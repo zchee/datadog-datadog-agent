@@ -29,9 +29,7 @@ if ohai["platform"] != "windows"
                           "--enable-shared")
   elsif linux_target?
     python_configure_options.push("--enable-shared",
-                          "--enable-ipv6",
-                          "ac_cv_file__dev_ptmx=yes",
-                          "ac_cv_file__dev_ptc=yes")
+                          "--enable-ipv6")
   elsif aix?
     # something here...
   end
@@ -48,10 +46,6 @@ if ohai["platform"] != "windows"
     # when cross compiling python immediatly after.
     # Since both python version *must* be identical, it's easier to manage
     # by building the same python version twice.
-
-#    mkdir "build"
-#    command "../configure && make", :cwd => "#{project_dir}/build"
-#    python_configure_options.push("--with-build-python=#{project_dir}/build/python")
 
     env = with_standard_compiler_flags(with_embedded_path)
     # Force different defaults for the "optimization settings"
