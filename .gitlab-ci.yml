@@ -15,14 +15,14 @@ lint:
   stage: lint
   script:
     - echo "coucou"
-    - echo "PKG_CONFIG_VERSION: $(pkg-config --version)"
-    - echo "RUBY_VERSION: $(ruby --version)"
-    - echo "BUNDLER_VERSION: $(bundler --version)"
-    - echo "PYTHON_VERSION: $(python3 --version)"
-    - echo "RUST_VERSION: $(rustc --version)"
-    - echo "RUSTUP_VERSION: $(rustup dump-testament)"
-    - echo "CMAKE_VERSION: $(cmake --version)"
-    - echo "GIMME_VERSION: $(gimme --version)"
+    - echo "PKG_CONFIG_VERSION $(pkg-config --version)"
+    - echo "RUBY_VERSION $(ruby --version)"
+    - echo "BUNDLER_VERSION $(bundler --version)"
+    - echo "PYTHON_VERSION $(python3 --version)"
+    - echo "RUST_VERSION $(rustc --version)"
+    - echo "RUSTUP_VERSION $(rustup dump-testament)"
+    - echo "CMAKE_VERSION $(cmake --version)"
+    - echo "GIMME_VERSION $(gimme --version)"
     - ls -la
     - uname -a
     - env
