@@ -1,4 +1,5 @@
-
+stages:
+  - lint
 
 lint:
   tags: ["mac-ventura-preview"]
