@@ -18,6 +18,6 @@ lint:
     - ls -la
     - uname -a
     - python3 --version
-    - cat $GOPATH
     - env
+    - ls $GOPATH/src/github.com
 
