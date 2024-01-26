@@ -1,5 +1,14 @@
 stages:
+  - setup
   - lint
+  - test
+  - build
+
+setup:
+  tags: ["mac-ventura-preview"]
+  stage: setup
+  script:
+    - echo "setupp"
 
 lint:
   tags: ["mac-ventura-preview"]
@@ -8,4 +17,7 @@ lint:
     - echo "coucou"
     - ls -la
     - uname -a
+    - python3 --version
+    - cat $GOPATH
+    - env
 
