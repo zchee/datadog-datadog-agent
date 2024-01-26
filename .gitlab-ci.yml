@@ -18,6 +18,7 @@ lint:
     - ls -la
     - uname -a
     - python3 --version
+    - go version
     - env
     - ls $GOPATH/src/github.com
 
