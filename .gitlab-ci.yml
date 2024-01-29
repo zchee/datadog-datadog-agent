@@ -35,7 +35,7 @@ check_versions:
       BUNDLER_VERSION $(bundler --version)
       PYTHON_VERSION $(python3 --version)
       RUST_VERSION $(rustc --version)
-      RUSTUP_VERSION $(rustup dump-testament)
+      RUSTUP_VERSION $(rustup --version)
       CMAKE_VERSION $(cmake --version)"
 
 
