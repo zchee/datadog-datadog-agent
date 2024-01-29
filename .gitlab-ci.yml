@@ -1,8 +1,9 @@
 stages:
   - setup
   - lint
-  - test
-  - build
+  # - test
+  # - build
+  - clean
 
 install_ibm_mq:
   tags: ["mac-ventura-preview"]
@@ -53,4 +54,11 @@ run_go_linters:
   script:
     - inv -e lint-go
 
-
+clean_runner:
+  tags: ["mac-ventura-preview"]
+  stage: clean
+  script:
+    - golangci-lint cache clean
+    - go clean -cache
+    - go clean -modcache
+    - python3 -m pip uninstall -y -r requirements.txt
