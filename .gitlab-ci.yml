@@ -27,6 +27,7 @@ install_deps:
 check_versions:
   tags: ["mac-ventura-preview"]
   stage: setup
+  needs: []
   script:
     # Check https://github.com/DataDog/datadog-agent-macos-build/blob/master/scripts/builder_setup.sh for differences
     # The runners deps are installed here: https://github.com/DataDog/ci-platform-machine-images/blob/bad51a01794d30db8dc18ad6e9dd7bd6462bab9b/packer/macos/preview/ventura/build.pkr.hcl
