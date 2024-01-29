@@ -8,8 +8,12 @@ install_ibm_mq:
   tags: ["mac-ventura-preview"]
   stage: setup
   script:
-    - echo "setupp"
-    - ./macos_builder_setup.sh
+    - IBM_MQ_VERSION="9.2.4.0-IBM-MQ-DevToolkit"
+    # Install IBM MQ
+    - mkdir -p /opt/mqm
+    - curl --retry 5 --fail "https://s3.amazonaws.com/dd-agent-omnibus/ibm-mq-backup/${IBM_MQ_VERSION}-MacX64.pkg" -o /tmp/mq_client.pkg
+    - installer -pkg /tmp/mq_client.pkg -target /
+    - rm -rf /tmp/mq_client.pkg
 
 install_deps:
   tags: ["mac-ventura-preview"]
