@@ -10,10 +10,10 @@ install_ibm_mq:
   script:
     - IBM_MQ_VERSION="9.2.4.0-IBM-MQ-DevToolkit"
     # Install IBM MQ
-    - mkdir -p /opt/mqm
+    - sudo mkdir -p /opt/mqm
     - curl --retry 5 --fail "https://s3.amazonaws.com/dd-agent-omnibus/ibm-mq-backup/${IBM_MQ_VERSION}-MacX64.pkg" -o /tmp/mq_client.pkg
-    - installer -pkg /tmp/mq_client.pkg -target /
-    - rm -rf /tmp/mq_client.pkg
+    - sudo installer -pkg /tmp/mq_client.pkg -target /
+    - sudo rm -rf /tmp/mq_client.pkg
 
 install_deps:
   tags: ["mac-ventura-preview"]
