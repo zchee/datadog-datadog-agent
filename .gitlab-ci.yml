@@ -4,10 +4,6 @@ stages:
   - test
   - build
 
-variables:
-  S3_CP_OPTIONS: --only-show-errors --region us-east-1 --sse AES256
-  S3_CP_CMD: aws s3 cp $S3_CP_OPTIONS
-
 install_ibm_mq:
   tags: ["mac-ventura-preview"]
   stage: setup
@@ -26,6 +22,7 @@ install_deps:
     - python3 -m pip install -r requirements.txt
     - inv -e install-tools
     - inv -e deps
+    - inv -e agent.version --version-cached
 
 check_versions:
   tags: ["mac-ventura-preview"]
