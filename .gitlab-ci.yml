@@ -56,5 +56,6 @@ run_go_linters:
   extends: .job_isolation
   tags: ["mac-ventura-preview"]
   stage: lint
+  needs: []
   script:
     - inv -e lint-go
