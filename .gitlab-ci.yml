@@ -1,33 +1,37 @@
 stages:
-  - setup
   - lint
   # - test
   # - build
-  - clean
 
-install_ibm_mq:
-  tags: ["mac-ventura-preview"]
-  stage: setup
-  script:
-    - IBM_MQ_VERSION="9.2.4.0-IBM-MQ-DevToolkit"
-    # Install IBM MQ
-    - sudo mkdir -p /opt/mqm
-    - curl --retry 5 --fail "https://s3.amazonaws.com/dd-agent-omnibus/ibm-mq-backup/${IBM_MQ_VERSION}-MacX64.pkg" -o /tmp/mq_client.pkg
-    - sudo installer -pkg /tmp/mq_client.pkg -target /
-    - sudo rm -rf /tmp/mq_client.pkg
-
-install_deps:
-  tags: ["mac-ventura-preview"]
-  stage: setup
-  script:
+.job_isolation:
+# Install dependencies
+  before_script:
     # - brew uninstall golangci-lint
     - python3 -m pip install -r requirements.txt
     - inv -e install-tools
     - inv -e deps
     - inv -e agent.version --version-cached
-  artifacts:
-    paths:
-      - agent-version.cache
+  # artifacts:
+  #   paths:
+  #     - agent-version.cache
+  # Remove cache and uninstall dependencies
+  after_script:
+    - golangci-lint cache clean
+    - go clean -cache
+    - go clean -modcache
+    - python3 -m pip uninstall -y -r requirements.txt
+
+# FIXME: Uncomment it when done with the preview
+# install_ibm_mq:
+#   tags: ["mac-ventura-preview"]
+#   stage: setup
+#   script:
+#     - IBM_MQ_VERSION="9.2.4.0-IBM-MQ-DevToolkit"
+#     # Install IBM MQ
+#     - sudo mkdir -p /opt/mqm
+#     - curl --retry 5 --fail "https://s3.amazonaws.com/dd-agent-omnibus/ibm-mq-backup/${IBM_MQ_VERSION}-MacX64.pkg" -o /tmp/mq_client.pkg
+#     - sudo installer -pkg /tmp/mq_client.pkg -target /
+#     - sudo rm -rf /tmp/mq_client.pkg
 
 check_versions:
   tags: ["mac-ventura-preview"]
@@ -49,16 +53,8 @@ check_versions:
 
 
 run_go_linters:
+  extends: .job_isolation
   tags: ["mac-ventura-preview"]
   stage: lint
   script:
     - inv -e lint-go
-
-clean_runner:
-  tags: ["mac-ventura-preview"]
-  stage: clean
-  script:
-    - golangci-lint cache clean
-    - go clean -cache
-    - go clean -modcache
-    - python3 -m pip uninstall -y -r requirements.txt
