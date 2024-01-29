@@ -22,9 +22,6 @@ install_deps:
     - python3 -m pip install -r requirements.txt
     - inv -e install-tools
     - inv -e deps
-    - inv -e agent.version --version-cached
-    - ls | grep "agent-version"
-    - ls
 
 check_versions:
   tags: ["mac-ventura-preview"]
@@ -47,8 +44,7 @@ run_go_linters:
   tags: ["mac-ventura-preview"]
   stage: lint
   script:
-    - ls | grep "agent-version"
-    - ls
+    - inv -e agent.version --version-cached
     - inv -e lint-go --cpus 3
 
 
