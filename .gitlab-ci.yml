@@ -37,6 +37,8 @@ check_versions:
     - |
       echo "PKG_CONFIG_VERSION $(pkg-config --version)
       RUBY_VERSION $(ruby --version)
+      GO_VERSION $(go version)
+      GOLANGCI_LINT_VERSION $(golangci-lint --version)
       BUNDLER_VERSION $(bundler --version)
       PYTHON_VERSION $(python3 --version)
       RUST_VERSION $(rustc --version)
