@@ -51,6 +51,6 @@ run_go_linters:
   tags: ["mac-ventura-preview"]
   stage: lint
   script:
-    - inv -e lint-go --cpus 3
+    - inv -e lint-go
 
 
