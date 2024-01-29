@@ -19,6 +19,7 @@ install_deps:
   tags: ["mac-ventura-preview"]
   stage: setup
   script:
+    - brew uninstall golangci-lint
     - python3 -m pip install -r requirements.txt
     - inv -e install-tools
     - inv -e deps
