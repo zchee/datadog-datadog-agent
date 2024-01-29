@@ -9,22 +9,22 @@ setup:
   stage: setup
   script:
     - echo "setupp"
+    - ./macos_builder_setup.sh
 
 lint:
   tags: ["mac-ventura-preview"]
   stage: lint
   script:
-    - echo "coucou"
-    - echo "PKG_CONFIG_VERSION $(pkg-config --version)"
-    - echo "RUBY_VERSION $(ruby --version)"
-    - echo "BUNDLER_VERSION $(bundler --version)"
-    - echo "PYTHON_VERSION $(python3 --version)"
-    - echo "RUST_VERSION $(rustc --version)"
-    - echo "RUSTUP_VERSION $(rustup dump-testament)"
-    - echo "CMAKE_VERSION $(cmake --version)"
-    - echo "GIMME_VERSION $(gimme --version)"
-    - ls -la
-    - uname -a
-    - env
+    # Check https://github.com/DataDog/datadog-agent-macos-build/blob/master/scripts/builder_setup.sh for differences
+    # The runners deps are installed here: https://github.com/DataDog/ci-platform-machine-images/blob/bad51a01794d30db8dc18ad6e9dd7bd6462bab9b/packer/macos/preview/ventura/build.pkr.hcl
+    - |
+      echo "PKG_CONFIG_VERSION $(pkg-config --version)
+      RUBY_VERSION $(ruby --version)
+      BUNDLER_VERSION $(bundler --version)
+      PYTHON_VERSION $(python3 --version)
+      RUST_VERSION $(rustc --version)
+      RUSTUP_VERSION $(rustup dump-testament)
+      CMAKE_VERSION $(cmake --version)"
+
 
 
