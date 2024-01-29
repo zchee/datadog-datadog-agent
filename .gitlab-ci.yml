@@ -35,7 +35,7 @@ stages:
 
 check_versions:
   tags: ["mac-ventura-preview"]
-  stage: setup
+  stage: lint
   needs: []
   script:
     # Check https://github.com/DataDog/datadog-agent-macos-build/blob/master/scripts/builder_setup.sh for differences
