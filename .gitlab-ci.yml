@@ -67,7 +67,7 @@ run_go_linters:
   script:
     - inv -e rtloader.make --python-runtimes 3
     - inv -e rtloader.install
-    - inv -e test --rerun-fails=2 --python-runtimes 3 --race --profile --cpus 3 --save-result-json "test_output.json" --junit-tar "junit-tests_macos.tgz"
+    - inv -e test --rerun-fails=2 --python-runtimes 3 --race --profile --save-result-json "test_output.json" --junit-tar "junit-tests_macos.tgz"
     - inv -e invoke-unit-tests
 
 run_go_tests_1:
