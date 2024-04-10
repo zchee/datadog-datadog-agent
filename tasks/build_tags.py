@@ -40,6 +40,8 @@ ALL_TAGS = {
     "process",
     "python",
     "sds",
+    "requirefips",
+    "goexperiment.opensslcrypto",
     "serverless",
     "systemd",
     "trivy",
@@ -97,6 +99,8 @@ AGENT_HEROKU_TAGS = AGENT_TAGS.difference(
         "trivy",
     }
 )
+
+FIPS_AGENT_TAGS = {"fipsrequire", "goexperiment.opensslcrypto"}
 
 # AGENTLESS_SCANNER_TAGS lists the tags needed when building the agentless-scanner
 AGENTLESS_SCANNER_TAGS = {""}
@@ -184,6 +188,7 @@ build_tags = {
     AgentFlavor.base: {
         # Build setups
         "agent": AGENT_TAGS,
+        "fips-agent": AGENT_TAGS.union(FIPS_AGENT_TAGS),
         "cluster-agent": CLUSTER_AGENT_TAGS,
         "cluster-agent-cloudfoundry": CLUSTER_AGENT_CLOUDFOUNDRY_TAGS,
         "dogstatsd": DOGSTATSD_TAGS,
