@@ -124,7 +124,7 @@ func NewAutoMultilineHandler(
 }
 
 func (h *AutoMultilineHandler) process(message *message.Message) {
-	h.multiLineDetector.ReportAnalytics(false)
+	h.multiLineDetector.ProcessMesage(message)
 	h.processFunc(message)
 }
 

@@ -161,6 +161,66 @@ func isMatch(setA []Token, setB []Token, thresh float64) bool {
 	return float64(match)/float64(count) >= thresh
 }
 
-// func tokensToString(tokens []Token) string {
+func tokenToString(token Token) string {
+	if token >= D1 && token <= D10 {
+		t := ""
+		for i := 0; i < int(token-D1); i++ {
+			t += "D"
+		}
+		return t
+	} else if token >= C1 && token <= C10 {
+		t := ""
+		for i := 0; i < int(token-C1); i++ {
+			t += "C"
+		}
+		return t
+	}
 
-// }
+	switch token {
+	case Space:
+		return " "
+	case Colon:
+		return ":"
+	case Dash:
+		return "-"
+	case FSlash:
+		return "/"
+	case BSlash:
+		return "\\"
+	case Period:
+		return "."
+	case Comma:
+		return ","
+	case SingleQuote:
+		return "'"
+	case DoubleQuote:
+		return "\""
+	case Star:
+		return "*"
+	case Plus:
+		return "+"
+	case ParenOpen:
+		return "("
+	case ParenClose:
+		return ")"
+	case BraceOpen:
+		return "{"
+	case BraceClose:
+		return "}"
+	case BracketOpen:
+		return "["
+	case BracketClose:
+		return "]"
+	}
+
+	return ""
+}
+
+func tokensToString(tokens []Token) string {
+
+	str := ""
+	for _, t := range tokens {
+		str += tokenToString(t)
+	}
+	return str
+}
