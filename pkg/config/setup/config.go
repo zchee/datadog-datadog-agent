@@ -961,6 +961,14 @@ func InitConfig(config pkgconfigmodel.Config) {
 	config.BindEnvAndSetDefault("logs_config.auto_multi_line_default_match_timeout", 30) // Seconds
 	config.BindEnvAndSetDefault("logs_config.auto_multi_line_default_match_threshold", 0.48)
 
+	// These settings are for an isolated experiment. They have no effect on the logs-agent behavior.
+	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.enabled", false)
+	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.token_length", 40)
+	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.token_match_threshold", 0.75)
+	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.detection_threshold", 0.1)
+	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.cluster_table_max_size", 100)
+	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.report_interval", "1m")
+
 	// If true, the agent looks for container logs in the location used by podman, rather
 	// than docker.  This is a temporary configuration parameter to support podman logs until
 	// a more substantial refactor of autodiscovery is made to determine this automatically.

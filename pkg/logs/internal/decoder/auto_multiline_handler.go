@@ -15,6 +15,7 @@ import (
 
 	"github.com/benbjohnson/clock"
 
+	experiment "github.com/DataDog/datadog-agent/pkg/logs/internal/decoder/multiline_experiment"
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
 	"github.com/DataDog/datadog-agent/pkg/logs/sources"
 	status "github.com/DataDog/datadog-agent/pkg/logs/status/utils"
@@ -70,6 +71,7 @@ type AutoMultilineHandler struct {
 	clk                 clock.Clock
 	autoMultiLineStatus *status.MappedInfo
 	tailerInfo          *status.InfoRegistry
+	multiLineDetector   *experiment.MultiLineDetector
 }
 
 // NewAutoMultilineHandler returns a new AutoMultilineHandler.
@@ -110,6 +112,7 @@ func NewAutoMultilineHandler(
 		clk:                 clock.New(),
 		autoMultiLineStatus: status.NewMappedInfo("Auto Multi-line"),
 		tailerInfo:          tailerInfo,
+		multiLineDetector:   experiment.NewMultiLineDetector(),
 	}
 
 	h.singleLineHandler = NewSingleLineHandler(outputFn, lineLimit)
@@ -121,6 +124,7 @@ func NewAutoMultilineHandler(
 }
 
 func (h *AutoMultilineHandler) process(message *message.Message) {
+	h.multiLineDetector.ReportAnalytics(false)
 	h.processFunc(message)
 }
 
@@ -183,6 +187,7 @@ func (h *AutoMultilineHandler) processAndTry(message *message.Message) {
 		matchRatio := float64(topMatch.score) / float64(h.linesTested)
 
 		if matchRatio >= h.matchThreshold {
+			h.multiLineDetector.FoundMultiLineLog(true)
 			h.autoMultiLineStatus.SetMessage("state", "State: Using multi-line handler")
 			h.autoMultiLineStatus.SetMessage("message", fmt.Sprintf("Pattern %v matched %d lines with a ratio of %f", topMatch.regexp.String(), topMatch.score, matchRatio))
 			log.Debug(fmt.Sprintf("Pattern %v matched %d lines with a ratio of %f - using multi-line handler", topMatch.regexp.String(), topMatch.score, matchRatio))
@@ -191,6 +196,7 @@ func (h *AutoMultilineHandler) processAndTry(message *message.Message) {
 			h.detectedPattern.Set(topMatch.regexp)
 			h.switchToMultilineHandler(topMatch.regexp)
 		} else {
+			h.multiLineDetector.FoundMultiLineLog(false)
 			h.autoMultiLineStatus.SetMessage("state", "State: Using single-line handler")
 			h.autoMultiLineStatus.SetMessage("message", fmt.Sprintf("No pattern met the line match threshold: %f during multiline auto detection. Top match was %v with a match ratio of: %f", h.matchThreshold, topMatch.regexp.String(), matchRatio))
 			log.Debugf(fmt.Sprintf("No pattern met the line match threshold: %f during multiline auto detection. Top match was %v with a match ratio of: %f - using single-line handler", h.matchThreshold, topMatch.regexp.String(), matchRatio))
