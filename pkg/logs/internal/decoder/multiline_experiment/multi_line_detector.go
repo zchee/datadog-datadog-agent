@@ -3,10 +3,10 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-//revive:disable
 package multilineexperiment
 
 import (
+	"encoding/json"
 	"sort"
 	"time"
 
@@ -15,15 +15,33 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
+// AnalyticsPayload contains the analytics data for the multi-line experiment
+type AnalyticsPayload struct {
+	Clusters             int          `json:"clusters"`
+	DroppedClusters      int          `json:"dropped_clusters"`
+	DetectedMultiLineLog bool         `json:"detected_multi_line_log"`
+	MixedFormatLikely    bool         `json:"mixed_format_likely"`
+	Confidence           float64      `json:"confidence"`
+	TopMatch             ClusterRow   `json:"top_match"`
+	ClusterTable         []ClusterRow `json:"clusters_table"`
+}
+
+// ClusterRow represents a row in the cluster table
+type ClusterRow struct {
+	Score  int    `json:"score"`
+	Tokens string `json:"tokens"`
+	Sample string `json:"sample"`
+}
+
 type tokenCluster struct {
 	score  int
 	tokens []Token
 	sample string
 }
 
+// MultiLineDetector is collects data about logs and reports metrics if we think they are multi-line.
 type MultiLineDetector struct {
-	enabled bool
-
+	enabled             bool
 	tokenLength         int
 	tokenMatchThreshold float64
 	detectionThreshold  float64
@@ -31,10 +49,12 @@ type MultiLineDetector struct {
 	foundMultiLineLog   *bool
 	reportInterval      time.Duration
 	reportTicker        *time.Ticker
+	droppedClusters     int
 
 	clusterTable []*tokenCluster
 }
 
+// NewMultiLineDetector returns a new MultiLineDetector
 func NewMultiLineDetector() *MultiLineDetector {
 
 	enabled := config.Datadog.GetBool("logs_config.multi_line_experiment.enabled")
@@ -51,11 +71,13 @@ func NewMultiLineDetector() *MultiLineDetector {
 		detectionThreshold:  detectionThreshold,
 		clusterTableMaxSize: clusterTableMaxSize,
 		reportInterval:      reportInterval,
+		droppedClusters:     0,
 		reportTicker:        time.NewTicker(reportInterval),
 		clusterTable:        []*tokenCluster{},
 	}
 }
 
+// ProcessMesage processes a message and updates the cluster table
 func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 
 	if !m.enabled {
@@ -106,12 +128,13 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 	// To prevent the cluster table from growing indefinitely drop new clusters when we reach the max.
 	// In the future we can implement resizeing and eviction strategies.
 	if matched && len(m.clusterTable) >= m.clusterTableMaxSize {
-		log.Warn("MULTI_LINE_EXPERIMENT: Multiline detector is full, dropping new cluster. Max size is ", m.clusterTableMaxSize)
+		m.droppedClusters++
 	}
 
 	m.reportAnalytics(false)
 }
 
+// FoundMultiLineLog reports if a multi-line log was detected from the core-agent mulit-line detection
 func (m *MultiLineDetector) FoundMultiLineLog(val bool) {
 	if !m.enabled {
 		return
@@ -122,9 +145,46 @@ func (m *MultiLineDetector) FoundMultiLineLog(val bool) {
 	m.reportAnalytics(true)
 }
 
+func (m *MultiLineDetector) buildPayload() *AnalyticsPayload {
+	payload := &AnalyticsPayload{
+		Clusters:             len(m.clusterTable),
+		DroppedClusters:      m.droppedClusters,
+		DetectedMultiLineLog: *m.foundMultiLineLog,
+		ClusterTable:         []ClusterRow{},
+	}
+
+	if len(m.clusterTable) >= 1 {
+		payload.Confidence = 1
+		payload.TopMatch = ClusterRow{
+			Score:  m.clusterTable[0].score,
+			Tokens: tokensToString(m.clusterTable[0].tokens),
+			Sample: m.clusterTable[0].sample,
+		}
+	}
+
+	if len(m.clusterTable) > 1 {
+		first := m.clusterTable[0].score
+		second := m.clusterTable[1].score
+		confidence := float64(first) / float64(first+second)
+		payload.Confidence = confidence
+		payload.MixedFormatLikely = confidence <= m.detectionThreshold
+	}
+
+	for _, cluster := range m.clusterTable {
+		payload.ClusterTable = append(payload.ClusterTable, ClusterRow{
+			Score:  cluster.score,
+			Tokens: tokensToString(cluster.tokens),
+			Sample: cluster.sample,
+		})
+	}
+
+	return payload
+
+}
+
 func (m *MultiLineDetector) reportAnalytics(force bool) {
 	// Don't report analytics if disable, or until after we have finished detection.
-	if !m.enabled && m.foundMultiLineLog != nil {
+	if !m.enabled || m.foundMultiLineLog == nil {
 		return
 	}
 
@@ -142,28 +202,10 @@ func (m *MultiLineDetector) reportAnalytics(force bool) {
 		return
 	}
 
-	log.Info("MULTI_LINE_EXPERIMENT: Multiline detector report")
-	log.Info("MULTI_LINE_EXPERIMENT: Cluster table size ", len(m.clusterTable))
-	log.Info("MULTI_LINE_EXPERIMENT: top cluster score ", m.clusterTable[0].score)
-
-	if len(m.clusterTable) == 1 {
-		log.Info("MULTI_LINE_EXPERIMENT: Found 1 cluster, single line log.")
+	payload := m.buildPayload()
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return
 	}
-
-	if len(m.clusterTable) > 1 {
-		first := m.clusterTable[0].score
-		second := m.clusterTable[1].score
-		ratio := float64(first) / float64(first+second)
-
-		if ratio > m.detectionThreshold {
-			log.Info("MULTI_LINE_EXPERIMENT: Top cluster is ", ratio, " times more likely. - high confidence multiline log.")
-		} else {
-			log.Info("MULTI_LINE_EXPERIMENT: Mixed format log likely!!!")
-		}
-	}
-
-	for i, cluster := range m.clusterTable {
-		log.Info("MULTI_LINE_EXPERIMENT: cluster ", i, " score ", cluster.score, " sample ", cluster.sample, " tokens ", tokensToString(cluster.tokens))
-	}
-
+	log.Infof("MULTI_LINE_EXPERIMENT: payload: %v", string(payloadBytes))
 }

@@ -3,13 +3,13 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-//revive:disable
 package multilineexperiment
 
 import (
 	"unicode"
 )
 
+//revive:disable
 type Token uint
 
 const (
@@ -63,6 +63,8 @@ const (
 
 	END
 )
+
+//revive:enable
 
 func getToken(char byte) Token {
 	if unicode.IsDigit(rune(char)) {
@@ -134,7 +136,7 @@ func tokenize(input []byte, len int) []Token {
 		if currentToken != lastToken {
 			insertToken()
 		} else {
-			run += 1
+			run++
 		}
 
 		lastToken = currentToken
@@ -164,13 +166,13 @@ func isMatch(setA []Token, setB []Token, thresh float64) bool {
 func tokenToString(token Token) string {
 	if token >= D1 && token <= D10 {
 		t := ""
-		for i := 0; i < int(token-D1); i++ {
+		for i := 0; i <= int(token-D1); i++ {
 			t += "D"
 		}
 		return t
 	} else if token >= C1 && token <= C10 {
 		t := ""
-		for i := 0; i < int(token-C1); i++ {
+		for i := 0; i <= int(token-C1); i++ {
 			t += "C"
 		}
 		return t
