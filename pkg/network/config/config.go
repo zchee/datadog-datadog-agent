@@ -151,10 +151,6 @@ type Config struct {
 	// tcp_close is not intercepted for some reason.
 	TCPConnTimeout time.Duration
 
-	// TCPClosedTimeout represents the maximum amount of time a closed TCP connection can remain buffered in eBPF before
-	// being marked as idle and flushed to the perf ring.
-	TCPClosedTimeout time.Duration
-
 	// MaxTrackedConnections specifies the maximum number of connections we can track. This determines the size of the eBPF Maps
 	MaxTrackedConnections uint32
 
@@ -222,6 +218,9 @@ type Config struct {
 
 	// ClosedChannelSize specifies the size for closed channel for the tracer
 	ClosedChannelSize int
+
+	// ClosedBufferWakeupCount specifies the number of events that will buffer in a perf buffer before userspace is woken up.
+	ClosedBufferWakeupCount int
 
 	// ExcludedSourceConnections is a map of source connections to blacklist
 	ExcludedSourceConnections map[string][]string
@@ -299,6 +298,9 @@ type Config struct {
 	// BypassEnabled is used in tests only.
 	// It enables a ebpf-manager feature to bypass programs on-demand for controlled visibility.
 	BypassEnabled bool
+
+	// KernelBatchingEnabled enables the use of custom batching for eBPF perf events with perf buffers
+	KernelBatchingEnabled bool
 }
 
 func join(pieces ...string) string {
@@ -319,7 +321,6 @@ func New() *Config {
 		CollectTCPv4Conns: cfg.GetBool(join(netNS, "collect_tcp_v4")),
 		CollectTCPv6Conns: cfg.GetBool(join(netNS, "collect_tcp_v6")),
 		TCPConnTimeout:    2 * time.Minute,
-		TCPClosedTimeout:  1 * time.Second,
 
 		CollectUDPv4Conns: cfg.GetBool(join(netNS, "collect_udp_v4")),
 		CollectUDPv6Conns: cfg.GetBool(join(netNS, "collect_udp_v6")),
@@ -335,6 +336,7 @@ func New() *Config {
 		MaxClosedConnectionsBuffered:   uint32(cfg.GetInt64(join(spNS, "max_closed_connections_buffered"))),
 		ClosedConnectionFlushThreshold: cfg.GetInt(join(spNS, "closed_connection_flush_threshold")),
 		ClosedChannelSize:              cfg.GetInt(join(spNS, "closed_channel_size")),
+		ClosedBufferWakeupCount:        cfg.GetInt(join(netNS, "closed_buffer_wakeup_count")),
 		MaxConnectionsStateBuffered:    cfg.GetInt(join(spNS, "max_connection_state_buffered")),
 		ClientStateExpiry:              2 * time.Minute,
 
@@ -349,6 +351,7 @@ func New() *Config {
 		ProtocolClassificationEnabled: cfg.GetBool(join(netNS, "enable_protocol_classification")),
 
 		NPMRingbuffersEnabled: cfg.GetBool(join(netNS, "enable_ringbuffers")),
+		KernelBatchingEnabled: cfg.GetBool(join(netNS, "enable_kernel_batching")),
 
 		EnableHTTPMonitoring:      cfg.GetBool(join(smNS, "enable_http_monitoring")),
 		EnableHTTP2Monitoring:     cfg.GetBool(join(smNS, "enable_http2_monitoring")),
