@@ -236,6 +236,9 @@ type Config struct {
 	// ClosedChannelSize specifies the size for closed channel for the tracer
 	ClosedChannelSize int
 
+	// ClosedBufferWakeupCount specifies the number of events that will buffer in a perf buffer before userspace is woken up.
+	ClosedBufferWakeupCount int
+
 	// ExcludedSourceConnections is a map of source connections to blacklist
 	ExcludedSourceConnections map[string][]string
 
@@ -310,6 +313,9 @@ type Config struct {
 	// EnableUSMEventStream enables USM to use the event stream instead
 	// of netlink for receiving process events.
 	EnableUSMEventStream bool
+
+	// KernelBatchingEnabled enables the use of custom batching for eBPF perf events with perf buffers
+	KernelBatchingEnabled bool
 }
 
 func join(pieces ...string) string {
@@ -346,6 +352,7 @@ func New() *Config {
 		MaxFailedConnectionsBuffered:   uint32(cfg.GetInt64(join(netNS, "max_failed_connections_buffered"))),
 		ClosedConnectionFlushThreshold: cfg.GetInt(join(spNS, "closed_connection_flush_threshold")),
 		ClosedChannelSize:              cfg.GetInt(join(spNS, "closed_channel_size")),
+		ClosedBufferWakeupCount:        cfg.GetInt(join(netNS, "closed_buffer_wakeup_count")),
 		MaxConnectionsStateBuffered:    cfg.GetInt(join(spNS, "max_connection_state_buffered")),
 		ClientStateExpiry:              2 * time.Minute,
 
@@ -360,6 +367,7 @@ func New() *Config {
 		ProtocolClassificationEnabled: cfg.GetBool(join(netNS, "enable_protocol_classification")),
 
 		NPMRingbuffersEnabled: cfg.GetBool(join(netNS, "enable_ringbuffers")),
+		KernelBatchingEnabled: cfg.GetBool(join(netNS, "enable_kernel_batching")),
 
 		EnableHTTPMonitoring:       cfg.GetBool(join(smNS, "enable_http_monitoring")),
 		EnableHTTP2Monitoring:      cfg.GetBool(join(smNS, "enable_http2_monitoring")),
