@@ -19,6 +19,7 @@ import (
 	ebpfmaps "github.com/DataDog/datadog-agent/pkg/ebpf/maps"
 	"github.com/DataDog/datadog-agent/pkg/network"
 	netebpf "github.com/DataDog/datadog-agent/pkg/network/ebpf"
+	ddsync "github.com/DataDog/datadog-agent/pkg/util/sync"
 )
 
 const (
@@ -26,7 +27,8 @@ const (
 )
 
 func TestGetPendingConns(t *testing.T) {
-	manager := newTestBatchManager(t)
+	cb, cbCh := ddsync.CallbackChannel[*network.ConnectionStats](100)
+	manager := newTestBatchManager(t, cb)
 
 	batch := new(netebpf.Batch)
 	batch.Id = 0
@@ -41,9 +43,14 @@ func TestGetPendingConns(t *testing.T) {
 	}
 	updateBatch()
 
-	buffer := network.NewConnectionBuffer(256, 256)
-	manager.GetPendingConns(buffer)
-	pendingConns := buffer.Connections()
+	manager.Flush()
+	var pendingConns []*network.ConnectionStats
+	for conn := range cbCh {
+		if conn == nil {
+			break
+		}
+		pendingConns = append(pendingConns, conn)
+	}
 	assert.GreaterOrEqual(t, len(pendingConns), 2)
 	for _, pid := range []uint32{pidMax + 1, pidMax + 2} {
 		found := false
@@ -64,9 +71,14 @@ func TestGetPendingConns(t *testing.T) {
 	updateBatch()
 
 	// We should now get only the connection that hasn't been processed before
-	buffer.Reset()
-	manager.GetPendingConns(buffer)
-	pendingConns = buffer.Connections()
+	manager.Flush()
+	pendingConns = pendingConns[:0]
+	for conn := range cbCh {
+		if conn == nil {
+			break
+		}
+		pendingConns = append(pendingConns, conn)
+	}
 	assert.GreaterOrEqual(t, len(pendingConns), 1)
 	var found bool
 	for _, p := range pendingConns {
@@ -80,7 +92,8 @@ func TestGetPendingConns(t *testing.T) {
 }
 
 func TestPerfBatchStateCleanup(t *testing.T) {
-	manager := newTestBatchManager(t)
+	cb, cbCh := ddsync.CallbackChannel[*network.ConnectionStats](100)
+	manager := newTestBatchManager(t, cb)
 	manager.extractor.expiredStateInterval = 100 * time.Millisecond
 
 	batch := new(netebpf.Batch)
@@ -93,14 +106,24 @@ func TestPerfBatchStateCleanup(t *testing.T) {
 	err := manager.batchMap.Put(&cpu, batch)
 	require.NoError(t, err)
 
-	buffer := network.NewConnectionBuffer(256, 256)
-	manager.GetPendingConns(buffer)
+	manager.Flush()
+	for conn := range cbCh {
+		if conn == nil {
+			break
+		}
+	}
+
 	_, ok := manager.extractor.stateByCPU[cpu].processed[batch.Id]
 	require.True(t, ok)
 	assert.Equal(t, uint16(2), manager.extractor.stateByCPU[cpu].processed[batch.Id].offset)
 
 	manager.extractor.CleanupExpiredState(time.Now().Add(manager.extractor.expiredStateInterval))
-	manager.GetPendingConns(buffer)
+	manager.Flush()
+	for conn := range cbCh {
+		if conn == nil {
+			break
+		}
+	}
 
 	// state should not have been cleaned up, since no more connections have happened
 	_, ok = manager.extractor.stateByCPU[cpu].processed[batch.Id]
@@ -108,7 +131,7 @@ func TestPerfBatchStateCleanup(t *testing.T) {
 	assert.Equal(t, uint16(2), manager.extractor.stateByCPU[cpu].processed[batch.Id].offset)
 }
 
-func newTestBatchManager(t *testing.T) *perfBatchManager {
+func newTestBatchManager(t *testing.T, callback func(*network.ConnectionStats)) *perfBatchManager {
 	require.NoError(t, rlimit.RemoveMemlock())
 	m, err := ebpf.NewMap(&ebpf.MapSpec{
 		Type:       ebpf.Hash,
@@ -122,7 +145,8 @@ func newTestBatchManager(t *testing.T) *perfBatchManager {
 	gm, err := ebpfmaps.Map[uint32, netebpf.Batch](m)
 	require.NoError(t, err)
 	extractor := newBatchExtractor(numTestCPUs)
-	mgr, err := newPerfBatchManager(gm, extractor)
+	connPool := ddsync.NewDefaultTypedPool[network.ConnectionStats]()
+	mgr, err := newPerfBatchManager(gm, extractor, connPool, callback)
 	require.NoError(t, err)
 	return mgr
 }

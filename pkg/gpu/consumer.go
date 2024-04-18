@@ -14,7 +14,6 @@ import (
 	"unsafe"
 
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/gpu/model"
-	ddebpf "github.com/DataDog/datadog-agent/pkg/ebpf"
 	gpuebpf "github.com/DataDog/datadog-agent/pkg/gpu/ebpf"
 	"github.com/DataDog/datadog-agent/pkg/process/monitor"
 	"github.com/DataDog/datadog-agent/pkg/status/health"
@@ -25,7 +24,7 @@ import (
 // cudaEventConsumer is responsible for consuming CUDA events from the eBPF probe, and delivering them
 // to the appropriate stream handler.
 type cudaEventConsumer struct {
-	eventHandler   ddebpf.EventHandler
+	eventHandler   <-chan []byte
 	once           sync.Once
 	closed         chan struct{}
 	streamHandlers map[model.StreamKey]*StreamHandler
@@ -35,7 +34,7 @@ type cudaEventConsumer struct {
 }
 
 // NewCudaEventConsumer creates a new CUDA event consumer.
-func NewCudaEventConsumer(eventHandler ddebpf.EventHandler, cfg *Config) *cudaEventConsumer {
+func NewCudaEventConsumer(eventHandler <-chan []byte, cfg *Config) *cudaEventConsumer {
 	return &cudaEventConsumer{
 		eventHandler:   eventHandler,
 		closed:         make(chan struct{}),
@@ -49,7 +48,6 @@ func (c *cudaEventConsumer) Stop() {
 	if c == nil {
 		return
 	}
-	c.eventHandler.Stop()
 	c.once.Do(func() {
 		close(c.closed)
 	})
@@ -81,8 +79,6 @@ func (c *cudaEventConsumer) Start() {
 			c.running.Store(false)
 		}()
 
-		dataChannel := c.eventHandler.DataChannel()
-		lostChannel := c.eventHandler.LostChannel()
 		for {
 			select {
 			case <-c.closed:
@@ -90,18 +86,18 @@ func (c *cudaEventConsumer) Start() {
 			case <-health.C:
 			case <-processSync.C:
 				c.checkClosedProcesses()
-			case batchData, ok := <-dataChannel:
+			case data, ok := <-c.eventHandler:
 				if !ok {
 					return
 				}
 
-				dataLen := len(batchData.Data)
+				dataLen := len(data)
 				if dataLen < gpuebpf.SizeofCudaEventHeader {
 					log.Errorf("Not enough data to parse header, data size=%d, expecting at least %d", dataLen, gpuebpf.SizeofCudaEventHeader)
 					continue
 				}
 
-				header := (*gpuebpf.CudaEventHeader)(unsafe.Pointer(&batchData.Data[0]))
+				header := (*gpuebpf.CudaEventHeader)(unsafe.Pointer(&data[0]))
 
 				pid := uint32(header.Pid_tgid >> 32)
 				streamKey := model.StreamKey{Pid: pid, Stream: header.Stream_id}
@@ -116,29 +112,22 @@ func (c *cudaEventConsumer) Start() {
 						log.Errorf("Not enough data to parse kernel launch event, data size=%d, expecting %d", dataLen, gpuebpf.SizeofCudaKernelLaunch)
 						continue
 					}
-					ckl := (*gpuebpf.CudaKernelLaunch)(unsafe.Pointer(&batchData.Data[0]))
+					ckl := (*gpuebpf.CudaKernelLaunch)(unsafe.Pointer(&data[0]))
 					c.streamHandlers[streamKey].handleKernelLaunch(ckl)
 				case gpuebpf.CudaEventTypeMemory:
 					if dataLen != gpuebpf.SizeofCudaMemEvent {
 						log.Errorf("Not enough data to parse memory event, data size=%d, expecting %d", dataLen, gpuebpf.SizeofCudaMemEvent)
 						continue
 					}
-					cme := (*gpuebpf.CudaMemEvent)(unsafe.Pointer(&batchData.Data[0]))
+					cme := (*gpuebpf.CudaMemEvent)(unsafe.Pointer(&data[0]))
 					c.streamHandlers[streamKey].handleMemEvent(cme)
 				case gpuebpf.CudaEventTypeSync:
 					if dataLen != gpuebpf.SizeofCudaSync {
 						log.Errorf("Not enough data to parse sync event, data size=%d, expecting %d", dataLen, gpuebpf.SizeofCudaSync)
 						continue
 					}
-					cs := (*gpuebpf.CudaSync)(unsafe.Pointer(&batchData.Data[0]))
+					cs := (*gpuebpf.CudaSync)(unsafe.Pointer(&data[0]))
 					c.streamHandlers[streamKey].handleSync(cs)
-				}
-
-				batchData.Done()
-			// lost events only occur when using perf buffers
-			case _, ok := <-lostChannel:
-				if !ok {
-					return
 				}
 			}
 		}

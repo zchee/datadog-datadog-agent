@@ -12,12 +12,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
-	ddebpf "github.com/DataDog/datadog-agent/pkg/ebpf"
 )
 
 func TestConsumerCanStartAndStop(t *testing.T) {
-	handler := ddebpf.NewRingBufferHandler(consumerChannelSize)
+	handler := make(chan []byte)
 	cfg := NewConfig()
 	consumer := NewCudaEventConsumer(handler, cfg)
 

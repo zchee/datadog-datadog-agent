@@ -13,16 +13,16 @@ import (
 	"regexp"
 
 	manager "github.com/DataDog/ebpf-manager"
-	"github.com/cilium/ebpf"
-	"github.com/cilium/ebpf/rlimit"
 
 	"github.com/DataDog/datadog-agent/comp/core/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/gpu/model"
 	ddebpf "github.com/DataDog/datadog-agent/pkg/ebpf"
 	"github.com/DataDog/datadog-agent/pkg/ebpf/bytecode"
+	"github.com/DataDog/datadog-agent/pkg/ebpf/perf"
 	"github.com/DataDog/datadog-agent/pkg/ebpf/uprobes"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+	ddsync "github.com/DataDog/datadog-agent/pkg/util/sync"
 )
 
 // TODO: Set a minimum kernel version
@@ -82,26 +82,6 @@ func startGPUProbe(buf bytecode.AssetReader, opts manager.Options, _ telemetry.C
 			{Name: cudaAllocCacheMap},
 		}})
 
-	if opts.MapSpecEditors == nil {
-		opts.MapSpecEditors = make(map[string]manager.MapSpecEditor)
-	}
-
-	// Ring buffer size has to be a multiple of the page size, and we want to have at least 4096 bytes
-	pagesize := os.Getpagesize()
-	ringbufSize := pagesize
-	minRingbufSize := 4096
-	if minRingbufSize > ringbufSize {
-		ringbufSize = (minRingbufSize/pagesize + 1) * pagesize
-	}
-
-	opts.MapSpecEditors[cudaEventMap] = manager.MapSpecEditor{
-		Type:       ebpf.RingBuf,
-		MaxEntries: uint32(ringbufSize),
-		KeySize:    0,
-		ValueSize:  0,
-		EditorFlag: manager.EditType | manager.EditMaxEntries | manager.EditKeyValue,
-	}
-
 	attachCfg := uprobes.AttacherConfig{
 		Rules: []*uprobes.AttachRule{
 			{
@@ -130,26 +110,24 @@ func startGPUProbe(buf bytecode.AssetReader, opts manager.Options, _ telemetry.C
 		return nil, fmt.Errorf("error creating uprobes attacher: %w", err)
 	}
 
-	if err := rlimit.RemoveMemlock(); err != nil {
-		return nil, err
-	}
-
 	p := &Probe{
 		mgr:      mgr,
 		cfg:      cfg,
 		attacher: attacher,
 	}
 
-	p.startEventConsumer()
-
-	if err := mgr.InitWithOptions(buf, &opts); err != nil {
+	if err := mgr.LoadELF(buf); err != nil {
+		return nil, fmt.Errorf("failed to load manager ELF: %w", err)
+	}
+	if err := p.startEventConsumer(mgr.Manager, &opts); err != nil {
+		return nil, fmt.Errorf("failed to start event consumer: %w", err)
+	}
+	if err := mgr.InitWithOptions(nil, &opts); err != nil {
 		return nil, fmt.Errorf("failed to init manager: %w", err)
 	}
-
 	if err := mgr.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start manager: %w", err)
 	}
-
 	if err := attacher.Start(); err != nil {
 		return nil, fmt.Errorf("error starting uprobes attacher: %w", err)
 	}
@@ -200,16 +178,34 @@ func (p *Probe) GetAndFlush() (*model.GPUStats, error) {
 	return &stats, nil
 }
 
-func (p *Probe) startEventConsumer() {
-	handler := ddebpf.NewRingBufferHandler(consumerChannelSize)
-	rb := &manager.RingBuffer{
-		Map: manager.Map{Name: cudaEventMap},
-		RingBufferOptions: manager.RingBufferOptions{
-			RecordHandler: handler.RecordHandler,
-			RecordGetter:  handler.RecordGetter,
+func (p *Probe) startEventConsumer(mgr *manager.Manager, mgrOpts *manager.Options) error {
+	// Ring buffer size has to be a multiple of the page size, and we want to have at least 4096 bytes
+	pagesize := os.Getpagesize()
+	ringbufSize := pagesize
+	minRingbufSize := 4096
+	if minRingbufSize > ringbufSize {
+		ringbufSize = (minRingbufSize/pagesize + 1) * pagesize
+	}
+
+	callback, callbackCh := ddsync.CallbackChannel[[]byte](consumerChannelSize)
+	ehopts := perf.EventHandlerOptions{
+		MapName:          cudaEventMap,
+		TelemetryEnabled: false,
+		UseRingBuffer:    true,
+		Handler:          callback,
+		RingBufOptions: perf.RingBufferOptions{
+			BufferSize: ringbufSize,
 		},
 	}
-	p.mgr.RingBuffers = append(p.mgr.RingBuffers, rb)
-	p.consumer = NewCudaEventConsumer(handler, p.cfg)
+	eh, err := perf.NewEventHandler(ehopts)
+	if err != nil {
+		return err
+	}
+	if err := eh.Init(mgr, mgrOpts); err != nil {
+		return err
+	}
+
+	p.consumer = NewCudaEventConsumer(callbackCh, p.cfg)
 	p.consumer.Start()
+	return nil
 }

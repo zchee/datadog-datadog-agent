@@ -439,12 +439,10 @@ func (ua *UprobeAttacher) Start() error {
 			log.Infof("uprobe attacher %s stopped", ua.name)
 		}()
 
-		var sharedLibDataChan <-chan ebpf.DataEvent
-		var sharedLibLostChan <-chan uint64
+		var sharedLibDataChan <-chan *sharedlibraries.LibPath
 
 		if ua.soWatcher != nil {
-			sharedLibDataChan = ua.soWatcher.GetPerfHandler().DataChannel()
-			sharedLibLostChan = ua.soWatcher.GetPerfHandler().LostChannel()
+			sharedLibDataChan = ua.soWatcher.GetPerfHandler()
 		}
 
 		for {
@@ -454,14 +452,11 @@ func (ua *UprobeAttacher) Start() error {
 			case <-processSync.C:
 				// We always track process deletions in the scan, to avoid memory leaks.
 				_ = ua.Sync(ua.config.EnablePeriodicScanNewProcesses, true)
-			case event, ok := <-sharedLibDataChan:
+			case lib, ok := <-sharedLibDataChan:
 				if !ok {
 					return
 				}
-				_ = ua.handleLibraryOpen(&event)
-			case <-sharedLibLostChan:
-				// Nothing to do in this case
-				break
+				_ = ua.handleLibraryOpen(lib)
 			}
 		}
 	}()
@@ -535,12 +530,9 @@ func (ua *UprobeAttacher) handleProcessExit(pid uint32) {
 	_ = ua.DetachPID(pid)
 }
 
-func (ua *UprobeAttacher) handleLibraryOpen(event *ebpf.DataEvent) error {
-	defer event.Done()
-
-	libpath := sharedlibraries.ToLibPath(event.Data)
-	path := sharedlibraries.ToBytes(&libpath)
-
+func (ua *UprobeAttacher) handleLibraryOpen(libpath *sharedlibraries.LibPath) error {
+	// TODO release libpath back into pool
+	path := sharedlibraries.ToBytes(libpath)
 	return ua.AttachLibrary(string(path), libpath.Pid)
 }
 

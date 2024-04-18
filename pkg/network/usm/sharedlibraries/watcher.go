@@ -17,7 +17,6 @@ import (
 	"time"
 	"unsafe"
 
-	ddebpf "github.com/DataDog/datadog-agent/pkg/ebpf"
 	"github.com/DataDog/datadog-agent/pkg/network/config"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/network/usm/utils"
@@ -32,9 +31,9 @@ const (
 	scanTerminatedProcessesInterval = 30 * time.Second
 )
 
-// ToLibPath casts the perf event data to the LibPath structure
-func ToLibPath(data []byte) LibPath {
-	return *(*LibPath)(unsafe.Pointer(&data[0]))
+func (l *LibPath) UnmarshalBinary(data []byte) error {
+	*l = *(*LibPath)(unsafe.Pointer(&data[0]))
+	return nil
 }
 
 // ToBytes converts the libpath to a byte array containing the path
@@ -55,7 +54,7 @@ type Watcher struct {
 	done           chan struct{}
 	procRoot       string
 	rules          []Rule
-	loadEvents     *ddebpf.PerfHandler
+	loadEvents     <-chan *LibPath
 	processMonitor *monitor.ProcessMonitor
 	registry       *utils.FileRegistry
 	ebpfProgram    *EbpfProgram
@@ -240,8 +239,6 @@ func (w *Watcher) Start() {
 			w.wg.Done()
 		}()
 
-		dataChannel := w.loadEvents.DataChannel()
-		lostChannel := w.loadEvents.LostChannel()
 		for {
 			select {
 			case <-w.done:
@@ -252,20 +249,19 @@ func (w *Watcher) Start() {
 				for deletedPid := range deletedPids {
 					_ = w.registry.Unregister(deletedPid)
 				}
-			case event, ok := <-dataChannel:
+			case lib, ok := <-w.loadEvents:
 				if !ok {
 					return
 				}
 
-				lib := ToLibPath(event.Data)
 				if int(lib.Pid) == thisPID {
+					libPathPool.Put(lib)
 					// don't scan ourself
-					event.Done()
 					continue
 				}
 
 				w.libHits.Add(1)
-				path := ToBytes(&lib)
+				path := ToBytes(lib)
 				for _, r := range w.rules {
 					if r.Re.Match(path) {
 						w.libMatches.Add(1)
@@ -273,10 +269,7 @@ func (w *Watcher) Start() {
 						break
 					}
 				}
-				event.Done()
-			case <-lostChannel:
-				// Nothing to do in this case
-				break
+				libPathPool.Put(lib)
 			}
 		}
 	}()

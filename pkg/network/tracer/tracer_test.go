@@ -1055,7 +1055,6 @@ func (s *TracerSuite) TestTCPEstablished() {
 	t := s.T()
 	// Ensure closed connections are flushed as soon as possible
 	cfg := testConfig()
-
 	tr := setupTracer(t, cfg)
 
 	server := testutil.NewTCPServer(func(c net.Conn) {
@@ -1073,14 +1072,14 @@ func (s *TracerSuite) TestTCPEstablished() {
 
 	connections := getConnections(t, tr)
 	conn, ok := findConnection(laddr, raddr, connections)
-
 	require.True(t, ok)
 	assert.Equal(t, uint32(1), conn.Last.TCPEstablished)
 	assert.Equal(t, uint32(0), conn.Last.TCPClosed)
 
 	c.Close()
+	// Wait for the connection to be closed
+	time.Sleep(500 * time.Millisecond)
 
-	// Wait for the connection to be sent from the perf buffer
 	require.Eventually(t, func() bool {
 		var ok bool
 		conn, ok = findConnection(laddr, raddr, getConnections(t, tr))
@@ -1107,7 +1106,6 @@ func (s *TracerSuite) TestTCPEstablishedPreExistingConn() {
 
 	// Ensure closed connections are flushed as soon as possible
 	cfg := testConfig()
-
 	tr := setupTracer(t, cfg)
 
 	c.Write([]byte("hello"))
