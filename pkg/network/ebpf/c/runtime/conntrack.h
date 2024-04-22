@@ -66,8 +66,9 @@ static __always_inline u32 get_netns(const struct nf_conn *ct) {
 static __always_inline int nf_conn_to_conntrack_tuples(struct nf_conn* ct, conntrack_tuple_t* orig, conntrack_tuple_t* reply) {
     struct nf_conntrack_tuple_hash tuplehash[IP_CT_DIR_MAX];
     bpf_memset(tuplehash, 0, sizeof(tuplehash));
-    BPF_CORE_READ_INTO(&tuplehash, ct, tuplehash);
-
+    if (BPF_CORE_READ_INTO(&tuplehash, ct, tuplehash)) {
+        return 1;
+    }
     if (!nf_conntrack_tuple_to_conntrack_tuple(orig, &tuplehash[IP_CT_DIR_ORIGINAL].tuple)) {
         return 1;
     }
