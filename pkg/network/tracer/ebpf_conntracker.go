@@ -510,15 +510,16 @@ func ebpfPrebuiltConntrackerSupportedOnKernel() (bool, error) {
 }
 
 func ebpfCOREConntrackerSupportedOnKernel() (bool, error) {
-	kv, err := ebpfkernel.NewKernelVersion()
-	if err != nil {
-		return false, fmt.Errorf("could not get kernel version: %s", err)
-	}
-
-	if kv.Code >= ebpfkernel.Kernel4_14 || kv.IsRH7Kernel() {
-		return true, nil
-	}
-	return false, nil
+	return true, nil
+	//kv, err := ebpfkernel.NewKernelVersion()
+	//if err != nil {
+	//	return false, fmt.Errorf("could not get kernel version: %s", err)
+	//}
+	//
+	//if kv.Code >= ebpfkernel.Kernel4_14 || kv.IsRH7Kernel() {
+	//	return true, nil
+	//}
+	//return false, nil
 }
 
 func getRCConntracker(cfg *config.Config) (*manager.Manager, error) {
