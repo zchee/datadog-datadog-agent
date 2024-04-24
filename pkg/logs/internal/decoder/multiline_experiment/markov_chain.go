@@ -48,7 +48,7 @@ func (m *MarkovChain) Compile() {
 	}
 }
 
-func (m *MarkovChain) TestFit(tokens []Token) float64 {
+func (m *MarkovChain) MatchProbability(tokens []Token) float64 {
 	out := make([]float64, len(tokens)-1)
 
 	lastToken := tokens[0]
@@ -56,7 +56,29 @@ func (m *MarkovChain) TestFit(tokens []Token) float64 {
 		out[i] = m.transitionTable[lastToken][token]
 		lastToken = token
 	}
+	// return geoMean(trimStateSet(out))
 	return geoMean(out)
+}
+
+// Removes leading and trailing zeros
+func trimStateSet(states []float64) []float64 {
+	start := 0
+	for i, n := range states {
+		if n != 0 {
+			start = i
+			break
+		}
+	}
+
+	end := len(states)
+	for i := len(states) - 1; i >= 0; i-- {
+		if states[i] != 0 {
+			end = i + 1
+			break
+		}
+	}
+
+	return states[start:end]
 }
 
 func geoMean(states []float64) float64 {

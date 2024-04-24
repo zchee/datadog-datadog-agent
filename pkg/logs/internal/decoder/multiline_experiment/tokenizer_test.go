@@ -32,3 +32,9 @@ func TestTokenizer(t *testing.T) {
 		assert.Equal(t, tc.expectedToken, actualToken)
 	}
 }
+
+func TestTrimStateSet(t *testing.T) {
+
+	newv := trimStateSet([]float64{0, 0, 0, 0.1, 0.2, 0.3, 0.4, 0, 0, 0, 0})
+	assert.Equal(t, []float64{0.1, 0.2, 0.3, 0.4}, newv)
+}
