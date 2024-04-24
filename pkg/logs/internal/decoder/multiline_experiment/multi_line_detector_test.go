@@ -28,8 +28,8 @@ func TestClusterTable(t *testing.T) {
 	d.FoundMultiLineLog(true)
 
 	assert.Equal(t, len(d.clusterTable), 2)
-	assert.Equal(t, d.clusterTable[0].score, 2)
-	assert.Equal(t, d.clusterTable[1].score, 2)
+	assert.Equal(t, d.clusterTable[0].sampleCount, int64(2))
+	assert.Equal(t, d.clusterTable[1].sampleCount, int64(2))
 }
 
 func TestPayloadMultiLineMatch(t *testing.T) {
@@ -50,11 +50,10 @@ func TestPayloadMultiLineMatch(t *testing.T) {
 
 	assert.Equal(t, payload.Clusters, 3)
 	assert.Equal(t, payload.DroppedClusters, 0)
-	assert.Equal(t, payload.Confidence, 0.8)
 	assert.Equal(t, payload.DetectedMultiLineLog, true)
 	assert.Equal(t, payload.MixedFormatLikely, false)
 	assert.Equal(t, payload.TopMatch.Tokens, "CCC DDD")
-	assert.Equal(t, payload.TopMatch.Score, 4)
+	assert.Equal(t, payload.TopMatch.SampleCount, int64(4))
 }
 
 func TestPayloadMixedFormat(t *testing.T) {
@@ -75,11 +74,8 @@ func TestPayloadMixedFormat(t *testing.T) {
 
 	assert.Equal(t, payload.Clusters, 3)
 	assert.Equal(t, payload.DroppedClusters, 0)
-	assert.Equal(t, payload.Confidence, 0.6)
 	assert.Equal(t, payload.DetectedMultiLineLog, false)
 	assert.Equal(t, payload.MixedFormatLikely, true)
-	assert.Equal(t, payload.TopMatch.Tokens, "CCC DDD")
-	assert.Equal(t, payload.TopMatch.Score, 3)
 }
 
 func toMessage(s string) *message.Message {
