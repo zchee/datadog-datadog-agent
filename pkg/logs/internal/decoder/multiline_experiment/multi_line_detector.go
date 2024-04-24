@@ -8,36 +8,45 @@ package multilineexperiment
 
 import (
 	"encoding/json"
+	"regexp"
 	"sort"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
+var jsonRegexp = regexp.MustCompile(`^\s*\{\s*\"`)
+
 // AnalyticsPayload contains the analytics data for the multi-line experiment
 type AnalyticsPayload struct {
+	ID                   string       `json:"id"`
 	Clusters             int          `json:"clusters"`
+	Samples              int          `json:"samples"`
 	DroppedClusters      int          `json:"dropped_clusters"`
 	DetectedMultiLineLog bool         `json:"detected_multi_line_log"`
 	MixedFormatLikely    bool         `json:"mixed_format_likely"`
-	Confidence           float64      `json:"confidence"`
+	Confidence           float32      `json:"confidence"`
 	TopMatch             ClusterRow   `json:"top_match"`
 	ClusterTable         []ClusterRow `json:"clusters_table"`
 }
 
 // ClusterRow represents a row in the cluster table
 type ClusterRow struct {
-	Score  int    `json:"score"`
-	Tokens string `json:"tokens"`
-	Sample string `json:"sample"`
+	Score       int64  `json:"score"`
+	SampleCount int64  `json:"sample_count"`
+	Tokens      string `json:"tokens"`
+	Sample      string `json:"sample"`
 }
 
 type tokenCluster struct {
-	score  int
-	tokens []Token
-	sample string
+	score       int64
+	sampleCount int64
+	tokens      []Token
+	sample      string
 }
 
 // MultiLineDetector is collects data about logs and reports metrics if we think they are multi-line.
@@ -51,6 +60,9 @@ type MultiLineDetector struct {
 	reportInterval      time.Duration
 	reportTicker        *time.Ticker
 	droppedClusters     int
+	totalSamples        int
+	containsJSON        bool
+	id                  string
 
 	clusterTable []*tokenCluster
 }
@@ -73,6 +85,9 @@ func NewMultiLineDetector() *MultiLineDetector {
 		clusterTableMaxSize: clusterTableMaxSize,
 		reportInterval:      reportInterval,
 		droppedClusters:     0,
+		totalSamples:        0,
+		containsJSON:        false,
+		id:                  uuid.New().String(),
 		reportTicker:        time.NewTicker(reportInterval),
 		clusterTable:        []*tokenCluster{},
 	}
@@ -91,6 +106,15 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 		return
 	}
 
+	defer m.reportAnalytics(false)
+
+	m.totalSamples++
+
+	// 0. pre-process: if log is json, never aggregate
+	if jsonRegexp.Match(content) {
+		m.containsJSON = true
+	}
+
 	// 1. Tokenize the log
 	maxLength := len(content)
 	if maxLength > m.tokenLength {
@@ -104,7 +128,8 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 	for i, cluster := range m.clusterTable {
 		matched = isMatch(tokens, cluster.tokens, m.tokenMatchThreshold)
 		if matched {
-			cluster.score++
+			cluster.sampleCount++
+			cluster.score += 10
 
 			// By keeping the scored clusters sorted, the best match always comes first. Since we expect one timestamp to match overwhelmingly
 			// it should match most often causing few re-sorts.
@@ -132,7 +157,6 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 		m.droppedClusters++
 	}
 
-	m.reportAnalytics(false)
 }
 
 // FoundMultiLineLog reports if a multi-line log was detected from the core-agent mulit-line detection
@@ -148,10 +172,12 @@ func (m *MultiLineDetector) FoundMultiLineLog(val bool) {
 
 func (m *MultiLineDetector) buildPayload() *AnalyticsPayload {
 	payload := &AnalyticsPayload{
+		ID:                   m.id,
 		Clusters:             len(m.clusterTable),
 		DroppedClusters:      m.droppedClusters,
 		DetectedMultiLineLog: *m.foundMultiLineLog,
 		ClusterTable:         []ClusterRow{},
+		Samples:              m.totalSamples,
 	}
 
 	if len(m.clusterTable) >= 1 {
@@ -166,9 +192,9 @@ func (m *MultiLineDetector) buildPayload() *AnalyticsPayload {
 	if len(m.clusterTable) > 1 {
 		first := m.clusterTable[0].score
 		second := m.clusterTable[1].score
-		confidence := float64(first) / float64(first+second)
+		confidence := float32(first) / float32(first+second)
 		payload.Confidence = confidence
-		payload.MixedFormatLikely = confidence <= m.detectionThreshold
+		payload.MixedFormatLikely = confidence <= float32(m.detectionThreshold)
 	}
 
 	for _, cluster := range m.clusterTable {
