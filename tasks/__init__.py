@@ -22,6 +22,7 @@ from tasks import (
     emacs,
     epforwarder,
     fakeintake,
+    fedramp,
     github_tasks,
     installer,
     kmt,
@@ -75,7 +76,12 @@ from tasks.go_test import (
     send_unit_tests_stats,
     test,
 )
-from tasks.install_tasks import download_tools, install_devcontainer_cli, install_shellcheck, install_tools
+from tasks.install_tasks import (
+    download_tools,
+    install_devcontainer_cli,
+    install_shellcheck,
+    install_tools,
+)
 from tasks.junit_tasks import junit_upload
 from tasks.libs.common.go_workspaces import handle_go_work
 from tasks.show_linters_issues import show_linters_issues
@@ -169,13 +175,14 @@ ns.add_collection(devcontainer)
 ns.add_collection(omnibus)
 ns.configure(
     {
-        'run': {
+        "run": {
             # this should stay, set the encoding explicitly so invoke doesn't
             # freak out if a command outputs unicode chars.
-            'encoding': 'utf-8',
+            "encoding": "utf-8",
         }
     }
 )
+ns.add_collection(fedramp)
 
 # disable go workspaces by default
 handle_go_work()
