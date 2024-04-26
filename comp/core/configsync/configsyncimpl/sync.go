@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -68,7 +67,7 @@ func fetchConfig(ctx context.Context, client *http.Client, authtoken, url string
 	options := apiutil.ReqOptions{
 		Ctx:       ctx,
 		Conn:      apiutil.LeaveConnectionOpen,
-		Authtoken: authtoken,
+		Authtoken: authtoken, //FEDRAMP TO CHECK all http call usin authtoken
 	}
 	data, err := apiutil.DoGetWithOptions(client, url, &options)
 	if err != nil {

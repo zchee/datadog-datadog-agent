@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -55,7 +54,7 @@ func buildSelfSignedKeyPair(additionalHostIdentities ...string) ([]byte, []byte)
 
 	// PEM encode the private key
 	rootKeyPEM := pem.EncodeToMemory(&pem.Block{
-		Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(rootKey),
+		Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(rootKey), // FEDRAMP TO CHECK
 	})
 
 	// Create and return TLS private cert and key
@@ -68,16 +67,16 @@ func initializeTLS(additionalHostIdentities ...string) (*tls.Certificate, *x509.
 		log.Infof("[%s:%d] Initializing TLS certificates for hosts %v", file, line, strings.Join(additionalHostIdentities, ", "))
 	}
 
-	cert, key := buildSelfSignedKeyPair(additionalHostIdentities...)
+	cert, key := buildSelfSignedKeyPair(additionalHostIdentities...) // FEDRAMP TO CHECK
 	if cert == nil {
 		return nil, nil, errors.New("unable to generate certificate")
 	}
-	pair, err := tls.X509KeyPair(cert, key)
+	pair, err := tls.X509KeyPair(cert, key) // FEDRAMP TO CHECK
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to generate TLS key pair: %v", err)
 	}
 
-	tlsCertPool := x509.NewCertPool()
+	tlsCertPool := x509.NewCertPool() // FEDRAMP TO CHECK
 	ok := tlsCertPool.AppendCertsFromPEM(cert)
 	if !ok {
 		return nil, nil, fmt.Errorf("unable to add new certificate to pool")

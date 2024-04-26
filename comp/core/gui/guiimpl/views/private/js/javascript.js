@@ -13,7 +13,7 @@ if (!String.prototype.endsWith) {
 }
 
 // Attempts to fetch the API key from the browsers cookies
-function getAuthToken() {
+function getAuthToken() { // FEDRAMP TO CHECK
   var cookies = document.cookie.split(';');
   for (var i = 0; i < cookies.length; i++) {
       var c = cookies[i];

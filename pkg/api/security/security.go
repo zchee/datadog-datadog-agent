@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -45,6 +44,7 @@ func GenerateKeyPair(bits int) (*rsa.PrivateKey, error) {
 	return privKey, nil
 }
 
+// FEDRAMP TO CHECK this file
 // CertTemplate create x509 certificate template
 func CertTemplate() (*x509.Certificate, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)

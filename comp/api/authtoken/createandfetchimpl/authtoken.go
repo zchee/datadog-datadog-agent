@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -40,6 +39,7 @@ type dependencies struct {
 	Log  log.Component
 }
 
+// FEDRAMP TO CHECK whole authtoken system
 func newAuthToken(deps dependencies) (authtoken.Component, error) {
 	if err := util.CreateAndSetAuthToken(deps.Conf); err != nil {
 		deps.Log.Error("could not create auth_token: %s", err)
