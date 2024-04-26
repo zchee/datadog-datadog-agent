@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -33,7 +32,7 @@ func getUUID() string {
 				windows.StringToUTF16Ptr(`SOFTWARE\Microsoft\Cryptography`),
 				0,
 				windows.KEY_READ|windows.KEY_WOW64_64KEY,
-				&h)
+				&h) // FEDRAMP REVIEW TODO
 			if err != nil {
 				return "", log.Warnf("Failed to open registry key Cryptography: %v", err)
 			}
