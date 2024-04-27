@@ -20,8 +20,10 @@
     - RPM_GPG_KEY=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $RPM_GPG_KEY_SSM_NAME)
     - printf -- "$RPM_GPG_KEY" | gpg --import --batch
     - export RPM_SIGNING_PASSPHRASE=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $RPM_SIGNING_PASSPHRASE_SSM_NAME)
+    - !reference [.setup_dd_org2_api_key]
     - inv -e omnibus.build --release-version "$RELEASE_VERSION" --base-dir $OMNIBUS_BASE_DIR --skip-deps --target-project=installer ${OMNIBUS_EXTRA_ARGS}
     - ls -la $OMNIBUS_PACKAGE_DIR/
+    - inv package.send-size --flavor "installer" --package-os "${PACKAGE_OS}" --package-path $OMNIBUS_PACKAGE_DIR/datadog-installer-7.*.${PACKAGE_ARCH_EXTENSION}.rpm --major-version "7" --git-ref "${CI_COMMIT_REF_SLUG}" --bucket-branch "${BUCKET_BRANCH}" --arch "${PACKAGE_ARCH}"
     - !reference [.lint_linux_packages]
   stage: packaging
   artifacts:

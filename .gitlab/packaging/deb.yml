@@ -10,7 +10,9 @@
     - export OMNIBUS_PACKAGE_ARTIFACT="$(ls ${OMNIBUS_PACKAGE_DIR}/*.tar.xz | head -n 1)"
     - echo "Packaging artifact ${OMNIBUS_PACKAGE_ARTIFACT} to .deb"
     - !reference [.setup_deb_signing_key]
+    - !reference [.setup_dd_org2_api_key]
     - inv -e omnibus.build --release-version "$RELEASE_VERSION" --base-dir $OMNIBUS_BASE_DIR --skip-deps --target-project installer
+    - inv package.send-size --flavor "installer" --package-os "debian" --package-path $OMNIBUS_PACKAGE_DIR/datadog-installer_7.*_${PACKAGE_ARCH_EXTENSION}.deb --major-version "7" --git-ref "${CI_COMMIT_REF_SLUG}" --bucket-branch "${BUCKET_BRANCH}" --arch "${PACKAGE_ARCH}"
     - !reference [.lint_linux_packages]
     - $S3_CP_CMD $OMNIBUS_PACKAGE_DIR/datadog-installer_*_${PACKAGE_ARCH_EXTENSION}.deb $S3_ARTIFACTS_URI/$DESTINATION_DEB
   artifacts:

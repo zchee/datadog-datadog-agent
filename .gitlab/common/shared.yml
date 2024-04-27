@@ -59,6 +59,10 @@
   - printf -- "${DEB_GPG_KEY}" | gpg --import --batch
   - export DEB_SIGNING_PASSPHRASE=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $DEB_SIGNING_PASSPHRASE_SSM_NAME)
 
+.setup_dd_org2_api_key: &setup_dd_org2_api_key
+  - set +x
+  - export DD_API_KEY=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $API_KEY_ORG2_SSM_NAME)
+
 .setup_macos_github_app:
   # GitHub App rate-limits are per-app.
   # This balances the requests made to GitHub between the two apps we have set up.

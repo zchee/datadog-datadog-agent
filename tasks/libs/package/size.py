@@ -27,6 +27,9 @@ SCANNED_BINARIES = {
         "process-agent": "opt/datadog-agent/embedded/bin/process-agent",
         "trace-agent": "opt/datadog-agent/embedded/bin/trace-agent",
     },
+    "installer": {
+        "installer": "opt/datadog-installer/bin/installer",
+    },
 }
 
 
