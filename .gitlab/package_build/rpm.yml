@@ -54,7 +54,8 @@ agent_rpm-x64-a6:
     AGENT_MAJOR_VERSION: 6
     PYTHON_RUNTIMES: "2,3"
     PACKAGE_ARCH: amd64
-    DD_PKG_ARCH: "x86_64"
+    PACKAGE_ARCH_EXTENSION: x86_64
+    DD_PKG_ARCH: x86_64
   before_script:
     - source /root/.bashrc
     - export RELEASE_VERSION=$RELEASE_VERSION_6
@@ -79,7 +80,8 @@ agent_rpm-x64-a7:
     AGENT_MAJOR_VERSION: 7
     PYTHON_RUNTIMES: "3"
     PACKAGE_ARCH: amd64
-    DD_PKG_ARCH: "x86_64"
+    PACKAGE_ARCH_EXTENSION: x86_64
+    DD_PKG_ARCH: x86_64
   before_script:
     - source /root/.bashrc
     - export RELEASE_VERSION=$RELEASE_VERSION_7
@@ -105,7 +107,8 @@ agent_rpm-arm64-a6:
     AGENT_MAJOR_VERSION: 6
     PYTHON_RUNTIMES: "2,3"
     PACKAGE_ARCH: arm64
-    DD_PKG_ARCH: "arm64"
+    PACKAGE_ARCH_EXTENSION: aarch64
+    DD_PKG_ARCH: arm64
   before_script:
     - source /root/.bashrc
     - export RELEASE_VERSION=$RELEASE_VERSION_6
@@ -131,7 +134,8 @@ agent_rpm-arm64-a7:
     AGENT_MAJOR_VERSION: 7
     PYTHON_RUNTIMES: "3"
     PACKAGE_ARCH: arm64
-    DD_PKG_ARCH: "arm64"
+    PACKAGE_ARCH_EXTENSION: aarch64
+    DD_PKG_ARCH: arm64
   before_script:
     - source /root/.bashrc
     - export RELEASE_VERSION=$RELEASE_VERSION_7
@@ -177,7 +181,9 @@ iot_agent_rpm-x64:
   tags: ["arch:amd64"]
   needs: ["go_mod_tidy_check", "go_deps"]
   variables:
-    DD_PKG_ARCH: "x86_64"
+    PACKAGE_ARCH: amd64
+    PACKAGE_ARCH_EXTENSION: x86_64
+    DD_PKG_ARCH: x86_64
 
 iot_agent_rpm-arm64:
   extends: .iot_agent_build_common_rpm
@@ -190,7 +196,9 @@ iot_agent_rpm-arm64:
   tags: ["arch:arm64"]
   needs: ["go_mod_tidy_check", "go_deps"]
   variables:
-    DD_PKG_ARCH: "arm64"
+    PACKAGE_ARCH: arm64
+    PACKAGE_ARCH_EXTENSION: aarch64
+    DD_PKG_ARCH: arm64
 
 iot_agent_rpm-armhf:
   extends: .iot_agent_build_common_rpm
@@ -204,7 +212,9 @@ iot_agent_rpm-armhf:
   tags: ["arch:arm64"]
   needs: ["go_mod_tidy_check", "go_deps"]
   variables:
-    DD_PKG_ARCH: "arm64"
+    PACKAGE_ARCH: armv7
+    PACKAGE_ARCH_EXTENSION: armv7hl
+    DD_PKG_ARCH: arm64
   before_script:
     # Ensures uname -m reports armv7l
     - export LD_PRELOAD="/usr/local/lib/libfakearmv7l.so"
@@ -218,7 +228,9 @@ dogstatsd_rpm-x64:
   tags: ["arch:amd64"]
   needs: ["go_mod_tidy_check", "build_dogstatsd-binary_x64", "go_deps"]
   variables:
-    DD_PKG_ARCH: "x86_64"
+    PACKAGE_ARCH: amd64
+    PACKAGE_ARCH_EXTENSION: x86_64
+    DD_PKG_ARCH: x86_64
   before_script:
     - source /root/.bashrc
     - !reference [.retrieve_linux_go_deps]

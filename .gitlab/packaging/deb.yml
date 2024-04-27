@@ -1,11 +1,9 @@
 ---
 .installer_package_deb_common:
-  before_script:
-    - source /root/.bashrc
-    - export RELEASE_VERSION=$RELEASE_VERSION_7
   stage: packaging
   script:
     - source /root/.bashrc
+    - export RELEASE_VERSION=$RELEASE_VERSION_7
     - !reference [.setup_ruby_mirror_linux]
     - !reference [.cache_omnibus_ruby_deps, setup]
     - echo "About to package for $RELEASE_VERSION"
@@ -14,7 +12,7 @@
     - !reference [.setup_deb_signing_key]
     - inv -e omnibus.build --release-version "$RELEASE_VERSION" --base-dir $OMNIBUS_BASE_DIR --skip-deps --target-project installer
     - !reference [.lint_linux_packages]
-    - $S3_CP_CMD $OMNIBUS_PACKAGE_DIR/datadog-installer_*_${PACKAGE_ARCH}.deb $S3_ARTIFACTS_URI/$DESTINATION_DEB
+    - $S3_CP_CMD $OMNIBUS_PACKAGE_DIR/datadog-installer_*_${PACKAGE_ARCH_EXTENSION}.deb $S3_ARTIFACTS_URI/$DESTINATION_DEB
   artifacts:
     expire_in: 2 weeks
     paths:
@@ -32,8 +30,9 @@ installer_deb-amd64:
   needs: ["installer-amd64"]
   variables:
     PACKAGE_ARCH: amd64
+    PACKAGE_ARCH_EXTENSION: amd64
+    DD_PKG_ARCH: x86_64
     DESTINATION_DEB: "datadog-installer_7_amd64.deb"
-    DD_PKG_ARCH: "x86_64"
 
 installer_deb-arm64:
   extends: .installer_package_deb_common
@@ -45,6 +44,7 @@ installer_deb-arm64:
   needs: ["installer-arm64"]
   variables:
     PACKAGE_ARCH: arm64
+    PACKAGE_ARCH_EXTENSION: arm64
+    DD_PKG_ARCH: arm64
     DESTINATION_DEB: "datadog-installer_7_arm64.deb"
-    DD_PKG_ARCH: "arm64"
 
