@@ -437,11 +437,12 @@ func (e *ebpfProgram) init(buf bytecode.AssetReader, options manager.Options) er
 	// Add excluded functions from disabled protocols
 	for _, p := range notSupported {
 		for _, m := range p.Maps {
+			options.ExcludedMaps = append(options.ExcludedMaps, m.Name)
 			// Unused maps still need to have a non-zero size
-			options.MapSpecEditors[m.Name] = manager.MapSpecEditor{
-				MaxEntries: uint32(1),
-				EditorFlag: manager.EditMaxEntries,
-			}
+			//options.MapSpecEditors[m.Name] = manager.MapSpecEditor{
+			//	MaxEntries: uint32(1),
+			//	EditorFlag: manager.EditMaxEntries,
+			//}
 
 			log.Debugf("disabled map: %v", m.Name)
 		}
