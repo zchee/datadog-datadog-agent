@@ -61,7 +61,7 @@ deploy_deb_testing-a6_x64:
     [
       "agent_deb-x64-a6",
       "agent_heroku_deb-x64-a6",
-      "lint_linux-x64",
+      {"job": "lint_linux-x64", "optional": true},
     ]
   script:
     - *setup_apt_signing_key
@@ -111,7 +111,7 @@ deploy_deb_testing-a7_x64:
       "agent_heroku_deb-x64-a7",
       "iot_agent_deb-x64",
       "dogstatsd_deb-x64",
-      "lint_linux-x64",
+      {"job": "lint_linux-x64", "optional": true},
     ]
   script:
     - *setup_apt_signing_key
@@ -128,7 +128,7 @@ deploy_deb_testing-a7_arm64:
   rules: !reference [.on_all_new_e2e_tests]
   extends:
     - .deploy_deb_testing-a7
-  needs: ["agent_deb-arm64-a7", "lint_linux-arm64"]
+  needs: ["agent_deb-arm64-a7", {"job": "lint_linux-arm64", "optional": true}]
   script:
     - *setup_apt_signing_key
     - set +x # make sure we don't output the creds to the build log
@@ -145,7 +145,7 @@ deploy_deb_testing-i7_amd64:
     - when: on_success
   extends:
     - .deploy_deb_testing-i7
-  needs: ["installer_deb-amd64", "lint_linux-x64"]
+  needs: ["installer_deb-amd64", {"job": "lint_linux-x64", "optional": true}]
   script:
     - *setup_apt_signing_key
     - set +x # make sure we don't output the creds to the build log
@@ -162,7 +162,7 @@ deploy_deb_testing-i7_arm64:
     - when: on_success
   extends:
     - .deploy_deb_testing-i7
-  needs: ["installer_deb-arm64", "lint_linux-arm64"]
+  needs: ["installer_deb-arm64", {"job": "lint_linux-arm64", "optional": true}]
   script:
     - *setup_apt_signing_key
     - set +x # make sure we don't output the creds to the build log
@@ -189,7 +189,7 @@ deploy_rpm_testing-a6_x64:
   needs:
     [
       "agent_rpm-x64-a6",
-      "lint_linux-x64",
+      {"job": "lint_linux-x64", "optional": true},
     ]
   script:
     - *setup_rpm_signing_key
@@ -203,7 +203,7 @@ deploy_rpm_testing-a6_arm64:
   needs:
     [
       "agent_rpm-arm64-a6",
-      "lint_linux-arm64",
+      {"job": "lint_linux-arm64", "optional": true},
     ]
   script:
     - *setup_rpm_signing_key
@@ -232,7 +232,7 @@ deploy_rpm_testing-a7_x64:
       "agent_rpm-x64-a7",
       "iot_agent_rpm-x64",
       "dogstatsd_rpm-x64",
-      "lint_linux-x64",
+      {"job": "lint_linux-x64", "optional": true},
     ]
   script:
     - *setup_rpm_signing_key
@@ -243,7 +243,7 @@ deploy_rpm_testing-a7_arm64:
   rules: !reference [.on_all_new_e2e_tests]
   extends:
     - .deploy_rpm_testing-a7
-  needs: ["agent_rpm-arm64-a7", "lint_linux-arm64"]
+  needs: ["agent_rpm-arm64-a7", {"job": "lint_linux-arm64", "optional": true}]
   script:
     - *setup_rpm_signing_key
     - set +x
@@ -266,7 +266,7 @@ deploy_rpm_testing-a7_arm64:
 deploy_rpm_testing-i7_arm64:
   extends:
     - .deploy_rpm_testing-i7
-  needs: ["installer_rpm-arm64", "lint_linux-arm64"]
+  needs: ["installer_rpm-arm64", {"job": "lint_linux-arm64", "optional": true}]
   script:
     - *setup_rpm_signing_key
     - set +x # make sure we don't output the creds to the build log
@@ -275,7 +275,7 @@ deploy_rpm_testing-i7_arm64:
 deploy_rpm_testing-i7_x64:
   extends:
     - .deploy_rpm_testing-i7
-  needs: ["installer_rpm-amd64", "lint_linux-x64"]
+  needs: ["installer_rpm-amd64", {"job": "lint_linux-x64", "optional": true}]
   script:
     - *setup_rpm_signing_key
     - set +x # make sure we don't output the creds to the build log
@@ -284,7 +284,7 @@ deploy_rpm_testing-i7_x64:
 deploy_suse_rpm_testing-i7_arm64:
   extends:
     - .deploy_rpm_testing-i7
-  needs: ["installer_suse_rpm-arm64", "lint_linux-arm64"]
+  needs: ["installer_suse_rpm-arm64", {"job": "lint_linux-arm64", "optional": true}]
   script:
     - *setup_rpm_signing_key
     - set +x # make sure we don't output the creds to the build log
@@ -293,7 +293,7 @@ deploy_suse_rpm_testing-i7_arm64:
 deploy_suse_rpm_testing-i7_x64:
   extends:
     - .deploy_rpm_testing-i7
-  needs: ["installer_suse_rpm-amd64", "lint_linux-x64"]
+  needs: ["installer_suse_rpm-amd64", {"job": "lint_linux-x64", "optional": true}]
   script:
     - *setup_rpm_signing_key
     - set +x # make sure we don't output the creds to the build log
@@ -307,7 +307,7 @@ deploy_suse_rpm_testing_x64-a6:
   needs:
     [
       "agent_suse-x64-a6",
-      "lint_linux-x64",
+      {"job": "lint_linux-x64", "optional": true},
     ]
   variables:
     DD_PIPELINE_ID: $CI_PIPELINE_ID-a6
@@ -332,7 +332,7 @@ deploy_suse_rpm_testing_x64-a7:
       "agent_suse-x64-a7",
       "iot_agent_suse-x64",
       "dogstatsd_suse-x64",
-      "lint_linux-x64",
+      {"job": "lint_linux-x64", "optional": true},
     ]
   variables:
     DD_PIPELINE_ID: $CI_PIPELINE_ID-a7
@@ -349,7 +349,7 @@ deploy_suse_rpm_testing_arm64-a7:
   stage: kitchen_deploy
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
   tags: ["arch:amd64"]
-  needs: ["agent_suse-arm64-a7", "lint_linux-arm64"]
+  needs: ["agent_suse-arm64-a7", {"job": "lint_linux-arm64", "optional": true}]
   variables:
     DD_PIPELINE_ID: $CI_PIPELINE_ID-a7
   before_script:

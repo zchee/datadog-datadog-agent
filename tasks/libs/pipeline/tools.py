@@ -90,6 +90,7 @@ def trigger_agent_pipeline(
     e2e_tests=False,
     rc_build=False,
     rc_k8s_deployments=False,
+    fast_path=False
 ):
     """
     Trigger a pipeline on the datadog-agent repositories. Multiple options are available:
@@ -131,6 +132,9 @@ def trigger_agent_pipeline(
 
     if rc_k8s_deployments:
         args["RC_K8S_DEPLOYMENTS"] = "true"
+
+    if fast_path:
+        args["FAST_PATH"] = "true"
 
     print(
         "Creating pipeline for datadog-agent on branch/tag {} with args:\n{}".format(  # noqa: FS002

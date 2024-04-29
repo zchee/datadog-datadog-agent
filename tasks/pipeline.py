@@ -224,6 +224,7 @@ def run(
     e2e_tests=True,
     rc_build=False,
     rc_k8s_deployments=False,
+    fast_path=False,
 ):
     """
     Run a pipeline on the given git ref (--git-ref <git ref>), or on the current branch if --here is given.
@@ -333,6 +334,7 @@ def run(
             e2e_tests=e2e_tests,
             rc_build=rc_build,
             rc_k8s_deployments=rc_k8s_deployments,
+            fast_path=fast_path,
         )
     except FilteredOutException:
         print(color_message(f"ERROR: pipeline does not match any workflow rule. Rules:\n{workflow_rules()}", "red"))

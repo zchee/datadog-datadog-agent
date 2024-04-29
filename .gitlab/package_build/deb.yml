@@ -45,7 +45,7 @@ agent_deb-x64-a6:
   tags: ["arch:amd64"]
   needs:
     [
-      "go_mod_tidy_check",
+      {job: "go_mod_tidy_check", optional: true},
       "build_system-probe-x64",
       "go_deps",
       "generate_minimized_btfs_x64",
@@ -70,7 +70,7 @@ agent_deb-x64-a7:
   tags: ["arch:amd64"]
   needs:
     [
-      "go_mod_tidy_check",
+      {job: "go_mod_tidy_check", optional: true},
       "build_system-probe-x64",
       "go_deps",
       "generate_minimized_btfs_x64",
@@ -96,7 +96,7 @@ agent_deb-arm64-a6:
   tags: ["arch:arm64"]
   needs:
     [
-      "go_mod_tidy_check",
+      {job: "go_mod_tidy_check", optional: true},
       "build_system-probe-arm64",
       "go_deps",
       "generate_minimized_btfs_arm64",
@@ -121,7 +121,7 @@ agent_deb-arm64-a7:
   tags: ["arch:arm64"]
   needs:
     [
-      "go_mod_tidy_check",
+      {job: "go_mod_tidy_check", optional: true},
       "build_system-probe-arm64",
       "go_deps",
       "generate_minimized_btfs_arm64",
@@ -174,7 +174,7 @@ iot_agent_deb-x64:
   stage: package_build
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
   tags: ["arch:amd64"]
-  needs: ["go_mod_tidy_check", "go_deps"]
+  needs: [{job: "go_mod_tidy_check", optional: true}, "go_deps"]
   variables:
     PACKAGE_ARCH: amd64
     DESTINATION_DEB: "datadog-iot-agent_7_amd64.deb"
@@ -189,7 +189,7 @@ iot_agent_deb-arm64:
   stage: package_build
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
   tags: ["arch:arm64"]
-  needs: ["go_mod_tidy_check", "go_deps"]
+  needs: [{job: "go_mod_tidy_check", optional: true}, "go_deps"]
   variables:
     PACKAGE_ARCH: arm64
     DESTINATION_DEB: "datadog-iot-agent_7_arm64.deb"
@@ -205,7 +205,7 @@ iot_agent_deb-armhf:
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_armhf$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
   # Run with platform:arm64 since no platform:armhf exists and arm64 should be backwards compatible
   tags: ["arch:arm64"]
-  needs: ["go_mod_tidy_check", "go_deps"]
+  needs: [{job: "go_mod_tidy_check", optional: true}, "go_deps"]
   variables:
     PACKAGE_ARCH: armhf
     DESTINATION_DEB: "datadog-iot-agent_7_armhf.deb"
@@ -218,7 +218,7 @@ dogstatsd_deb-x64:
   stage: package_build
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
   tags: ["arch:amd64"]
-  needs: ["go_mod_tidy_check", "build_dogstatsd-binary_x64", "go_deps"]
+  needs: [{job: "go_mod_tidy_check", optional: true}, "build_dogstatsd-binary_x64", "go_deps"]
   variables:
     DD_PKG_ARCH: "x86_64"
   before_script:
@@ -250,7 +250,7 @@ dogstatsd_deb-arm64:
   stage: package_build
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
   tags: ["arch:arm64"]
-  needs: ["go_mod_tidy_check", "build_dogstatsd-binary_arm64", "go_deps"]
+  needs: [{job: "go_mod_tidy_check", optional: true}, "build_dogstatsd-binary_arm64", "go_deps"]
   variables:
     DD_PKG_ARCH: "arm64"
   before_script:
