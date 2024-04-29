@@ -7,7 +7,7 @@ build do
     license "Apache-2.0"
     license_file "./LICENSE"
 
-    # no Windows support for now.
+    # No Windows support for now.
     if linux_target? || osx_target?
         command "cargo build --release", cwd: "#{project_dir}/sds-go/rust"
         if osx_target?
