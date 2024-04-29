@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -105,7 +104,7 @@ func newGui(deps dependencies) optional.Option[guicomp.Component] {
 	}
 
 	// Create a CSRF token (unique to each session)
-	e := g.createCSRFToken()
+	e := g.createCSRFToken() // FEDRAMP TO CHECK - CSRF token is created
 	if e != nil {
 		g.logger.Errorf("GUI server initialization failed (unable to create CSRF token): ", e)
 		return optional.NewNoneOption[guicomp.Component]()
@@ -175,7 +174,7 @@ func (g *gui) stop(_ context.Context) error {
 
 func (g *gui) createCSRFToken() error {
 	key := make([]byte, 32)
-	_, e := rand.Read(key)
+	_, e := rand.Read(key) // FEDRAMP TO CHECK - grep this function in hte code base
 	if e != nil {
 		return fmt.Errorf("error creating CSRF token: " + e.Error())
 	}

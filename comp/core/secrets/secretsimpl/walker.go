@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -56,7 +55,7 @@ func (w *walker) slice(currentSlice []interface{}, yamlPath []string) error {
 
 // hash handles map types, the walker will recursively explore each element of the map continuing its search for
 // strings to replace.
-func (w *walker) hash(currentMap map[interface{}]interface{}, yamlPath []string) error {
+func (w *walker) hash(currentMap map[interface{}]interface{}, yamlPath []string) error { // FEDRAMP TO CHECK: is this hash for security purpose?
 	for configKey := range currentMap {
 		path := yamlPath
 		if newkey, ok := configKey.(string); ok {

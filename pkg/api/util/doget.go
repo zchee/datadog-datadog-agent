@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -41,7 +40,7 @@ func GetClient(verify bool) *http.Client {
 	}
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // FEDRAMP TO CHECK - InsecureSkipVerify is set to true
 	}
 
 	return &http.Client{Transport: tr}
@@ -67,7 +66,7 @@ func DoGetWithOptions(c *http.Client, url string, options *ReqOptions) (body []b
 		return body, e
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+options.Authtoken)
+	req.Header.Set("Authorization", "Bearer "+options.Authtoken) // FEDRAMP TO CHECK - Authorization header is set with Bearer token
 	if options.Conn == CloseConnection {
 		req.Close = true
 	}

@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -69,7 +68,7 @@ func newHealthProbe(lc fx.Lifecycle, deps dependencies) (healthprobeComponent.Co
 		return nil, nil
 	}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", healthPort))
+	ln, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", healthPort)) // FEDRAMP TO CHECK listen on all interfaces ?
 	if err != nil {
 		return nil, err
 	}

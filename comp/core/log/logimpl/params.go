@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -115,7 +114,7 @@ func ForDaemon(loggerName, logFileConfig, defaultLogFile string) Params {
 		}
 
 		if uri == "" {
-			return "unixgram:///dev/log"
+			return "unixgram:///dev/log" // FEDRAMP TO CHECK
 		}
 
 		return uri
