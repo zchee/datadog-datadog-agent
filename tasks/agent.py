@@ -152,6 +152,7 @@ def build(
         python_home_3=python_home_3,
         major_version=major_version,
         python_runtimes=python_runtimes,
+        include_sds=include_sds,
     )
 
     bundled_agents = ["agent"]

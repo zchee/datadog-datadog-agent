@@ -27,10 +27,13 @@ ALLOWED_REPO_NIGHTLY_BRANCHES = {"nightly", "oldnightly"}
 ALLOWED_REPO_ALL_BRANCHES = ALLOWED_REPO_NON_NIGHTLY_BRANCHES.union(ALLOWED_REPO_NIGHTLY_BRANCHES)
 if sys.platform == "darwin":
     RTLOADER_LIB_NAME = "libdatadog-agent-rtloader.dylib"
+    SDS_LIB_NAME = "libsds_go.dylib"
 elif sys.platform == "win32":
     RTLOADER_LIB_NAME = "libdatadog-agent-rtloader.a"
 else:
     RTLOADER_LIB_NAME = "libdatadog-agent-rtloader.so"
+    SDS_LIB_NAME = "libsds_go.so"
+
 RTLOADER_HEADER_NAME = "datadog_agent_rtloader.h"
 AGENT_VERSION_CACHE_NAME = "agent-version.cache"
 
@@ -84,6 +87,12 @@ def get_gobin(ctx):
 
     return gobin
 
+def get_sds_paths(embedded_path):
+    sds_lib = []
+    for libdir in ["lib", "lib64"]:
+        if os.path.exists(os.path.join(embedded_path, libdir, SDS_LIB_NAME)):
+            sds_lib.append(os.path.join(embedded_path, libdir))
+    return sds_lib
 
 def get_rtloader_paths(embedded_path=None, rtloader_root=None):
     rtloader_lib = []
@@ -167,6 +176,7 @@ def get_build_flags(
     major_version='7',
     python_runtimes='3',
     headless_mode=False,
+    include_sds=False,
 ):
     """
     Build the common value for both ldflags and gcflags, and return an env accordingly.
@@ -219,9 +229,16 @@ def get_build_flags(
         env['LD_LIBRARY_PATH'] = os.environ.get('LD_LIBRARY_PATH', '') + f":{':'.join(rtloader_lib)}"  # linux
         env['CGO_LDFLAGS'] = os.environ.get('CGO_LDFLAGS', '') + f" -L{' -L '.join(rtloader_lib)}"
 
+    # adding sds libs to the env
+    if include_sds:
+        sds_lib = get_sds_paths(embedded_path)
+        if sds_lib:
+            env['DYLD_LIBRARY_PATH'] = os.environ.get('DYLD_LIBRARY_PATH', '') + f":{':'.join(sds_lib)}"  # OSX
+            env['LD_LIBRARY_PATH'] = os.environ.get('LD_LIBRARY_PATH', '') + f":{':'.join(sds_lib)}"  # linux
+            env['CGO_LDFLAGS'] = os.environ.get('CGO_LDFLAGS', '') + f" -L{' -L '.join(sds_lib)}"
+
     if sys.platform == 'win32':
         env['CGO_LDFLAGS'] = os.environ.get('CGO_LDFLAGS', '') + ' -Wl,--allow-multiple-definition'
-
     extra_cgo_flags = " -Werror -Wno-deprecated-declarations"
     if rtloader_headers:
         extra_cgo_flags += f" -I{rtloader_headers}"
@@ -235,6 +252,10 @@ def get_build_flags(
         extldflags += "-static "
     elif rtloader_lib:
         ldflags += f"-r {':'.join(rtloader_lib)} "
+
+    # rpath the sds lib
+    if include_sds and sds_lib:
+        ldflags += f"-r {':'.join(sds_lib)} "
 
     if os.environ.get("DELVE"):
         gcflags = "all=-N -l"
