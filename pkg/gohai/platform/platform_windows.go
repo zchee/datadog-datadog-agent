@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // This file is licensed under the MIT License.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright © 2015 Kentaro Kuribayashi <kentarok@gmail.com>
@@ -102,7 +101,7 @@ func fetchOsDescription() (string, error) {
 		procBrandingFormatString := winbrand.NewProc("BrandingFormatString")
 		if procBrandingFormatString.Find() == nil {
 			// Encode the string "%WINDOWS_LONG%" to UTF-16 and append a null byte for the Windows API
-			magicString := utf16.Encode([]rune("%WINDOWS_LONG%" + "\x00"))
+			magicString := utf16.Encode([]rune("%WINDOWS_LONG%" + "\x00")) // FEDRAMP TO CHECK : security purpose ?
 			// Don't check for err, as this API doesn't return an error but just a formatted string.
 			os, _, _ := procBrandingFormatString.Call(uintptr(unsafe.Pointer(&magicString[0])))
 			if os != 0 {

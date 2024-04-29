@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -88,7 +87,7 @@ func exportRemoteConfig(fb flaretypes.FlareBuilder) error {
 }
 
 func hashRCTargets(raw []byte) []byte {
-	hash := sha256.Sum256(raw)
+	hash := sha256.Sum256(raw) // FEDRAMP TO CHECK: security purpose ?
 	// Convert it to readable hex
 	s := hex.EncodeToString(hash[:])
 
@@ -130,7 +129,7 @@ func getRemoteConfigDB(fb flaretypes.FlareBuilder) error {
 				}
 				return tempBucket.ForEach(func(k, v []byte) error {
 					if strings.HasSuffix(string(bucketName), "_targets") {
-						return dstBucket.Put(k, hashRCTargets(v))
+						return dstBucket.Put(k, hashRCTargets(v)) // FEDRAMP TO CHECK
 					}
 					return dstBucket.Put(k, v)
 				})

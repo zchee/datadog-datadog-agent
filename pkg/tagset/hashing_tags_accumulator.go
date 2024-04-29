@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.Datadoghq.com/).
@@ -23,7 +22,7 @@ type HashingTagsAccumulator struct {
 // NewHashingTagsAccumulator returns a new empty HashingTagsAccumulator
 func NewHashingTagsAccumulator() *HashingTagsAccumulator {
 	return &HashingTagsAccumulator{
-		hashedTags: newHashedTagsWithCapacity(128),
+		hashedTags: newHashedTagsWithCapacity(128), // FEDRAMP TO CHECK
 	}
 }
 

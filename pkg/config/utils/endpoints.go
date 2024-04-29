@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -128,7 +127,7 @@ func GetMainEndpoint(c pkgconfigmodel.Reader, prefix string, ddURLKey string) st
 }
 
 // GetMRFEndpoint returns the MRF DD URL defined in the config, based on `multi_region_failover.site` and the prefix, or ddMRFURLKey
-func GetMRFEndpoint(c pkgconfigmodel.Reader, prefix, ddMRFURLKey string) (string, error) {
+func GetMRFEndpoint(c pkgconfigmodel.Reader, prefix, ddMRFURLKey string) (string, error) { // FEDRAMP TO CHECK: Replication between availability zones ? (same for additional endpoints)
 	// value under ddURLKey takes precedence over 'multi_region_failover.site'
 	if c.IsSet(ddMRFURLKey) && c.GetString(ddMRFURLKey) != "" {
 		return getResolvedMRFDDURL(c, ddMRFURLKey), nil

@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -194,7 +193,7 @@ func decodeRelease(data string) ([]byte, error) {
 func decodeChartValuesFromRelease(encodedRelease string) ([]byte, error) {
 	var userConfig chartUserValues
 
-	decodedrelease, err := decodeRelease(encodedRelease)
+	decodedrelease, err := decodeRelease(encodedRelease) // FEDRAMP TO CHECK (security purpose ?)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +233,7 @@ func getHelmValues() ([]byte, error) {
 	} else {
 		// Contrary to the Configmap, the secret data is a byte array, so the string function is necessary
 		dataString = string(secret.Data["release"])
-		helmUserValues, err = decodeChartValuesFromRelease(dataString)
+		helmUserValues, err = decodeChartValuesFromRelease(dataString) // FEDRAMP TO CHECK (security purpose ?)
 		if err != nil {
 			log.Warnf("Unable to decode release stored in secret: %v", err)
 		} else {
@@ -247,7 +246,7 @@ func getHelmValues() ([]byte, error) {
 		log.Warnf("Error while collecting the Helm chart values from configmap: %v", err)
 	} else {
 		dataString = configmap.Data["release"]
-		helmUserValues, err = decodeChartValuesFromRelease(dataString)
+		helmUserValues, err = decodeChartValuesFromRelease(dataString) // FEDRAMP TO CHECK (security purpose ?)
 		if err != nil {
 			log.Warnf("Unable to decode release stored in configmap: %v", err)
 		} else {

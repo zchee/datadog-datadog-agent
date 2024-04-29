@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -51,7 +50,7 @@ func readAllDmesg() ([]byte, error) {
 	const syslogActionSizeBuffer = 10
 	const syslogActionReadAll = 3
 
-	n, err := syscall.Klogctl(syslogActionSizeBuffer, nil)
+	n, err := syscall.Klogctl(syslogActionSizeBuffer, nil) // FEDRAMP TO CHECK: syslog related idk what it does
 	if err != nil {
 		return nil, fmt.Errorf("failed to query size of log buffer [%w]", err)
 	}

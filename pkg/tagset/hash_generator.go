@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.Datadoghq.com/).
@@ -41,6 +40,7 @@ const bruteforceSize = 4
 // blank is a marker value to indicate that hashset slot is vacant.
 const blank = -1
 
+// FEDRAMP TO CHECK make sure this is not used for security purposes
 // NewHashGenerator creates a new HashGenerator
 func NewHashGenerator() *HashGenerator {
 	g := &HashGenerator{}

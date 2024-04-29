@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -169,7 +168,7 @@ func getExpVar(fb flaretypes.FlareBuilder) error {
 		return fb.AddFile(f, []byte(fmt.Sprintf("Got response %s from /debug/vars:\n%s", resp.Status, slurp)))
 	}
 	var all map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&all); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&all); err != nil { // FEDRAMP TO CHECK: is this decryption ? (for security purpose ?)
 		return fmt.Errorf("error decoding trace-agent /debug/vars response: %v", err)
 	}
 	v, err := yaml.Marshal(all)
