@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -17,7 +16,7 @@ type APITokenRenewCallback func(context.Context) (string, time.Time, error)
 
 // APIToken is an API token with auto renew when expired
 type APIToken struct {
-	Value          string
+	Value          string // FEDRAMP REVIEW TODO
 	ExpirationDate time.Time
 	renewCallback  APITokenRenewCallback
 
