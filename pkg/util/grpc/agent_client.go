@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -37,7 +36,7 @@ func getGRPCClientConn(ctx context.Context, ipcAddress string, cmdPort string, o
 	// This is needed as the server hangs when using "grpc.WithInsecure()"
 	tlsConf := tls.Config{InsecureSkipVerify: true}
 
-	opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tlsConf)))
+	opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tlsConf))) // FEDRAMP TO CHECK
 
 	target := net.JoinHostPort(ipcAddress, cmdPort)
 

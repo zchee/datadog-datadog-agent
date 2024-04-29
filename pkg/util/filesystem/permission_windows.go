@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -50,7 +49,7 @@ func getCurrentUserSid() (*windows.SID, error) {
 		return nil, fmt.Errorf("Couldn't get process token %v", err)
 	}
 	defer token.Close()
-	user, err := token.GetTokenUser()
+	user, err := token.GetTokenUser() // FEDRAMP TO CHECK
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get token user %v", err)
 	}

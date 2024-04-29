@@ -1,4 +1,3 @@
-// FEDRAMP REVIEW TODO
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -25,7 +24,7 @@ type verifierFunc func(string) (interface{}, error)
 // request headers, and validates it using the provided func.
 func AuthInterceptor(verifier verifierFunc) grpc_auth.AuthFunc {
 	return func(ctx context.Context) (context.Context, error) {
-		token, err := grpc_auth.AuthFromMD(ctx, "Bearer")
+		token, err := grpc_auth.AuthFromMD(ctx, "Bearer") // FEDRAMP TO CHECK
 		if err != nil {
 			return nil, err
 		}
