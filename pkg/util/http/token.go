@@ -16,7 +16,7 @@ type APITokenRenewCallback func(context.Context) (string, time.Time, error)
 
 // APIToken is an API token with auto renew when expired
 type APIToken struct {
-	Value          string // FEDRAMP REVIEW TODO
+	Value          string // FEDRAMP TO CHECK
 	ExpirationDate time.Time
 	renewCallback  APITokenRenewCallback
 

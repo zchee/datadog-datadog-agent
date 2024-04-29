@@ -11,4 +11,4 @@ import "github.com/DataDog/datadog-agent/pkg/util/cache"
 
 // GetUUID returns the UUID of the host
 var GetUUID = getUUID                                           // For testing purposes
-var guidCacheKey = cache.BuildAgentKey("host", "utils", "uuid") // FEDRAMP REVIEW TODO
+var guidCacheKey = cache.BuildAgentKey("host", "utils", "uuid") // FEDRAMP TO CHECK

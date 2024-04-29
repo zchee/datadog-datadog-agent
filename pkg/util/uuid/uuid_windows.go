@@ -32,7 +32,7 @@ func getUUID() string {
 				windows.StringToUTF16Ptr(`SOFTWARE\Microsoft\Cryptography`),
 				0,
 				windows.KEY_READ|windows.KEY_WOW64_64KEY,
-				&h) // FEDRAMP REVIEW TODO
+				&h) // FEDRAMP TO CHECK
 			if err != nil {
 				return "", log.Warnf("Failed to open registry key Cryptography: %v", err)
 			}

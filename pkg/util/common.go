@@ -23,7 +23,7 @@ import (
 )
 
 func init() {
-	rand.Seed(time.Now().UnixNano()) // FEDRAMP REVIEW TODO
+	rand.Seed(time.Now().UnixNano()) // FEDRAMP TO CHECK
 }
 
 // CopyFile atomically copies file path `src“ to file path `dst`.

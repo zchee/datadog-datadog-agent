@@ -77,7 +77,7 @@ func CreateHTTPTransport(cfg pkgconfigmodel.Reader) *http.Transport {
 	})
 
 	tlsConfig := &tls.Config{
-		KeyLogWriter:       keyLogWriter, // FEDRAMP REVIEW TODO
+		KeyLogWriter:       keyLogWriter, // FEDRAMP TO CHECK
 		InsecureSkipVerify: cfg.GetBool("skip_ssl_validation"),
 	}
 
