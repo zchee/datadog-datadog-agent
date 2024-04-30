@@ -122,7 +122,7 @@ func mutatingWebhooks(wmeta workloadmeta.Component, rcClient *rcclient.Client, s
 		log.Errorf("failed to register APM Instrumentation webhook: %v", err)
 	}
 
-	cws, err := cwsinstrumentation.NewCWSInstrumentation()
+	cws, err := cwsinstrumentation.NewCWSInstrumentation(wmeta)
 	if err == nil {
 		webhooks = append(webhooks, cws.WebhookForPods(), cws.WebhookForCommands())
 	} else {

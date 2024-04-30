@@ -9,6 +9,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -25,8 +26,32 @@ const (
 
 var installerUnits = []string{installerUnit, installerUnitExp}
 
+// PreSetupInstaller creates the necessary directories for the installer to be installed.
+// FIXME: This is a preinst and I feel bad about it
+func PreSetupInstaller() error {
+	err := os.MkdirAll("/opt/datadog-packages", 0755)
+	if err != nil {
+		return fmt.Errorf("error creating /opt/datadog-packages: %w", err)
+	}
+	return nil
+}
+
+func addDDAgentUser(ctx context.Context) error {
+	if _, err := user.Lookup("dd-agent"); err == nil {
+		return nil
+	}
+	return exec.CommandContext(ctx, "useradd", "--system", "--shell", "/usr/sbin/nologin", "--home", "/opt/datadog-packages", "--no-create-home", "--no-user-group", "-g", "dd-agent", "dd-agent").Run()
+}
+
+func addDDAgentGroup(ctx context.Context) error {
+	if _, err := user.LookupGroup("dd-agent"); err == nil {
+		return nil
+	}
+	return exec.CommandContext(ctx, "groupadd", "--system", "dd-agent").Run()
+}
+
 // SetupInstaller installs and starts the installer systemd units
-func SetupInstaller(ctx context.Context, enableDaemon bool) (err error) {
+func SetupInstaller(ctx context.Context) (err error) {
 	defer func() {
 		if err != nil {
 			log.Errorf("Failed to setup installer: %s, reverting", err)
@@ -34,28 +59,19 @@ func SetupInstaller(ctx context.Context, enableDaemon bool) (err error) {
 		}
 	}()
 
-	cmd := exec.CommandContext(ctx, "adduser", "--system", "dd-agent", "--disabled-login", "--shell", "/usr/sbin/nologin", "--home", "/opt/datadog-packages", "--no-create-home", "--group", "--quiet")
-	err = cmd.Run()
-	if err != nil {
-		return fmt.Errorf("error creating dd-agent user: %w", err)
-	}
-	cmd = exec.CommandContext(ctx, "addgroup", "--system", "dd-agent", "--quiet")
-	err = cmd.Run()
-	if err != nil {
+	if err = addDDAgentGroup(ctx); err != nil {
 		return fmt.Errorf("error creating dd-agent group: %w", err)
 	}
-	cmd = exec.CommandContext(ctx, "usermod", "-g", "dd-agent", "dd-agent")
-	err = cmd.Run()
+	if addDDAgentUser(ctx) != nil {
+		return fmt.Errorf("error creating dd-agent user: %w", err)
+	}
+	err = exec.CommandContext(ctx, "usermod", "-g", "dd-agent", "dd-agent").Run()
 	if err != nil {
 		return fmt.Errorf("error adding dd-agent user to dd-agent group: %w", err)
 	}
 	ddAgentUID, ddAgentGID, err := getAgentIDs()
 	if err != nil {
 		return fmt.Errorf("error getting dd-agent user and group IDs: %w", err)
-	}
-	err = os.MkdirAll("/opt/datadog-packages", 0755)
-	if err != nil {
-		return fmt.Errorf("error creating /opt/datadog-packages: %w", err)
 	}
 	err = os.MkdirAll("/var/log/datadog", 0755)
 	if err != nil {
@@ -74,7 +90,21 @@ func SetupInstaller(ctx context.Context, enableDaemon bool) (err error) {
 	if err != nil {
 		return fmt.Errorf("error changing owner of /var/log/datadog: %w", err)
 	}
-	if !enableDaemon {
+	err = os.Chown("/opt/datadog-packages/datadog-installer/stable/run", ddAgentUID, ddAgentGID)
+	if err != nil {
+		return fmt.Errorf("error changing owner of /opt/datadog-packages/datadog-installer/stable/run: %w", err)
+	}
+
+	// Create installer path symlink
+	err = os.Symlink("/opt/datadog-packages/datadog-installer/stable/bin/installer/installer", "/usr/bin/datadog-installer")
+	if err != nil && errors.Is(err, os.ErrExist) {
+		log.Info("Installer symlink already exists, skipping")
+	} else if err != nil {
+		return fmt.Errorf("error creating symlink to /usr/bin/datadog-installer: %w", err)
+	}
+
+	// FIXME(Arthur): enable the daemon unit by default and use the same strategy as the system probe
+	if os.Getenv("DD_REMOTE_UPDATES") != "true" {
 		return nil
 	}
 
@@ -105,6 +135,7 @@ func SetupInstaller(ctx context.Context, enableDaemon bool) (err error) {
 	return startInstallerStable(ctx)
 }
 
+// getAgentIDs returns the UID and GID of the dd-agent user and group.
 func getAgentIDs() (uid, gid int, err error) {
 	ddAgentUser, err := user.Lookup("dd-agent")
 	if err != nil {
@@ -142,6 +173,11 @@ func RemoveInstaller(ctx context.Context) {
 		if err := removeUnit(ctx, unit); err != nil {
 			log.Warnf("Failed to stop %s: %s", unit, err)
 		}
+	}
+
+	// Remove symlink
+	if err := os.Remove("/usr/bin/datadog-installer"); err != nil {
+		log.Warnf("Failed to remove /usr/bin/datadog-installer: %s", err)
 	}
 }
 
