@@ -3,8 +3,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-// Package deb provides a way to create and install dumb deb packages that conflict with existing packages.
-package deb
+// Package dpkg provides functions to interact with dpkg.
+package dpkg
 
 import (
 	"archive/tar"
@@ -18,15 +18,15 @@ import (
 	"github.com/xor-gate/ar"
 )
 
-// Deb writes a new deb package to the given writer using the given info.
-func Deb(name string, version string, conflicts []string, out io.Writer) error {
+// deb writes a new deb package to the given writer using the given info.
+func deb(pkg string, version string, conflicts []string, out io.Writer) error {
 	mtime := time.Now()
 
 	dataTar, err := createDataTar()
 	if err != nil {
 		return fmt.Errorf("cannot create data tarball: %w", err)
 	}
-	controlTar, err := createControlTar(name, version, conflicts, mtime)
+	controlTar, err := createControlTar(pkg, version, conflicts, mtime)
 	if err != nil {
 		return fmt.Errorf("cannot create control tarball: %w", err)
 	}
