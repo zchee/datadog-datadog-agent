@@ -8,7 +8,9 @@ package amqp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"sync"
@@ -22,6 +24,12 @@ type Options struct {
 	Username      string
 	Password      string
 	Dialer        *net.Dialer
+
+	// WithTLS indicates whether the connection should be made using TLS
+	WithTLS bool
+	// TlsDialFn is a function that returns a TLS connection as an
+	// io.ReadWriteCloser, suitable to be used with amqp.Open.
+	TLSDialFn func() (io.ReadWriteCloser, error)
 }
 
 // Client is a wrapper around the amqp client
@@ -43,12 +51,7 @@ func NewClient(opts Options) (*Client, error) {
 		opts.Password = Pass
 	}
 
-	dialOptions := amqp.Config{}
-	if opts.Dialer != nil {
-		dialOptions.Dial = opts.Dialer.Dial
-	}
-
-	publishConn, err := amqp.DialConfig(fmt.Sprintf("amqp://%s:%s@%s/", opts.Username, opts.Password, opts.ServerAddress), dialOptions)
+	publishConn, err := newAMQPConnection(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +59,7 @@ func NewClient(opts Options) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	consumeConn, err := amqp.DialConfig(fmt.Sprintf("amqp://%s:%s@%s/", opts.Username, opts.Password, opts.ServerAddress), dialOptions)
+	consumeConn, err := newAMQPConnection(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -172,4 +175,51 @@ func (c *Client) Consume(queue string, numberOfMessages int) ([]string, error) {
 	wg.Wait()
 
 	return res, nil
+}
+
+// newAMQPConnection wraps connection creation from the "amqp" package. It handles
+// the differences in the connection creation process between plaintext & TLS
+// connections. Specifically, for TLS connections, it uses a
+// TransparentUnixProxyServer to handle the TLS part, allowing tests to hook it
+// using USM's GoTLS decoding.
+// Returns a new connection to the AMQP server, on an error if it failed to
+// make one.
+func newAMQPConnection(opts Options) (*amqp.Connection, error) {
+	url := getURL(opts)
+
+	if opts.WithTLS {
+		if opts.TLSDialFn == nil {
+			return nil, errors.New("TLS dial function not set")
+		}
+
+		conn, err := opts.TLSDialFn()
+		if err != nil {
+			return nil, err
+		}
+
+		return amqp.Open(conn, amqp.Config{
+			SASL: []amqp.Authentication{&amqp.PlainAuth{
+				Username: opts.Username,
+				Password: opts.Password,
+			}},
+			Vhost: "/",
+		})
+	}
+
+	dialOptions := amqp.Config{}
+	if opts.Dialer != nil {
+		dialOptions.Dial = opts.Dialer.Dial
+	}
+
+	return amqp.DialConfig(url, dialOptions)
+}
+
+// getURL returns the URL to connect to the AMQP server.
+func getURL(opts Options) string {
+	scheme := "amqp"
+	if opts.WithTLS {
+		scheme = "amqps"
+	}
+
+	return fmt.Sprintf("%s://%s:%s@%s/", scheme, opts.Username, opts.Password, opts.ServerAddress)
 }
