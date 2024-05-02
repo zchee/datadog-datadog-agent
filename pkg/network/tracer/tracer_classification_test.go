@@ -119,6 +119,7 @@ const (
 	mongoPort      = "27017"
 	redisPort      = "6379"
 	amqpPort       = "5672"
+	amqpsPort      = "5671"
 	httpPort       = "8080"
 	httpsPort      = "8443"
 	http2Port      = "9090"

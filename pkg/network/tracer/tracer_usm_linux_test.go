@@ -30,14 +30,20 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/config"
 	netlink "github.com/DataDog/datadog-agent/pkg/network/netlink/testutil"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/amqp"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http/testutil"
 	prototls "github.com/DataDog/datadog-agent/pkg/network/protocols/tls/openssl"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer/connection"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer/connection/kprobe"
+	"github.com/DataDog/datadog-agent/pkg/network/tracer/testutil/proxy"
 	"github.com/DataDog/datadog-agent/pkg/network/usm/testutil/grpc"
 	"github.com/DataDog/datadog-agent/pkg/network/usm/utils"
 	grpc2 "github.com/DataDog/datadog-agent/pkg/util/grpc"
+)
+
+const (
+	amqpUnixPath = "/tmp/amqp_transparent.sock"
 )
 
 func httpSupported() bool {
@@ -88,6 +94,7 @@ func (s *USMSuite) TestProtocolClassification() {
 	}
 
 	cfg.EnableNativeTLSMonitoring = true
+	cfg.EnableGoTLSSupport = true
 	cfg.EnableHTTPMonitoring = true
 	tr, err := NewTracer(cfg)
 	require.NoError(t, err)
@@ -352,6 +359,7 @@ func testTLSClassification(t *testing.T, tr *Tracer, clientHost, targetHost, ser
 			name string
 			fn   func(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string)
 		}{
+			{"AMQP", testTLSAMQPClassification},
 			{"HTTP", testHTTPSClassification},
 		}
 
@@ -361,6 +369,144 @@ func testTLSClassification(t *testing.T, tr *Tracer, clientHost, targetHost, ser
 			})
 		}
 	})
+}
+
+func testTLSAMQPClassification(t *testing.T, tr *Tracer, _, targetHost, serverHost string) {
+	skipFunc := composeSkips(skipIfNotLinux, skipIfUsingNAT, skipIfHTTPSNotSupported)
+	skipFunc(t, testContext{
+		serverAddress: serverHost,
+		serverPort:    amqpsPort,
+		targetAddress: targetHost,
+	})
+
+	// Start the proxy server.
+	authority := net.JoinHostPort(serverHost, amqpsPort)
+	_, cancel := proxy.NewExternalUnixTransparentProxyServer(t, amqpUnixPath, authority, amqp.AmqpTLS)
+	t.Cleanup(cancel)
+	require.NoError(t, proxy.WaitForConnectionReady(amqpUnixPath))
+
+	clientDialFn := func() (io.ReadWriteCloser, error) {
+		return net.Dial("unix", amqpUnixPath)
+	}
+
+	amqpTeardown := func(t *testing.T, ctx testContext) {
+		if client, ok := ctx.extras["client"].(*amqp.Client); ok {
+			defer client.Terminate()
+
+			require.NoError(t, client.DeleteQueues())
+		}
+	}
+
+	// Setting one instance of amqp server for all tests.
+	serverAddress := net.JoinHostPort(serverHost, amqpsPort)
+	targetAddress := net.JoinHostPort(targetHost, amqpsPort)
+	require.NoError(t, amqp.RunServer(t, serverHost, amqpsPort, amqp.AmqpTLS))
+
+	tests := []protocolClassificationAttributes{
+		{
+			name: "connect",
+			context: testContext{
+				serverPort:    amqpsPort,
+				serverAddress: serverAddress,
+				targetAddress: targetAddress,
+				extras:        make(map[string]interface{}),
+			},
+			postTracerSetup: func(t *testing.T, ctx testContext) {
+				client, err := amqp.NewClient(amqp.Options{
+					ServerAddress: ctx.serverAddress,
+					WithTLS:       true,
+					TLSDialFn:     clientDialFn,
+				})
+				require.NoError(t, err)
+				ctx.extras["client"] = client
+			},
+			teardown:   amqpTeardown,
+			validation: validateProtocolConnection(&protocols.Stack{Encryption: protocols.TLS, Application: protocols.AMQP}),
+		},
+		{
+			name: "declare channel",
+			context: testContext{
+				serverPort:    amqpsPort,
+				serverAddress: serverAddress,
+				targetAddress: targetAddress,
+				extras:        make(map[string]interface{}),
+			},
+			preTracerSetup: func(t *testing.T, ctx testContext) {
+				client, err := amqp.NewClient(amqp.Options{
+					ServerAddress: ctx.serverAddress,
+					WithTLS:       true,
+					TLSDialFn:     clientDialFn,
+				})
+				require.NoError(t, err)
+				ctx.extras["client"] = client
+			},
+			postTracerSetup: func(t *testing.T, ctx testContext) {
+				client := ctx.extras["client"].(*amqp.Client)
+				require.NoError(t, client.DeclareQueue("test", client.PublishChannel))
+			},
+			teardown:   amqpTeardown,
+			validation: validateProtocolConnection(&protocols.Stack{Encryption: protocols.TLS}),
+		},
+		{
+			name: "publish",
+			context: testContext{
+				serverPort:    amqpsPort,
+				serverAddress: serverAddress,
+				targetAddress: targetAddress,
+				extras:        make(map[string]interface{}),
+			},
+			preTracerSetup: func(t *testing.T, ctx testContext) {
+				client, err := amqp.NewClient(amqp.Options{
+					ServerAddress: ctx.serverAddress,
+					WithTLS:       true,
+					TLSDialFn:     clientDialFn,
+				})
+				require.NoError(t, err)
+				require.NoError(t, client.DeclareQueue("test", client.PublishChannel))
+				ctx.extras["client"] = client
+			},
+			postTracerSetup: func(t *testing.T, ctx testContext) {
+				client := ctx.extras["client"].(*amqp.Client)
+				require.NoError(t, client.Publish("test", "my msg"))
+			},
+			teardown:   amqpTeardown,
+			validation: validateProtocolConnection(&protocols.Stack{Encryption: protocols.TLS, Application: protocols.AMQP}),
+		},
+		{
+			name: "consume",
+			context: testContext{
+				serverPort:    amqpsPort,
+				serverAddress: serverAddress,
+				targetAddress: targetAddress,
+				extras:        make(map[string]interface{}),
+			},
+			preTracerSetup: func(t *testing.T, ctx testContext) {
+				client, err := amqp.NewClient(amqp.Options{
+					ServerAddress: ctx.serverAddress,
+					WithTLS:       true,
+					TLSDialFn:     clientDialFn,
+				})
+				require.NoError(t, err)
+				require.NoError(t, client.DeclareQueue("test", client.PublishChannel))
+				require.NoError(t, client.DeclareQueue("test", client.ConsumeChannel))
+				require.NoError(t, client.Publish("test", "my msg"))
+				ctx.extras["client"] = client
+			},
+			postTracerSetup: func(t *testing.T, ctx testContext) {
+				client := ctx.extras["client"].(*amqp.Client)
+				res, err := client.Consume("test", 1)
+				require.NoError(t, err)
+				require.Equal(t, []string{"my msg"}, res)
+			},
+			teardown:   amqpTeardown,
+			validation: validateProtocolConnection(&protocols.Stack{Encryption: protocols.TLS, Application: protocols.AMQP}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testProtocolClassificationInner(t, tt, tr)
+		})
+	}
 }
 
 func testHTTPSClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
