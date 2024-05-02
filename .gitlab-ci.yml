@@ -1,5 +1,7 @@
 ---
 hello-world:
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64:v32377621-ce42cb8e
+  tags: ["arch:amd64"]
+  needs: []
   script:
     - echo "Hello, world! :rocket:"
