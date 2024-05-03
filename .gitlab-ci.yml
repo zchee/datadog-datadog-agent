@@ -12,6 +12,7 @@ stages:
     - python3 -m pip install -r tasks/libs/requirements-github.txt
     - echo $PATH
     - which python3
+    - gimme 1.21.5
     - inv -e install-tools
     - inv -e deps
     - inv -e agent.version --version-cached
