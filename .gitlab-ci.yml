@@ -9,6 +9,7 @@ stages:
     # - brew uninstall golangci-lint
     - python3 -m pip install -r requirements.txt
     - python3 -m pip install -r tasks/libs/requirements-github.txt
+    - echo $PATH
     - inv -e install-tools
     - inv -e deps
     - inv -e agent.version --version-cached
