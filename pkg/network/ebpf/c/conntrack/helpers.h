@@ -41,22 +41,18 @@ static __always_inline int nf_conntrack_tuple_to_conntrack_tuple(conntrack_tuple
     switch (ct->dst.protonum) {
     case IPPROTO_TCP:
         t->metadata = CONN_TYPE_TCP;
-        t->sport = ct->src.u.tcp.port;
-        t->dport = ct->dst.u.tcp.port;
         break;
     case IPPROTO_UDP:
         t->metadata = CONN_TYPE_UDP;
-        t->sport = ct->src.u.udp.port;
-        t->dport = ct->dst.u.udp.port;
         break;
     default:
         log_debug("ERR(to_conn_tuple): unknown protocol number: %u", ct->dst.protonum);
         return 0;
     }
 
-    t->sport = bpf_ntohs(t->sport);
-    t->dport = bpf_ntohs(t->dport);
-    if (t->sport == 0 || t->dport == 0) {
+    t->sport = bpf_ntohs(ct->src.u.all);
+    t->dport = bpf_ntohs(ct->dst.u.all);
+    if ((t->sport & t->dport) == 0) {
         log_debug("ERR(to_conn_tuple): src/dst port not set: src: %u, dst: %u", t->sport, t->dport);
         return 0;
     }
@@ -65,28 +61,35 @@ static __always_inline int nf_conntrack_tuple_to_conntrack_tuple(conntrack_tuple
         t->metadata |= CONN_V4;
         t->saddr_l = ct->src.u3.ip;
         t->daddr_l = ct->dst.u3.ip;
-
-        if (!t->saddr_l || !t->daddr_l) {
-            log_debug("ERR(to_conn_tuple.v4): src/dst addr not set src:%llu, dst:%llu", t->saddr_l, t->daddr_l);
-            return 0;
+    } else if (ct->src.l3num == AF_INET6) {
+        switch (t->metadata & CONN_TYPE_MASK) {
+        case CONN_TYPE_TCP:
+            if (!is_tcpv6_enabled()) {
+                return 0;
+            }
+            break;
+        case CONN_TYPE_UDP:
+            if (!is_udpv6_enabled()) {
+                return 0;
+            }
+            break;
         }
-    } else if (ct->src.l3num == AF_INET6 && (is_tcpv6_enabled() || is_udpv6_enabled())) {
         t->metadata |= CONN_V6;
         read_in6_addr(&t->saddr_h, &t->saddr_l, &ct->src.u3.in6);
         read_in6_addr(&t->daddr_h, &t->daddr_l, &ct->dst.u3.in6);
 
-        if (!(t->saddr_h || t->saddr_l)) {
-            log_debug("ERR(to_conn_tuple.v6): src addr not set: src_l: %llu, src_h: %llu",
-                t->saddr_l, t->saddr_h);
-            return 0;
-        }
-        if (!(t->daddr_h || t->daddr_l)) {
-            log_debug("ERR(to_conn_tuple.v6): dst addr not set: dst_l: %llu, dst_h: %llu",
-                t->daddr_l, t->daddr_h);
+        if ((t->saddr_h & t->daddr_h) == 0) {
+            log_debug("ERR(to_conn_tuple.v6): src_h/dst_h not set: src_h: %llu, dst_h: %llu",
+                t->saddr_h, t->daddr_h);
             return 0;
         }
     }
 
+    if ((t->saddr_l & t->daddr_l) == 0) {
+        log_debug("ERR(to_conn_tuple): src_l/dst_l not set: src_l: %llu, dst_l: %llu",
+            t->saddr_l, t->daddr_l);
+        return 0;
+    }
     return 1;
 }
 

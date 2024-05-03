@@ -20,6 +20,8 @@ typedef enum
     CONN_V6 = 1 << 1,
 } metadata_mask_t;
 
+#define CONN_TYPE_MASK 1
+
 typedef struct {
     /* Using the type unsigned __int128 generates an error in the ebpf verifier */
     __u64 saddr_h;
