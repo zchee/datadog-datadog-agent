@@ -35,7 +35,7 @@ stages:
 #     - sudo rm -rf /tmp/mq_client.pkg
 
 check_versions:
-  tags: ["mac-ventura-preview"]
+  tags: ["macos:monterey-arm64", "specific:true"]
   stage: lint
   needs: []
   script:
@@ -55,7 +55,7 @@ check_versions:
 
 run_go_linters:
   extends: .job_isolation
-  tags: ["mac-ventura-preview"]
+  tags: ["macos:monterey-arm64", "specific:true"]
   stage: lint
   needs: []
   script:
@@ -63,55 +63,9 @@ run_go_linters:
 
 .run_go_tests:
   extends: .job_isolation
-  tags: ["mac-ventura-preview"]
+  tags: ["macos:monterey-arm64", "specific:true"]
   script:
     - inv -e rtloader.make --python-runtimes 3
     - inv -e rtloader.install
     - inv -e test --rerun-fails=2 --python-runtimes 3 --race --profile --save-result-json "test_output.json" --junit-tar "junit-tests_macos.tgz"
     - inv -e invoke-unit-tests
-
-run_go_tests_1:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_2:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_3:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_4:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_5:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_6:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_7:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_8:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_9:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_10:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_11:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_12:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_13:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_14:
-  stage: test
-  extends: .run_go_tests
-run_go_tests_15:
-  stage: test
-  extends: .run_go_tests
