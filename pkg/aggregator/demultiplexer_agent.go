@@ -160,8 +160,8 @@ func initAgentDemultiplexer(
 	bufferSize := config.Datadog.GetInt("aggregator_buffer_size")
 	metricSamplePool := metrics.NewMetricSamplePool(MetricSamplePoolBatchSize, utils.IsTelemetryEnabled(config.Datadog))
 
-	_, statsdPipelinesCount := GetDogStatsDWorkerAndPipelineCount()
-	log.Debug("the Demultiplexer will use", statsdPipelinesCount, "pipelines")
+	work, statsdPipelinesCount := GetDogStatsDWorkerAndPipelineCount()
+	log.Infof("Dogstatsd configured to run with %d workers and %d pipelines", work, statsdPipelinesCount)
 
 	statsdWorkers := make([]*timeSamplerWorker, statsdPipelinesCount)
 
