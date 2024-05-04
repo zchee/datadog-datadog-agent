@@ -54,6 +54,7 @@ namespace Datadog.CustomActions.Native
     {
         // specific access rights
         SERVICE_QUERY_CONFIG = 0x0001,
+        SERVICE_CHANGE_CONFIG = 0x0002,
         SERVICE_QUERY_STATUS = 0x0004,
         SERVICE_ENUMERATE_DEPENDENTS = 0x0008,
         SERVICE_START = 0x0010,

@@ -24,8 +24,13 @@ func (s *Servicedef) IsEnabled() bool {
 func startDependentServices() {
 	for _, svc := range subservices {
 		if svc.IsEnabled() {
+			log.Debugf("Enabling service: %s", svc.name)
+			err := svc.Enable()
+			if err != nil {
+				log.Warnf("Failed to enable service %s: %s", svc.name, err.Error())
+			}
 			log.Debugf("Attempting to start service: %s", svc.name)
-			err := svc.Start()
+			err = svc.Start()
 			if err != nil {
 				log.Warnf("Failed to start services %s: %s", svc.name, err.Error())
 			} else {
@@ -33,6 +38,28 @@ func startDependentServices() {
 			}
 		} else {
 			log.Infof("Service %s is disabled, not starting", svc.name)
+			// disable it in SCM just to be sure
+			err := svc.Disable()
+			if err != nil {
+				log.Warnf("Failed to disable service in SCM %s: %s", svc.name, err.Error())
+			}
+		}
+	}
+}
+
+func stopDependentServices() {
+	for _, svc := range subservices {
+		// disable each service so that it can't be restarted from underneath us
+		err := svc.Disable()
+		if err != nil {
+			log.Warnf("Failed to disable service %s: %s", svc.name, err.Error())
+		}
+	}
+	// do same loop, once they're all disabled, stop them
+	for _, svc := range subservices {
+		err := svc.Stop()
+		if err != nil {
+			log.Warnf("Failed to stop service %s: %s", svc.name, err.Error())
 		}
 	}
 }

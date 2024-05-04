@@ -25,3 +25,13 @@ func (s *Servicedef) Start() error {
 func (s *Servicedef) Stop() error {
 	return nil
 }
+
+// Enable enables the service
+func (s *Servicedef) Enable() error {
+	return nil
+}
+
+// Disable disables the service
+func (s *Servicedef) Disable() error {
+	return nil
+}

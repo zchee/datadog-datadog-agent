@@ -7,14 +7,10 @@
 package run
 
 import (
-	"fmt"
-	"syscall"
-
-	"golang.org/x/sys/windows"
-	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+	"github.com/DataDog/datadog-agent/pkg/util/winutil"
 )
 
 type serviceInitFunc func() (err error)
@@ -87,6 +83,16 @@ func securityInit() error {
 	return nil
 }
 
+// Enable enables the service in the service control manager
+func (s *Servicedef) Enable() error {
+	return winutil.EnableService(s.serviceName)
+}
+
+// Disable disables the service in the service control manager
+func (s *Servicedef) Disable() error {
+	return winutil.DisableService(s.serviceName)
+}
+
 // Start starts the service
 func (s *Servicedef) Start() error {
 	if s.serviceInit != nil {
@@ -96,42 +102,7 @@ func (s *Servicedef) Start() error {
 			return err
 		}
 	}
-
-	/*
-	 * default go implementations of mgr.Connect and mgr.OpenService use way too
-	 * open permissions by default.  Use those structures so the other methods
-	 * work properly, but initialize them here using restrictive enough permissions
-	 * that we can actually open/start the service when running as non-root.
-	 */
-	h, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT)
-	if err != nil {
-		log.Warnf("Failed to connect to scm %v", err)
-		return err
-	}
-	m := &mgr.Mgr{Handle: h}
-	defer m.Disconnect()
-
-	snptr, err := syscall.UTF16PtrFromString(s.serviceName)
-	if err != nil {
-		log.Warnf("Failed to get service name %v", err)
-		return fmt.Errorf("could not create service name pointer: %s", err)
-	}
-
-	hSvc, err := windows.OpenService(m.Handle, snptr,
-		windows.SERVICE_START|windows.SERVICE_STOP)
-	if err != nil {
-		log.Warnf("Failed to open service %v", err)
-		return fmt.Errorf("could not access service: %v", err)
-	}
-	scm := &mgr.Service{Name: s.serviceName, Handle: hSvc}
-	defer scm.Close()
-	err = scm.Start("is", "manual-started")
-	if err != nil {
-		log.Warnf("Failed to start service %v", err)
-		return fmt.Errorf("could not start service: %v", err)
-	}
-
-	return nil
+	return winutil.StartService(s.serviceName, "is", "manual-started")
 }
 
 // Stop stops the service

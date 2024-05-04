@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -153,6 +154,10 @@ type cliParams struct {
 	// pidfilePath contains the value of the --pidfile flag.
 	pidfilePath string
 }
+
+// this waitgroup used to ensure agent subservices loop is done processing on start before
+// allowing stop to continue
+var dependentServicesWg sync.WaitGroup
 
 // Commands returns a slice of subcommands for the 'agent' command.
 func Commands(globalParams *command.GlobalParams) []*cobra.Command {
@@ -594,7 +599,13 @@ func startAgent(
 	misconfig.ToLog(misconfig.CoreAgent)
 
 	// start dependent services
-	go startDependentServices()
+	dependentServicesWg.Add(1)
+	go func() {
+		defer dependentServicesWg.Done()
+		log.Debugf("Starting dependent services")
+		startDependentServices()
+		log.Debugf("Dependent services started")
+	}()
 
 	return otelcollector.Start()
 }
@@ -606,6 +617,18 @@ func StopAgentWithDefaults(agentAPI internalAPI.Component) {
 
 // stopAgent Tears down the agent process
 func stopAgent(agentAPI internalAPI.Component) {
+	// allow stop to process in background
+	dependentServicesStopWg := sync.WaitGroup{}
+	dependentServicesStopWg.Add(1)
+	go func() {
+		defer dependentServicesStopWg.Done()
+		pkglog.Debugf("Waiting for service start to complete...")
+		dependentServicesWg.Wait()
+		pkglog.Debugf("Stopping dependent services")
+		stopDependentServices()
+		pkglog.Debugf("Dependent services stopped")
+	}()
+
 	// retrieve the agent health before stopping the components
 	// GetReadyNonBlocking has a 100ms timeout to avoid blocking
 	health, err := health.GetReadyNonBlocking()
@@ -621,6 +644,8 @@ func stopAgent(agentAPI internalAPI.Component) {
 
 	profiler.Stop()
 
+	// make sure the dependent services have stopped on background loop
+	dependentServicesStopWg.Wait()
 	// gracefully shut down any component
 	_, cancel := pkgcommon.GetMainCtxCancel()
 	cancel()
