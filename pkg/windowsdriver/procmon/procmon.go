@@ -13,7 +13,6 @@ import (
 	"unsafe"
 
 	"github.com/DataDog/datadog-agent/pkg/util/winutil"
-	"github.com/DataDog/datadog-agent/pkg/windowsdriver/driver"
 	"github.com/DataDog/datadog-agent/pkg/windowsdriver/olreader"
 )
 
@@ -85,7 +84,7 @@ func NewWinProcMon(onStart chan *ProcessStartNotification, onStop chan *ProcessS
 		onStop:  onStop,
 		onError: onError,
 	}
-	if err := driver.StartDriverService(driverName); err != nil {
+	if err := winutil.StartDriverService(driverName); err != nil {
 		return nil, err
 	}
 	reader, err := olreader.NewOverlappedReader(wp, bufsize, numbufs)
@@ -137,7 +136,7 @@ func (wp *WinProcmon) Stop() {
 		nil)
 	wp.reader.Stop()
 
-	_ = driver.StopDriverService(driverName, false)
+	_ = winutil.StopDriverService(driverName, false)
 }
 
 //nolint:revive // TODO(WKIT) Fix revive linter

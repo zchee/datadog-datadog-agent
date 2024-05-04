@@ -11,9 +11,14 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/DataDog/datadog-agent/pkg/util/winutil"
 	"go.uber.org/atomic"
 
 	sysconfigtypes "github.com/DataDog/datadog-agent/cmd/system-probe/config/types"
+)
+
+const (
+	driverServiceName = "ddnpm"
 )
 
 // ErrDriverNotInitialized is returned when you attempt to use the driver without calling Init
@@ -77,7 +82,7 @@ func (d *driver) isNeeded() bool {
 
 func (d *driver) start() error {
 	if refs := d.inuse.Inc(); refs == 1 {
-		return startDriverService(driverServiceName)
+		return winutil.StartDriverService(driverServiceName)
 	}
 	return nil
 }
@@ -85,10 +90,10 @@ func (d *driver) start() error {
 func (d *driver) stop(force bool) error {
 	if force {
 		d.inuse.Store(0)
-		return stopDriverService(driverServiceName, true)
+		return winutil.StopDriverService(driverServiceName, true)
 	}
 	if refs := d.inuse.Dec(); refs == 0 {
-		return stopDriverService(driverServiceName, false)
+		return winutil.StopDriverService(driverServiceName, false)
 	}
 	return nil
 }

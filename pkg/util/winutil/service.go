@@ -140,6 +140,89 @@ func StopService(serviceName string) error {
 	return doStopService(serviceName)
 }
 
+// StopDriverService stops a driver service.
+// really it stops any service, but without enumerating dependent services.  it also 
+// will check first to see if it's already in the stop-pending state.
+// it optionally will set the service state to disabled after stopping it.
+func StopDriverService(driverServiceName string, disable bool) (err error) {
+	// connect to SCM
+	manager, err := OpenSCManager(windows.SC_MANAGER_CONNECT)
+	if err != nil {
+		return err
+	}
+	defer manager.Disconnect()
+
+	// connect to service
+	driverAccess := windows.SERVICE_QUERY_STATUS | windows.SERVICE_QUERY_CONFIG | windows.SERVICE_CHANGE_CONFIG
+	service, err := OpenService(manager, driverServiceName, uint32(driverAccess))
+	if err != nil {
+		return err
+	}
+	defer service.Close()
+
+	// check if running already
+	status, err := service.Query()
+	if err != nil {
+		return err
+	}
+
+	// already issued a STOP command
+	if status.State == windows.SERVICE_STOP_PENDING {
+		return nil
+	}
+
+	// RUNNING, so stop it
+	if status.State == windows.SERVICE_RUNNING {
+		log.Infof("Stopping %s service via SCM", driverServiceName)
+		err := StopService(driverServiceName)
+		if err != nil {
+			return fmt.Errorf("Unable to stop service: %v", err)
+		}
+	}
+
+	// if needed, disable it too
+	if disable {
+		noChange := uint32(windows.SERVICE_NO_CHANGE)
+		log.Infof("Setting %s service to disabled", driverServiceName)
+		err := windows.ChangeServiceConfig(service.Handle, noChange, windows.SERVICE_DISABLED, noChange, nil, nil, nil, nil, nil, nil, nil)
+		if err != nil {
+			return fmt.Errorf("Unable to update config: %v", err)
+		}
+	}
+	return nil
+}
+
+// StartSeriverService starts a driver service.  It will accept any service type,
+// checks to see if service is disabled; if so, first enables the service before starting it.
+func StartDriverService(driverServiceName string) (err error) {
+	running, err := IsServiceRunning(driverServiceName)
+	if err != nil {
+		return err
+	}
+
+	if running {
+		log.Debugf("Service %s already running, nothing to do", driverServiceName)
+		return nil
+	}
+
+	log.Debugf("Checking if %s is disabled", driverServiceName)
+	disabled, err := IsServiceDisabled(driverServiceName)
+	if err != nil {
+		return err
+	}
+	if disabled {
+		log.Debugf("%s is disabled, enabling it", driverServiceName)
+		err = EnableService(driverServiceName)
+		if err != nil {
+			return err
+		}
+	}
+	var serviceArgs []string
+	log.Infof("Starting %s", driverServiceName)
+	return StartService(driverServiceName, serviceArgs...)
+}
+
+
 // WaitForState waits for the service to become the desired state. A timeout can be specified
 // with a context. Returns nil if/when the service becomes the desired state.
 func WaitForState(ctx context.Context, serviceName string, desiredState svc.State) error {
@@ -247,6 +330,60 @@ func IsServiceDisabled(serviceName string) (enabled bool, err error) {
 	return (serviceConfig.StartType == windows.SERVICE_DISABLED), nil
 }
 
+
+// EnableService enables the service in the control manager.  It does so by setting the
+// service to `SERVICE_DEMAND_START`.  Calling this function even if the service is _not_
+// disabled will result in having it changed to `DEMAND_START`
+//
+func EnableService(serviceName string) error {
+	// connect to SCM
+	manager, err := OpenSCManager(windows.SC_MANAGER_CONNECT)
+	if err != nil {
+		return err
+	}
+	defer manager.Disconnect()
+
+	// connect to service
+	driverAccess := windows.SERVICE_QUERY_STATUS | windows.SERVICE_QUERY_CONFIG | windows.SERVICE_CHANGE_CONFIG
+	service, err := OpenService(manager, serviceName, uint32(driverAccess))
+	if err != nil {
+		return err
+	}
+	defer service.Close()
+
+	noChange := uint32(windows.SERVICE_NO_CHANGE)
+	err = windows.ChangeServiceConfig(service.Handle, noChange, windows.SERVICE_DEMAND_START, noChange, nil, nil, nil, nil, nil, nil, nil)
+	if err != nil {
+		return fmt.Errorf("Unable to update config: %v", err)
+	}
+	return nil
+}
+
+// DisableService disables the service in the service control manager.  It changes the service
+// config to SERVICE_DISABLED, without making any other changes.
+func DisableService(serviceName string) error {
+	// connect to SCM
+	manager, err := OpenSCManager(windows.SC_MANAGER_CONNECT)
+	if err != nil {
+		return err
+	}
+	defer manager.Disconnect()
+
+	// connect to service
+	driverAccess := windows.SERVICE_QUERY_STATUS | windows.SERVICE_QUERY_CONFIG | windows.SERVICE_CHANGE_CONFIG
+	service, err := OpenService(manager, serviceName, uint32(driverAccess))
+	if err != nil {
+		return err
+	}
+	defer service.Close()
+
+	noChange := uint32(windows.SERVICE_NO_CHANGE)
+	err = windows.ChangeServiceConfig(service.Handle, noChange, windows.SERVICE_DISABLED, noChange, nil, nil, nil, nil, nil, nil, nil)
+	if err != nil {
+		return fmt.Errorf("Unable to update config: %v", err)
+	}
+	return nil
+}
 // IsServiceRunning returns true if serviceName's state is SERVICE_RUNNING
 func IsServiceRunning(serviceName string) (running bool, err error) {
 	running = false
