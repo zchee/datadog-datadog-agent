@@ -693,6 +693,7 @@ func TestMappingCases(t *testing.T) {
 		{
 			name: "Simple OK case",
 			config: `
+dogstatsd_port: __random__
 dogstatsd_mapper_profiles:
   - name: test
     prefix: 'test.'
@@ -723,6 +724,7 @@ dogstatsd_mapper_profiles:
 		{
 			name: "Tag already present",
 			config: `
+dogstatsd_port: __random__
 dogstatsd_mapper_profiles:
   - name: test
     prefix: 'test.'
@@ -748,6 +750,7 @@ dogstatsd_mapper_profiles:
 		{
 			name: "Cache size",
 			config: `
+dogstatsd_port: __random__
 dogstatsd_mapper_cache_size: 999
 dogstatsd_mapper_profiles:
   - name: test
@@ -768,10 +771,7 @@ dogstatsd_mapper_profiles:
 	samples := []metrics.MetricSample{}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
-			cfg := make(map[string]interface{})
-
-			cfg["dogstatsd_port"] = listeners.RandomPortName
-			deps := fulfillDepsWithConfigOverride(t, cfg)
+			deps := fulfillDepsWithConfigYaml(t, scenario.config)
 
 			s := deps.Server.(*server)
 
