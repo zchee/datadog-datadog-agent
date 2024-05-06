@@ -657,12 +657,11 @@ func TestStaticTags(t *testing.T) {
 }
 
 func TestNoMappingsConfig(t *testing.T) {
-	datadogYaml := ``
+	cfg := make(map[string]interface{})
 
-	deps := fulfillDepsWithConfigYaml(t, datadogYaml)
+	cfg["dogstatsd_port"] = listeners.RandomPortName
+	deps := fulfillDepsWithConfigOverride(t, cfg)
 	s := deps.Server.(*server)
-	cw := deps.Config.(config.Writer)
-	cw.SetWithoutSource("dogstatsd_port", listeners.RandomPortName)
 
 	samples := []metrics.MetricSample{}
 
@@ -769,12 +768,12 @@ dogstatsd_mapper_profiles:
 	samples := []metrics.MetricSample{}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
-			deps := fulfillDepsWithConfigYaml(t, scenario.config)
+			cfg := make(map[string]interface{})
+
+			cfg["dogstatsd_port"] = listeners.RandomPortName
+			deps := fulfillDepsWithConfigOverride(t, cfg)
 
 			s := deps.Server.(*server)
-			cw := deps.Config.(config.ReaderWriter)
-
-			cw.SetWithoutSource("dogstatsd_port", listeners.RandomPortName)
 
 			requireStart(t, s)
 
