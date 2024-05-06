@@ -828,17 +828,14 @@ func TestNewServerExtraTags(t *testing.T) {
 }
 
 func TestProcessedMetricsOrigin(t *testing.T) {
-	cfg := make(map[string]interface{})
 
 	for _, enabled := range []bool{true, false} {
+		cfg := make(map[string]interface{})
 		cfg["dogstatsd_origin_optout_enabled"] = enabled
 		cfg["dogstatsd_port"] = listeners.RandomPortName
 		deps := fulfillDepsWithConfigOverride(t, cfg)
 		s := deps.Server.(*server)
 		assert := assert.New(t)
-
-		s.start(context.TODO())
-		requireStart(t, s)
 
 		s.Stop()
 
