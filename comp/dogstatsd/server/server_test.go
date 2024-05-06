@@ -832,7 +832,7 @@ func TestProcessedMetricsOrigin(t *testing.T) {
 
 	for _, enabled := range []bool{true, false} {
 		cfg["dogstatsd_origin_optout_enabled"] = enabled
-
+		cfg["dogstatsd_port"] = listeners.RandomPortName
 		deps := fulfillDepsWithConfigOverride(t, cfg)
 		s := deps.Server.(*server)
 		assert := assert.New(t)
@@ -914,7 +914,10 @@ func TestProcessedMetricsOrigin(t *testing.T) {
 
 //nolint:revive // TODO(AML) Fix revive linter
 func testContainerIDParsing(t *testing.T, cfg map[string]interface{}) {
-	deps := fulfillDeps(t)
+	cfg := make(map[string]interface{})
+
+	cfg["dogstatsd_port"] = listeners.RandomPortName
+	deps := fulfillDepsWithConfigOverride(t, cfg)
 	s := deps.Server.(*server)
 	assert := assert.New(t)
 	requireStart(t, s)
@@ -955,6 +958,8 @@ func TestContainerIDParsing(t *testing.T) {
 
 func TestOrigin(t *testing.T) {
 	cfg := make(map[string]interface{})
+
+	cfg["dogstatsd_port"] = listeners.RandomPortName
 	t.Run("TestOrigin", func(t *testing.T) {
 		deps := fulfillDepsWithConfigOverride(t, cfg)
 		s := deps.Server.(*server)
