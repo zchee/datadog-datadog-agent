@@ -52,7 +52,7 @@ static __always_inline int nf_conntrack_tuple_to_conntrack_tuple(conntrack_tuple
 
     t->sport = bpf_ntohs(ct->src.u.all);
     t->dport = bpf_ntohs(ct->dst.u.all);
-    if ((t->sport & t->dport) == 0) {
+    if (t->sport == 0 || t->dport == 0) {
         log_debug("ERR(to_conn_tuple): src/dst port not set: src: %u, dst: %u", t->sport, t->dport);
         return 0;
     }
@@ -78,14 +78,14 @@ static __always_inline int nf_conntrack_tuple_to_conntrack_tuple(conntrack_tuple
         read_in6_addr(&t->saddr_h, &t->saddr_l, &ct->src.u3.in6);
         read_in6_addr(&t->daddr_h, &t->daddr_l, &ct->dst.u3.in6);
 
-        if ((t->saddr_h & t->daddr_h) == 0) {
+        if (t->saddr_h == 0 || t->daddr_h == 0) {
             log_debug("ERR(to_conn_tuple.v6): src_h/dst_h not set: src_h: %llu, dst_h: %llu",
                 t->saddr_h, t->daddr_h);
             return 0;
         }
     }
 
-    if ((t->saddr_l & t->daddr_l) == 0) {
+    if (t->saddr_l == 0 || t->daddr_l == 0) {
         log_debug("ERR(to_conn_tuple): src_l/dst_l not set: src_l: %llu, dst_l: %llu",
             t->saddr_l, t->daddr_l);
         return 0;
