@@ -178,6 +178,22 @@ func (m *Monitor) GetProtocolStats() map[protocols.ProtocolType]interface{} {
 	return m.ebpfProgram.getProtocolStats()
 }
 
+func (m *Monitor) Pause() error {
+	if m == nil {
+		return nil
+	}
+
+	return m.ebpfProgram.Pause()
+}
+
+func (m *Monitor) Resume() error {
+	if m == nil {
+		return nil
+	}
+
+	return m.ebpfProgram.Resume()
+}
+
 // Stop HTTP monitoring
 func (m *Monitor) Stop() {
 	if m == nil {

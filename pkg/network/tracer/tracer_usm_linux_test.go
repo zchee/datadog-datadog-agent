@@ -432,6 +432,7 @@ func testTLSAMQPClassification(t *testing.T, tr *Tracer, _, targetHost, serverHo
 				extras:        make(map[string]interface{}),
 			},
 			preTracerSetup: func(t *testing.T, ctx testContext) {
+				require.NoError(t, tr.usmMonitor.Pause())
 				client, err := amqp.NewClient(amqp.Options{
 					ServerAddress: ctx.serverAddress,
 					WithTLS:       true,
@@ -441,6 +442,7 @@ func testTLSAMQPClassification(t *testing.T, tr *Tracer, _, targetHost, serverHo
 				ctx.extras["client"] = client
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
+				require.NoError(t, tr.usmMonitor.Resume())
 				client := ctx.extras["client"].(*amqp.Client)
 				require.NoError(t, client.DeclareQueue("test", client.PublishChannel))
 			},
