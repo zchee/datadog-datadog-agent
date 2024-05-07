@@ -123,11 +123,15 @@ func WaitForConnectionReady(unixSocket string) error {
 func (p *UnixTransparentProxyServer) handleConnection(unixSocketConn net.Conn) {
 	defer unixSocketConn.Close()
 
+	lw, err := os.Create("/tmp/keylog")
+	if err != nil {
+		return
+	}
+
 	var remoteConn net.Conn
-	var err error
 	if p.useTLS {
 		timedContext, cancel := context.WithTimeout(context.Background(), defaultDialTimeout)
-		dialer := &tls.Dialer{Config: &tls.Config{InsecureSkipVerify: true}}
+		dialer := &tls.Dialer{Config: &tls.Config{InsecureSkipVerify: true, KeyLogWriter: lw}}
 		remoteConn, err = dialer.DialContext(timedContext, "tcp", p.remoteAddr)
 		cancel()
 	} else {
