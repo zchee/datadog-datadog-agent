@@ -23,6 +23,7 @@ type Key struct {
 	RequestAPIKey  uint16
 	RequestVersion uint16
 	TopicName      string
+	ErrorCode      int8 // Between -1 and 119
 	types.ConnectionKey
 }
 

@@ -41,22 +41,27 @@ func (statKeeper *StatKeeper) Process(tx *EbpfTx) {
 	statKeeper.statsMutex.Lock()
 	defer statKeeper.statsMutex.Unlock()
 
-	key := Key{
-		RequestAPIKey:  tx.APIKey(),
-		RequestVersion: tx.APIVersion(),
-		TopicName:      statKeeper.extractTopicName(&tx.Transaction),
-		ConnectionKey:  tx.ConnTuple(),
-	}
-	requestStats, ok := statKeeper.stats[key]
-	if !ok {
-		if len(statKeeper.stats) >= statKeeper.maxEntries {
-			statKeeper.telemetry.dropped.Add(1)
-			return
+	for errorCode, count := range tx.ErrorCode() {
+		// Since Kafka error codes start at -1 and our array index starts at 0, we offset the error code by 1
+		offsetedErrorCode := int8(errorCode) - 1
+		key := Key{
+			RequestAPIKey:  tx.APIKey(),
+			RequestVersion: tx.APIVersion(),
+			TopicName:      statKeeper.extractTopicName(&tx.Transaction),
+			ConnectionKey:  tx.ConnTuple(),
+			ErrorCode:      offsetedErrorCode,
 		}
-		requestStats = new(RequestStat)
-		statKeeper.stats[key] = requestStats
+		requestStats, ok := statKeeper.stats[key]
+		if !ok {
+			if len(statKeeper.stats) >= statKeeper.maxEntries {
+				statKeeper.telemetry.dropped.Add(1)
+				return
+			}
+			requestStats = new(RequestStat)
+			statKeeper.stats[key] = requestStats
+		}
+		requestStats.Count += int(count)
 	}
-	requestStats.Count += int(tx.RecordsCount())
 }
 
 // GetAndResetAllStats returns all the stats and resets the stats
