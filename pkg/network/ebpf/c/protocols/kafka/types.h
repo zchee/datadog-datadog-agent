@@ -28,6 +28,7 @@ typedef struct kafka_transaction_t {
     __u8 request_api_version;
     __u8 topic_name_size;
     char topic_name[TOPIC_NAME_MAX_STRING_SIZE];
+    __u8 error_codes[121]; // u16 gives an stack exceed max size error and also limit the batch size
 } kafka_transaction_t;
 
 typedef struct kafka_event_t {

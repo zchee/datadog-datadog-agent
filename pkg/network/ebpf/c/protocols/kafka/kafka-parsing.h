@@ -227,6 +227,25 @@ static __always_inline enum parse_result kafka_continue_parse_response_loop(kafk
         switch (response->state) {
         case KAFKA_FETCH_RESPONSE_PARTITION_START:
             offset += sizeof(s32); // Skip partition_index
+
+            // Error codes range from -1 to 119 as per the Kafka protocol specification.
+            // For details, refer to: https://kafka.apache.org/protocol.html#protocol_error_codes
+            s32 error_code = 0;
+            ret = read_with_remainder(response, skb, &offset, data_end, &error_code, first);
+            if (ret != RET_DONE) {
+                return ret;
+            }
+            if (error_code < -1 || error_code > 119) {
+                extra_debug("invalid error code: %d", error_code);
+                return RET_ERR;
+            }
+            if (response->transaction.error_codes[error_code] >= 255) {
+                extra_debug("transaction error code %d exceeds maximum count", error_code);
+            } else {
+                // Since Kafka error codes start at -1 and our array index starts at 0, we offset the error code by 1
+                response->transaction.error_codes[error_code + 1]++;
+            }
+
             offset += sizeof(s16); // Skip error_code
             offset += sizeof(s64); // Skip high_watermark
 
