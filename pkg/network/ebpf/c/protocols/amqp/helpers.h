@@ -22,6 +22,7 @@ static __always_inline bool is_amqp(const char* buf, __u32 buf_size) {
     // New connection should start with protocol header of AMQP.
     // Ref https://www.rabbitmq.com/resources/specs/amqp0-9-1.pdf.
     if (is_amqp_protocol_header(buf, buf_size)) {
+        log_debug("[amqp] classified with protocol header");
         return true;
     }
 
@@ -47,6 +48,7 @@ static __always_inline bool is_amqp(const char* buf, __u32 buf_size) {
         switch (method_id) {
         case AMQP_METHOD_CONNECTION_START:
         case AMQP_METHOD_CONNECTION_START_OK:
+            log_debug("[amqp] classified with connection start");
             return true;
         default:
             return false;
@@ -56,6 +58,7 @@ static __always_inline bool is_amqp(const char* buf, __u32 buf_size) {
         case AMQP_METHOD_PUBLISH:
         case AMQP_METHOD_DELIVER:
         case AMQP_METHOD_CONSUME:
+            log_debug("[amqp] classified with basic public/deliver/consume");
             return true;
         default:
             return false;
@@ -64,6 +67,7 @@ static __always_inline bool is_amqp(const char* buf, __u32 buf_size) {
         switch (method_id) {
         case AMQP_METHOD_CLOSE_OK:
         case AMQP_METHOD_CLOSE:
+            log_debug("[amqp] classified with channel close");
             return true;
         default:
             return false;
