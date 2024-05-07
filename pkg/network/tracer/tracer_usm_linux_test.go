@@ -96,6 +96,8 @@ func (s *USMSuite) TestProtocolClassification() {
 	cfg.EnableNativeTLSMonitoring = true
 	cfg.EnableGoTLSSupport = true
 	cfg.EnableHTTPMonitoring = true
+	cfg.BPFDebug = true
+
 	tr, err := NewTracer(cfg)
 	require.NoError(t, err)
 	t.Cleanup(tr.Stop)
