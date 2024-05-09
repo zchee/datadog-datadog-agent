@@ -323,8 +323,9 @@ func TestExtractLibInfo(t *testing.T) {
 			containerRegistry: "",
 			expectedLibsToInject: []libInfo{
 				{
-					lang:  "java",
-					image: fmt.Sprintf("%s/dd-lib-java-init:v1", commonRegistry),
+					lang: "java",
+					//image: fmt.Sprintf("%s/dd-lib-java-init:v1", commonRegistry),
+					image: fmt.Sprintf("%s/dd-lib-java-init:v1", "docker.io/ddkverhoog"),
 				},
 			},
 		},
@@ -602,7 +603,7 @@ func TestExtractLibInfo(t *testing.T) {
 
 			// Need to create a new instance of the webhook to take into account
 			// the config changes.
-			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta, nil, nil, "")
+			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta, nil, nil, "", "")
 			require.NoError(t, errInitAPMInstrumentation)
 
 			libsToInject, _ := apmInstrumentationWebhook.extractLibInfo(tt.pod)
@@ -1992,7 +1993,7 @@ func TestInjectAutoInstrumentation(t *testing.T) {
 
 			// Need to create a new instance of the webhook to take into account
 			// the config changes.
-			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta, nil, nil, "")
+			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta, nil, nil, "", "")
 			require.NoError(t, errInitAPMInstrumentation)
 
 			_, err := apmInstrumentationWebhook.inject(tt.pod, "", fake.NewSimpleDynamicClient(scheme.Scheme))
@@ -2238,7 +2239,7 @@ func TestShouldInject(t *testing.T) {
 
 			// Need to create a new instance of the webhook to take into account
 			// the config changes.
-			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta, nil, nil, "")
+			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta, nil, nil, "", "")
 			require.NoError(t, errInitAPMInstrumentation)
 
 			if got := ShouldInject(tt.pod, wmeta); got != tt.want {
