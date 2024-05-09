@@ -28,6 +28,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/common"
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/metrics"
 	mutatecommon "github.com/DataDog/datadog-agent/pkg/clusteragent/admission/mutate/common"
+	"github.com/DataDog/datadog-agent/pkg/clusteragent/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	rcclient "github.com/DataDog/datadog-agent/pkg/config/remote/client"
 	"github.com/DataDog/datadog-agent/pkg/util/containers"
@@ -155,6 +156,7 @@ func NewWebhook(
 	rcClient *rcclient.Client,
 	stopCh <-chan struct{},
 	clusterName string,
+	clusterID string,
 ) (*Webhook, error) {
 	containerRegistry := mutatecommon.ContainerRegistry("admission_controller.auto_instrumentation.container_registry")
 
@@ -181,13 +183,15 @@ func NewWebhook(
 		return nil, err
 	}
 	w.filter = filter
+	telemetryCollector := telemetry.NewNoopCollector()
 
 	if rcClient == nil {
 		return w, nil
 	}
+	telemetryCollector = telemetry.NewCollector(rcClient.ID, clusterID)
 
 	if config.IsRemoteConfigEnabled(config.Datadog) {
-		w.rcProvider, _ = newRemoteConfigProvider(rcClient, clusterName, w.apmInstrumentationState)
+		w.rcProvider, _ = newRemoteConfigProvider(rcClient, clusterName, w.apmInstrumentationState, telemetryCollector)
 	}
 	go w.rcProvider.start(stopCh)
 
@@ -200,10 +204,11 @@ func GetWebhook(
 	rcClient *rcclient.Client,
 	stopCh <-chan struct{},
 	clusterName string,
+	clusterID string,
 ) (*Webhook, error) {
 	initOnce.Do(func() {
 		if apmInstrumentationWebhook == nil {
-			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta, rcClient, stopCh, clusterName)
+			apmInstrumentationWebhook, errInitAPMInstrumentation = NewWebhook(wmeta, rcClient, stopCh, clusterName, clusterID)
 		}
 	})
 
@@ -631,7 +636,7 @@ func ShouldInject(pod *corev1.Pod, wmeta workloadmeta.Component) bool {
 		}
 	}
 
-	apmWebhook, err := GetWebhook(wmeta, nil, nil, "")
+	apmWebhook, err := GetWebhook(wmeta, nil, nil, "", "")
 	if err != nil {
 		return config.Datadog.GetBool("admission_controller.mutate_unlabelled")
 	}
@@ -656,7 +661,6 @@ func (w *Webhook) isEnabledInNamespace(namespace string) bool {
 	}
 	w.filter = filter
 	isEnabled := !w.filter.IsExcluded(nil, "", "", namespace)
-	log.Infof("LILIYAB11 for ns %s is enabled %v", namespace, isEnabled)
 
 	return isEnabled
 }

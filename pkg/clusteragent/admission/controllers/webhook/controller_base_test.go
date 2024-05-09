@@ -37,6 +37,8 @@ func TestNewController(t *testing.T) {
 		nil,
 		nil,
 		"",
+		"",
+		"",
 	)
 
 	assert.IsType(t, &ControllerV1{}, controller)

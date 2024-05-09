@@ -947,7 +947,7 @@ func TestGenerateTemplatesV1beta1(t *testing.T) {
 
 			c := &ControllerV1beta1{}
 			c.config = tt.configFunc()
-			c.mutatingWebhooks = mutatingWebhooks(wmeta, nil, nil, "")
+			c.mutatingWebhooks = mutatingWebhooks(wmeta, nil, nil, "", "")
 			c.generateTemplates()
 
 			assert.EqualValues(t, tt.want(), c.webhookTemplates)
@@ -1084,6 +1084,7 @@ func (f *fixtureV1beta1) createController() (*ControllerV1beta1, informers.Share
 		wmeta,
 		nil,
 		nil,
+		"",
 		"",
 	), factory
 }

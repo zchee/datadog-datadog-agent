@@ -419,6 +419,7 @@ func start(log log.Component,
 			StopCh:              stopCh,
 			RcClient:            rcClient,
 			ClusterName:         clusterName,
+			ClusterID:           clusterId,
 		}
 
 		webhooks, err := admissionpkg.StartControllers(admissionCtx, wmeta)

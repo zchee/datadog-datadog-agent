@@ -36,6 +36,7 @@ type ControllerContext struct {
 	StopCh              chan struct{}
 	RcClient            *rcclient.Client
 	ClusterName         string
+	ClusterID           string
 }
 
 // StartControllers starts the secret and webhook controllers
@@ -83,6 +84,7 @@ func StartControllers(ctx ControllerContext, wmeta workloadmeta.Component) ([]we
 		ctx.RcClient,
 		ctx.StopCh,
 		ctx.ClusterName,
+		ctx.ClusterID,
 	)
 
 	go secretController.Run(ctx.StopCh)

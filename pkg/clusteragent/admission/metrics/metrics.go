@@ -90,6 +90,15 @@ var (
 	InvalidRemoteConfigs = telemetry.NewGaugeWithOpts("admission_webhooks", "rc_provider_configs_invalid",
 		[]string{}, "Number of invalid remote configurations.",
 		telemetry.Options{NoDoubleUnderscoreSep: true})
+	DeleteRemoteConfigsAttempts = telemetry.NewCounterWithOpts("admission_webhooks", "rc_provider_configs_delete_attempts",
+		[]string{}, "Number of deleted remote configurations.",
+		telemetry.Options{NoDoubleUnderscoreSep: true})
+	DeleteRemoteConfigsCompleted = telemetry.NewCounterWithOpts("admission_webhooks", "rc_provider_configs_delete_completed",
+		[]string{}, "Number of deleted remote configurations.",
+		telemetry.Options{NoDoubleUnderscoreSep: true})
+	DeleteRemoteConfigsErrors = telemetry.NewCounterWithOpts("admission_webhooks", "rc_provider_configs_delete_errors",
+		[]string{}, "Number of deleted remote configurations.",
+		telemetry.Options{NoDoubleUnderscoreSep: true})
 	PatchAttempts = telemetry.NewCounterWithOpts("admission_webhooks", "patcher_attempts",
 		[]string{}, "Number of patch attempts.",
 		telemetry.Options{NoDoubleUnderscoreSep: true})

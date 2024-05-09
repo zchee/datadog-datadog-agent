@@ -152,11 +152,9 @@ func (c *instrumentationConfigurationCache) delete(rcConfigID string) error {
 					delete(c.namespaceToConfigIDMap, ns)
 					delete(c.namespaceToEnvMap, ns)
 				}
-				log.Infof("LILIYAB11")
 			} else {
 				delete(c.namespaceToConfigIDMap, "cluster")
 				delete(c.namespaceToEnvMap, "cluster")
-				log.Infof("LILIYAB22")
 			}
 			break
 		}

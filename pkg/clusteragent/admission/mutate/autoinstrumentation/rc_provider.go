@@ -12,6 +12,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/metrics"
+	"github.com/DataDog/datadog-agent/pkg/clusteragent/telemetry"
 	rcclient "github.com/DataDog/datadog-agent/pkg/config/remote/client"
 	"github.com/DataDog/datadog-agent/pkg/remoteconfig/state"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -25,7 +27,8 @@ type remoteConfigProvider struct {
 	lastProcessedRCRevision int64
 	rcConfigIDs             map[string]struct{}
 
-	cache *instrumentationConfigurationCache
+	cache              *instrumentationConfigurationCache
+	telemetryCollector telemetry.TelemetryCollector
 }
 
 type rcProvider interface {
@@ -38,6 +41,7 @@ func newRemoteConfigProvider(
 	client *rcclient.Client,
 	clusterName string,
 	cache *instrumentationConfigurationCache,
+	telemetryCollector telemetry.TelemetryCollector,
 ) (*remoteConfigProvider, error) {
 	if client == nil {
 		return nil, errors.New("remote config client not initialized")
@@ -49,6 +53,7 @@ func newRemoteConfigProvider(
 		lastProcessedRCRevision: 0,
 		rcConfigIDs:             make(map[string]struct{}),
 		cache:                   cache,
+		telemetryCollector:      telemetryCollector,
 	}, nil
 }
 
@@ -74,6 +79,7 @@ func (rcp *remoteConfigProvider) start(stopCh <-chan struct{}) {
 // process is the event handler called by the RC client on config updates
 func (rcp *remoteConfigProvider) process(update map[string]state.RawConfig, applyStateCallback func(string, state.ApplyStatus)) {
 	log.Infof("Got %d updates from remote-config", len(update))
+	var invalid float64
 	toDelete := make(map[string]struct{}, len(rcp.rcConfigIDs))
 	for k := range rcp.rcConfigIDs {
 		toDelete[k] = struct{}{}
@@ -84,6 +90,8 @@ func (rcp *remoteConfigProvider) process(update map[string]state.RawConfig, appl
 		var req Request
 		err := json.Unmarshal(config.Config, &req)
 		if err != nil {
+			invalid++
+			rcp.telemetryCollector.SendRemoteConfigMutateEvent(req.getApmRemoteConfigEvent(err, telemetry.ConfigParseFailure))
 			log.Errorf("Error while parsing config: %v", err)
 			continue
 		}
@@ -100,20 +108,34 @@ func (rcp *remoteConfigProvider) process(update map[string]state.RawConfig, appl
 
 		req.RcVersion = config.Metadata.Version
 		log.Infof("Remote Enablement: updating with config %+v", req)
+		metrics.PatchAttempts.Inc()
 		resp := rcp.cache.update(req)
+		if resp.Status.State == state.ApplyStateError {
+			metrics.PatchErrors.Inc()
+			rcp.telemetryCollector.SendRemoteConfigMutateEvent(req.getApmRemoteConfigEvent(err, telemetry.FailedToMutateConfig))
+		} else if resp.Status.State == state.ApplyStateAcknowledged {
+			metrics.PatchCompleted.Inc()
+			rcp.telemetryCollector.SendRemoteConfigMutateEvent(req.getApmRemoteConfigEvent(err, telemetry.Success))
+		}
+
 		applyStateCallback(path, resp.Status)
 		rcp.lastProcessedRCRevision = req.Revision
 	}
 
 	for configToDelete := range toDelete {
 		log.Infof("Remote Enablement: deleting config %s", configToDelete)
+		metrics.DeleteRemoteConfigsAttempts.Inc()
 		if err := rcp.cache.delete(configToDelete); err != nil {
 			log.Errorf("Remote Enablement: failed to delete config %s with %v", configToDelete, err)
+			metrics.DeleteRemoteConfigsErrors.Inc()
 		} else {
+			metrics.DeleteRemoteConfigsCompleted.Inc()
 			delete(rcp.rcConfigIDs, configToDelete)
 		}
 
 	}
+
+	metrics.InvalidRemoteConfigs.Set(invalid)
 }
 
 func shouldSkipConfig(req Request, lastAppliedRevision int64, clusterName string) bool {

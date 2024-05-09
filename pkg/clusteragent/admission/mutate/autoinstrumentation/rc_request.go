@@ -8,7 +8,11 @@
 package autoinstrumentation
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/common"
+	"github.com/DataDog/datadog-agent/pkg/clusteragent/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/remoteconfig/state"
 )
 
@@ -60,4 +64,43 @@ type Response struct {
 	Revision  int64             `json:"revision"`
 	RcVersion uint64            `json:"rc_version"`
 	Status    state.ApplyStatus `json:"status"`
+}
+
+func (req Request) getApmRemoteConfigEvent(err error, errorCode int) telemetry.ApmRemoteConfigEvent {
+	env := ""
+	if req.LibConfig.Env != nil {
+		env = *req.LibConfig.Env
+	}
+	errorMessage := ""
+	if err != nil {
+		errorMessage = err.Error()
+	}
+	targetClusters := []string{}
+	targetNamespaces := []string{}
+	targetEnabled := []string{}
+	for _, c := range req.K8sTargetV2.ClusterTargets {
+		targetClusters = append(targetClusters, c.ClusterName)
+		targetNamespaces = append(targetNamespaces, *c.EnabledNamespaces...)
+		targetEnabled = append(targetEnabled, strconv.FormatBool(*c.Enabled))
+	}
+	return telemetry.ApmRemoteConfigEvent{
+		RequestType: "apm-remote-config-event",
+		ApiVersion:  "v2",
+		Payload: telemetry.ApmRemoteConfigEventPayload{
+			Tags: telemetry.ApmRemoteConfigEventTags{
+				Env:                 env,
+				RcId:                req.ID,
+				RcRevision:          req.Revision,
+				RcVersion:           req.RcVersion,
+				KubernetesCluster:   strings.Join(targetClusters, " "),
+				KubernetesNamespace: strings.Join(targetNamespaces, " "),
+				KubernetesKind:      "cluster",
+				KubernetesName:      strings.Join(targetEnabled, " "),
+			},
+			Error: telemetry.ApmRemoteConfigEventError{
+				Code:    errorCode,
+				Message: errorMessage,
+			},
+		},
+	}
 }
