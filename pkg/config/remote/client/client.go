@@ -299,6 +299,7 @@ func newClient(cf ConfigFetcher, opts ...func(opts *Options)) (*Client, error) {
 // If the client is already started, this is a no-op. At this time, a client that has been stopped cannot
 // be restarted.
 func (c *Client) Start() {
+	log.Infof("LILIYAB: starting poll loop")
 	c.startupSync.Do(c.startFn)
 }
 
@@ -342,6 +343,7 @@ func (c *Client) Subscribe(product string, fn func(update map[string]state.RawCo
 	}
 
 	c.listeners[product] = append(c.listeners[product], fn)
+	log.Infof("LILIYAB: subscribed new client")
 }
 
 // GetConfigs returns the current configs applied of a product.
@@ -372,8 +374,10 @@ func (c *Client) startFn() {
 func (c *Client) pollLoop() {
 	successfulFirstRun := false
 	// First run
+	log.Infof("LILIYAB: doing first run")
 	err := c.update()
 	if err != nil {
+		log.Infof("LILIYAB: failed first run")
 		if status.Code(err) == codes.Unimplemented {
 			// Remote Configuration is disabled as the server isn't initialized
 			//
@@ -390,6 +394,7 @@ func (c *Client) pollLoop() {
 	} else {
 		successfulFirstRun = true
 	}
+	log.Infof("LILIYAB: completed first run")
 
 	logLimit := log.NewLogLimit(5, time.Minute)
 	for {
@@ -459,6 +464,7 @@ func (c *Client) update() error {
 	if len(changedProducts) == 0 {
 		return nil
 	}
+	log.Infof("LILIYAB: updating")
 
 	c.m.Lock()
 	defer c.m.Unlock()
