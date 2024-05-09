@@ -80,8 +80,12 @@ func (req Request) getApmRemoteConfigEvent(err error, errorCode int) telemetry.A
 	targetEnabled := []string{}
 	for _, c := range req.K8sTargetV2.ClusterTargets {
 		targetClusters = append(targetClusters, c.ClusterName)
-		targetNamespaces = append(targetNamespaces, *c.EnabledNamespaces...)
-		targetEnabled = append(targetEnabled, strconv.FormatBool(*c.Enabled))
+		if c.EnabledNamespaces != nil && len(*c.EnabledNamespaces) > 0 {
+			targetNamespaces = append(targetNamespaces, *c.EnabledNamespaces...)
+		}
+		if c.Enabled != nil {
+			targetEnabled = append(targetEnabled, strconv.FormatBool(*c.Enabled))
+		}
 	}
 	return telemetry.ApmRemoteConfigEvent{
 		RequestType: "apm-remote-config-event",
