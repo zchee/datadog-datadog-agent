@@ -7,6 +7,7 @@ package aggregator
 
 import (
 	"expvar"
+	"fmt"
 	"time"
 
 	"github.com/DataDog/datadog-agent/comp/core/tagger"
@@ -231,8 +232,11 @@ func (w *noAggregationStreamWorker) run() {
 						w.metricSamplePool.PutBatch(samples) // return the sample batch back to the pool for reuse
 
 						if serializedSamples > w.maxMetricsPerPayload {
+							fmt.Println("rz6300 flushing", serializedSamples, w.maxMetricsPerPayload)
 							tlmNoAggFlush.Add(1)
 							break mainloop // end `Serialize` call and trigger a flush to the forwarder
+						} else {
+							fmt.Println("rz6300", serializedSamples, w.maxMetricsPerPayload)
 						}
 					}
 				}
