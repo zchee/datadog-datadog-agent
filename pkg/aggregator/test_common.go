@@ -24,8 +24,8 @@ func (s *senders) PeekSender(cid checkid.ID) (sender.Sender, error) {
 
 // PeekSender returns a Sender with passed ID or an error if the sender is not registered
 func (d *AgentDemultiplexer) PeekSender(cid checkid.ID) (sender.Sender, error) {
-	d.m.Lock()
-	defer d.m.Unlock()
+	d.senderLock.Lock()
+	defer d.senderLock.Unlock()
 	if d.senders == nil {
 		return nil, errors.New("demultiplexer is stopped")
 	}
