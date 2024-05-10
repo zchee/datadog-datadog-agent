@@ -297,10 +297,11 @@ func (c *instrumentationConfigurationCache) updateConfiguration(enabled bool, en
 		}
 	}
 
-	log.Infof("New APM Instrumentation configuration [enabled=%t enabledNamespaces=%v disabledNamespaces=%v]",
+	log.Infof("New APM Instrumentation configuration [enabled=%t enabledNamespaces=%v disabledNamespaces=%v apply status=%v]",
 		c.currentConfiguration.enabled,
 		c.currentConfiguration.enabledNamespaces,
 		c.currentConfiguration.disabledNamespaces,
+		resp.Status.State,
 	)
 	return resp
 }

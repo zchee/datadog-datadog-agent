@@ -318,10 +318,6 @@ func start(log log.Component,
 		rcClient, err = initializeRemoteConfigClient(rcserv, config, clusterId, clusterName)
 		if err != nil {
 			log.Errorf("Failed to start remote-configuration: %v", err)
-		} else {
-			rcClient.Start()
-			log.Debugf("Remote-config client started successfully")
-			defer rcClient.Close()
 		}
 	}
 

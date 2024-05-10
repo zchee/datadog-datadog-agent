@@ -31,6 +31,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	rcclient "github.com/DataDog/datadog-agent/pkg/config/remote/client"
+	"github.com/DataDog/datadog-agent/pkg/config/utils"
 	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes"
 	apiServerCommon "github.com/DataDog/datadog-agent/pkg/util/kubernetes/apiserver/common"
@@ -183,12 +184,11 @@ func NewWebhook(
 		return nil, err
 	}
 	w.filter = filter
-	telemetryCollector := telemetry.NewNoopCollector()
 
 	if rcClient == nil {
 		return w, nil
 	}
-	telemetryCollector = telemetry.NewCollector(rcClient.ID, clusterID)
+	telemetryCollector := telemetry.NewCollector(rcClient.ID, clusterID)
 
 	if config.IsRemoteConfigEnabled(config.Datadog) {
 		w.rcProvider, _ = newRemoteConfigProvider(rcClient, clusterName, w.apmInstrumentationState, telemetryCollector)
@@ -906,11 +906,22 @@ func getServiceNameFromPod(pod *corev1.Pod) (string, error) {
 // basicConfig returns the default tracing config to inject into application pods
 // when no other config has been provided.
 func basicConfig() common.LibConfig {
+	var defaultEnv *string
+	for _, tag := range utils.GetConfiguredTags(config.Datadog, false) {
+		if strings.HasPrefix(tag, "env:") {
+			env := strings.TrimPrefix(tag, "env:")
+			defaultEnv = &env
+			log.Debugf("Setting DefaultEnv to %q (from `env:` entry under the 'tags' config option: %q)", env, tag)
+			log.Infof("LILIYAB %s", env)
+			break
+		}
+	}
 	return common.LibConfig{
 		Tracing:        pointer.Ptr(true),
 		LogInjection:   pointer.Ptr(true),
 		HealthMetrics:  pointer.Ptr(true),
 		RuntimeMetrics: pointer.Ptr(true),
+		Env:            defaultEnv,
 	}
 }
 

@@ -10,6 +10,7 @@ package autoinstrumentation
 import (
 	"encoding/json"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/metrics"
@@ -29,6 +30,11 @@ type remoteConfigProvider struct {
 
 	cache              *instrumentationConfigurationCache
 	telemetryCollector telemetry.TelemetryCollector
+}
+
+type rcConfigs struct {
+	path    string
+	request Request
 }
 
 type rcProvider interface {
@@ -61,14 +67,10 @@ func (rcp *remoteConfigProvider) start(stopCh <-chan struct{}) {
 	log.Info("Remote Enablement: starting remote-config provider")
 	rcp.client.Subscribe(state.ProductAPMTracing, rcp.process)
 	rcp.client.Start()
-	ticker := time.NewTicker(rcp.pollInterval)
-	defer ticker.Stop()
 	defer rcp.client.Close()
 
 	for {
 		select {
-		//case <-ticker.C:
-		//	rcp.process(rcp.client.GetConfigs(state.ProductAPMTracing), rcp.client.UpdateApplyStatus)
 		case <-stopCh:
 			log.Info("Remote Enablement: shutting down remote-config patch provider")
 			return
@@ -85,8 +87,10 @@ func (rcp *remoteConfigProvider) process(update map[string]state.RawConfig, appl
 		toDelete[k] = struct{}{}
 	}
 
+	// order all configs received from RC
+	orderedConfigs := []int64{}
+	allConfigs := map[int64]rcConfigs{}
 	for path, config := range update {
-		log.Infof("Parsing config %s from path %s", config.Config, path)
 		var req Request
 		err := json.Unmarshal(config.Config, &req)
 		if err != nil {
@@ -95,7 +99,21 @@ func (rcp *remoteConfigProvider) process(update map[string]state.RawConfig, appl
 			log.Errorf("Error while parsing config: %v", err)
 			continue
 		}
+		req.RcVersion = config.Metadata.Version
+		orderedConfigs = append(orderedConfigs, req.Revision)
+		allConfigs[req.Revision] = rcConfigs{
+			path:    path,
+			request: req,
+		}
+	}
+	sort.SliceStable(orderedConfigs, func(i, j int) bool { return orderedConfigs[i] < orderedConfigs[j] })
 
+	for _, revision := range orderedConfigs {
+		rcConfig, ok := allConfigs[revision]
+		if !ok {
+			log.Errorf("RC config not found")
+		}
+		req := rcConfig.request
 		if _, ok := toDelete[req.ID]; ok {
 			delete(toDelete, req.ID)
 		} else {
@@ -106,19 +124,21 @@ func (rcp *remoteConfigProvider) process(update map[string]state.RawConfig, appl
 			continue
 		}
 
-		req.RcVersion = config.Metadata.Version
 		log.Infof("Remote Enablement: updating with config %+v", req)
 		metrics.PatchAttempts.Inc()
 		resp := rcp.cache.update(req)
+		var err error
 		if resp.Status.State == state.ApplyStateError {
+			log.Infof("LILIYAB111")
 			metrics.PatchErrors.Inc()
 			rcp.telemetryCollector.SendRemoteConfigMutateEvent(req.getApmRemoteConfigEvent(err, telemetry.FailedToMutateConfig))
 		} else if resp.Status.State == state.ApplyStateAcknowledged {
+			log.Infof("LILIYAB222")
 			metrics.PatchCompleted.Inc()
 			rcp.telemetryCollector.SendRemoteConfigMutateEvent(req.getApmRemoteConfigEvent(err, telemetry.Success))
 		}
-
-		applyStateCallback(path, resp.Status)
+		log.Infof("LILIYAB333: %s %v", rcConfig.path, resp.Status)
+		applyStateCallback(rcConfig.path, resp.Status)
 		rcp.lastProcessedRCRevision = req.Revision
 	}
 
