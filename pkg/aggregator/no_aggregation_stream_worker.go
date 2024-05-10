@@ -235,9 +235,8 @@ func (w *noAggregationStreamWorker) run() {
 							fmt.Println("rz6300 flushing", serializedSamples, w.maxMetricsPerPayload)
 							tlmNoAggFlush.Add(1)
 							break mainloop // end `Serialize` call and trigger a flush to the forwarder
-						} else {
-							fmt.Println("rz6300", serializedSamples, w.maxMetricsPerPayload)
 						}
+						fmt.Println("rz6300", serializedSamples, w.maxMetricsPerPayload)
 					}
 				}
 			}, func(serieSource metrics.SerieSource) {
