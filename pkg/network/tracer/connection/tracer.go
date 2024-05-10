@@ -321,14 +321,29 @@ func (t *tracer) Start(callback func([]network.ConnectionStats)) (err error) {
 func (t *tracer) Pause() error {
 	// add small delay for socket filters to properly detach
 	time.Sleep(1 * time.Millisecond)
-	return t.m.Pause()
+	for _, probe := range t.m.Probes {
+		if prog := probe.Program(); prog == nil || prog.Type() != ebpf.SocketFilter {
+			continue
+		}
+		if err := probe.Pause(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (t *tracer) Resume() error {
-	err := t.m.Resume()
+	for _, probe := range t.m.Probes {
+		if prog := probe.Program(); prog == nil || prog.Type() != ebpf.SocketFilter {
+			continue
+		}
+		if err := probe.Resume(); err != nil {
+			return err
+		}
+	}
 	// add small delay for socket filters to properly attach
 	time.Sleep(1 * time.Millisecond)
-	return err
+	return nil
 }
 
 func (t *tracer) FlushPending() {
