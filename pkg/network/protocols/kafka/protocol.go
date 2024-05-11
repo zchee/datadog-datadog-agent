@@ -61,6 +61,15 @@ var Spec = &protocols.ProtocolSpec{
 		{
 			Name: responseMap,
 		},
+		{
+			Name: "kafka_client_id",
+		},
+		{
+			Name: "kafka_topic_name",
+		},
+		{
+			Name: "kafka_telemetry",
+		},
 	},
 	TailCalls: []manager.TailCallRoute{
 		{
