@@ -106,6 +106,15 @@ var Spec = &protocols.ProtocolSpec{
 		{
 			Name: "http2_ctx_heap",
 		},
+		{
+			Name: TelemetryMap,
+		},
+		{
+			Name: TLSTelemetryMap,
+		},
+		{
+			Name: "http2_scratch_buffer",
+		},
 	},
 	TailCalls: []manager.TailCallRoute{
 		{
