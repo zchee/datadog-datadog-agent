@@ -94,12 +94,27 @@ type ebpfProgram struct {
 func newEBPFProgram(c *config.Config, connectionProtocolMap *ebpf.Map) (*ebpfProgram, error) {
 	mgr := &manager.Manager{
 		Maps: []*manager.Map{
-			{Name: protocols.TLSDispatcherProgramsMap},
-			{Name: protocols.ProtocolDispatcherProgramsMap},
-			{Name: connectionStatesMap},
-			{Name: sockFDLookupArgsMap},
-			{Name: tupleByPidFDMap},
-			{Name: pidFDByTupleMap},
+			{
+				Name: protocols.TLSDispatcherProgramsMap,
+			},
+			{
+				Name: protocols.ProtocolDispatcherProgramsMap,
+			},
+			{
+				Name: protocols.ProtocolDispatcherClassificationPrograms,
+			},
+			{
+				Name: connectionStatesMap,
+			},
+			{
+				Name: sockFDLookupArgsMap,
+			},
+			{
+				Name: tupleByPidFDMap,
+			},
+			{
+				Name: pidFDByTupleMap,
+			},
 		},
 		Probes: []*manager.Probe{
 			{

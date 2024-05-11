@@ -37,14 +37,13 @@ type protocol struct {
 }
 
 const (
-	eventStreamName                          = "kafka"
-	filterTailCall                           = "socket__kafka_filter"
-	responseParserTailCall                   = "socket__kafka_response_parser"
-	dispatcherTailCall                       = "socket__protocol_dispatcher_kafka"
-	protocolDispatcherClassificationPrograms = "dispatcher_classification_progs"
-	kafkaHeapMap                             = "kafka_heap"
-	inFlightMap                              = "kafka_in_flight"
-	responseMap                              = "kafka_response"
+	eventStreamName        = "kafka"
+	filterTailCall         = "socket__kafka_filter"
+	responseParserTailCall = "socket__kafka_response_parser"
+	dispatcherTailCall     = "socket__protocol_dispatcher_kafka"
+	kafkaHeapMap           = "kafka_heap"
+	inFlightMap            = "kafka_in_flight"
+	responseMap            = "kafka_response"
 	// eBPFTelemetryMap is the name of the eBPF map used to retrieve metrics from the kernel
 	eBPFTelemetryMap = "kafka_telemetry"
 )
@@ -53,9 +52,6 @@ const (
 var Spec = &protocols.ProtocolSpec{
 	Factory: newKafkaProtocol,
 	Maps: []*manager.Map{
-		{
-			Name: protocolDispatcherClassificationPrograms,
-		},
 		{
 			Name: kafkaHeapMap,
 		},
@@ -82,7 +78,7 @@ var Spec = &protocols.ProtocolSpec{
 			},
 		},
 		{
-			ProgArrayName: protocolDispatcherClassificationPrograms,
+			ProgArrayName: protocols.ProtocolDispatcherClassificationPrograms,
 			Key:           uint32(protocols.DispatcherKafkaProg),
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFFuncName: dispatcherTailCall,
