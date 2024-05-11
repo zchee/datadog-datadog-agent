@@ -48,7 +48,12 @@ const (
 var Spec = &protocols.ProtocolSpec{
 	Factory: newHTTPProtocol,
 	Maps: []*manager.Map{
-		{Name: inFlightMap},
+		{
+			Name: inFlightMap,
+		},
+		{
+			Name: "http_scratch_buffer",
+		},
 	},
 	TailCalls: []manager.TailCallRoute{
 		{
