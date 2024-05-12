@@ -911,4 +911,12 @@ delete_iteration:
 
     return 0;
 }
+
+SEC("tracepoint/net/netif_receive_skb")
+int http2_tracepoint__net__netif_receive_skb(struct pt_regs* ctx) {
+    http2_batch_flush(ctx);
+    terminated_http2_batch_flush(ctx);
+    return 0;
+}
+
 #endif

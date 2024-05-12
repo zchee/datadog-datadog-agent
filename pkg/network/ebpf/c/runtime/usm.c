@@ -53,18 +53,6 @@ int BPF_KPROBE(kprobe__tcp_sendmsg, struct sock *sk) {
     return 0;
 }
 
-SEC("tracepoint/net/netif_receive_skb")
-int tracepoint__net__netif_receive_skb(struct pt_regs* ctx) {
-    log_debug("tracepoint/net/netif_receive_skb");
-    // flush batch to userspace
-    // because perf events can't be sent from socket filter programs
-    http_batch_flush(ctx);
-    http2_batch_flush(ctx);
-    terminated_http2_batch_flush(ctx);
-    kafka_batch_flush(ctx);
-    return 0;
-}
-
 // GO TLS PROBES
 
 // func (c *Conn) Write(b []byte) (int, error)

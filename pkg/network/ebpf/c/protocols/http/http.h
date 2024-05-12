@@ -288,4 +288,11 @@ int uprobe__http_termination(struct pt_regs *ctx) {
     return 0;
 }
 
+SEC("tracepoint/net/netif_receive_skb")
+int http_tracepoint__net__netif_receive_skb(struct pt_regs* ctx) {
+    // flush batch to userspace
+    // because perf events can't be sent from socket filter programs
+    http_batch_flush(ctx);
+    return 0;
+}
 #endif

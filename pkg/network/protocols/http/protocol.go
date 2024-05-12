@@ -54,6 +54,25 @@ var Spec = &protocols.ProtocolSpec{
 		{
 			Name: "http_scratch_buffer",
 		},
+		{
+			Name: "http_batch_events",
+		},
+		{
+			Name: "http_batch_events",
+		},
+		{
+			Name: "http_batch_state",
+		},
+		{
+			Name: "http_batches",
+		},
+	},
+	Probes: []*manager.Probe{
+		{
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "http_tracepoint__net__netif_receive_skb",
+			},
+		},
 	},
 	TailCalls: []manager.TailCallRoute{
 		{

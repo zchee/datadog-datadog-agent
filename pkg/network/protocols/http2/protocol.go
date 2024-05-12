@@ -115,6 +115,31 @@ var Spec = &protocols.ProtocolSpec{
 		{
 			Name: "http2_scratch_buffer",
 		},
+		{
+			Name: "http2_batch_events",
+		},
+		{
+			Name: "http2_batch_state",
+		},
+		{
+			Name: "http2_batches",
+		},
+		{
+			Name: "terminated_http2_batch_events",
+		},
+		{
+			Name: "terminated_http2_batch_state",
+		},
+		{
+			Name: "terminated_http2_batches",
+		},
+	},
+	Probes: []*manager.Probe{
+		{
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "http2_tracepoint__net__netif_receive_skb",
+			},
+		},
 	},
 	TailCalls: []manager.TailCallRoute{
 		{

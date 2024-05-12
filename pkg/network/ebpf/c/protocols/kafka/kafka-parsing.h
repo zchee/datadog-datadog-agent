@@ -37,6 +37,12 @@ _Pragma( STRINGIFY(unroll(max_buffer_size)) )                                   
 #define extra_debug(fmt, ...)
 #endif
 
+SEC("tracepoint/net/netif_receive_skb")
+int kafka_tracepoint__net__netif_receive_skb(struct pt_regs* ctx) {
+    kafka_batch_flush(ctx);
+    return 0;
+}
+
 SEC("socket/kafka_filter")
 int socket__kafka_filter(struct __sk_buff* skb) {
     const u32 zero = 0;

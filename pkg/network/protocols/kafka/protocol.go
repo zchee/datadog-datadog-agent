@@ -70,6 +70,22 @@ var Spec = &protocols.ProtocolSpec{
 		{
 			Name: "kafka_telemetry",
 		},
+		{
+			Name: "kafka_batch_events",
+		},
+		{
+			Name: "kafka_batch_state",
+		},
+		{
+			Name: "kafka_batches",
+		},
+	},
+	Probes: []*manager.Probe{
+		{
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kafka_tracepoint__net__netif_receive_skb",
+			},
+		},
 	},
 	TailCalls: []manager.TailCallRoute{
 		{

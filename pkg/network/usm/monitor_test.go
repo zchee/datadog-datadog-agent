@@ -657,3 +657,66 @@ func skipIfNotSupported(t *testing.T, err error) {
 		t.Skipf("skipping test because this kernel is not supported: %s", notSupported)
 	}
 }
+
+func TestNoUnassociatedMap(t *testing.T) {
+	cfg := config.New()
+	usmMonitor, err := NewMonitor(cfg, nil)
+	require.NoError(t, err)
+	require.NoError(t, usmMonitor.Start())
+	dummyOnlyMaps, err := usmMonitor.ebpfProgram.GetMaps()
+	usmMonitor.Stop()
+	require.NoError(t, err)
+	fmt.Println(len(dummyOnlyMaps))
+	for name := range dummyOnlyMaps {
+		fmt.Println(name)
+	}
+
+	//tests := []struct {
+	//	name        string
+	//	cfgModifier func(cfg *config.Config)
+	//}{
+	//	{
+	//		name: "HTTP monitoring enabled",
+	//		cfgModifier: func(cfg *config.Config) {
+	//			cfg.EnableHTTPMonitoring = true
+	//		},
+	//	},
+	//	{
+	//		name: "HTTP2 monitoring enabled",
+	//		cfgModifier: func(cfg *config.Config) {
+	//			cfg.EnableHTTP2Monitoring = true
+	//		},
+	//	},
+	//	{
+	//		name: "Kafka monitoring enabled",
+	//		cfgModifier: func(cfg *config.Config) {
+	//			cfg.EnableKafkaMonitoring = true
+	//		},
+	//	},
+	//	{
+	//		name: "Native TLS monitoring enabled",
+	//		cfgModifier: func(cfg *config.Config) {
+	//			cfg.EnableNativeTLSMonitoring = true
+	//		},
+	//	},
+	//	{
+	//		name: "Node.js monitoring enabled",
+	//		cfgModifier: func(cfg *config.Config) {
+	//			cfg.EnableNodeJSMonitoring = true
+	//		},
+	//	},
+	//	{
+	//		name: "Go TLS monitoring enabled",
+	//		cfgModifier: func(cfg *config.Config) {
+	//			cfg.EnableGoTLSSupport = true
+	//		},
+	//	},
+	//	{
+	//		name: "Istio monitoring enabled",
+	//		cfgModifier: func(cfg *config.Config) {
+	//			cfg.EnableIstioMonitoring = true
+	//		},
+	//	},
+	//}
+
+}

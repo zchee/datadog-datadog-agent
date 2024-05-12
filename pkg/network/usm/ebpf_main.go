@@ -44,13 +44,14 @@ var (
 
 	// knownProtocols holds all known protocols supported by USM to initialize.
 	knownProtocols = []*protocols.ProtocolSpec{
+		dummySpec,
 		http.Spec,
 		http2.Spec,
 		kafka.Spec,
 		javaTLSSpec,
 		// opensslSpec is unique, as we're modifying its factory during runtime to allow getting more parameters in the
 		// factory.
-		opensslSpec,
+		//opensslSpec,
 		goTLSSpec,
 	}
 )
@@ -126,12 +127,6 @@ func newEBPFProgram(c *config.Config, connectionProtocolMap *ebpf.Map) (*ebpfPro
 			{
 				ProbeIdentificationPair: manager.ProbeIdentificationPair{
 					EBPFFuncName: tcpCloseProbe,
-					UID:          probeUID,
-				},
-			},
-			{
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: "tracepoint__net__netif_receive_skb",
 					UID:          probeUID,
 				},
 			},
@@ -452,11 +447,7 @@ func (e *ebpfProgram) init(buf bytecode.AssetReader, options manager.Options) er
 	// Add excluded functions from disabled protocols
 	for _, p := range notSupported {
 		for _, m := range p.Maps {
-			// Unused maps still need to have a non-zero size
-			options.MapSpecEditors[m.Name] = manager.MapSpecEditor{
-				MaxEntries: uint32(1),
-				EditorFlag: manager.EditMaxEntries,
-			}
+			options.ExcludedMaps = append(options.ExcludedMaps, m.Name)
 
 			log.Debugf("disabled map: %v", m.Name)
 		}
