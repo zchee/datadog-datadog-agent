@@ -912,7 +912,6 @@ func basicConfig() common.LibConfig {
 			env := strings.TrimPrefix(tag, "env:")
 			defaultEnv = &env
 			log.Debugf("Setting DefaultEnv to %q (from `env:` entry under the 'tags' config option: %q)", env, tag)
-			log.Infof("LILIYAB %s", env)
 			break
 		}
 	}

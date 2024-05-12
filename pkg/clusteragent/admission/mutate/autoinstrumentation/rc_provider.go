@@ -129,15 +129,12 @@ func (rcp *remoteConfigProvider) process(update map[string]state.RawConfig, appl
 		resp := rcp.cache.update(req)
 		var err error
 		if resp.Status.State == state.ApplyStateError {
-			log.Infof("LILIYAB111")
 			metrics.PatchErrors.Inc()
 			rcp.telemetryCollector.SendRemoteConfigMutateEvent(req.getApmRemoteConfigEvent(err, telemetry.FailedToMutateConfig))
 		} else if resp.Status.State == state.ApplyStateAcknowledged {
-			log.Infof("LILIYAB222")
 			metrics.PatchCompleted.Inc()
 			rcp.telemetryCollector.SendRemoteConfigMutateEvent(req.getApmRemoteConfigEvent(err, telemetry.Success))
 		}
-		log.Infof("LILIYAB333: %s %v", rcConfig.path, resp.Status)
 		applyStateCallback(rcConfig.path, resp.Status)
 		rcp.lastProcessedRCRevision = req.Revision
 	}
