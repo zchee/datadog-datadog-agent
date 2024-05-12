@@ -29,10 +29,10 @@ from tasks.flavor import AgentFlavor
 from tasks.libs.common.color import color_message
 from tasks.libs.common.datadog_api import create_count, send_metrics
 from tasks.libs.common.junit_upload_core import enrich_junitxml, produce_junit_tar
-from tasks.libs.common.utils import clean_nested_paths, get_build_flags
-from tasks.linter import _lint_go
+from tasks.libs.common.utils import clean_nested_paths, collapsed_section, get_build_flags
 from tasks.modules import DEFAULT_MODULES, GoModule
 from tasks.test_core import ModuleTestResult, process_input_args, process_module_results, test_core
+from tasks.testwasher import TestWasher
 from tasks.trace_agent import integration_tests as trace_integration_tests
 
 PROFILE_COV = "coverage.out"
@@ -85,7 +85,6 @@ def build_standard_lib(
 ):
     """
     Builds the stdlib with the same build flags as the tests.
-
     Since Go 1.20, standard library is not pre-compiled anymore but is built as needed and cached in the build cache.
     To avoid a perfomance overhead when running tests, we pre-compile the standard library and cache it.
     We must use the same build flags as the one we are using when compiling tests to not invalidate the cache.
@@ -194,6 +193,7 @@ def test_flavor(
     """
     args["go_build_tags"] = " ".join(build_tags)
 
+    args["json_flag"] = "--jsonfile " + GO_TEST_RESULT_TMP_JSON
     junit_file = f"junit-out-{flavor.name}.xml"
     junit_file_flag = "--junitfile " + junit_file if junit_tar else ""
     args["junit_file_flag"] = junit_file_flag
@@ -297,12 +297,40 @@ def sanitize_env_vars():
             del os.environ[env]
 
 
-@task(iterable=['flavors'])
+def process_test_result(test_results: ModuleTestResult, junit_tar: str, flavor: AgentFlavor, test_washer: bool) -> bool:
+    if junit_tar:
+        junit_files = [
+            module_test_result.junit_file_path
+            for module_test_result in test_results
+            if module_test_result.junit_file_path
+        ]
+
+        produce_junit_tar(junit_files, junit_tar)
+
+    success = process_module_results(flavor=flavor, module_results=test_results)
+
+    if success:
+        print(color_message("All tests passed", "green"))
+        return True
+
+    if test_washer:
+        tw = TestWasher()
+        should_succeed = tw.process_module_results(test_results)
+        if should_succeed:
+            print(
+                color_message("All failing tests are known to be flaky, marking the test job as successful", "orange")
+            )
+            return True
+
+    return False
+
+
+@task
 def test(
     ctx,
     module=None,
     targets=None,
-    flavors=None,
+    flavor=None,
     coverage=False,
     print_coverage=False,
     build_include=None,
@@ -329,6 +357,7 @@ def test(
     include_sds=False,
     skip_flakes=False,
     build_stdlib=False,
+    test_washer=False,
 ):
     """
     Run go tests on the given module and targets.
@@ -344,23 +373,18 @@ def test(
         inv test --targets=./pkg/collector/check,./pkg/aggregator --race
         inv test --module=. --race
     """
-    modules_results_per_phase = defaultdict(dict)
-
     sanitize_env_vars()
 
-    modules, flavors = process_input_args(module, targets, flavors)
+    modules, flavor = process_input_args(ctx, module, targets, flavor)
 
-    unit_tests_tags = {
-        f: compute_build_tags_for_flavor(
-            flavor=f,
-            build="unit-tests",
-            arch=arch,
-            build_include=build_include,
-            build_exclude=build_exclude,
-            include_sds=include_sds,
-        )
-        for f in flavors
-    }
+    unit_tests_tags = compute_build_tags_for_flavor(
+        flavor=flavor,
+        build="unit-tests",
+        arch=arch,
+        build_include=build_include,
+        build_exclude=build_exclude,
+        include_sds=include_sds,
+    )
 
     ldflags, gcflags, env = get_build_flags(
         ctx,
@@ -393,7 +417,8 @@ def test(
     stdlib_build_cmd += '-ldflags="{ldflags}" {build_cpus} {race_opt} std cmd'
     rerun_coverage_fix = '--raw-command {cov_test_path}' if coverage else ""
     gotestsum_flags = (
-        '{junit_file_flag} {json_flag} --format pkgname {rerun_fails} --packages="{packages}" ' + rerun_coverage_fix
+        '{junit_file_flag} {json_flag} --format {gotestsum_format} {rerun_fails} --packages="{packages}" '
+        + rerun_coverage_fix
     )
     gobuild_flags = (
         '-mod={go_mod} -tags "{go_build_tags}" -gcflags="{gcflags}" -ldflags="{ldflags}" {build_cpus} {race_opt}'
@@ -413,31 +438,32 @@ def test(
         "verbose": '-v' if verbose else '',
         "nocache": nocache,
         # Used to print failed tests at the end of the go test command
-        "json_flag": f'--jsonfile "{GO_TEST_RESULT_TMP_JSON}" ',
         "rerun_fails": f"--rerun-fails={rerun_fails}" if rerun_fails else "",
         "skip_flakes": "--skip-flake" if skip_flakes else "",
+        "gotestsum_format": "standard-verbose" if verbose else "pkgname",
     }
 
     # Test
-    for flavor, build_tags in unit_tests_tags.items():
-        if build_stdlib:
-            build_standard_lib(
-                ctx,
-                build_tags=build_tags,
-                cmd=stdlib_build_cmd,
-                env=env,
-                args=args,
-                test_profiler=test_profiler,
-            )
-        if only_modified_packages:
-            modules = get_modified_packages(ctx, build_tags=build_tags)
-        if only_impacted_packages:
-            modules = get_impacted_packages(ctx, build_tags=build_tags)
+    if build_stdlib:
+        build_standard_lib(
+            ctx,
+            build_tags=unit_tests_tags,
+            cmd=stdlib_build_cmd,
+            env=env,
+            args=args,
+            test_profiler=test_profiler,
+        )
 
-        modules_results_per_phase["test"][flavor] = test_flavor(
+    if only_modified_packages:
+        modules = get_modified_packages(ctx, build_tags=unit_tests_tags)
+    if only_impacted_packages:
+        modules = get_impacted_packages(ctx, build_tags=unit_tests_tags)
+
+    with collapsed_section("Running unit tests"):
+        test_results = test_flavor(
             ctx,
             flavor=flavor,
-            build_tags=build_tags,
+            build_tags=unit_tests_tags,
             modules=modules,
             cmd=cmd,
             env=env,
@@ -449,18 +475,9 @@ def test(
         )
 
     # Output
-    if junit_tar:
-        junit_files = []
-        for flavor in modules_results_per_phase["test"]:
-            for module_test_result in modules_results_per_phase["test"][flavor]:
-                if module_test_result.junit_file_path:
-                    junit_files.append(module_test_result.junit_file_path)
-
-        produce_junit_tar(junit_files, junit_tar)
 
     if coverage and print_coverage:
-        for flavor in flavors:
-            coverage_flavor(ctx, flavor, modules)
+        coverage_flavor(ctx, flavor, modules)
 
     # FIXME(AP-1958): this prints nothing in CI. Commenting out the print line
     # in the meantime to avoid confusion
@@ -468,13 +485,11 @@ def test(
         # print("\n--- Top 15 packages sorted by run time:")
         test_profiler.print_sorted(15)
 
-    success = process_module_results(modules_results_per_phase)
-
-    if success:
-        print(color_message("All tests passed", "green"))
-    else:
-        # Exit if any of the modules failed on any phase
+    success = process_test_result(test_results, junit_tar, flavor, test_washer)
+    if not success:
         raise Exit(code=1)
+
+    print(f"Tests final status (including re-runs): {color_message('ALL TESTS PASSED', 'green')}")
 
 
 @task(iterable=['flavors'])
@@ -482,12 +497,11 @@ def codecov(
     ctx,
     module=None,
     targets=None,
-    flavors=None,
+    flavor=None,
 ):
-    modules, flavors = process_input_args(module, targets, flavors)
+    modules, flavor = process_input_args(ctx, module, targets, flavor)
 
-    for flavor in flavors:
-        codecov_flavor(ctx, flavor, modules)
+    codecov_flavor(ctx, flavor, modules)
 
 
 @task
@@ -939,12 +953,12 @@ def should_run_all_tests(files, trigger_files):
     return False
 
 
-@task(iterable=['flavors'])
+@task
 def lint_go(
     ctx,
     module=None,
     targets=None,
-    flavors=None,
+    flavor=None,
     build="lint",
     build_tags=None,
     build_include=None,
@@ -956,21 +970,6 @@ def lint_go(
     golangci_lint_kwargs="",
     headless_mode=False,
     include_sds=False,
+    only_modified_packages=False,
 ):
-    _lint_go(
-        ctx,
-        module,
-        targets,
-        flavors,
-        build,
-        build_tags,
-        build_include,
-        build_exclude,
-        rtloader_root,
-        arch,
-        cpus,
-        timeout,
-        golangci_lint_kwargs,
-        headless_mode,
-        include_sds,
-    )
+    raise Exit("This task is deprecated, please use `inv linter.go`", 1)
