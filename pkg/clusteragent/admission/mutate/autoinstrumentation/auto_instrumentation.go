@@ -113,7 +113,9 @@ const (
 )
 
 var (
-	supportedLanguages = []language{java, js, python, dotnet, ruby}
+	//supportedLanguages = []language{java, js, python, dotnet, ruby}
+	// For Remote enablement private beta only support Java, JS and Python
+	supportedLanguages = []language{java, js, python}
 
 	singleStepInstrumentationInstallTypeEnvVar = corev1.EnvVar{
 		Name:  instrumentationInstallTypeEnvVarName,
