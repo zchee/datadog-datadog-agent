@@ -69,13 +69,9 @@ func (rcp *remoteConfigProvider) start(stopCh <-chan struct{}) {
 	rcp.client.Start()
 	defer rcp.client.Close()
 
-	for {
-		select {
-		case <-stopCh:
-			log.Info("Remote Enablement: shutting down remote-config patch provider")
-			return
-		}
-	}
+	<-stopCh
+	log.Info("Remote Enablement: shutting down remote-config patch provider")
+	return
 }
 
 // process is the event handler called by the RC client on config updates

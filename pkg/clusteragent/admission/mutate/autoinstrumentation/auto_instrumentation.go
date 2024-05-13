@@ -421,7 +421,7 @@ func injectApmRemoteEnablementConfig(pod *corev1.Pod, rcID string, env string) {
 	if rcID != "" {
 		rcConfigIDEnvVar := corev1.EnvVar{
 			Name:  instrumentationRemoteConfigIDEnvVarName,
-			Value: fmt.Sprintf("%s", rcID),
+			Value: rcID,
 		}
 		_ = mutatecommon.InjectEnv(pod, rcConfigIDEnvVar)
 	}
