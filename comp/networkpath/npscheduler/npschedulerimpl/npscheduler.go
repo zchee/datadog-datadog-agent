@@ -53,6 +53,8 @@ type npSchedulerImpl struct {
 	running bool
 
 	statsdClient ddgostatsd.ClientInterface
+
+	tracerouteFactory func() (traceroute.Traceroute, error)
 }
 
 func newNoopNpSchedulerImpl() *npSchedulerImpl {
@@ -92,6 +94,8 @@ func newNpSchedulerImpl(epForwarder eventplatform.Component, logger log.Componen
 		flushLoopDone: make(chan struct{}),
 
 		statsdClient: statsd.Client,
+
+		tracerouteFactory: traceroute.New,
 	}
 }
 
@@ -201,12 +205,12 @@ func (s *npSchedulerImpl) runTraceroute(ptest *pathteststore.PathtestContext) {
 		TimeoutMs:    1000,
 	}
 
-	tr, err := traceroute.New(cfg)
+	tr, err := s.tracerouteFactory()
 	if err != nil {
 		s.logger.Warnf("new traceroute error: %+v", err)
 		return
 	}
-	path, err := tr.Run(context.TODO())
+	path, err := tr.Run(context.TODO(), cfg)
 	if err != nil {
 		s.logger.Warnf("run traceroute error: %+v", err)
 		return

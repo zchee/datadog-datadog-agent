@@ -30,6 +30,6 @@ type (
 	// Traceroute defines an interface for running
 	// traceroutes for the Network Path integration
 	Traceroute interface {
-		Run(context.Context) (payload.NetworkPath, error)
+		Run(context.Context, Config) (payload.NetworkPath, error)
 	}
 )

@@ -24,20 +24,16 @@ const (
 // LinuxTraceroute defines a structure for
 // running traceroute from an agent running
 // on Linux
-type LinuxTraceroute struct {
-	cfg Config
-}
+type LinuxTraceroute struct{}
 
 // New creates a new instance of LinuxTraceroute
 // based on an input configuration
-func New(cfg Config) (*LinuxTraceroute, error) {
-	return &LinuxTraceroute{
-		cfg: cfg,
-	}, nil
+func New(cfg Config) (Traceroute, error) {
+	return &LinuxTraceroute{}, nil
 }
 
 // Run executes a traceroute
-func (l *LinuxTraceroute) Run(_ context.Context) (payload.NetworkPath, error) {
+func (l *LinuxTraceroute) Run(_ context.Context, cfg Config) (payload.NetworkPath, error) {
 	tu, err := net.GetRemoteSystemProbeUtil(
 		dd_config.SystemProbe.GetString("system_probe_config.sysprobe_socket"))
 	if err != nil {
@@ -45,7 +41,7 @@ func (l *LinuxTraceroute) Run(_ context.Context) (payload.NetworkPath, error) {
 		return payload.NetworkPath{}, err
 	}
 
-	resp, err := tu.GetTraceroute(clientID, l.cfg.DestHostname, l.cfg.DestPort, l.cfg.MaxTTL, l.cfg.TimeoutMs)
+	resp, err := tu.GetTraceroute(clientID, cfg.DestHostname, cfg.DestPort, cfg.MaxTTL, cfg.TimeoutMs)
 	if err != nil {
 		return payload.NetworkPath{}, err
 	}
