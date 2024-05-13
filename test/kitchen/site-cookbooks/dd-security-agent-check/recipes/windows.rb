@@ -42,6 +42,9 @@ remote_file "#{tmp_dir}\\wix311-binaries.zip" do
   source "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip"
 end
 
+execute 'winupdate-stop' do
+  command "powershell -C \"Stop-Service -Name wuauserv -Force\""
+end
 
 execute 'wix-extract' do
   cwd tmp_dir
