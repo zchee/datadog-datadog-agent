@@ -4,6 +4,7 @@ go_library(
     name = "agent_lib",
     srcs = [
         "doc.go",
+        "klog.go",
         "main.go",
         "main_common.go",
         "main_linux_cgo.go",
@@ -13,7 +14,11 @@ go_library(
     cgo = True,
     importpath = "github.com/DataDog/datadog-agent/cmd/agent",
     visibility = ["//visibility:private"],
-    deps = select({
+    deps = [
+        "//pkg/util/log",
+        "@io_k8s_klog//:klog",
+        "@io_k8s_klog_v2//:klog",
+    ] + select({
         "@rules_go//go/platform:aix": [
             "//cmd/agent/command",
             "//cmd/agent/subcommands",
@@ -100,7 +105,6 @@ go_library(
             "//cmd/agent/subcommands",
             "//cmd/agent/windows/service",
             "//cmd/internal/runcmd",
-            "//pkg/util/log",
             "//pkg/util/winutil/servicemain",
         ],
         "//conditions:default": [],

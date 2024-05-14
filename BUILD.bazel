@@ -16,7 +16,7 @@ gazelle(
         "gce",
         "jetson",
         "jmx",
-        # "kubeapiserver",
+        "kubeapiserver",
         "kubelet",
         "netcgo",  # Force the use of the CGO resolver. This will also have the effect of making the binary non-static
         # "oracle",
