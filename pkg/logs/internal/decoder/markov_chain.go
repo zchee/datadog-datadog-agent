@@ -4,7 +4,7 @@
 // Copyright 2016-present Datadog, Inc.
 
 //revive:disable
-package multilineexperiment
+package decoder
 
 import "math"
 

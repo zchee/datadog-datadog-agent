@@ -3,10 +3,11 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-// Package multilineexperiment contains the multi-line experiment code.
-package multilineexperiment
+// package decoder contains the multi-line experiment code.
+package decoder
 
 import (
+	"bytes"
 	"encoding/json"
 	"regexp"
 	"sort"
@@ -55,7 +56,7 @@ type tokenCluster struct {
 
 // MultiLineDetector is collects data about logs and reports metrics if we think they are multi-line.
 type MultiLineDetector struct {
-	enabled             bool
+	Enabled             bool
 	tokenLength         int
 	tokenMatchThreshold float64
 	detectionThreshold  float64
@@ -68,12 +69,28 @@ type MultiLineDetector struct {
 	containsJSON        bool
 	id                  string
 	timestampModel      *MarkovChain
-
-	clusterTable []*tokenCluster
+	clusterTable        []*tokenCluster
+	outputFn            func(*message.Message)
+	buffer              *bytes.Buffer
+	shouldTruncate      bool
+	linesLen            int
+	status              string
+	timestamp           string
+	lineLimit           int
+	sampleThreshold     int64
+	weightThreshold     float64
 }
 
+type label uint32
+
+const (
+	StartGroup label = iota
+	NoAggregate
+	Aggregate
+)
+
 // NewMultiLineDetector returns a new MultiLineDetector
-func NewMultiLineDetector() *MultiLineDetector {
+func NewMultiLineDetector(outputFn func(*message.Message), lineLimit int) *MultiLineDetector {
 
 	enabled := config.Datadog.GetBool("logs_config.multi_line_experiment.enabled")
 	tokenLength := config.Datadog.GetInt("logs_config.multi_line_experiment.token_length")
@@ -82,8 +99,11 @@ func NewMultiLineDetector() *MultiLineDetector {
 	clusterTableMaxSize := config.Datadog.GetInt("logs_config.multi_line_experiment.cluster_table_max_size")
 	reportInterval := config.Datadog.GetDuration("logs_config.multi_line_experiment.report_interval")
 
+	sampleThreshold := config.Datadog.GetInt64("logs_config.multi_line_experiment.sample_threshold")
+	weightThreshold := config.Datadog.GetFloat64("logs_config.multi_line_experiment.weight_threshold")
+
 	return &MultiLineDetector{
-		enabled:             enabled,
+		Enabled:             enabled,
 		tokenLength:         tokenLength,
 		tokenMatchThreshold: tokenMatchThreshold,
 		detectionThreshold:  detectionThreshold,
@@ -96,15 +116,88 @@ func NewMultiLineDetector() *MultiLineDetector {
 		reportTicker:        time.NewTicker(reportInterval),
 		clusterTable:        []*tokenCluster{},
 		timestampModel:      compileModel(tokenLength),
+		outputFn:            outputFn,
+		buffer:              bytes.NewBuffer(nil),
+		shouldTruncate:      false,
+		linesLen:            0,
+		status:              "",
+		timestamp:           "",
+		lineLimit:           lineLimit,
+		sampleThreshold:     sampleThreshold,
+		weightThreshold:     weightThreshold,
 	}
+}
+
+func (m *MultiLineDetector) sendBuffer() {
+	defer func() {
+		m.buffer.Reset()
+		m.shouldTruncate = false
+	}()
+
+	data := bytes.TrimSpace(m.buffer.Bytes())
+	content := make([]byte, len(data))
+	copy(content, data)
+
+	if len(content) > 0 || m.linesLen > 0 {
+		m.outputFn(NewMessage(content, m.status, m.linesLen, m.timestamp))
+	}
+}
+
+func (m *MultiLineDetector) aggregate(message *message.Message, l label) {
+
+	if l == NoAggregate {
+		m.sendBuffer()
+		m.outputFn(message)
+		return
+	}
+
+	if l == StartGroup {
+		if m.buffer.Len() > 0 {
+			m.sendBuffer()
+		}
+	}
+
+	if l == Aggregate && m.buffer.Len() == 0 {
+		m.outputFn(message)
+		return
+	}
+
+	isTruncated := m.shouldTruncate
+	m.shouldTruncate = false
+
+	// track the raw data length and the timestamp so that the agent tails
+	// from the right place at restart
+	m.linesLen += message.RawDataLen
+	m.timestamp = message.ParsingExtra.Timestamp
+	m.status = message.Status
+
+	if m.buffer.Len() > 0 {
+		// the buffer already contains some data which means that
+		// the current line is not the first line of the message
+		m.buffer.Write(escapedLineFeed)
+	}
+
+	if isTruncated {
+		// the previous line has been truncated because it was too long,
+		// the new line is just a remainder,
+		// adding the truncated flag at the beginning of the content
+		m.buffer.Write(truncatedFlag)
+	}
+
+	m.buffer.Write(message.GetContent())
+
+	if m.buffer.Len() >= m.lineLimit {
+		// the multiline message is too long, it needs to be cut off and send,
+		// adding the truncated flag the end of the content
+		m.buffer.Write(truncatedFlag)
+		m.sendBuffer()
+		m.shouldTruncate = true
+	}
+
 }
 
 // ProcessMesage processes a message and updates the cluster table
 func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
-
-	if !m.enabled {
-		return
-	}
 
 	content := message.GetContent()
 
@@ -131,6 +224,8 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 	sample := content[:maxLength]
 	tokens := tokenize(sample, m.tokenLength)
 
+	var weight float64
+	// var samples int64
 	// 3. Check if we already have a cluster matching these tokens
 	matched := false
 	for i, cluster := range m.clusterTable {
@@ -138,6 +233,8 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 		if matched {
 			cluster.sampleCount++
 			cluster.score += (1 * cluster.weight)
+			weight = cluster.weight
+			// samples = cluster.sampleCount
 
 			// By keeping the scored clusters sorted, the best match always comes first. Since we expect one timestamp to match overwhelmingly
 			// it should match most often causing few re-sorts.
@@ -152,7 +249,6 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 
 	// 4. If no match is found, add to the table
 	if !matched && len(m.clusterTable) < m.clusterTableMaxSize {
-		var weight float64
 		p := float64(0)
 
 		// 5. Compute weight.
@@ -181,11 +277,20 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 		m.droppedClusters++
 	}
 
+	// 6. Label the logs
+	if isJSONLog {
+		m.aggregate(message, NoAggregate)
+	} else if weight > m.weightThreshold {
+		m.aggregate(message, StartGroup)
+	} else {
+		m.aggregate(message, Aggregate)
+	}
+
 }
 
 // FoundMultiLineLog reports if a multi-line log was detected from the core-agent mulit-line detection
 func (m *MultiLineDetector) FoundMultiLineLog(val bool) {
-	if !m.enabled {
+	if !m.Enabled {
 		return
 	}
 
@@ -256,7 +361,7 @@ func (m *MultiLineDetector) buildPayload() *AnalyticsPayload {
 
 func (m *MultiLineDetector) reportAnalytics(force bool) {
 	// Don't report analytics if disable, or until after we have finished detection.
-	if !m.enabled || m.foundMultiLineLog == nil {
+	if !m.Enabled || m.foundMultiLineLog == nil {
 		return
 	}
 

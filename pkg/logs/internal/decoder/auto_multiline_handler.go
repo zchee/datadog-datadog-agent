@@ -15,7 +15,6 @@ import (
 
 	"github.com/benbjohnson/clock"
 
-	experiment "github.com/DataDog/datadog-agent/pkg/logs/internal/decoder/multiline_experiment"
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
 	"github.com/DataDog/datadog-agent/pkg/logs/sources"
 	status "github.com/DataDog/datadog-agent/pkg/logs/status/utils"
@@ -71,7 +70,7 @@ type AutoMultilineHandler struct {
 	clk                 clock.Clock
 	autoMultiLineStatus *status.MappedInfo
 	tailerInfo          *status.InfoRegistry
-	multiLineDetector   *experiment.MultiLineDetector
+	multiLineDetector   *MultiLineDetector
 }
 
 // NewAutoMultilineHandler returns a new AutoMultilineHandler.
@@ -112,7 +111,7 @@ func NewAutoMultilineHandler(
 		clk:                 clock.New(),
 		autoMultiLineStatus: status.NewMappedInfo("Auto Multi-line"),
 		tailerInfo:          tailerInfo,
-		multiLineDetector:   experiment.NewMultiLineDetector(),
+		multiLineDetector:   NewMultiLineDetector(outputFn, lineLimit),
 	}
 
 	h.singleLineHandler = NewSingleLineHandler(outputFn, lineLimit)
@@ -124,8 +123,12 @@ func NewAutoMultilineHandler(
 }
 
 func (h *AutoMultilineHandler) process(message *message.Message) {
-	h.multiLineDetector.ProcessMesage(message)
-	h.processFunc(message)
+
+	if h.multiLineDetector.Enabled {
+		h.multiLineDetector.ProcessMesage(message)
+	} else {
+		h.processFunc(message)
+	}
 }
 
 func (h *AutoMultilineHandler) flushChan() <-chan time.Time {

@@ -1006,6 +1006,9 @@ func InitConfig(config pkgconfigmodel.Config) {
 	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.cluster_table_max_size", 100)
 	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.report_interval", "1m")
 
+	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.sample_threshold", 100)
+	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.weight_threshold", 1.0)
+
 	// If true, the agent looks for container logs in the location used by podman, rather
 	// than docker.  This is a temporary configuration parameter to support podman logs until
 	// a more substantial refactor of autodiscovery is made to determine this automatically.
