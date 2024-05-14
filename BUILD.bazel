@@ -7,7 +7,7 @@ gazelle(
         # List of known tags borrowed from /tasks/build_tags.py
         "apm",
         "consul",
-        # "containerd",
+        "containerd",
         # "cri",
         "datadog.no_waf",
         "docker",

@@ -1,6 +1,6 @@
 {
   "lockFileVersion": 6,
-  "moduleFileHash": "b28e37bbfae62cfbe70b327cbd5577a5c044352a723a646ddaf54d3684255167",
+  "moduleFileHash": "bcaecd672f7dc0844369091b8b638a7235b90dfc9cf22f05c7e304ca9f9ecaab",
   "flags": {
     "cmdRegistries": [
       "https://bcr.bazel.build/"
@@ -591,6 +591,36 @@
               "location": {
                 "file": "@@//:MODULE.bazel",
                 "line": 20,
+                "column": 25
+              }
+            },
+            {
+              "tagName": "gazelle_override",
+              "attributeValues": {
+                "directives": [
+                  "gazelle:proto disable"
+                ],
+                "path": "github.com/containerd/containerd"
+              },
+              "devDependency": false,
+              "location": {
+                "file": "@@//:MODULE.bazel",
+                "line": 33,
+                "column": 25
+              }
+            },
+            {
+              "tagName": "gazelle_override",
+              "attributeValues": {
+                "directives": [
+                  "gazelle:proto disable"
+                ],
+                "path": "github.com/containerd/ttrpc"
+              },
+              "devDependency": false,
+              "location": {
+                "file": "@@//:MODULE.bazel",
+                "line": 39,
                 "column": 25
               }
             }

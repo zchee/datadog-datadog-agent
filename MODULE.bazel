@@ -27,6 +27,22 @@ go_deps.gazelle_override(
     ],
     path = "github.com/grpc-ecosystem/grpc-gateway",
 )
+
+# containerd/containerd doesn't require regenerating code from protos,
+# which for some reason gazelle mishandles; let's disable them.
+go_deps.gazelle_override(
+    directives = [
+        "gazelle:proto disable",
+    ],
+    path = "github.com/containerd/containerd",
+)
+go_deps.gazelle_override(
+    directives = [
+        "gazelle:proto disable",
+    ],
+    path = "github.com/containerd/ttrpc",
+)
+
 use_repo(
     go_deps,
     "com_github_acobaugh_osrelease",
