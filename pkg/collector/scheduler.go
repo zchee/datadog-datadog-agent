@@ -185,6 +185,10 @@ func (s *CheckScheduler) getChecks(config integration.Config) ([]check.Check, er
 		} else {
 			log.Debugf("Loading check instance for check '%s' using default loaders", config.Name)
 		}
+		var loadersName []string
+		for _, loader := range s.loaders {
+			loadersName = append(loadersName, loader.Name())
+		}
 
 		for _, loader := range s.loaders {
 			// the loader is skipped if the loader name is set and does not match

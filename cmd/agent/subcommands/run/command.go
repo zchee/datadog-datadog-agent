@@ -145,6 +145,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/version"
 
 	// runtime init routines
+	_ "github.com/DataDog/datadog-agent/pkg/collector/wasmcheck"
 	ddruntime "github.com/DataDog/datadog-agent/pkg/runtime"
 )
 
