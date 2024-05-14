@@ -13,7 +13,7 @@ gazelle(
         "docker",
         "ec2",
         "etcd",
-        # "gce",
+        "gce",
         "jetson",
         "jmx",
         # "kubeapiserver",
