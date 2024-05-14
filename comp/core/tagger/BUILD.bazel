@@ -4,6 +4,7 @@ go_library(
     name = "tagger",
     srcs = [
         "component.go",
+        "component_mock.go",
         "global.go",
         "params.go",
     ],

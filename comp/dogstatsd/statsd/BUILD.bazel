@@ -4,7 +4,9 @@ go_library(
     name = "statsd",
     srcs = [
         "component.go",
+        "component_mock.go",
         "statsd.go",
+        "statsd_mock.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/comp/dogstatsd/statsd",
     visibility = ["//visibility:public"],
@@ -17,11 +19,16 @@ go_library(
 
 go_test(
     name = "statsd_test",
-    srcs = ["statsd_test.go"],
+    srcs = [
+        "statsd_mock_test.go",
+        "statsd_test.go",
+    ],
     embed = [":statsd"],
     deps = [
         "//pkg/util/fxutil",
         "@com_github_datadog_datadog_go_v5//statsd",
         "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@org_uber_go_fx//:fx",
     ],
 )

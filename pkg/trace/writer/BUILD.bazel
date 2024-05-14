@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "sender.go",
         "stats.go",
+        "testserver.go",
         "trace.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/trace/writer",

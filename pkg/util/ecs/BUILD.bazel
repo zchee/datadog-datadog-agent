@@ -2,7 +2,19 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "ecs",
-    srcs = ["doc.go"],
+    srcs = [
+        "detection.go",
+        "diagnosis.go",
+        "doc.go",
+    ],
     importpath = "github.com/DataDog/datadog-agent/pkg/util/ecs",
     visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/config",
+        "//pkg/diagnose/diagnosis",
+        "//pkg/util/cache",
+        "//pkg/util/ecs/common",
+        "//pkg/util/ecs/metadata",
+        "//pkg/util/log",
+    ],
 )

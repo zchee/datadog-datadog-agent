@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "submitterimpl",
-    srcs = ["submitter.go"],
+    srcs = [
+        "submitter.go",
+        "submitter_mock.go",
+    ],
     importpath = "github.com/DataDog/datadog-agent/comp/process/submitter/submitterimpl",
     visibility = ["//visibility:public"],
     deps = [
@@ -14,7 +17,9 @@ go_library(
         "//comp/process/submitter",
         "//comp/process/types",
         "//pkg/process/runner",
+        "//pkg/process/runner/mocks",
         "//pkg/util/fxutil",
+        "@com_github_stretchr_testify//mock",
         "@org_uber_go_fx//:fx",
     ],
 )

@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "serverdebugimpl",
-    srcs = ["debug.go"],
+    srcs = [
+        "debug.go",
+        "mock_debug.go",
+    ],
     importpath = "github.com/DataDog/datadog-agent/comp/dogstatsd/serverDebug/serverdebugimpl",
     visibility = ["//visibility:public"],
     deps = [

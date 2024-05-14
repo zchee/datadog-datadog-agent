@@ -23,6 +23,7 @@ go_library(
 go_test(
     name = "tagset_test",
     srcs = [
+        "composite_tags_test.go",
         "hash_generator_test.go",
         "hashed_tags_pvt_test.go",
         "hashed_tags_test.go",
@@ -32,6 +33,7 @@ go_test(
     embed = [":tagset"],
     deps = [
         "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
         "@com_github_twmb_murmur3//:murmur3",
     ],
 )

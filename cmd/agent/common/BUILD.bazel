@@ -9,6 +9,7 @@ go_library(
         "helpers.go",
         "import.go",
         "loader.go",
+        "test_helpers.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/cmd/agent/common",
     visibility = ["//visibility:public"],
@@ -50,7 +51,10 @@ go_library(
 
 go_test(
     name = "common_test",
-    srcs = ["import_test.go"],
+    srcs = [
+        "import_docker_test.go",
+        "import_test.go",
+    ],
     embed = [":common"],
     deps = [
         "//pkg/config/legacy",

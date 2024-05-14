@@ -8,6 +8,7 @@ go_library(
         "collector_cache.go",
         "collector_types.go",
         "metacollector.go",
+        "mock.go",
         "provider.go",
         "registry.go",
         "types.go",

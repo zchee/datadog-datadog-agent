@@ -4,6 +4,7 @@ go_library(
     name = "system",
     srcs = [
         "cpu.go",
+        "cpu_mock.go",
         "cpu_unix.go",
         "cpu_windows.go",
         "file_linux.go",
@@ -73,6 +74,7 @@ go_library(
 go_test(
     name = "system_test",
     srcs = [
+        "cpu_test.go",
         "file_linux_test.go",
         "namespace_linux_test.go",
         "network_linux_test.go",

@@ -5,11 +5,16 @@ go_library(
     srcs = [
         "common.go",
         "helpers.go",
+        "test_helpers.go",
         "value.go",
         "value_helpers.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/gohai/utils",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
 )
 
 go_test(

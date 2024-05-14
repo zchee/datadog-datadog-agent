@@ -5,11 +5,13 @@ go_library(
     srcs = [
         "builder.go",
         "status.go",
+        "test_utils.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/logs/status",
     visibility = ["//visibility:public"],
     deps = [
         "//comp/logs/agent/config",
+        "//pkg/config",
         "//pkg/logs/metrics",
         "//pkg/logs/sources",
         "//pkg/logs/status/utils",

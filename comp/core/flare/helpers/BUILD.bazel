@@ -4,6 +4,7 @@ go_library(
     name = "helpers",
     srcs = [
         "builder.go",
+        "builder_mock.go",
         "perm_info.go",
         "perm_info_nix.go",
         "perm_info_win.go",
@@ -24,6 +25,8 @@ go_library(
         "//pkg/util/scrubber",
         "//pkg/version",
         "@com_github_mholt_archiver_v3//:archiver",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ] + select({
         "@rules_go//go/platform:windows": [
             "//pkg/util/winutil",

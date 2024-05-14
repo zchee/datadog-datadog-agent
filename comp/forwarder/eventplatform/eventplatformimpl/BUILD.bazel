@@ -4,6 +4,7 @@ go_library(
     name = "eventplatformimpl",
     srcs = [
         "epforwarder.go",
+        "epforwarder_mock.go",
         "epforwarder_mockgen.go",
         "params.go",
     ],
@@ -11,6 +12,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//comp/core/config",
+        "//comp/core/hostname",
         "//comp/core/hostname/hostnameinterface",
         "//comp/forwarder/eventplatform",
         "//comp/forwarder/eventplatformreceiver",

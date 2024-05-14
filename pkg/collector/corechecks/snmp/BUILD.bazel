@@ -40,6 +40,7 @@ go_test(
         "//comp/forwarder/defaultforwarder",
         "//comp/serializer/compression/compressionimpl",
         "//pkg/aggregator",
+        "//pkg/aggregator/mocksender",
         "//pkg/collector/check/id",
         "//pkg/collector/corechecks/snmp/internal/checkconfig",
         "//pkg/collector/corechecks/snmp/internal/common",

@@ -37,6 +37,7 @@ go_test(
     srcs = ["devicecheck_test.go"],
     embed = [":devicecheck"],
     deps = [
+        "//pkg/aggregator/mocksender",
         "//pkg/collector/corechecks/snmp/internal/checkconfig",
         "//pkg/collector/corechecks/snmp/internal/common",
         "//pkg/collector/corechecks/snmp/internal/configvalidation",

@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "taggerimpl",
-    srcs = ["tagger.go"],
+    srcs = [
+        "tagger.go",
+        "tagger_mock.go",
+    ],
     importpath = "github.com/DataDog/datadog-agent/comp/core/tagger/taggerimpl",
     visibility = ["//visibility:public"],
     deps = [
@@ -10,6 +13,8 @@ go_library(
         "//comp/api/api/utils",
         "//comp/core/config",
         "//comp/core/log",
+        "//comp/core/log/logimpl",
+        "//comp/core/sysprobeconfig/sysprobeconfigimpl",
         "//comp/core/tagger",
         "//comp/core/tagger/taggerimpl/collectors",
         "//comp/core/tagger/taggerimpl/local",

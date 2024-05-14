@@ -4,6 +4,7 @@ go_library(
     name = "autodiscoveryimpl",
     srcs = [
         "autoconfig.go",
+        "autoconfig_mock.go",
         "config_poller.go",
         "configmgr.go",
         "multimap.go",

@@ -85,6 +85,7 @@ go_test(
     deps = select({
         "@rules_go//go/platform:windows": [
             "//cmd/system-probe/utils",
+            "//pkg/aggregator/mocksender",
             "//pkg/collector/corechecks/system/wincrashdetect/probe",
             "//pkg/config",
             "//pkg/metrics/event",

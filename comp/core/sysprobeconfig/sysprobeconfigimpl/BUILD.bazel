@@ -4,6 +4,8 @@ go_library(
     name = "sysprobeconfigimpl",
     srcs = [
         "config.go",
+        "config_mock.go",
+        "mock_params.go",
         "params.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/comp/core/sysprobeconfig/sysprobeconfigimpl",

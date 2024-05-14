@@ -18,6 +18,7 @@ go_library(
         "system_probe_cws.go",
         "system_probe_cws_notwin.go",
         "system_probe_cws_windows.go",
+        "test_helpers.go",
         "unexpectedunicodefinder.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/config/setup",

@@ -26,6 +26,7 @@ go_test(
     ],
     embed = [":report"],
     deps = [
+        "//pkg/aggregator/mocksender",
         "//pkg/collector/corechecks/network-devices/cisco-sdwan/client",
         "//pkg/collector/corechecks/network-devices/cisco-sdwan/payload",
         "//pkg/networkdevice/metadata",

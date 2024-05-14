@@ -4,6 +4,7 @@ go_library(
     name = "core",
     srcs = [
         "bundle.go",
+        "bundle_mock.go",
         "bundle_params.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/comp/core",

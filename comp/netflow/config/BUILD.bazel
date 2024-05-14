@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "component.go",
         "config.go",
+        "mock.go",
         "service.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/comp/netflow/config",

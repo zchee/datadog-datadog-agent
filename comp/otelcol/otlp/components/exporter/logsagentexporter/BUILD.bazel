@@ -25,7 +25,10 @@ go_library(
 
 go_test(
     name = "logsagentexporter_test",
-    srcs = ["logs_exporter_test.go"],
+    srcs = [
+        "factory_test.go",
+        "logs_exporter_test.go",
+    ],
     embed = [":logsagentexporter"],
     deps = [
         "//comp/otelcol/otlp/testutil",

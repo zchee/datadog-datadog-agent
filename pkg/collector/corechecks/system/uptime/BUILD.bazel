@@ -65,5 +65,8 @@ go_test(
     name = "uptime_test",
     srcs = ["uptime_test.go"],
     embed = [":uptime"],
-    deps = ["//comp/core/autodiscovery/integration"],
+    deps = [
+        "//comp/core/autodiscovery/integration",
+        "//pkg/aggregator/mocksender",
+    ],
 )

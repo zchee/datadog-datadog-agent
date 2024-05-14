@@ -1,6 +1,6 @@
 {
   "lockFileVersion": 6,
-  "moduleFileHash": "d79fd4e1dfa85aacf3bb93b26bdeecd4eb2e52c0925ec96987ba6c95f667b3fd",
+  "moduleFileHash": "b28e37bbfae62cfbe70b327cbd5577a5c044352a723a646ddaf54d3684255167",
   "flags": {
     "cmdRegistries": [
       "https://bcr.bazel.build/"
@@ -578,14 +578,14 @@
             {
               "tagName": "gazelle_override",
               "attributeValues": {
-                "path": "github.com/grpc-ecosystem/grpc-gateway",
                 "directives": [
                   "gazelle:go_naming_convention import",
                   "gazelle:prefix github.com/grpc-ecosystem/grpc-gateway",
                   "gazelle:exclude third_party",
                   "gazelle:exclude vendor",
                   "gazelle:exclude _output"
-                ]
+                ],
+                "path": "github.com/grpc-ecosystem/grpc-gateway"
               },
               "devDependency": false,
               "location": {

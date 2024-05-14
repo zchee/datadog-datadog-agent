@@ -18,6 +18,7 @@ go_test(
     embed = [":loaders"],
     deps = [
         "//comp/core/autodiscovery/integration",
+        "//pkg/aggregator/mocksender",
         "//pkg/aggregator/sender",
         "//pkg/collector/check",
         "@com_github_stretchr_testify//assert",

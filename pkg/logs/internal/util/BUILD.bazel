@@ -5,11 +5,13 @@ go_library(
     srcs = [
         "moving_sum.go",
         "service_name.go",
+        "test_utils.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/logs/internal/util",
     visibility = ["//pkg/logs:__subpackages__"],
     deps = [
         "//comp/core/tagger",
+        "//pkg/logs/util/testutils",
         "//pkg/util/log",
         "@com_github_benbjohnson_clock//:clock",
     ],

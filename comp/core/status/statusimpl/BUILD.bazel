@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "common_header_provider.go",
         "status.go",
+        "status_mock.go",
     ],
     embedsrcs = [
         "templates/errors.tmpl",

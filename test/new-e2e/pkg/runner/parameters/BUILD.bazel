@@ -12,6 +12,7 @@ go_library(
         "store_aws.go",
         "store_config_file.go",
         "store_env.go",
+        "store_mock.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/test/new-e2e/pkg/runner/parameters",
     visibility = ["//visibility:public"],

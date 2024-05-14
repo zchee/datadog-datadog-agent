@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "ndmtmp",
-    srcs = ["bundle.go"],
+    srcs = [
+        "bundle.go",
+        "bundle_mock.go",
+    ],
     importpath = "github.com/DataDog/datadog-agent/comp/ndmtmp",
     visibility = ["//visibility:public"],
     deps = [

@@ -14,6 +14,7 @@ go_library(
         "status.go",
         "sync_forwarder.go",
         "telemetry.go",
+        "test_common.go",
         "worker.go",
     ],
     embedsrcs = [
@@ -41,6 +42,7 @@ go_library(
         "//pkg/util/http",
         "//pkg/util/scrubber",
         "//pkg/version",
+        "@com_github_stretchr_testify//mock",
         "@org_uber_go_atomic//:atomic",
         "@org_uber_go_fx//:fx",
     ],
@@ -51,9 +53,11 @@ go_test(
     srcs = [
         "blocked_endpoints_test.go",
         "default_forwarder_test.go",
+        "domain_forwarder_test.go",
         "forwarder_health_test.go",
         "forwarder_test.go",
         "status_test.go",
+        "worker_test.go",
     ],
     embed = [":defaultforwarder"],
     deps = [

@@ -8,6 +8,7 @@ go_library(
         "token.go",
         "transport.go",
         "warnings.go",
+        "warnings_mock.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/util/http",
     visibility = ["//visibility:public"],

@@ -5,12 +5,14 @@ go_library(
     srcs = [
         "metric_sender.go",
         "metric_sender_agent.go",
+        "metric_sender_mock.go",
         "metric_sender_statsd.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/networkpath/metricsender",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/aggregator/sender",
+        "//pkg/metrics",
         "//pkg/process/statsd",
     ],
 )

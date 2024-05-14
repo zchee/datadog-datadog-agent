@@ -110,6 +110,7 @@ go_test(
     deps = select({
         "@rules_go//go/platform:windows": [
             "//comp/core/autodiscovery/integration",
+            "//pkg/aggregator/mocksender",
             "//pkg/collector/check",
             "//pkg/config",
             "//pkg/metrics/event",

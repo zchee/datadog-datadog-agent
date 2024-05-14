@@ -18,9 +18,9 @@ go_test(
     name = "tests_test",
     srcs = [
         "audit_test.go",
-        "badenv_test.go",
         "base_test.go",
         "data_test.go",
+        "docker_test.go",
         "file_test.go",
         "package_test.go",
         "process_test.go",
@@ -28,6 +28,7 @@ go_test(
     embed = [":tests"],
     deps = [
         "//pkg/compliance",
+        "//pkg/util/docker",
         "@com_github_stretchr_testify//assert",
     ],
 )

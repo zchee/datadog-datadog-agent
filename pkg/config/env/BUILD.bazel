@@ -9,6 +9,7 @@ go_library(
         "environment_containers.go",
         "environment_detection.go",
         "environment_nocontainers.go",
+        "environment_testing.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/config/env",
     visibility = ["//visibility:public"],

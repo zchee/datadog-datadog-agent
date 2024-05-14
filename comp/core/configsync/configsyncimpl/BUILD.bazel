@@ -5,11 +5,14 @@ go_library(
     srcs = [
         "module.go",
         "sync.go",
+        "test_common.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/comp/core/configsync/configsyncimpl",
     visibility = ["//visibility:public"],
     deps = [
         "//comp/api/authtoken",
+        "//comp/api/authtoken/fetchonlyimpl",
+        "//comp/core",
         "//comp/core/config",
         "//comp/core/configsync",
         "//comp/core/log",
@@ -17,6 +20,8 @@ go_library(
         "//pkg/config/model",
         "//pkg/util/fxutil",
         "//pkg/util/optional",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
         "@org_uber_go_fx//:fx",
     ],
 )

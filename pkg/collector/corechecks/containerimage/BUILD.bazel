@@ -36,6 +36,7 @@ go_test(
     deps = [
         "//comp/core/workloadmeta",
         "//comp/forwarder/eventplatform",
+        "//pkg/aggregator/mocksender",
         "//pkg/util/hostname",
         "//pkg/util/pointer",
         "@com_github_datadog_agent_payload_v5//contimage",

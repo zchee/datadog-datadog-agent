@@ -4,6 +4,7 @@ go_library(
     name = "flare",
     srcs = [
         "component.go",
+        "component_mock.go",
         "flare.go",
         "params.go",
         "providers.go",

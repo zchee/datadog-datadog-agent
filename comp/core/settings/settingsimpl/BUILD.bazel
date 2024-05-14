@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "settingsimpl",
-    srcs = ["settingsimpl.go"],
+    srcs = [
+        "settings_mock.go",
+        "settingsimpl.go",
+    ],
     importpath = "github.com/DataDog/datadog-agent/comp/core/settings/settingsimpl",
     visibility = ["//visibility:public"],
     deps = [

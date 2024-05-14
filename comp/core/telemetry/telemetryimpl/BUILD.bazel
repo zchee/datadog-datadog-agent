@@ -10,6 +10,7 @@ go_library(
         "simple_prom_gauge.go",
         "simple_prom_histogram.go",
         "telemetry.go",
+        "telemtry_mock.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/comp/core/telemetry/telemetryimpl",
     visibility = ["//visibility:public"],

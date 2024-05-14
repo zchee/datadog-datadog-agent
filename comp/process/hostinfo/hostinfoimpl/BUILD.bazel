@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "hostinfoimpl",
-    srcs = ["hostinfo.go"],
+    srcs = [
+        "hostinfo.go",
+        "hostinfo_mock.go",
+    ],
     importpath = "github.com/DataDog/datadog-agent/comp/process/hostinfo/hostinfoimpl",
     visibility = ["//visibility:public"],
     deps = [

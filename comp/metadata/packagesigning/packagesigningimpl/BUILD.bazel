@@ -4,6 +4,7 @@ go_library(
     name = "packagesigningimpl",
     srcs = [
         "aptsigning.go",
+        "mock.go",
         "packagesigning.go",
         "readgpg.go",
         "rpmsigning.go",

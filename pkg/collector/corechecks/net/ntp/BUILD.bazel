@@ -40,6 +40,7 @@ go_test(
     deps = [
         "//comp/core/autodiscovery/integration",
         "//pkg/aggregator",
+        "//pkg/aggregator/mocksender",
         "//pkg/config",
         "//pkg/metrics/servicecheck",
         "//pkg/util/cloudproviders",

@@ -4,10 +4,13 @@ go_library(
     name = "config",
     srcs = [
         "component.go",
+        "component_mock.go",
         "config.go",
+        "config_mock.go",
         "params.go",
         "params_darwin.go",
         "params_freebsd.go",
+        "params_mock.go",
         "params_nix.go",
         "params_windows.go",
         "setup.go",
@@ -16,6 +19,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//comp/core/secrets",
+        "//pkg/config/env",
         "//pkg/config/model",
         "//pkg/config/setup",
         "//pkg/util/fxutil",

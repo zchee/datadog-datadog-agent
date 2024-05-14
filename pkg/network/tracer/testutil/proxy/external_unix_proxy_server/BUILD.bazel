@@ -5,6 +5,7 @@ go_library(
     srcs = ["external_unix_proxy_server.go"],
     importpath = "github.com/DataDog/datadog-agent/pkg/network/tracer/testutil/proxy/external_unix_proxy_server",
     visibility = ["//visibility:private"],
+    deps = ["//pkg/network/tracer/testutil/proxy"],
 )
 
 go_binary(

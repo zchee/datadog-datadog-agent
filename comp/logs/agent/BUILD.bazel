@@ -9,6 +9,7 @@ go_library(
         "mock.go",
         "scheduler_provider.go",
         "serverless.go",
+        "serverless_mock.go",
         "status.go",
     ],
     embedsrcs = [

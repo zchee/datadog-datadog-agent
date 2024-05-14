@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "fetchonlyimpl",
-    srcs = ["authtoken.go"],
+    srcs = [
+        "authtoken.go",
+        "mock.go",
+    ],
     importpath = "github.com/DataDog/datadog-agent/comp/api/authtoken/fetchonlyimpl",
     visibility = ["//visibility:public"],
     deps = [

@@ -16,7 +16,17 @@ go_library(
 
 go_test(
     name = "mapper_test",
-    srcs = ["mapper_cache_test.go"],
+    srcs = [
+        "mapper_cache_test.go",
+        "mapper_test.go",
+    ],
     embed = [":mapper"],
-    deps = ["@com_github_stretchr_testify//assert"],
+    deps = [
+        "//comp/core/config",
+        "//pkg/config",
+        "//pkg/util/fxutil",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@org_uber_go_fx//:fx",
+    ],
 )

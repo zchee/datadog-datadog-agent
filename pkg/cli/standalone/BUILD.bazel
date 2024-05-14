@@ -4,7 +4,7 @@ go_library(
     name = "standalone",
     srcs = [
         "doc.go",
-        "jmx_nojmx.go",
+        "jmx.go",
         "warnings.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/cli/standalone",
@@ -14,5 +14,7 @@ go_library(
         "//comp/api/api",
         "//comp/core/autodiscovery/integration",
         "//pkg/aggregator/sender",
+        "//pkg/collector/check",
+        "//pkg/jmxfetch",
     ],
 )

@@ -30,6 +30,7 @@ go_test(
         "//comp/core",
         "//comp/core/autodiscovery/integration",
         "//comp/forwarder/defaultforwarder",
+        "//pkg/aggregator/mocksender",
         "//pkg/collector/check/id",
         "//pkg/collector/corechecks/network-devices/cisco-sdwan/client",
         "//pkg/collector/corechecks/network-devices/cisco-sdwan/payload",

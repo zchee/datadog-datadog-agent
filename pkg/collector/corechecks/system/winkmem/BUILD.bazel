@@ -82,6 +82,7 @@ go_test(
     deps = select({
         "@rules_go//go/platform:windows": [
             "//comp/core/autodiscovery/integration",
+            "//pkg/aggregator/mocksender",
             "@com_github_stretchr_testify//mock",
         ],
         "//conditions:default": [],

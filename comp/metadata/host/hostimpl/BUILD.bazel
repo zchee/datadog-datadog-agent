@@ -4,6 +4,7 @@ go_library(
     name = "hostimpl",
     srcs = [
         "host.go",
+        "mock.go",
         "payload.go",
         "payload_no_gohai.go",
         "status.go",

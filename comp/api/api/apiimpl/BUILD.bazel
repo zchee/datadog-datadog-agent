@@ -4,6 +4,7 @@ go_library(
     name = "apiimpl",
     srcs = [
         "api.go",
+        "api_mock.go",
         "grpc.go",
         "listener.go",
         "security.go",
@@ -85,6 +86,7 @@ go_test(
         "//comp/collector/collector",
         "//comp/core/autodiscovery",
         "//comp/core/autodiscovery/autodiscoveryimpl",
+        "//comp/core/flare/flareimpl",
         "//comp/core/hostname/hostnameimpl",
         "//comp/core/secrets",
         "//comp/core/secrets/secretsimpl",

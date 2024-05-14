@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "eventplatformreceiver.go",
         "format.go",
+        "mock.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/comp/forwarder/eventplatformreceiver/eventplatformreceiverimpl",
     visibility = ["//visibility:public"],

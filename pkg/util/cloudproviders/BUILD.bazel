@@ -4,7 +4,9 @@ go_library(
     name = "cloudproviders",
     srcs = [
         "cloudproviders.go",
+        "mock.go",
         "network.go",
+        "network_mock.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/util/cloudproviders",
     visibility = ["//visibility:public"],

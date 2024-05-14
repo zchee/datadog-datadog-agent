@@ -27,6 +27,7 @@ go_library(
         "point_count_telemetry.go",
         "queue_duration_capacity.go",
         "telemetry.go",
+        "test_common.go",
         "time_interval_accumulator.go",
         "transaction_retry_queue.go",
     ],
@@ -52,8 +53,10 @@ go_test(
         "disk_usage_limit_test.go",
         "file_removal_policy_test.go",
         "http_transactions_serializer_test.go",
+        "on_disk_retry_queue_test.go",
         "queue_duration_capacity_test.go",
         "time_interval_accumulator_test.go",
+        "transaction_retry_queue_test.go",
     ],
     embed = [":retry"],
     deps = [

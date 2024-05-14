@@ -9,6 +9,7 @@ go_library(
         "report_format.go",
         "report_memory_usage.go",
         "report_metrics.go",
+        "report_testing.go",
         "report_utils.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/collector/corechecks/snmp/internal/report",
@@ -43,6 +44,7 @@ go_test(
     ],
     embed = [":report"],
     deps = [
+        "//pkg/aggregator/mocksender",
         "//pkg/collector/corechecks/snmp/internal/checkconfig",
         "//pkg/collector/corechecks/snmp/internal/common",
         "//pkg/collector/corechecks/snmp/internal/configvalidation",

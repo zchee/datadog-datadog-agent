@@ -80,6 +80,7 @@ go_test(
     deps = select({
         "@rules_go//go/platform:windows": [
             "//comp/core/autodiscovery/integration",
+            "//pkg/aggregator/mocksender",
             "//pkg/util/pdhutil",
         ],
         "//conditions:default": [],

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "collector.go",
         "component.go",
+        "component_mock.go",
         "counter.go",
         "gauge.go",
         "histogram.go",
@@ -20,5 +21,6 @@ go_library(
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_prometheus_client_model//go",
         "@io_opentelemetry_go_otel_metric//:metric",
+        "@io_opentelemetry_go_otel_sdk_metric//:metric",
     ],
 )

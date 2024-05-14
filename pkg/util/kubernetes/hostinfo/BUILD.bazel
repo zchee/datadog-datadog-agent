@@ -1,16 +1,34 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "hostinfo",
     srcs = [
         "cluster_name_from_node_label.go",
-        "cluster_name_from_node_label_nothing.go",
+        "cluster_name_from_node_label_kubelet.go",
         "doc.go",
-        "no_node_labels.go",
+        "no_apiserver.go",
         "no_tags.go",
+        "node_annotations.go",
+        "node_labels.go",
         "tags_utils.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/util/kubernetes/hostinfo",
     visibility = ["//visibility:public"],
-    deps = ["//pkg/config"],
+    deps = [
+        "//pkg/config",
+        "//pkg/util/clusteragent",
+        "//pkg/util/kubernetes/kubelet",
+    ],
+)
+
+go_test(
+    name = "hostinfo_test",
+    srcs = ["node_labels_test.go"],
+    embed = [":hostinfo"],
+    deps = [
+        "//pkg/config",
+        "//pkg/util/clusteragent",
+        "//pkg/util/kubernetes/kubelet",
+        "@com_github_stretchr_testify//mock",
+    ],
 )

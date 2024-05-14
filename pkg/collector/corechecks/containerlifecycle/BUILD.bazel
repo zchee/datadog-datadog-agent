@@ -39,6 +39,7 @@ go_test(
     embed = [":containerlifecycle"],
     deps = [
         "//comp/core/workloadmeta",
+        "//pkg/aggregator/mocksender",
         "//pkg/collector/check/id",
         "//pkg/util/hostname",
         "@com_github_datadog_agent_payload_v5//contlcycle",

@@ -11,6 +11,7 @@ go_library(
         "consts.go",
         "legacy_converter.go",
         "mock.go",
+        "test_helpers.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/pkg/config",
     visibility = ["//visibility:public"],

@@ -34,6 +34,7 @@ go_test(
     embed = [":worker"],
     deps = [
         "//pkg/aggregator",
+        "//pkg/aggregator/mocksender",
         "//pkg/aggregator/sender",
         "//pkg/collector/check",
         "//pkg/collector/check/id",
