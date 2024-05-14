@@ -8,7 +8,7 @@ gazelle(
         "apm",
         "consul",
         "containerd",
-        # "cri",
+        "cri",
         "datadog.no_waf",
         "docker",
         "ec2",

@@ -1,6 +1,6 @@
 {
   "lockFileVersion": 6,
-  "moduleFileHash": "bcaecd672f7dc0844369091b8b638a7235b90dfc9cf22f05c7e304ca9f9ecaab",
+  "moduleFileHash": "b59b6d23f9ebd7afb9ad8f28b9db9b2a141471be444ba8169e8140ce6bb6fb1c",
   "flags": {
     "cmdRegistries": [
       "https://bcr.bazel.build/"
@@ -621,6 +621,21 @@
               "location": {
                 "file": "@@//:MODULE.bazel",
                 "line": 39,
+                "column": 25
+              }
+            },
+            {
+              "tagName": "gazelle_override",
+              "attributeValues": {
+                "directives": [
+                  "gazelle:proto disable"
+                ],
+                "path": "k8s.io/cri-api"
+              },
+              "devDependency": false,
+              "location": {
+                "file": "@@//:MODULE.bazel",
+                "line": 45,
                 "column": 25
               }
             }
