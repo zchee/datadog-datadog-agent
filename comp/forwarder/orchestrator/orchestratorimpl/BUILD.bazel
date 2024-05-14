@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "orchestratorimpl",
     srcs = [
-        "forwarder_no_orchestrator.go",
+        "forwarder_orchestrator.go",
         "forwarder_orchestrator_mock.go",
         "params.go",
     ],
@@ -13,7 +13,10 @@ go_library(
         "//comp/core/config",
         "//comp/core/log",
         "//comp/forwarder/defaultforwarder",
+        "//comp/forwarder/defaultforwarder/resolver",
         "//comp/forwarder/orchestrator",
+        "//pkg/orchestrator/config",
+        "//pkg/process/util/api/config",
         "//pkg/util/fxutil",
         "//pkg/util/optional",
         "@org_uber_go_fx//:fx",
