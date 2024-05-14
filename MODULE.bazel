@@ -9,6 +9,16 @@ bazel_dep(name = "rules_foreign_cc", version = "0.10.1")
 # to be able to build using `rules_foreign_cc` on MacOS M1
 register_toolchains("@@rules_foreign_cc~//toolchains:built_ninja_toolchain")
 
+find_rpmbuild = use_extension(
+    "@rules_pkg//toolchains/rpm:rpmbuild_configure.bzl",
+    "find_system_rpmbuild_bzlmod",
+)
+use_repo(find_rpmbuild, "rules_pkg_rpmbuild")
+
+register_toolchains(
+    "@rules_pkg_rpmbuild//:all",
+)
+
 # We need an unreleased recent commit because we need support for local path replaces
 # https://github.com/bazelbuild/bazel-gazelle/pull/1776
 git_override(
