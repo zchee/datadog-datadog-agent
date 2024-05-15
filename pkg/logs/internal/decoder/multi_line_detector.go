@@ -177,7 +177,7 @@ func (m *MultiLineDetector) aggregate(message *message.Message, l label) {
 
 	// track the raw data length and the timestamp so that the agent tails
 	// from the right place at restart
-	m.lineCount += 1
+	m.lineCount++
 	m.timestamp = message.ParsingExtra.Timestamp
 	m.status = message.Status
 
