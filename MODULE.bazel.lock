@@ -1,6 +1,6 @@
 {
   "lockFileVersion": 6,
-  "moduleFileHash": "6f6ad8777ac01645e05c893b9cc0b6a5c531e5bd33daa2ae3e3672e6ade2d0e5",
+  "moduleFileHash": "61d163abea9ea116d363986df4ea09a5e5da0dfa07731e913d8918cdbf3ac4b7",
   "flags": {
     "cmdRegistries": [
       "https://bcr.bazel.build/"
@@ -703,6 +703,21 @@
               "tagName": "module_override",
               "attributeValues": {
                 "patches": [
+                  "bazel/patch/opentelemetry_mapping_go_pkg_otlp_metrics-bazel.patch"
+                ],
+                "path": "github.com/DataDog/opentelemetry-mapping-go/pkg/otlp/metrics"
+              },
+              "devDependency": false,
+              "location": {
+                "file": "@@//:MODULE.bazel",
+                "line": 79,
+                "column": 24
+              }
+            },
+            {
+              "tagName": "module_override",
+              "attributeValues": {
+                "patches": [
                   "bazel/patch/godror-bazel.patch"
                 ],
                 "path": "github.com/godror/godror"
@@ -710,7 +725,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 81,
+                "line": 92,
                 "column": 24
               }
             }

@@ -92,6 +92,7 @@ go_library(
 go_test(
     name = "config_test",
     srcs = [
+        "config_otlp_test.go",
         "config_test.go",
         "install_signature_test.go",
     ],
