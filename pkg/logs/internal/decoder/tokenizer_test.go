@@ -76,5 +76,6 @@ func TestModel(t *testing.T) {
 	test("[INFO] test.swift:123 App started successfully")
 	test("ERROR in | myFile.go:53:123 App started successfully")
 	test("9/28/2022 2:23:15 PM")
+	test("2024-05-15 17:04:12,369 - root - DEBUG -")
 
 }

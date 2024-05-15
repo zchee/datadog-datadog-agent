@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-// package decoder contains the multi-line experiment code.
+// Package decoder contains the multi-line experiment code.
 package decoder
 
 import (
@@ -24,34 +24,38 @@ var jsonRegexp = regexp.MustCompile(`^\s*\{\s*\"`)
 
 // AnalyticsPayload contains the analytics data for the multi-line experiment
 type AnalyticsPayload struct {
-	ID                   string       `json:"id"`
-	Clusters             int          `json:"clusters"`
-	Samples              int          `json:"samples"`
-	DroppedClusters      int          `json:"dropped_clusters"`
-	DetectedMultiLineLog bool         `json:"detected_multi_line_log"`
-	MixedFormatLikely    bool         `json:"mixed_format_likely"`
-	IsJSON               bool         `json:"is_json"`
-	Confidence           float32      `json:"confidence"`
-	TopMatch             ClusterRow   `json:"top_match"`
-	ClusterTable         []ClusterRow `json:"clusters_table"`
+	ID              string `json:"id"`
+	Clusters        int    `json:"clusters"`
+	Samples         int    `json:"samples"`
+	DroppedClusters int    `json:"dropped_clusters"`
+	// DetectedMultiLineLog bool         `json:"detected_multi_line_log"`
+	// MixedFormatLikely    bool         `json:"mixed_format_likely"`
+	// IsJSON               bool         `json:"is_json"`
+	// Confidence           float32      `json:"confidence"`
+	TopMatch     ClusterRow   `json:"top_match"`
+	ClusterTable []ClusterRow `json:"clusters_table"`
 }
 
 // ClusterRow represents a row in the cluster table
 type ClusterRow struct {
-	Score       int64   `json:"score"`
-	Weight      float32 `json:"weight"`
-	SampleCount int64   `json:"sample_count"`
-	Tokens      string  `json:"tokens"`
-	Sample      string  `json:"sample"`
+	// Score       int64   `json:"score"`
+	TimestampMatch float32 `json:"timestampMatch"`
+	SampleCount    int64   `json:"sample_count"`
+	Tokens         string  `json:"tokens"`
+	Sample         string  `json:"sample"`
+	Label          string  `json:"label"`
+	MatchedRegex   bool    `json:"matched_regex"`
 }
 
 type tokenCluster struct {
-	score                float64
+	// score                float64
 	sampleCount          int64
-	weight               float64
+	timestampMatch       float64
 	timestampProbability float32
 	tokens               []Token
 	sample               string
+	label                label
+	matchedRegex         bool
 }
 
 // MultiLineDetector is collects data about logs and reports metrics if we think they are multi-line.
@@ -61,32 +65,32 @@ type MultiLineDetector struct {
 	tokenMatchThreshold float64
 	detectionThreshold  float64
 	clusterTableMaxSize int
-	foundMultiLineLog   *bool
-	reportInterval      time.Duration
-	reportTicker        *time.Ticker
-	droppedClusters     int
-	totalSamples        int
-	containsJSON        bool
-	id                  string
-	timestampModel      *MarkovChain
-	clusterTable        []*tokenCluster
-	outputFn            func(*message.Message)
-	buffer              *bytes.Buffer
-	shouldTruncate      bool
-	linesLen            int
-	status              string
-	timestamp           string
-	lineLimit           int
-	sampleThreshold     int64
-	weightThreshold     float64
+	// foundMultiLineLog       *bool
+	reportInterval          time.Duration
+	reportTicker            *time.Ticker
+	droppedClusters         int
+	totalSamples            int
+	containsJSON            bool
+	id                      string
+	timestampModel          *MarkovChain
+	clusterTable            []*tokenCluster
+	outputFn                func(*message.Message)
+	buffer                  *bytes.Buffer
+	shouldTruncate          bool
+	linesLen                int
+	status                  string
+	timestamp               string
+	lineLimit               int
+	sampleThreshold         int64
+	timestampMatchThreshold float64
 }
 
 type label uint32
 
 const (
-	StartGroup label = iota
-	NoAggregate
-	Aggregate
+	startGroup label = iota
+	noAggregate
+	aggregate
 )
 
 // NewMultiLineDetector returns a new MultiLineDetector
@@ -100,31 +104,31 @@ func NewMultiLineDetector(outputFn func(*message.Message), lineLimit int) *Multi
 	reportInterval := config.Datadog.GetDuration("logs_config.multi_line_experiment.report_interval")
 
 	sampleThreshold := config.Datadog.GetInt64("logs_config.multi_line_experiment.sample_threshold")
-	weightThreshold := config.Datadog.GetFloat64("logs_config.multi_line_experiment.weight_threshold")
+	timestampMatchThreshold := config.Datadog.GetFloat64("logs_config.multi_line_experiment.timestampMatch_threshold")
 
 	return &MultiLineDetector{
-		Enabled:             enabled,
-		tokenLength:         tokenLength,
-		tokenMatchThreshold: tokenMatchThreshold,
-		detectionThreshold:  detectionThreshold,
-		clusterTableMaxSize: clusterTableMaxSize,
-		reportInterval:      reportInterval,
-		droppedClusters:     0,
-		totalSamples:        0,
-		containsJSON:        false,
-		id:                  uuid.New().String(),
-		reportTicker:        time.NewTicker(reportInterval),
-		clusterTable:        []*tokenCluster{},
-		timestampModel:      compileModel(tokenLength),
-		outputFn:            outputFn,
-		buffer:              bytes.NewBuffer(nil),
-		shouldTruncate:      false,
-		linesLen:            0,
-		status:              "",
-		timestamp:           "",
-		lineLimit:           lineLimit,
-		sampleThreshold:     sampleThreshold,
-		weightThreshold:     weightThreshold,
+		Enabled:                 enabled,
+		tokenLength:             tokenLength,
+		tokenMatchThreshold:     tokenMatchThreshold,
+		detectionThreshold:      detectionThreshold,
+		clusterTableMaxSize:     clusterTableMaxSize,
+		reportInterval:          reportInterval,
+		droppedClusters:         0,
+		totalSamples:            0,
+		containsJSON:            false,
+		id:                      uuid.New().String(),
+		reportTicker:            time.NewTicker(reportInterval),
+		clusterTable:            []*tokenCluster{},
+		timestampModel:          compileModel(tokenLength),
+		outputFn:                outputFn,
+		buffer:                  bytes.NewBuffer(nil),
+		shouldTruncate:          false,
+		linesLen:                0,
+		status:                  "",
+		timestamp:               "",
+		lineLimit:               lineLimit,
+		sampleThreshold:         sampleThreshold,
+		timestampMatchThreshold: timestampMatchThreshold,
 	}
 }
 
@@ -145,19 +149,20 @@ func (m *MultiLineDetector) sendBuffer() {
 
 func (m *MultiLineDetector) aggregate(message *message.Message, l label) {
 
-	if l == NoAggregate {
+	if l == noAggregate {
 		m.sendBuffer()
 		m.outputFn(message)
 		return
 	}
 
-	if l == StartGroup {
+	if l == startGroup {
 		if m.buffer.Len() > 0 {
 			m.sendBuffer()
 		}
 	}
 
-	if l == Aggregate && m.buffer.Len() == 0 {
+	if l == aggregate && m.buffer.Len() == 0 {
+		// If no group has been started - don't aggregate
 		m.outputFn(message)
 		return
 	}
@@ -200,6 +205,7 @@ func (m *MultiLineDetector) aggregate(message *message.Message, l label) {
 func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 
 	content := message.GetContent()
+	label := aggregate
 
 	if len(content) <= 0 {
 		return
@@ -214,6 +220,7 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 	if jsonRegexp.Match(content) {
 		m.containsJSON = true
 		isJSONLog = true
+		label = noAggregate
 	}
 
 	// 2. Tokenize the log
@@ -224,50 +231,54 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 	sample := content[:maxLength]
 	tokens := tokenize(sample, m.tokenLength)
 
-	var weight float64
-	// var samples int64
+	var timestampMatch float64
+
 	// 3. Check if we already have a cluster matching these tokens
 	matched := false
 	for i, cluster := range m.clusterTable {
 		matched = isMatch(tokens, cluster.tokens, m.tokenMatchThreshold)
 		if matched {
 			cluster.sampleCount++
-			cluster.score += (1 * cluster.weight)
-			weight = cluster.weight
-			// samples = cluster.sampleCount
+			label = cluster.label
 
-			// By keeping the scored clusters sorted, the best match always comes first. Since we expect one timestamp to match overwhelmingly
-			// it should match most often causing few re-sorts.
 			if i != 0 {
 				sort.Slice(m.clusterTable, func(i, j int) bool {
-					return m.clusterTable[i].score > m.clusterTable[j].score
+					return m.clusterTable[i].sampleCount > m.clusterTable[j].sampleCount
 				})
 			}
 			break
 		}
 	}
+	matchedRegex := false
 
 	// 4. If no match is found, add to the table
 	if !matched && len(m.clusterTable) < m.clusterTableMaxSize {
 		p := float64(0)
 
-		// 5. Compute weight.
-		if isJSONLog {
-			// If log is Json, down-weight it.
-			weight = 0.001
-		} else {
-			// Compute probability that log starts with a timestamp to determine it's weight
+		for _, pattern := range formatsToTry {
+			if pattern.Match(content) {
+				matchedRegex = true
+			}
+		}
+
+		// 5. Compute timestampMatch.
+		if !isJSONLog {
+			// Compute probability that log starts with a timestamp to determine it's timestampMatch
 			p = m.timestampModel.MatchProbability(tokens)
-			weight = 10 * p
+			if p > m.timestampMatchThreshold {
+				label = startGroup
+			}
+			timestampMatch = p
 		}
 
 		m.clusterTable = append(m.clusterTable, &tokenCluster{
-			score:                1,
 			sampleCount:          1,
-			weight:               weight,
 			timestampProbability: float32(p),
 			tokens:               tokens,
 			sample:               string(sample),
+			timestampMatch:       timestampMatch,
+			label:                label,
+			matchedRegex:         matchedRegex,
 		})
 	}
 
@@ -277,57 +288,53 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 		m.droppedClusters++
 	}
 
-	// 6. Label the logs
-	if isJSONLog {
-		m.aggregate(message, NoAggregate)
-	} else if weight > m.weightThreshold {
-		m.aggregate(message, StartGroup)
-	} else {
-		m.aggregate(message, Aggregate)
-	}
+	m.aggregate(message, label)
 
 }
 
 // FoundMultiLineLog reports if a multi-line log was detected from the core-agent mulit-line detection
-func (m *MultiLineDetector) FoundMultiLineLog(val bool) {
-	if !m.Enabled {
-		return
-	}
+func (m *MultiLineDetector) FoundMultiLineLog(_ bool) {
+	// if !m.Enabled {
+	// 	return
+	// }
 
-	m.foundMultiLineLog = &val
-	m.reportTicker = time.NewTicker(m.reportInterval)
-	m.reportAnalytics(true)
+	// m.foundMultiLineLog = &val
+	// m.reportTicker = time.NewTicker(m.reportInterval)
+	// m.reportAnalytics(true)
+}
+
+func labelString(l label) string {
+	labelString := "Aggregate"
+	if l == startGroup {
+		labelString = "StartGroup"
+	} else if l == noAggregate {
+		labelString = "NoAggregate"
+	}
+	return labelString
 }
 
 func (m *MultiLineDetector) buildPayload() *AnalyticsPayload {
+
 	payload := &AnalyticsPayload{
-		ID:                   m.id,
-		Clusters:             len(m.clusterTable),
-		DroppedClusters:      m.droppedClusters,
-		DetectedMultiLineLog: *m.foundMultiLineLog,
-		ClusterTable:         []ClusterRow{},
-		Samples:              m.totalSamples,
-		IsJSON:               m.containsJSON,
+		ID:              m.id,
+		Clusters:        len(m.clusterTable),
+		DroppedClusters: m.droppedClusters,
+		// DetectedMultiLineLog: *m.foundMultiLineLog,
+		ClusterTable: []ClusterRow{},
+		Samples:      m.totalSamples,
+		// IsJSON:               m.containsJSON,
 	}
 
 	if len(m.clusterTable) >= 1 {
-		payload.Confidence = 1
 		payload.TopMatch = ClusterRow{
-			Score:       int64(m.clusterTable[0].score),
-			Weight:      float32(m.clusterTable[0].weight),
-			Tokens:      tokensToString(m.clusterTable[0].tokens),
-			Sample:      m.clusterTable[0].sample,
-			SampleCount: m.clusterTable[0].sampleCount,
+			// Score:       int64(m.clusterTable[0].score),
+			TimestampMatch: float32(m.clusterTable[0].timestampMatch),
+			Tokens:         tokensToString(m.clusterTable[0].tokens),
+			Sample:         m.clusterTable[0].sample,
+			SampleCount:    m.clusterTable[0].sampleCount,
+			Label:          labelString(m.clusterTable[0].label),
+			MatchedRegex:   m.clusterTable[0].matchedRegex,
 		}
-	}
-
-	// Compute confidence
-	if len(m.clusterTable) > 1 {
-		score := m.clusterTable[0].score
-		count := float64(m.clusterTable[0].sampleCount)
-
-		confidence := score / count
-		payload.Confidence = float32(confidence)
 	}
 
 	// Compute mixed format likely
@@ -339,19 +346,21 @@ func (m *MultiLineDetector) buildPayload() *AnalyticsPayload {
 			return float64(sampleTable[i].sampleCount) > float64(sampleTable[j].sampleCount)
 		})
 
-		first := sampleTable[0].sampleCount
-		second := sampleTable[1].sampleCount
-		confidence := float64(first) / float64(first+second)
-		payload.MixedFormatLikely = confidence <= m.detectionThreshold
+		// first := sampleTable[0].sampleCount
+		// second := sampleTable[1].sampleCount
+		// confidence := float64(first) / float64(first+second)
+		// payload.MixedFormatLikely = confidence <= m.detectionThreshold
 	}
 
 	for _, cluster := range m.clusterTable {
 		payload.ClusterTable = append(payload.ClusterTable, ClusterRow{
-			Score:       int64(cluster.score),
-			Weight:      float32(cluster.weight),
-			Tokens:      tokensToString(cluster.tokens),
-			Sample:      cluster.sample,
-			SampleCount: cluster.sampleCount,
+			// Score:          int64(cluster.score),
+			TimestampMatch: float32(cluster.timestampMatch),
+			Tokens:         tokensToString(cluster.tokens),
+			Sample:         cluster.sample,
+			SampleCount:    cluster.sampleCount,
+			Label:          labelString(cluster.label),
+			MatchedRegex:   cluster.matchedRegex,
 		})
 	}
 
@@ -361,7 +370,7 @@ func (m *MultiLineDetector) buildPayload() *AnalyticsPayload {
 
 func (m *MultiLineDetector) reportAnalytics(force bool) {
 	// Don't report analytics if disable, or until after we have finished detection.
-	if !m.Enabled || m.foundMultiLineLog == nil {
+	if !m.Enabled {
 		return
 	}
 
@@ -392,8 +401,8 @@ func compileModel(tokenLength int) *MarkovChain {
 
 	timestamps := []string{
 		"2024-03-28T13:45:30.123456Z",
-		"28/Mar/2024:13:45:30 -0700",
-		"Sun, 28 Mar 2024 13:45:30 -0700",
+		"28/Mar/2024:13:45:30",
+		"Sun, 28 Mar 2024 13:45:30",
 		"2024-03-28 13:45:30",
 		"2024-03-28 13:45:30,123",
 		"02 Jan 06 15:04 MST",
@@ -403,7 +412,7 @@ func compileModel(tokenLength int) *MarkovChain {
 		"2024-08-20'T'13:20:10*633+0000",
 		"2024 Mar 03 05:12:41.211 PDT",
 		"Jan 21 18:20:11 +0000 2024",
-		"19/Apr/2024:06:36:15 -0700",
+		"19/Apr/2024:06:36:15",
 		"Dec 2, 2024 2:39:58 AM",
 		"Jun 09 2024 15:28:14",
 		"Apr 20 00:00:35 2010",
@@ -412,7 +421,7 @@ func compileModel(tokenLength int) *MarkovChain {
 		"2024-10-14T22:11:20+0000",
 		"2024-07-01T14:59:55.711'+0000'",
 		"2024-07-01T14:59:55.711Z",
-		"2024-08-19 12:17:55 -0400",
+		"2024-08-19 12:17:55",
 		"2024-08-19 12:17:55-0400",
 		"2024-06-26 02:31:29,573",
 		"2024/04/12*19:37:50",
@@ -420,10 +429,8 @@ func compileModel(tokenLength int) *MarkovChain {
 		"2024 Mar 10 01:44:20.392",
 		"2024-03-10 14:30:12,655+0000",
 		"2024-02-27 15:35:20.311",
-		"2024-03-12 13:11:34.222-0700",
 		"2024-07-22'T'16:28:55.444",
 		"2024-09-08'T'03:13:10",
-		"2024-03-12'T'17:56:22'-0700'",
 		"2024-11-22'T'10:10:15.455",
 		"2024-02-11'T'18:31:44",
 		"2024-10-30*02:47:33:899",
@@ -436,7 +443,6 @@ func compileModel(tokenLength int) *MarkovChain {
 		"11/24/2024*05:13:11",
 		"05/09/2024*08:22:14*612",
 		"04/23/24 04:34:22 +0000",
-		"10/03/2024 07:29:46 -0700",
 		"2024/04/25 14:57:42",
 		"11:42:35",
 		"11:42:35.173",
@@ -450,6 +456,7 @@ func compileModel(tokenLength int) *MarkovChain {
 		"23 Apr 2024 10:32:35*311",
 		"8/5/2024 3:31:18 AM:234",
 		"9/28/2024 2:23:15 PM",
+		"2023-03.28T14-33:53-7430Z",
 	}
 
 	for _, str := range timestamps {

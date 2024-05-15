@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-// package decoder contains the multi-line experiment code.
+// Package decoder contains the multi-line experiment code.
 package decoder
 
 import (
@@ -303,6 +303,12 @@ func tokenToString(token Token) string {
 		return "AM"
 	case PM:
 		return "PM"
+	case T:
+		return "T"
+	case Z:
+		return "Z"
+	case ZONE:
+		return "ZONE"
 	}
 
 	return ""

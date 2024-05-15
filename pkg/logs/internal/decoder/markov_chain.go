@@ -69,14 +69,14 @@ func trimStateSet(states []uint) []uint {
 	return states[start:end]
 }
 
-func avg(states []uint) float64 {
-	sum := float64(0)
-	for _, n := range states {
-		sum += float64(n)
-	}
+// func avg(states []uint) float64 {
+// 	sum := float64(0)
+// 	for _, n := range states {
+// 		sum += float64(n)
+// 	}
 
-	return sum / float64(len(states))
-}
+// 	return sum / float64(len(states))
+// }
 
 func geoMean(states []uint) float64 {
 	prod := float64(1)
