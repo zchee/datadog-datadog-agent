@@ -6,20 +6,19 @@
 //revive:disable
 package decoder
 
-import "math"
+import (
+	"math"
+)
 
 type MarkovChain struct {
-	countTable      [][]uint
-	transitionTable [][]float64
+	countTable [][]uint
 }
 
 func NewMarkovChain() *MarkovChain {
 	return &MarkovChain{
-		countTable:      make([][]uint, END),
-		transitionTable: make([][]float64, END),
+		countTable: make([][]uint, END),
 	}
 }
-
 func (m *MarkovChain) Add(tokens []Token) {
 	lastToken := tokens[0]
 	for _, token := range tokens[1:] {
@@ -31,37 +30,26 @@ func (m *MarkovChain) Add(tokens []Token) {
 	}
 }
 
-func (m *MarkovChain) Compile() {
-	for i, neighbors := range m.countTable {
-		m.transitionTable[i] = make([]float64, END)
-
-		total := 0
-		for _, count := range neighbors {
-			if count > 0 {
-				total += int(count)
-			}
-		}
-
-		for k, count := range neighbors {
-			m.transitionTable[i][k] = float64(count) / float64(total)
-		}
-	}
-}
-
 func (m *MarkovChain) MatchProbability(tokens []Token) float64 {
-	out := make([]float64, len(tokens)-1)
+	out := make([]uint, len(tokens)-1)
 
 	lastToken := tokens[0]
 	for i, token := range tokens[1:] {
-		out[i] = m.transitionTable[lastToken][token]
+		if m.countTable[lastToken] != nil && m.countTable[lastToken][token] > 0 {
+			out[i] = 1
+		}
 		lastToken = token
 	}
-	// return geoMean(trimStateSet(out))
-	return geoMean(out)
+	trimmed := trimStateSet(out)
+	// fmt.Println(trimmed)
+	if len(trimmed) < 5 {
+		return 0
+	}
+	return geoMean(trimmed)
 }
 
 // Removes leading and trailing zeros
-func trimStateSet(states []float64) []float64 {
+func trimStateSet(states []uint) []uint {
 	start := 0
 	for i, n := range states {
 		if n != 0 {
@@ -81,13 +69,22 @@ func trimStateSet(states []float64) []float64 {
 	return states[start:end]
 }
 
-func geoMean(states []float64) float64 {
+func avg(states []uint) float64 {
+	sum := float64(0)
+	for _, n := range states {
+		sum += float64(n)
+	}
+
+	return sum / float64(len(states))
+}
+
+func geoMean(states []uint) float64 {
 	prod := float64(1)
 	for _, n := range states {
 		if n == 0 {
 			prod *= 0.01
 		} else {
-			prod = prod * n
+			prod = prod * float64(n)
 		}
 	}
 

@@ -7,6 +7,7 @@
 package decoder
 
 import (
+	"strings"
 	"unicode"
 )
 
@@ -62,8 +63,76 @@ const (
 	C9
 	C10
 
+	// Special
+	MTH
+	AM
+	PM
+	DAY
+	ZONE
+	T
+	Z
+
 	END
 )
+
+var specialMap = map[string]Token{
+	"JAN":  Month,
+	"FEB":  Month,
+	"MAR":  Month,
+	"APR":  Month,
+	"MAY":  Month,
+	"JUN":  Month,
+	"JUL":  Month,
+	"AUG":  Month,
+	"SEP":  Month,
+	"OCT":  Month,
+	"NOV":  Month,
+	"DEC":  Month,
+	"MON":  Day,
+	"TUE":  Day,
+	"WED":  Day,
+	"THU":  Day,
+	"FRI":  Day,
+	"SAT":  Day,
+	"SUN":  Day,
+	"AM":   AM,
+	"PM":   PM,
+	"UTC":  ZONE,
+	"GMT":  ZONE,
+	"EST":  ZONE,
+	"EDT":  ZONE,
+	"CST":  ZONE,
+	"CDT":  ZONE,
+	"MST":  ZONE,
+	"MDT":  ZONE,
+	"PST":  ZONE,
+	"PDT":  ZONE,
+	"JST":  ZONE,
+	"KST":  ZONE,
+	"IST":  ZONE,
+	"MSK":  ZONE,
+	"CEST": ZONE,
+	"CET":  ZONE,
+	"BST":  ZONE,
+	"NZST": ZONE,
+	"NZDT": ZONE,
+	"ACST": ZONE,
+	"ACDT": ZONE,
+	"AEST": ZONE,
+	"AEDT": ZONE,
+	"AWST": ZONE,
+	"AWDT": ZONE,
+	"AKST": ZONE,
+	"AKDT": ZONE,
+	"HST":  ZONE,
+	"HDT":  ZONE,
+	"CHST": ZONE,
+	"CHDT": ZONE,
+	"NST":  ZONE,
+	"NDT":  ZONE,
+	"T":    T,
+	"Z":    Z,
+}
 
 //revive:enable
 
@@ -112,13 +181,24 @@ func getToken(char byte) Token {
 	return C1
 }
 
-func tokenize(input []byte, len int) []Token {
-	tokens := make([]Token, 0, len)
+func tokenize(input []byte, leng int) []Token {
+	tokens := make([]Token, 0, leng)
 
 	run := 0
 	lastToken := getToken(input[0])
+	strBuf := []byte{input[0]}
 
 	insertToken := func() {
+		defer func() {
+			run = 0
+			strBuf = []byte{}
+		}()
+		if len(strBuf) > 0 {
+			if specialToken, ok := specialMap[strings.ToUpper(string(strBuf))]; ok {
+				tokens = append(tokens, specialToken)
+				return
+			}
+		}
 		if lastToken == C1 || lastToken == D1 {
 			if run > 9 {
 				run = 9
@@ -129,15 +209,16 @@ func tokenize(input []byte, len int) []Token {
 		} else {
 			tokens = append(tokens, lastToken)
 		}
-		run = 0
 	}
 
 	for _, char := range input[1:] {
 		currentToken := getToken(char)
 		if currentToken != lastToken {
 			insertToken()
+			strBuf = append(strBuf, char)
 		} else {
 			run++
+			strBuf = append(strBuf, char)
 		}
 
 		lastToken = currentToken
@@ -214,6 +295,14 @@ func tokenToString(token Token) string {
 		return "["
 	case BracketClose:
 		return "]"
+	case Month:
+		return "MTH"
+	case Day:
+		return "DAY"
+	case AM:
+		return "AM"
+	case PM:
+		return "PM"
 	}
 
 	return ""

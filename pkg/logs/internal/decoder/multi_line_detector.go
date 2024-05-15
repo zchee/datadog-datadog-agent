@@ -398,8 +398,6 @@ func compileModel(tokenLength int) *MarkovChain {
 		"2024-03-28 13:45:30,123",
 		"02 Jan 06 15:04 MST",
 		"2024-03-28T14:33:53.743350Z",
-		"[28/Mar/2024:15:21:28 +0000]",
-		"[2024-03-28T15:21:35.680Z]",
 		"2024-03-28T15:19:38.578639+00:00",
 		"2024-03-28 15:44:53",
 		"2024-08-20'T'13:20:10*633+0000",
@@ -434,8 +432,6 @@ func compileModel(tokenLength int) *MarkovChain {
 		"24-06-26 02:31:29,573",
 		"24-04-19 12:00:17",
 		"06/01/24 04:11:05",
-		"220423 11:42:35",
-		"20240423 11:42:35.173",
 		"08/10/24*13:33:56",
 		"11/24/2024*05:13:11",
 		"05/09/2024*08:22:14*612",
@@ -452,8 +448,6 @@ func compileModel(tokenLength int) *MarkovChain {
 		"23-Apr-2024 11:42:35.883",
 		"23 Apr 2024 11:42:35",
 		"23 Apr 2024 10:32:35*311",
-		"0423_11:42:35",
-		"0423_11:42:35.883",
 		"8/5/2024 3:31:18 AM:234",
 		"9/28/2024 2:23:15 PM",
 	}
@@ -461,6 +455,5 @@ func compileModel(tokenLength int) *MarkovChain {
 	for _, str := range timestamps {
 		model.Add(tokenize([]byte(str), tokenLength))
 	}
-	model.Compile()
 	return model
 }
