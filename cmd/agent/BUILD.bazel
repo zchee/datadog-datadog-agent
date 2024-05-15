@@ -1,8 +1,4 @@
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
-load("@rules_pkg//pkg:deb.bzl", "pkg_deb")
-load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_files")
-load("@rules_pkg//pkg:rpm.bzl", "pkg_rpm")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
 go_library(
     name = "agent_lib",
@@ -119,67 +115,4 @@ go_binary(
     name = "agent",
     embed = [":agent_lib"],
     visibility = ["//visibility:public"],
-)
-
-pkg_files(
-    name = "binary",
-    srcs = [":agent"],
-    attributes = pkg_attributes(
-        group = "root",
-        mode = "755",
-        user = "root",
-    ),
-    prefix = "opt/datadog-agent/bin/agent",
-)
-
-pkg_tar(
-    name = "agent_tar",
-    srcs = [":binary"],
-    package_dir = "./",
-    stamp = 1,
-)
-
-pkg_deb(
-    name = "agent_deb",
-    architecture = "amd64",
-    conflicts = ["datadog-iot-agent"],
-    data = ":agent_tar",
-    description = """Datadog Monitoring Agent
-  The Datadog Monitoring Agent is a lightweight process that monitors system
-  processes and services, and sends information back to your Datadog account.
-  .
-  This package installs and runs the advanced Agent daemon, which queues and
-  forwards metrics from your applications as well as system services.
-  .
-  See http://www.datadoghq.com/ for more information""",
-    homepage = "http://www.datadoghq.com/",
-    license = "Apache License Version 2.0",
-    maintainer = "Datadog Packages <package@datadoghq.com>",
-    package = "datadog-agent",
-    priority = "extra",
-    recommends = ["datadog-signing-keys (>= 1:1.3.1)"],
-    section = "utils",
-    version = "1:7.55.0-1",
-)
-
-pkg_files(
-    name = "rpm_files",
-    srcs = [":agent"],
-)
-
-pkg_rpm(
-    name = "agent_rpm",
-    srcs = [":rpm_files"],
-    description = """Datadog Monitoring Agent
-The Datadog Monitoring Agent is a lightweight process that monitors system
-processes and services, and sends information back to your Datadog account.
-.
-This package installs and runs the advanced Agent daemon, which queues and
-forwards metrics from your applications as well as system services.
-.
-See http://www.datadoghq.com/ for more information""",
-    license = "Apache License Version 2.0",
-    release = "1",
-    summary = "Datadog Monitoring Agent",
-    version = "7.55.0",
 )

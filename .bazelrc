@@ -1,1 +1,1 @@
-build --define gotags=bundle_agent,apm,consul,containerd,cri,datadog.no_waf,docker,ec2,etcd,gce,jetson,jmx,kubeapiserver,kubelet,netcgo,oracle,podman,process,zk,zlib,zstd
+build --experimental_worker_for_repo_fetching=off --verbose_failures --sandbox_debug --define gotags=bundle_agent,apm,consul,containerd,cri,datadog.no_waf,docker,ec2,etcd,gce,jetson,jmx,kubeapiserver,kubelet,netcgo,oracle,orchestrator,otlp,podman,process,python,zk,zlib,zstd
