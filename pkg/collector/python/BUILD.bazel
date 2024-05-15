@@ -36,6 +36,7 @@ go_library(
         "util.go",
         "version.go",
     ],
+    cdeps = ["//rtloader:rtloader"],  # keep
     cgo = True,
     clinkopts = select({
         "@rules_go//go/platform:aix": [

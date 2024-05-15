@@ -13,8 +13,15 @@ cmake(
         "BUILD_DEMO": "OFF",
     },
     lib_source = ":srcs",
-    out_shared_libs	= select({
-        "@platforms//os:macos": ["libdatadog-agent-rtloader.dylib", "libdatadog-agent-three.dylib"],
-        "@platforms//os:linux": ["libdatadog-agent-rtloader.so", "libdatadog-agent-three.so"],
+    out_shared_libs = select({
+        "@platforms//os:macos": [
+            "libdatadog-agent-rtloader.dylib",
+            "libdatadog-agent-three.dylib",
+        ],
+        "@platforms//os:linux": [
+            "libdatadog-agent-rtloader.so",
+            "libdatadog-agent-three.so",
+        ],
     }),
+    visibility = ["//visibility:public"],
 )
