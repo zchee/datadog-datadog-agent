@@ -1,0 +1,17 @@
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+cmake(
+    name = "rtloader",
+    cache_entries = {
+        "DISABLE_PYTHON2:BOOL": "ON",
+        "BUILD_DEMO": "OFF",
+    },
+    lib_source = ":srcs",
+    out_shared_libs	= ["libdatadog-agent-rtloader.so", "libdatadog-agent-three.so"],
+)

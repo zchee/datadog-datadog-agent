@@ -1,6 +1,17 @@
 bazel_dep(name = "rules_go", version = "0.47.1")
 bazel_dep(name = "gazelle", version = "0.36.0")
 
+# For rtloader
+bazel_dep(name = "rules_foreign_cc", version = "0.10.1")
+
+tools = use_extension("@rules_foreign_cc//foreign_cc:extensions.bzl", "tools")
+tools.cmake(version = "3.23.1")
+tools.ninja(version = "1.11.1")
+use_repo(
+    tools,
+    "meson_src",
+)
+
 # We need an unreleased recent commit because we need support for local path replaces
 # https://github.com/bazelbuild/bazel-gazelle/pull/1776
 git_override(
