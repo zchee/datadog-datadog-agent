@@ -5,50 +5,44 @@
 
 package config
 
-import "strings"
+import (
+	"sync"
+)
 
 // EnvTransformer convert strings from the environment into other types
 type EnvTransformer func(string) interface{}
 
-type Option struct {
-	YamlFiles []string
-	EnvPrefix string
+type config struct {
+	// data is the current configuration fully loaded as a tree
+	data     map[string]interface{}
+	keyDelim string
 
-	defaults  map[string]interface{}
+	// knownKeys list all the known keys in the configuration, include intermediate path.
+	// Not all known key are set. A key can be set as known without a default value.
+	//
+	// ex: for a 'a.b.c' key, all 'a', 'a.b' and 'a.b.c' will be known
 	knownKeys map[string]struct{}
 
-	envBinding        map[string]string
-	envKeyTransformer map[string]EnvTransformer
-}
-
-func (o *Option) SetDefault(key string, val interface{}) {
-	key = strings.ToLower(key)
-	o.defaults[key] = val
-	o.knownKeys[key] = struct{}{}
-}
-
-func (o *Option) SetKnown(key string) {
-	o.knownKeys[strings.ToLower(key)] = struct{}{}
-}
-
-func (o *Option) BindEnv(key string, env string) {
-	key = strings.ToLower(key)
-	o.envBinding[env] = key
-	o.knownKeys = struct{}{}
-}
-
-func (o *Option) SetEnvKeyTransformer(key string, fn EnvTransformer) {
-	key = strings.ToLower(key)
-	o.envKeyTransformer[key] = fn
-	o.knownKeys[key] = struct{}{}
-}
-
-type Config struct {
-	settings map[string]interface{}
-	data     map[string]interface{}
-
+	// Those layers contain all known keys for each source.
+	// The format use the full known key as the map entry:
+	//
+	// ex:
+	//	"remote_configuration.apm_sampling.enabled": <value>
+	//	"remote_configuration.agent_integrations.enabled": <value>
+	//	"remote_configuration.agent_integrations.allow_log_config_scheduling": <value>
+	//	...
 	defaultData map[string]interface{}
 	fileData    map[string]interface{}
-	envVarsData map[string]interface{}
+	envVarData  map[string]interface{}
 	runtimeData map[string]interface{}
+
+	unknownKeyWarnings map[string]string
+
+	m sync.RWMutex
+}
+
+// Config is an interface to access a configuration
+type Config interface {
+	Get(string) interface{}
+	// Set(string, interface{})
 }
