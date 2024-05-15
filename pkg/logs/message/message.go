@@ -35,6 +35,7 @@ type Message struct {
 	Status             string
 	IngestionTimestamp int64
 	RawDataLen         int
+	IsMultiLine        bool
 	// Tags added on processing
 	ProcessingTags []string
 	// Extra information from the parsers
@@ -190,6 +191,7 @@ func NewMessage(content []byte, origin *Origin, status string, ingestionTimestam
 		Origin:             origin,
 		Status:             status,
 		IngestionTimestamp: ingestionTimestamp,
+		IsMultiLine:        false,
 	}
 }
 
@@ -208,6 +210,7 @@ func NewStructuredMessage(content StructuredContent, origin *Origin, status stri
 		Origin:             origin,
 		Status:             status,
 		IngestionTimestamp: ingestionTimestamp,
+		IsMultiLine:        false,
 	}
 }
 

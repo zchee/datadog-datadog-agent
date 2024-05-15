@@ -17,10 +17,11 @@ import (
 
 	"go.uber.org/atomic"
 
+	"github.com/benbjohnson/clock"
+
 	coreConfig "github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
-	"github.com/benbjohnson/clock"
 
 	"github.com/DataDog/datadog-agent/pkg/logs/internal/decoder"
 	"github.com/DataDog/datadog-agent/pkg/logs/internal/tag"
@@ -114,9 +115,10 @@ type Tailer struct {
 	// blocked sending to the tailer's outputChan.
 	stopForward context.CancelFunc
 
-	info      *status.InfoRegistry
-	bytesRead *status.CountInfo
-	movingSum *util.MovingSum
+	info         *status.InfoRegistry
+	bytesRead    *status.CountInfo
+	movingSum    *util.MovingSum
+	hasMultiline bool
 }
 
 // TailerOptions holds all possible parameters that NewTailer requires in addition to optional parameters that can be optionally passed into. This can be used for more optional parameters if required in future
@@ -179,6 +181,7 @@ func NewTailer(opts *TailerOptions) *Tailer {
 		info:                   opts.Info,
 		bytesRead:              bytesRead,
 		movingSum:              movingSum,
+		hasMultiline:           false,
 	}
 
 	if fileRotated {
@@ -344,6 +347,11 @@ func (t *Tailer) forwardMessages() {
 		origin.Identifier = identifier
 		origin.Offset = strconv.FormatInt(offset, 10)
 		origin.SetTags(append(t.tags, t.tagProvider.GetTags()...))
+
+		if output.IsMultiLine && !t.hasMultiline {
+			t.hasMultiline = true
+			log.Info("MULTI_LINE_EXPERIMENT_TAILER: Tailer has detected a multiline pattern for file: ", t.file.Path, " source: ", origin.Source(), " service:  ", origin.Service())
+		}
 		// Ignore empty lines once the registry offset is updated
 		if len(output.GetContent()) == 0 {
 			continue

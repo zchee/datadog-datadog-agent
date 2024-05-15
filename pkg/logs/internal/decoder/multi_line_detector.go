@@ -77,7 +77,7 @@ type MultiLineDetector struct {
 	outputFn                func(*message.Message)
 	buffer                  *bytes.Buffer
 	shouldTruncate          bool
-	linesLen                int
+	lineCount               int
 	status                  string
 	timestamp               string
 	lineLimit               int
@@ -123,7 +123,7 @@ func NewMultiLineDetector(outputFn func(*message.Message), lineLimit int) *Multi
 		outputFn:                outputFn,
 		buffer:                  bytes.NewBuffer(nil),
 		shouldTruncate:          false,
-		linesLen:                0,
+		lineCount:               0,
 		status:                  "",
 		timestamp:               "",
 		lineLimit:               lineLimit,
@@ -136,14 +136,19 @@ func (m *MultiLineDetector) sendBuffer() {
 	defer func() {
 		m.buffer.Reset()
 		m.shouldTruncate = false
+		m.lineCount = 0
 	}()
 
 	data := bytes.TrimSpace(m.buffer.Bytes())
 	content := make([]byte, len(data))
 	copy(content, data)
 
-	if len(content) > 0 || m.linesLen > 0 {
-		m.outputFn(NewMessage(content, m.status, m.linesLen, m.timestamp))
+	if len(content) > 0 || m.lineCount > 0 {
+		if m.lineCount > 1 {
+			m.outputFn(NewMultiLineMessage(content, m.status, m.lineCount, m.timestamp))
+		} else {
+			m.outputFn(NewMessage(content, m.status, m.lineCount, m.timestamp))
+		}
 	}
 }
 
@@ -172,7 +177,7 @@ func (m *MultiLineDetector) aggregate(message *message.Message, l label) {
 
 	// track the raw data length and the timestamp so that the agent tails
 	// from the right place at restart
-	m.linesLen += message.RawDataLen
+	m.lineCount += 1
 	m.timestamp = message.ParsingExtra.Timestamp
 	m.status = message.Status
 

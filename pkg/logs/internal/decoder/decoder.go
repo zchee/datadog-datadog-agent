@@ -11,6 +11,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/comp/logs/agent/config"
 	dd_conf "github.com/DataDog/datadog-agent/pkg/config"
+
 	//nolint:revive // TODO(AML) Fix revive linter
 	pkgConfig "github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/logs/internal/framer"
@@ -42,6 +43,25 @@ func NewMessage(content []byte, status string, rawDataLen int, readTimestamp str
 		ParsingExtra: message.ParsingExtra{
 			Timestamp: readTimestamp,
 		},
+		IsMultiLine: false,
+	}
+	msg.SetContent(content)
+	return &msg
+}
+
+// NewMultiLineMessage returns a new encoded message.
+func NewMultiLineMessage(content []byte, status string, rawDataLen int, readTimestamp string) *message.Message {
+	msg := message.Message{
+		MessageContent: message.MessageContent{
+			State: message.StateEncoded,
+		},
+		Status:             status,
+		RawDataLen:         rawDataLen,
+		IngestionTimestamp: time.Now().UnixNano(),
+		ParsingExtra: message.ParsingExtra{
+			Timestamp: readTimestamp,
+		},
+		IsMultiLine: true,
 	}
 	msg.SetContent(content)
 	return &msg
