@@ -1,3 +1,38 @@
+single-machine-performance-get_baseline_sha:
+  stage: functional_test
+  rules:
+    - !reference [.except_mergequeue]
+    - when: on_success
+  tags: ["runner:docker"]
+  timeout: 10m
+  artifacts:
+    - ${CI_COMMIT_SHA}-baseline_sha # for provenance, debugging
+  allow_failure: true
+  script:
+    # Compute merge base of current commit and `main`
+    - git fetch origin
+    - SMP_BASE_BRANCH=$(inv release.get-release-json-value base_branch)
+    - echo "Looking for merge base for branch ${SMP_BASE_BRANCH}"
+    - SMP_MERGE_BASE=$(git merge-base ${CI_COMMIT_SHA} origin/${SMP_BASE_BRANCH})
+    - echo "Merge base is ${SMP_MERGE_BASE}"
+    # Setup AWS credentials for single-machine-performance AWS account
+    - AWS_NAMED_PROFILE="single-machine-performance"
+    - SMP_ACCOUNT_ID=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $SMP_ACCOUNT_ID_SSM_NAME)
+    - SMP_ECR_URL=${SMP_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com
+    - SMP_AGENT_TEAM_ID=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $SMP_AGENT_TEAM_ID_SSM_NAME)
+    - SMP_API=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $SMP_API_SSM_NAME)
+    - aws configure set aws_access_key_id $($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $SMP_BOT_ACCESS_KEY_ID_SSM_NAME) --profile ${AWS_NAMED_PROFILE}
+    - aws configure set aws_secret_access_key $($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $SMP_BOT_ACCESS_KEY_SSM_NAME) --profile ${AWS_NAMED_PROFILE}
+    - aws configure set region us-west-2 --profile ${AWS_NAMED_PROFILE}
+    # Search for SHA of baseline commit
+    - BASELINE_SHA="${SMP_MERGE_BASE}"
+    - echo "Computing baseline..."
+    - echo "Checking if image exists for commit ${BASELINE_SHA}..."
+    - while [[ ! $(aws ecr describe-images --profile single-machine-performance --registry-id "${SMP_ACCOUNT_ID}" --repository-name "${SMP_AGENT_TEAM_ID}-agent" --image-ids imageTag="${BASELINE_SHA}-7-amd64") ]]; do echo "No image exists for ${BASELINE_SHA} - checking predecessor of ${BASELINE_SHA} next"; BASELINE_SHA=$(git rev-parse ${BASELINE_SHA}^); echo "Checking if image exists for commit ${BASELINE_SHA}..."; done
+    - echo "Image exists for commit ${BASELINE_SHA}"
+    - echo "Baseline SHA is ${BASELINE_SHA}"
+    - echo -n "${BASELINE_SHA}" > "${CI_COMMIT_SHA}-baseline_sha"
+
 single-machine-performance-regression_detector:
   stage: functional_test
   rules:
@@ -8,11 +43,12 @@ single-machine-performance-regression_detector:
   needs:
     - job: single_machine_performance-amd64-a7
       artifacts: false
+    - job: single-machine-performance-get_baseline_sha
+      artifacts: true
   artifacts:
     expire_in: 1 weeks
     paths:
       - submission_metadata # for provenance, debugging
-      - ${CI_COMMIT_SHA}-baseline_sha # for provenance, debugging
       - outputs/report.md # for debugging, also on S3
       - outputs/report.html # for debugging, also on S3
     when: always
@@ -34,12 +70,7 @@ single-machine-performance-regression_detector:
     - mkdir outputs # Also needed for smp job sync step
     - touch outputs/report.md # Will be emitted by smp job sync
     - touch outputs/report.html # Will be emitted by smp job sync
-    # Compute merge base of current commit and `main`
     - git fetch origin
-    - SMP_BASE_BRANCH=$(inv release.get-release-json-value base_branch)
-    - echo "Looking for merge base for branch ${SMP_BASE_BRANCH}"
-    - SMP_MERGE_BASE=$(git merge-base ${CI_COMMIT_SHA} origin/${SMP_BASE_BRANCH})
-    - echo "Merge base is ${SMP_MERGE_BASE}"
     # Setup AWS credentials for single-machine-performance AWS account
     - AWS_NAMED_PROFILE="single-machine-performance"
     - SMP_ACCOUNT_ID=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $SMP_ACCOUNT_ID_SSM_NAME)
@@ -52,13 +83,9 @@ single-machine-performance-regression_detector:
     # Download smp binary and prepare it for use
     - aws --profile single-machine-performance s3 cp s3://smp-cli-releases/v${SMP_VERSION}/x86_64-unknown-linux-gnu/smp smp
     - chmod +x smp
-    - BASELINE_SHA="${SMP_MERGE_BASE}"
-    - echo "Computing baseline..."
-    - echo "Checking if image exists for commit ${BASELINE_SHA}..."
-    - while [[ ! $(aws ecr describe-images --profile single-machine-performance --registry-id "${SMP_ACCOUNT_ID}" --repository-name "${SMP_AGENT_TEAM_ID}-agent" --image-ids imageTag="${BASELINE_SHA}-7-amd64") ]]; do echo "No image exists for ${BASELINE_SHA} - checking predecessor of ${BASELINE_SHA} next"; BASELINE_SHA=$(git rev-parse ${BASELINE_SHA}^); echo "Checking if image exists for commit ${BASELINE_SHA}..."; done
-    - echo "Image exists for commit ${BASELINE_SHA}"
+    # Get baseline sha from artifact
+    - BASELINE_SHA="$(cat ${CI_COMMIT_SHA}-baseline_sha)"
     - echo "Baseline SHA is ${BASELINE_SHA}"
-    - echo -n "${BASELINE_SHA}" > "${CI_COMMIT_SHA}-baseline_sha"
     # Copy the baseline SHA to SMP for debugging purposes later
     - aws s3 cp --profile single-machine-performance --only-show-errors "${CI_COMMIT_SHA}-baseline_sha" "s3://${SMP_AGENT_TEAM_ID}-smp-artifacts/information/"
     - BASELINE_IMAGE=${SMP_ECR_URL}/${SMP_AGENT_TEAM_ID}-agent:${BASELINE_SHA}-7-amd64
