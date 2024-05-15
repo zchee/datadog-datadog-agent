@@ -6,7 +6,13 @@ single-machine-performance-get_baseline_sha:
   tags: ["runner:docker"]
   timeout: 10m
   artifacts:
-    - ${CI_COMMIT_SHA}-baseline_sha # for provenance, debugging
+    expire_in: 1 week
+    paths:
+      - ${CI_COMMIT_SHA}-baseline_sha # for provenance, debugging
+    when: always
+  needs:
+    - job: single_machine_performance-amd64-a7
+      artifacts: false
   allow_failure: true
   script:
     # Compute merge base of current commit and `main`
