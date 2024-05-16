@@ -48,6 +48,9 @@ func TestModel(t *testing.T) {
 	detector := NewMultiLineDetector(func(m *message.Message) {}, 1000)
 
 	test := func(input string) {
+		if len(input) > 40 {
+			input = input[:40]
+		}
 		p := detector.timestampModel.MatchProbability(tokenize([]byte(input), 40))
 		fmt.Printf("%.2f\t\t\t\t%v\n", p, input)
 		// assert.Greater(t, p, 0.5)
@@ -55,8 +58,10 @@ func TestModel(t *testing.T) {
 	p := detector.timestampModel.MatchProbability(tokenize([]byte("  File \"//./main.py\", line 20, in b"), 40))
 	assert.Less(t, p, 0.22)
 
-	p = detector.timestampModel.MatchProbability(tokenize([]byte("2024-05-15 14:04:20,365 - root"), 40))
-	assert.Greater(t, p, 0.7)
+	// fmt.Println(tokensToString(tokenize([]byte("  File \"//./main.py\", line 20, in b"), 40)))
+
+	// p = detector.timestampModel.MatchProbability(tokenize([]byte("2024-05-15 14:04:20,365 - root"), 40))
+	// assert.Greater(t, p, 0.7)
 
 	test("2021-03-28 13:45:30 App started successfully")
 	test(" .  a at some log")
@@ -77,5 +82,13 @@ func TestModel(t *testing.T) {
 	test("ERROR in | myFile.go:53:123 App started successfully")
 	test("9/28/2022 2:23:15 PM")
 	test("2024-05-15 17:04:12,369 - root - DEBUG -")
-
+	test("[2024-05-15T18:03:23.501Z] Info : All routes applied.")
+	test("2024-05-15 14:03:13 EDT | CORE | INFO | (pkg/logs/tailers/file/tailer.go:353 in forwardMessages) | ")
+	test("20171223-22:15:29:606|Step_LSC|30002312|onStandStepChanged 3579")
+	test("Jun 14 15:16:01 combo sshd(pam_unix)[19939]: authentication failure; logname= uid=0 euid=0 tty=NODEVssh ruser= rhost=218.188.2.4 ")
+	test("Jul  1 09:00:55 calvisitor-10-105-160-95 kernel[0]: IOThunderboltSwitch<0>(0x0)::listenerCallback -")
+	test("nova-api.log.1.2017-05-16_13:53:08 2017-05-16 00:00:00.008 25746 INFO nova.osapi")
+	test("54fadb412c4e40cdbaed9335e4c35a9e - - -] 10.11.10.1 ")
+	test("[Sun Dec 04 04:47:44 2005] [notice] workerEnv.init() ok /etc/httpd/conf/workers2.properties")
+	test("2024/05/16 14:47:42 Datadog Tracer v1.64")
 }

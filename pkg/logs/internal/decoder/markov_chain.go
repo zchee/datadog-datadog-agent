@@ -40,12 +40,14 @@ func (m *MarkovChain) MatchProbability(tokens []Token) float64 {
 		}
 		lastToken = token
 	}
+	// fmt.Println(out)
 	trimmed := trimStateSet(out)
 	// fmt.Println(trimmed)
-	if len(trimmed) < 5 {
+	if len(trimmed) < 8 {
 		return 0
 	}
-	return geoMean(trimmed)
+	return avg(trimmed)
+	// return geoMean(trimmed)
 }
 
 // Removes leading and trailing zeros
@@ -69,14 +71,14 @@ func trimStateSet(states []uint) []uint {
 	return states[start:end]
 }
 
-// func avg(states []uint) float64 {
-// 	sum := float64(0)
-// 	for _, n := range states {
-// 		sum += float64(n)
-// 	}
+func avg(states []uint) float64 {
+	sum := float64(0)
+	for _, n := range states {
+		sum += float64(n)
+	}
 
-// 	return sum / float64(len(states))
-// }
+	return sum / float64(len(states))
+}
 
 func geoMean(states []uint) float64 {
 	prod := float64(1)

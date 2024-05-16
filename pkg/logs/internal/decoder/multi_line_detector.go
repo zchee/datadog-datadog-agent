@@ -423,6 +423,7 @@ func compileModel(tokenLength int) *MarkovChain {
 		"Apr 20 00:00:35 2010",
 		"Sep 28 19:00:00 +0000",
 		"Mar 16 08:12:04",
+		"Jul 1 09:00:55",
 		"2024-10-14T22:11:20+0000",
 		"2024-07-01T14:59:55.711'+0000'",
 		"2024-07-01T14:59:55.711Z",
@@ -462,6 +463,7 @@ func compileModel(tokenLength int) *MarkovChain {
 		"8/5/2024 3:31:18 AM:234",
 		"9/28/2024 2:23:15 PM",
 		"2023-03.28T14-33:53-7430Z",
+		"2017-05-16_13:53:08",
 	}
 
 	for _, str := range timestamps {
