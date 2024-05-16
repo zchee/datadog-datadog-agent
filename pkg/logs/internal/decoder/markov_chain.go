@@ -6,10 +6,6 @@
 //revive:disable
 package decoder
 
-import (
-	"math"
-)
-
 type MarkovChain struct {
 	countTable [][]uint
 }
@@ -42,7 +38,6 @@ func (m *MarkovChain) MatchProbability(tokens []Token) float64 {
 	}
 	// fmt.Println(out)
 	trimmed := trimStateSet(out)
-	// fmt.Println(trimmed)
 	if len(trimmed) < 8 {
 		return 0
 	}
@@ -80,15 +75,15 @@ func avg(states []uint) float64 {
 	return sum / float64(len(states))
 }
 
-func geoMean(states []uint) float64 {
-	prod := float64(1)
-	for _, n := range states {
-		if n == 0 {
-			prod *= 0.01
-		} else {
-			prod = prod * float64(n)
-		}
-	}
+// func geoMean(states []uint) float64 {
+// 	prod := float64(1)
+// 	for _, n := range states {
+// 		if n == 0 {
+// 			prod *= 0.01
+// 		} else {
+// 			prod = prod * float64(n)
+// 		}
+// 	}
 
-	return math.Pow(prod, 1/float64(len(states)))
-}
+// 	return math.Pow(prod, 1/float64(len(states)))
+// }
