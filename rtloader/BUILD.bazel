@@ -16,10 +16,12 @@ cmake(
     out_shared_libs = select({
         "@platforms//os:macos": [
             "libdatadog-agent-rtloader.dylib",
+            "libdatadog-agent-rtloader.1.dylib",
             "libdatadog-agent-three.dylib",
         ],
         "@platforms//os:linux": [
             "libdatadog-agent-rtloader.so",
+            "libdatadog-agent-rtloader.so.1",
             "libdatadog-agent-three.so",
         ],
     }),
