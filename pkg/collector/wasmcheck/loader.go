@@ -13,19 +13,25 @@ import (
 	"strings"
 
 	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
 	"gopkg.in/yaml.v2"
+
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/integration"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 	"github.com/DataDog/datadog-agent/pkg/collector/check"
+	checkid "github.com/DataDog/datadog-agent/pkg/collector/check/id"
 	"github.com/DataDog/datadog-agent/pkg/collector/loaders"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 // WasmCheckLoader is a specific loader for checks living in this package
 type WasmCheckLoader struct {
-	wasmRuntime wazero.Runtime
-	ctx         context.Context
+	wasmRuntime    wazero.Runtime
+	checkFunctions api.Module
+	ctx            context.Context
+	senderManager  sender.SenderManager
 }
 
 type initConfig struct {
@@ -34,11 +40,35 @@ type initConfig struct {
 }
 
 // NewWasmCheckLoader creates a loader for go checks
-func NewWasmCheckLoader() (*WasmCheckLoader, error) {
+func NewWasmCheckLoader(senderManager sender.SenderManager) (*WasmCheckLoader, error) {
 	ctx := context.Background()
+	r := wazero.NewRuntime(ctx)
+
+	_, err := r.NewHostModuleBuilder("env").
+		NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, v float32) {
+			_, err := senderManager.GetSender(checkid.ID(m.Name()))
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			// s.Gauge(v)
+			fmt.Println("gauge >>", v)
+		}).
+		Export("gauge").
+		Instantiate(ctx)
+
+	// Note: testdata/greet.go doesn't use WASI, but TinyGo needs it to
+	// implement functions such as panic.
+	wasi_snapshot_preview1.MustInstantiate(ctx, r)
+
+	if err != nil {
+		log.Errorf(err.Error())
+	}
+
 	return &WasmCheckLoader{
-		wasmRuntime: wazero.NewRuntime(ctx),
-		ctx:         ctx,
+		wasmRuntime:   r,
+		ctx:           ctx,
+		senderManager: senderManager,
 	}, nil
 }
 
@@ -84,18 +114,16 @@ func (l *WasmCheckLoader) Load(senderManger sender.SenderManager, config integra
 		log.Errorf("failed to compile Wasm binary: %v", err)
 	}
 
+	id := checkid.BuildID(config.Name, config.FastDigest(), instance, config.InitConfig)
+
 	// Instantiate a new Wasm module from the already compiled `compiledWasm`.
-	wasmInstance, err := l.wasmRuntime.InstantiateModule(l.ctx, compiledWasm, wazero.NewModuleConfig().WithName(""))
+	wasmModule, err := l.wasmRuntime.InstantiateModule(l.ctx, compiledWasm, wazero.NewModuleConfig().WithName(string(id)))
 	if err != nil {
 		log.Errorf("failed to instantiate %v", err)
 	}
 
-	checkFunction := wasmInstance.ExportedFunction("check")
-	if checkFunction == nil {
-		log.Errorf("failed to find wasm function \"check\"", err)
-	}
-
-	c = newWasmCheck(l.ctx, checkFunction, config.Name)
+	c = newWasmCheck(l.ctx, id, config.Name, wasmModule)
+	c.Configure(senderManger, config.FastDigest(), instance, config.InitConfig, config.Source)
 
 	// if err := c.Configure(senderManger, config.FastDigest(), instance, config.InitConfig, config.Source); err != nil {
 	// 	if errors.Is(err, check.ErrSkipCheckInstance) {
@@ -114,8 +142,8 @@ func (l *WasmCheckLoader) String() string {
 }
 
 func init() {
-	factory := func(sender.SenderManager) (check.Loader, error) {
-		return NewWasmCheckLoader()
+	factory := func(s sender.SenderManager) (check.Loader, error) {
+		return NewWasmCheckLoader(s)
 	}
 
 	loaders.RegisterLoader(40, factory)

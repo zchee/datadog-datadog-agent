@@ -33,9 +33,16 @@ func newSafeSender(sender sender.Sender) sender.Sender {
 	return &safeSender{Sender: sender}
 }
 
+type wasmFunc struct {
+	check  api.Function
+	malloc api.Function
+	free   api.Function
+}
+
 type wasmCheck struct {
 	ctx            context.Context
-	checkFunction  api.Function
+	funcs          wasmFunc
+	wasmModule     api.Module
 	senderManager  sender.SenderManager
 	id             checkid.ID
 	ModuleName     string
@@ -48,15 +55,25 @@ type wasmCheck struct {
 }
 
 // NewwasmCheck conveniently creates a wasmCheck instance
-func newWasmCheck(ctx context.Context, checkFunction api.Function, name string) *wasmCheck {
+func newWasmCheck(ctx context.Context, id checkid.ID, name string, wasmModule api.Module) *wasmCheck {
+
+	checkFunction := wasmModule.ExportedFunction("check")
+	if checkFunction == nil {
+		log.Errorf("failed to find wasm function \"check\"")
+	}
+
+	// // These are undocumented, but exported. See tinygo-org/tinygo#2788
+	malloc := wasmModule.ExportedFunction("malloc")
+	free := wasmModule.ExportedFunction("free")
 
 	check := &wasmCheck{
-		ctx:           ctx,
-		checkFunction: checkFunction,
-		ModuleName:    name,
-		interval:      defaults.DefaultCheckInterval,
-		lastWarnings:  []error{},
-		telemetry:     utils.IsCheckTelemetryEnabled(name, config.Datadog),
+		ctx:          ctx,
+		funcs:        wasmFunc{check: checkFunction, malloc: malloc, free: free},
+		wasmModule:   wasmModule,
+		ModuleName:   name,
+		interval:     defaults.DefaultCheckInterval,
+		lastWarnings: []error{},
+		telemetry:    utils.IsCheckTelemetryEnabled(name, config.Datadog),
 	}
 	// TODO runtime.SetFinalizer(pyCheck, wasmCheckFinalizer)
 
@@ -85,19 +102,32 @@ func (c *wasmCheck) GetRawSender() (sender.Sender, error) {
 
 func (c *wasmCheck) runCheck(commitMetrics bool) error {
 
+	name := `{"name": "maxime"}`
+	nameSize := uint64(len(name))
+	// Instead of an arbitrary memory offset, use TinyGo's allocator. Notice
+	// there is nothing string-specific in this allocation function. The same
+	// function could be used to pass binary serialized data to Wasm.
+	results, err := c.funcs.malloc.Call(c.ctx, nameSize)
+	if err != nil {
+		log.Errorf(err.Error())
+	}
+	namePtr := results[0]
+	// This pointer is managed by TinyGo, but TinyGo is unaware of external usage.
+	// So, we have to free it when finished
+	defer c.funcs.free.Call(c.ctx, namePtr)
+
+	// The pointer is a linear memory offset, which is where we write the name.
+	if !c.wasmModule.Memory().Write(uint32(namePtr), []byte(name)) {
+		log.Errorf("Memory.Write(%d, %d) out of range of memory size %d",
+			namePtr, nameSize, c.wasmModule.Memory().Size())
+	}
+
 	//TODO better implement this
-	result, err := c.checkFunction.Call(c.ctx)
+	_, err = c.funcs.check.Call(c.ctx, namePtr, nameSize)
 	if err != nil {
 		log.Errorf("failed to invoke \"add\": %v", err)
 	}
 
-	if commitMetrics {
-		sender, err := c.GetSender()
-		if err != nil {
-			return err
-		}
-		sender.Gauge("system.load.1", float64(result[0]), "", nil)
-	}
 	return nil
 }
 
