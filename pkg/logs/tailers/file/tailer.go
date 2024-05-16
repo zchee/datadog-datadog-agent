@@ -115,10 +115,9 @@ type Tailer struct {
 	// blocked sending to the tailer's outputChan.
 	stopForward context.CancelFunc
 
-	info         *status.InfoRegistry
-	bytesRead    *status.CountInfo
-	movingSum    *util.MovingSum
-	hasMultiline bool
+	info      *status.InfoRegistry
+	bytesRead *status.CountInfo
+	movingSum *util.MovingSum
 }
 
 // TailerOptions holds all possible parameters that NewTailer requires in addition to optional parameters that can be optionally passed into. This can be used for more optional parameters if required in future
@@ -181,7 +180,6 @@ func NewTailer(opts *TailerOptions) *Tailer {
 		info:                   opts.Info,
 		bytesRead:              bytesRead,
 		movingSum:              movingSum,
-		hasMultiline:           false,
 	}
 
 	if fileRotated {
@@ -346,12 +344,14 @@ func (t *Tailer) forwardMessages() {
 		origin := message.NewOrigin(t.file.Source.UnderlyingSource())
 		origin.Identifier = identifier
 		origin.Offset = strconv.FormatInt(offset, 10)
-		origin.SetTags(append(t.tags, t.tagProvider.GetTags()...))
+		tags := append(t.tags, t.tagProvider.GetTags()...)
 
-		if output.IsMultiLine && !t.hasMultiline {
-			t.hasMultiline = true
-			log.Info("MULTI_LINE_EXPERIMENT_TAILER: Tailer has detected a multiline pattern for file: ", t.file.Path, " source: ", origin.Source(), " service:  ", origin.Service())
+		if output.IsMultiLine {
+			tags = append(tags, "ddagent_multiline_log:true")
 		}
+
+		origin.SetTags(tags)
+
 		// Ignore empty lines once the registry offset is updated
 		if len(output.GetContent()) == 0 {
 			continue
