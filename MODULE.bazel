@@ -75,6 +75,12 @@ go_deps.gazelle_override(
     directives = [
         "gazelle:proto disable",
     ],
+    path = "github.com/containerd/cgroups/v3",
+)
+go_deps.gazelle_override(
+    directives = [
+        "gazelle:proto disable",
+    ],
     path = "k8s.io/cri-api",
 )
 go_deps.gazelle_override(

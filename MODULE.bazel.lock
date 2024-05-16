@@ -1,6 +1,6 @@
 {
   "lockFileVersion": 6,
-  "moduleFileHash": "1a697bccc3c8390729b9374fd39e9bd4ff43888779d91500f7848cb24f9bda5a",
+  "moduleFileHash": "0bd5da6105583d22ed5ac4746aba527bb78db3c2c875213f79a362c39bf3ca9c",
   "flags": {
     "cmdRegistries": [
       "https://bcr.bazel.build/"
@@ -683,7 +683,7 @@
                 "directives": [
                   "gazelle:proto disable"
                 ],
-                "path": "k8s.io/cri-api"
+                "path": "github.com/containerd/cgroups/v3"
               },
               "devDependency": false,
               "location": {
@@ -698,7 +698,7 @@
                 "directives": [
                   "gazelle:proto disable"
                 ],
-                "path": "k8s.io/apimachinery"
+                "path": "k8s.io/cri-api"
               },
               "devDependency": false,
               "location": {
@@ -713,7 +713,7 @@
                 "directives": [
                   "gazelle:proto disable"
                 ],
-                "path": "k8s.io/kube-aggregator"
+                "path": "k8s.io/apimachinery"
               },
               "devDependency": false,
               "location": {
@@ -728,7 +728,7 @@
                 "directives": [
                   "gazelle:proto disable"
                 ],
-                "path": "k8s.io/apiserver"
+                "path": "k8s.io/kube-aggregator"
               },
               "devDependency": false,
               "location": {
@@ -743,12 +743,27 @@
                 "directives": [
                   "gazelle:proto disable"
                 ],
-                "path": "github.com/openshift/api"
+                "path": "k8s.io/apiserver"
               },
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
                 "line": 98,
+                "column": 25
+              }
+            },
+            {
+              "tagName": "gazelle_override",
+              "attributeValues": {
+                "directives": [
+                  "gazelle:proto disable"
+                ],
+                "path": "github.com/openshift/api"
+              },
+              "devDependency": false,
+              "location": {
+                "file": "@@//:MODULE.bazel",
+                "line": 104,
                 "column": 25
               }
             },
@@ -763,7 +778,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 109,
+                "line": 115,
                 "column": 24
               }
             },
@@ -778,7 +793,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 122,
+                "line": 128,
                 "column": 24
               }
             }
@@ -2267,6 +2282,31 @@
             "bzlFile": "@@bazel_tools//tools/sh:sh_configure.bzl",
             "ruleClassName": "sh_config",
             "attributes": {}
+          }
+        },
+        "recordedRepoMappingEntries": []
+      }
+    },
+    "@@buildozer~//:buildozer_binary.bzl%buildozer_binary": {
+      "general": {
+        "bzlTransitiveDigest": "EleDU/FQ1+e/RgkW3aIDmdaxZEthvoWQhsqFTxiSgMI=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "buildozer_binary": {
+            "bzlFile": "@@buildozer~//private:buildozer_binary.bzl",
+            "ruleClassName": "_buildozer_binary_repo",
+            "attributes": {
+              "sha256": {
+                "darwin-amd64": "d29e347ecd6b5673d72cb1a8de05bf1b06178dd229ff5eb67fad5100c840cc8e",
+                "darwin-arm64": "9b9e71bdbec5e7223871e913b65d12f6d8fa026684daf991f00e52ed36a6978d",
+                "linux-amd64": "8dfd6345da4e9042daa738d7fdf34f699c5dfce4632f7207956fceedd8494119",
+                "linux-arm64": "6559558fded658c8fa7432a9d011f7c4dcbac6b738feae73d2d5c352e5f605fa",
+                "windows-amd64": "e7f05bf847f7c3689dd28926460ce6e1097ae97380ac8e6ae7147b7b706ba19b"
+              },
+              "version": "6.4.0"
+            }
           }
         },
         "recordedRepoMappingEntries": []
