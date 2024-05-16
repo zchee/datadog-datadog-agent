@@ -20,6 +20,7 @@ const (
 	// Special Characters
 	Colon        // :
 	Dash         // -
+	Underscore   // _
 	FSlash       // /
 	BSlash       // \
 	Period       // .
@@ -148,6 +149,8 @@ func getToken(char byte) Token {
 		return Colon
 	case '-':
 		return Dash
+	case '_':
+		return Underscore
 	case '/':
 		return FSlash
 	case '\\':
@@ -267,6 +270,8 @@ func tokenToString(token Token) string {
 		return ":"
 	case Dash:
 		return "-"
+	case Underscore:
+		return "_"
 	case FSlash:
 		return "/"
 	case BSlash:

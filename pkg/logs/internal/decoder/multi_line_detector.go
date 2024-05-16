@@ -246,7 +246,7 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 			cluster.sampleCount++
 			label = cluster.label
 
-			// if the most popular occuring log is set to be aggreagted, than it's probably NOT a multi-line log. Lets skip it.
+			// if the most popular log is set to be aggreagted, than it's probably NOT a multi-line log. Lets skip it.
 			if i == 0 && label == aggregate {
 				label = noAggregate
 			}
@@ -473,6 +473,7 @@ func compileModel(tokenLength int) *MarkovChain {
 
 	for _, str := range timestamps {
 		model.Add(tokenize([]byte(str), tokenLength))
+		// fmt.Println(tokensToString(tokenize([]byte(str), tokenLength)))
 	}
 	return model
 }

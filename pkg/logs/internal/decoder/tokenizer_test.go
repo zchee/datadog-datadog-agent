@@ -51,6 +51,7 @@ func TestModel(t *testing.T) {
 		if len(input) > 40 {
 			input = input[:40]
 		}
+		// fmt.Println(tokensToString(tokenize([]byte(input), 40)))
 		p := detector.timestampModel.MatchProbability(tokenize([]byte(input), 40))
 		fmt.Printf("%.2f\t\t\t\t%v\n", p, input)
 		// assert.Greater(t, p, 0.5)
@@ -94,4 +95,5 @@ func TestModel(t *testing.T) {
 	test("2024/05/16 19:46:15 Datadog Tracer v1.64.0-rc.1 ")
 	test("127.0.0.1 - - [16/May/2024:19:49:17 +0000]")
 	test("'/conf.d/..data/container_lifecycle.yaml' ")
+	test("commit: 04a34f1e96d7eb8795b0f944b1ea388281990fc8") // TODO Fix
 }
