@@ -116,3 +116,19 @@ go_binary(
     embed = [":agent_lib"],
     visibility = ["//visibility:public"],
 )
+
+filegroup(
+    name = "dist_files",
+    srcs = glob(
+        [
+            "dist/checks/**/*",
+            "dist/utils/*.py",
+            "dist/*.yaml",
+            "dist/config.py",
+        ],
+        exclude = [
+            "dist/datadog.yaml",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
