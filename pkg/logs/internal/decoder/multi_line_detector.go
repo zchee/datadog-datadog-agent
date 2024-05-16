@@ -246,6 +246,11 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 			cluster.sampleCount++
 			label = cluster.label
 
+			// if the most popular occuring log is set to be aggreagted, than it's probably NOT a multi-line log. Lets skip it.
+			if i == 0 && label == aggregate {
+				label = noAggregate
+			}
+
 			if i != 0 {
 				sort.Slice(m.clusterTable, func(i, j int) bool {
 					return m.clusterTable[i].sampleCount > m.clusterTable[j].sampleCount

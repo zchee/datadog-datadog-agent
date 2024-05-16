@@ -1002,7 +1002,7 @@ func InitConfig(config pkgconfigmodel.Config) {
 	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.enabled", false)
 	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.token_length", 40)
 	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.token_match_threshold", 0.50)
-	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.detection_threshold", 0.75)
+	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.detection_threshold", 0.50)
 	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.timestampMatch_threshold", 0.70)
 	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.cluster_table_max_size", 100)
 	config.BindEnvAndSetDefault("logs_config.multi_line_experiment.report_interval", "1m")

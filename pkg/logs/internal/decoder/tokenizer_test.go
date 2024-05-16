@@ -91,4 +91,7 @@ func TestModel(t *testing.T) {
 	test("54fadb412c4e40cdbaed9335e4c35a9e - - -] 10.11.10.1 ")
 	test("[Sun Dec 04 04:47:44 2005] [notice] workerEnv.init() ok /etc/httpd/conf/workers2.properties")
 	test("2024/05/16 14:47:42 Datadog Tracer v1.64")
+	test("2024/05/16 19:46:15 Datadog Tracer v1.64.0-rc.1 ")
+	test("127.0.0.1 - - [16/May/2024:19:49:17 +0000]")
+	test("'/conf.d/..data/container_lifecycle.yaml' ")
 }
