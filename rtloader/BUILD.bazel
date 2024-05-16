@@ -11,8 +11,12 @@ cmake(
     cache_entries = {
         "DISABLE_PYTHON2:BOOL": "ON",
         "BUILD_DEMO": "OFF",
+        "CMAKE_PREFIX_PATH": "$EXT_BUILD_DEPS/python3",
     },
     lib_source = ":srcs",
+    deps = [
+        "@python3//:python3",
+    ],
     out_shared_libs = select({
         "@platforms//os:macos": [
             "libdatadog-agent-rtloader.dylib",
