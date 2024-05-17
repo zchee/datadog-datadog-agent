@@ -35,8 +35,20 @@ type WasmCheckLoader struct {
 }
 
 type initConfig struct {
-	LoaderName string `yaml:"loader"`
-	WasmPath   string `yaml:"path"`
+	LoaderName   string `yaml:"loader"`
+	WasmPath     string `yaml:"path"`
+	AllocateFunc string `yaml:"allocate_func"`
+	FreeFunc     string `yaml:"free_func"`
+}
+
+func fromWasmString(m api.Memory, ptr, size uint32) (string, error) {
+	// The pointer is a linear memory offset, which is where we write the name.
+	if bytes, ok := m.Read(ptr, size); !ok {
+		return "", fmt.Errorf("Memory.Read(%d, %d) out of range of memory size %d",
+			ptr, size, m.Size())
+	} else {
+		return string(bytes), nil
+	}
 }
 
 // NewWasmCheckLoader creates a loader for go checks
@@ -46,13 +58,27 @@ func NewWasmCheckLoader(senderManager sender.SenderManager) (*WasmCheckLoader, e
 
 	_, err := r.NewHostModuleBuilder("env").
 		NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, v float32) {
-			_, err := senderManager.GetSender(checkid.ID(m.Name()))
+		WithFunc(func(ctx context.Context, m api.Module, v float64, pMetric, sMetric, pHostname, sHostname, pTags, sTags uint32) {
+			sender, err := senderManager.GetSender(checkid.ID(m.Name()))
 			if err != nil {
 				fmt.Println(err.Error())
 			}
-			// s.Gauge(v)
-			fmt.Println("gauge >>", v)
+			mem := m.Memory()
+
+			metric, err := fromWasmString(mem, pMetric, sMetric)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			hostname, err := fromWasmString(mem, pHostname, sHostname)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			tags, err := fromWasmString(mem, pTags, sTags)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+
+			sender.Gauge(metric, v, hostname, []string{tags})
 		}).
 		Export("gauge").
 		Instantiate(ctx)
@@ -85,8 +111,7 @@ func (l *WasmCheckLoader) Load(senderManger sender.SenderManager, config integra
 
 	err := yaml.Unmarshal(config.InitConfig, &initConfig)
 	if err != nil {
-		log.Warnf("Unable to parse instance config for check `%s`: %v", config.Name, instance)
-		return nil, err
+		return nil, fmt.Errorf("Unable to parse instance config for check `%s`: %v", config.Name, instance)
 	}
 
 	if initConfig.LoaderName != "wasm" {
@@ -105,13 +130,13 @@ func (l *WasmCheckLoader) Load(senderManger sender.SenderManager, config integra
 
 	wasmBinary, err := os.ReadFile(path.Join(pathRoot, initConfig.WasmPath))
 	if err != nil {
-		log.Errorf("Failed to read wasm file: %v", err)
+		return nil, fmt.Errorf("Failed to read wasm file: %v", err)
 	}
 
 	// Compile the Wasm binary once so that we can skip the entire compilation time during instantiation.
 	compiledWasm, err := l.wasmRuntime.CompileModule(l.ctx, wasmBinary)
 	if err != nil {
-		log.Errorf("failed to compile Wasm binary: %v", err)
+		return nil, fmt.Errorf("failed to compile Wasm binary: %v", err)
 	}
 
 	id := checkid.BuildID(config.Name, config.FastDigest(), instance, config.InitConfig)
@@ -119,20 +144,17 @@ func (l *WasmCheckLoader) Load(senderManger sender.SenderManager, config integra
 	// Instantiate a new Wasm module from the already compiled `compiledWasm`.
 	wasmModule, err := l.wasmRuntime.InstantiateModule(l.ctx, compiledWasm, wazero.NewModuleConfig().WithName(string(id)))
 	if err != nil {
-		log.Errorf("failed to instantiate %v", err)
+		return nil, fmt.Errorf("failed to instantiate wasm Module: %v", err)
 	}
 
-	c = newWasmCheck(l.ctx, id, config.Name, wasmModule)
-	c.Configure(senderManger, config.FastDigest(), instance, config.InitConfig, config.Source)
-
-	// if err := c.Configure(senderManger, config.FastDigest(), instance, config.InitConfig, config.Source); err != nil {
-	// 	if errors.Is(err, check.ErrSkipCheckInstance) {
-	// 		return c, err
-	// 	}
-	// 	log.Errorf("core.loader: could not configure check %s: %s", c, err)
-	// 	msg := fmt.Sprintf("Could not configure check %s: %s", c, err)
-	// 	return c, fmt.Errorf(msg)
-	// }
+	c, err = newWasmCheck(l.ctx, id, config.Name, wasmModule, initConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create WASM Check: %v", err)
+	}
+	err = c.Configure(senderManger, config.FastDigest(), instance, config.InitConfig, config.Source)
+	if err != nil {
+		return c, err
+	}
 
 	return c, nil
 }
