@@ -89,18 +89,54 @@ pkg_files(
     strip_prefix = strip_prefix.from_pkg(),
 )
 
+pkg_files(
+    name = "rtloader",
+    srcs = [
+        "//rtloader",
+    ],
+    strip_prefix = strip_prefix.from_pkg("rtloader"),
+)
+
+pkg_files(
+    name = "python3",
+    srcs = [
+        "@python3",
+    ],
+    excludes = [
+        "**/test/**",
+    ],
+)
+
+pkg_files(
+    name = "zlib",
+    srcs = [
+        "@zlib",
+    ],
+)
+
+pkg_filegroup(
+    name = "embedded",
+    srcs = [
+        ":python3",
+        ":rtloader",
+        ":zlib",
+    ],
+    prefix = "opt/datadog-agent/embedded",
+)
+
 pkg_filegroup(
     name = "agent_files",
     srcs = [
         ":agent_dist",
         ":binary",
+        ":embedded",
     ],
 )
 
 pkg_tar(
     name = "agent_tar",
     srcs = [":agent_files"],
-    package_dir = "./",
+    #    package_dir = "./",
     stamp = 1,
 )
 
