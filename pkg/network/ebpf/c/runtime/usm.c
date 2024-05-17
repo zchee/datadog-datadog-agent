@@ -1,6 +1,7 @@
 #include "bpf_tracing.h"
 #include "bpf_builtins.h"
 #include "bpf_telemetry.h"
+#include "tracepoints.h"
 
 #include "ktypes.h"
 #ifdef COMPILE_RUNTIME
@@ -63,7 +64,7 @@ int BPF_KPROBE(kprobe__tcp_sendmsg, struct sock *sk) {
 }
 
 SEC("tracepoint/net/netif_receive_skb")
-int tracepoint__net__netif_receive_skb(struct pt_regs* ctx) {
+int tracepoint__net__netif_receive_skb(struct trace_event_raw_net_dev_template___dd *ctx) {
     log_debug("tracepoint/net/netif_receive_skb");
     // flush batch to userspace
     // because perf events can't be sent from socket filter programs

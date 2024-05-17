@@ -70,20 +70,10 @@ int BPF_KPROBE(k_map_alloc, struct bpf_map *map) {
     return 0;
 }
 
-struct tracepoint_raw_syscalls_sys_exit_t {
-    unsigned short common_type;
-    unsigned char common_flags;
-    unsigned char common_preempt_count;
-    int common_pid;
-
-    int __syscall_nr;
-    long ret;
-};
-
 // TODO if we can find a kprobe point further in, that would be preferable for performance reasons
 // bpf_map_new_fd doesn't work because ...?
 SEC("tracepoint/syscalls/sys_exit_bpf")
-int tp_bpf_exit(struct tracepoint_raw_syscalls_sys_exit_t *ctx) {
+int BPF_TP_SYSCALL_EXIT(tp_bpf_exit, long ret) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     struct bpf_map **map_ptr = bpf_map_lookup_elem(&bpf_map_new_fd_args, &pid_tgid);
     if (!map_ptr) {
@@ -91,7 +81,7 @@ int tp_bpf_exit(struct tracepoint_raw_syscalls_sys_exit_t *ctx) {
     }
 
     log_debug("tp/bpf_exit: pid_tgid=%llx", pid_tgid);
-    int fd = ctx->ret;
+    int fd = ret;
     if (fd <= 0) {
         goto cleanup;
     }
@@ -124,27 +114,13 @@ cleanup:
     return 0;
 }
 
-
-
-struct tracepoint_syscalls_sys_enter_fcntl_t {
-    unsigned short common_type;
-    unsigned char common_flags;
-    unsigned char common_preempt_count;
-    int common_pid;
-
-    int __syscall_nr;
-    unsigned long fd;
-    unsigned long cmd;
-    unsigned long arg;
-};
-
 // intercept fcntl(2) syscall, because it is used by cilium/ebpf library
 // to create duplicated FDs of perf_event FDs. We need to maintain the
 // perf_event_fd+pid -> map_id association for all possible FDs.
 SEC("tracepoint/syscalls/sys_enter_fcntl")
-int tp_fcntl_enter(struct tracepoint_syscalls_sys_enter_fcntl_t *args) {
+int BPF_TP_SYSCALL_ENTER(tp_fcntl_enter, int fd, int cmd) {
     // we are only interested if the FD is being duplicated
-    if (args->cmd != F_DUPFD_CLOEXEC) {
+    if (cmd != F_DUPFD_CLOEXEC) {
         return 0;
     }
 
@@ -152,7 +128,7 @@ int tp_fcntl_enter(struct tracepoint_syscalls_sys_enter_fcntl_t *args) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     map_fd_t key = {};
     key.pid = pid_tgid >> 32;
-    key.fd = args->fd;
+    key.fd = fd;
     int *map_idp = bpf_map_lookup_elem(&perf_buffer_fds, &key);
     if (!map_idp) {
         return 0;
@@ -164,21 +140,21 @@ int tp_fcntl_enter(struct tracepoint_syscalls_sys_enter_fcntl_t *args) {
 }
 
 SEC("tracepoint/syscalls/sys_exit_fcntl")
-int tp_fcntl_exit(struct tracepoint_raw_syscalls_sys_exit_t *args) {
+int BPF_TP_SYSCALL_EXIT(tp_fcntl_exit, long ret) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     int *map_idp = bpf_map_lookup_elem(&fcntl_args, &pid_tgid);
     if (!map_idp) {
         return 0;
     }
     int map_id = *map_idp;
-    if (args->ret <= 0) {
+    if (ret <= 0) {
         goto cleanup;
     }
 
     // store (duplicated) perf_event_fd+pid -> map_id association
     map_fd_t key = {};
     key.pid = pid_tgid >> 32;
-    key.fd = (int)args->ret;
+    key.fd = (int)ret;
     log_debug("sys_exit_fcntl: fd dup new_fd=%d map_id=%d", key.fd, map_id);
     bpf_map_update_elem(&perf_buffer_fds, &key, &map_id, BPF_ANY);
 
@@ -208,20 +184,20 @@ int BPF_KPROBE(k_pe_open, struct perf_event_attr *attr) {
 }
 
 SEC("tracepoint/syscalls/sys_exit_perf_event_open")
-int tp_pe_open_exit(struct tracepoint_raw_syscalls_sys_exit_t *args) {
+int BPF_TP_SYSCALL_EXIT(tp_pe_open_exit, long ret) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     u32 *z = bpf_map_lookup_elem(&peo_args, &pid_tgid);
     if (!z) {
         return 0;
     }
-    if (args->ret <= 0) {
+    if (ret <= 0) {
         goto cleanup;
     }
 
     // store perf_event_fd+pid -> mmap region (unpopulated at this point)
     mmap_region_t val = {};
     map_fd_t key = {};
-    key.fd = (int)args->ret;
+    key.fd = (int)ret;
     key.pid = pid_tgid >> 32;
     log_debug("tracepoint_sys_exit_perf_event_open: fd=%d", key.fd);
     bpf_map_update_elem(&perf_event_mmap, &key, &val, BPF_ANY);
@@ -231,41 +207,26 @@ cleanup:
     return 0;
 }
 
-struct tracepoint_syscalls_sys_enter_mmap_t {
-    unsigned short common_type;
-    unsigned char common_flags;
-    unsigned char common_preempt_count;
-    int common_pid;
-
-    int __syscall_nr;
-    unsigned long addr;
-    unsigned long len;
-    unsigned long protection;
-    unsigned long flags;
-    unsigned long fd;
-    unsigned long offset;
-};
-
 // capture mmap(2) syscalls to get the actual length and address of mmap-ed regions
 SEC("tracepoint/syscalls/sys_enter_mmap")
-int tp_mmap_enter(struct tracepoint_syscalls_sys_enter_mmap_t *args) {
+int BPF_TP_SYSCALL_ENTER(tp_mmap_enter, unsigned long addr, unsigned long len, unsigned long protection, unsigned long flags, unsigned long fd, unsigned long offset) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     mmap_args_t margs = {};
 
-    // perf buffer - perf_event_fd is args->fd
+    // perf buffer - perf_event_fd is fd
     // pivot from perf_event_fd+pid -> mmap region
     map_fd_t key = {};
-    key.fd = (int)args->fd;
+    key.fd = (int)fd;
     key.pid = pid_tgid >> 32;
     mmap_region_t *val = bpf_map_lookup_elem(&perf_event_mmap, &key);
     if (val) {
-        val->len = args->len;
+        val->len = len;
         margs.fd = key.fd;
         bpf_map_update_elem(&mmap_args, &pid_tgid, &margs, BPF_ANY);
         return 0;
     }
 
-    // ring buffer - map_fd is args->fd
+    // ring buffer - map_fd is fd
     // indexed by map_id, so we must look that up by map_fd+pid
     u32 *map_idp = bpf_map_lookup_elem(&ring_buffer_fds, &key);
     if (!map_idp) {
@@ -278,26 +239,26 @@ int tp_mmap_enter(struct tracepoint_syscalls_sys_enter_mmap_t *args) {
     // choose correct mmap sub-region based on offset
     // offset 0 = consumer sub-region
     // offset x (size of consumer sub-region) = data sub-region
-    if (args->offset == 0) {
-        ring_val->consumer.len = args->len;
+    if (offset == 0) {
+        ring_val->consumer.len = len;
     } else {
-        ring_val->data.len = args->len;
+        ring_val->data.len = len;
     }
     margs.map_id = *map_idp;
-    margs.offset = args->offset;
-    log_debug("tracepoint_sys_enter_mmap: fd=%d len=%lu", key.fd, args->len);
+    margs.offset = offset;
+    log_debug("tracepoint_sys_enter_mmap: fd=%d len=%lu", key.fd, len);
     bpf_map_update_elem(&mmap_args, &pid_tgid, &margs, BPF_ANY);
     return 0;
 }
 
 SEC("tracepoint/syscalls/sys_exit_mmap")
-int tp_mmap_exit(struct tracepoint_raw_syscalls_sys_exit_t *args) {
+int BPF_TP_SYSCALL_EXIT(tp_mmap_exit, long ret) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     mmap_args_t *margs = bpf_map_lookup_elem(&mmap_args, &pid_tgid);
     if (!margs) {
         return 0;
     }
-    if (args->ret <= 0) {
+    if (ret <= 0) {
         goto cleanup;
     }
 
@@ -326,7 +287,7 @@ int tp_mmap_exit(struct tracepoint_raw_syscalls_sys_exit_t *args) {
         goto cleanup;
     }
     // store address of mmap region
-    val->addr = args->ret;
+    val->addr = ret;
     log_debug("tracepoint_sys_exit_mmap: len=%lu addr=%lx", val->len, val->addr);
 
 cleanup:

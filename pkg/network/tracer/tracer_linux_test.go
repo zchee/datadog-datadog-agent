@@ -2017,12 +2017,10 @@ func (s *TracerSuite) TestGetHelpersTelemetry() {
 	tr := setupTracer(t, cfg)
 
 	expectedErrorTP := "tracepoint__syscalls__sys_enter_openat"
-	syscallNumber := syscall.SYS_OPENAT
+	syscallNumber := unix.SYS_OPENAT
 	if sysOpenAt2Supported() {
 		expectedErrorTP = "tracepoint__syscalls__sys_enter_openat2"
-		// In linux kernel source dir run:
-		// printf SYS_openat2 | gcc -include sys/syscall.h -E -
-		syscallNumber = 437
+		syscallNumber = unix.SYS_OPENAT2
 	}
 
 	// Ensure `bpf_probe_read_user` fails by passing an address guaranteed to pagefault to open syscall.

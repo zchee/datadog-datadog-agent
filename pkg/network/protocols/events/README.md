@@ -36,7 +36,7 @@ filter programs. Because of that we recommend to call it from
 
 ```c
 SEC("tracepoint/net/netif_receive_skb")
-int tracepoint__net__netif_receive_skb(struct pt_regs* ctx) {
+int tracepoint__net__netif_receive_skb(void *ctx) {
     <protocol>_batch_flush(ctx);
     return 0;
 }
