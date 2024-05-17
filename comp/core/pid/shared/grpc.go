@@ -6,7 +6,7 @@ package shared
 import (
 	"context"
 
-	"github.com/hashicorp/go-plugin/examples/grpc/proto"
+	"github.com/DataDog/datadog-agent/comp/core/pid/proto"
 )
 
 // GRPCClient is an implementation of KV that talks over RPC.
@@ -34,7 +34,7 @@ func (m *GRPCClient) Get(key string) ([]byte, error) {
 // Here is the gRPC server that GRPCClient talks to.
 type GRPCServer struct {
 	// This is the real implementation
-	Impl KV
+	Impl Pid
 }
 
 func (m *GRPCServer) Put(

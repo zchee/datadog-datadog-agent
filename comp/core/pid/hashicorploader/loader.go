@@ -8,8 +8,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/DataDog/datadog-agent/comp/core/pid/shared"
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/go-plugin/examples/grpc/shared"
 )
 
 func CreateComponent() error {
@@ -30,14 +30,12 @@ func CreateComponent() error {
 	}
 
 	// Request the plugin
-	raw, err := rpcClient.Dispense("kv_grpc")
+	raw, err := rpcClient.Dispense(shared.PluginName)
 	if err != nil {
 		return err
 	}
 
-	// We should have a KV store now! This feels like a normal interface
-	// implementation but is in fact over an RPC connection.
-	kv := raw.(shared.KV)
+	kv := raw.(shared.Pid)
 	err = kv.Put("Hello", []byte("World"))
 	if err != nil {
 		return err
@@ -47,7 +45,6 @@ func CreateComponent() error {
 	if err != nil {
 		return err
 	}
-
 	fmt.Println("-----------------", string(result))
 	return nil
 }
