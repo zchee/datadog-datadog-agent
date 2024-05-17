@@ -1,4 +1,5 @@
 bazel_dep(name = "rules_go", version = "0.47.1")
+bazel_dep(name = "rules_pkg", version = "0.10.1")
 bazel_dep(name = "gazelle", version = "0.36.0")
 bazel_dep(name = "platforms", version = "0.0.10")
 
@@ -15,6 +16,16 @@ bazel_dep(name = "rules_foreign_cc", version = "0.10.1")
 # Workaround for https://github.com/bazelbuild/rules_foreign_cc/issues/1019
 # to be able to build using `rules_foreign_cc` on MacOS M1
 register_toolchains("@@rules_foreign_cc~//toolchains:built_ninja_toolchain")
+
+find_rpmbuild = use_extension(
+    "@rules_pkg//toolchains/rpm:rpmbuild_configure.bzl",
+    "find_system_rpmbuild_bzlmod",
+)
+use_repo(find_rpmbuild, "rules_pkg_rpmbuild")
+
+register_toolchains(
+    "@rules_pkg_rpmbuild//:all",
+)
 
 ## THIRD-PARTY DEPS
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
