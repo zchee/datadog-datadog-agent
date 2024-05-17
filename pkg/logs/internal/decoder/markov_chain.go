@@ -6,6 +6,10 @@
 //revive:disable
 package decoder
 
+import (
+	"fmt"
+)
+
 type MarkovChain struct {
 	countTable [][]uint
 }
@@ -48,6 +52,10 @@ func (m *MarkovChain) MatchProbability(tokens []Token) float64 {
 	}
 	return avg(trimmed)
 	// return geoMean(trimmed)
+}
+
+func (m *MarkovChain) Show() {
+	fmt.Printf("TODO\n")
 }
 
 // Removes leading and trailing zeros
