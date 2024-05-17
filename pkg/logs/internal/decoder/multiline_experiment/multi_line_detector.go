@@ -53,6 +53,12 @@ type tokenCluster struct {
 	sample               string
 }
 
+type Model interface {
+	Add(input []Token)
+	Compile()
+	MatchProbability([]Token) float64
+}
+
 // MultiLineDetector is collects data about logs and reports metrics if we think they are multi-line.
 type MultiLineDetector struct {
 	enabled             bool
@@ -67,14 +73,13 @@ type MultiLineDetector struct {
 	totalSamples        int
 	containsJSON        bool
 	id                  string
-	timestampModel      *MarkovChain
+	timestampModel      Model
 
 	clusterTable []*tokenCluster
 }
 
 // NewMultiLineDetector returns a new MultiLineDetector
 func NewMultiLineDetector() *MultiLineDetector {
-
 	enabled := config.Datadog.GetBool("logs_config.multi_line_experiment.enabled")
 	tokenLength := config.Datadog.GetInt("logs_config.multi_line_experiment.token_length")
 	tokenMatchThreshold := config.Datadog.GetFloat64("logs_config.multi_line_experiment.token_match_threshold")
@@ -101,7 +106,6 @@ func NewMultiLineDetector() *MultiLineDetector {
 
 // ProcessMesage processes a message and updates the cluster table
 func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
-
 	if !m.enabled {
 		return
 	}
@@ -180,7 +184,6 @@ func (m *MultiLineDetector) ProcessMesage(message *message.Message) {
 	if matched && len(m.clusterTable) >= m.clusterTableMaxSize {
 		m.droppedClusters++
 	}
-
 }
 
 // FoundMultiLineLog reports if a multi-line log was detected from the core-agent mulit-line detection
@@ -251,7 +254,6 @@ func (m *MultiLineDetector) buildPayload() *AnalyticsPayload {
 	}
 
 	return payload
-
 }
 
 func (m *MultiLineDetector) reportAnalytics(force bool) {
@@ -282,8 +284,8 @@ func (m *MultiLineDetector) reportAnalytics(force bool) {
 	log.Infof("MULTI_LINE_EXPERIMENT: payload: %v", string(payloadBytes))
 }
 
-func compileModel(tokenLength int) *MarkovChain {
-	model := NewMarkovChain()
+func compileModel(tokenLength int) Model {
+	model := NewTrie()
 
 	timestamps := []string{
 		"2024-03-28T13:45:30.123456Z",
