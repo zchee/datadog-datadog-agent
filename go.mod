@@ -696,6 +696,7 @@ require (
 	github.com/glaslos/ssdeep v0.4.0
 	github.com/gocomply/scap v0.1.2-0.20230531064509-55a00f73e8d6
 	github.com/godror/godror v0.37.0
+	github.com/hashicorp/go-plugin v1.6.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/kr/pretty v0.3.1
 	github.com/moby/term v0.5.0
@@ -847,6 +848,7 @@ require (
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/nomad/api v0.0.0-20240306004928-3e7191ccb702 // indirect
+	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/hetznercloud/hcloud-go/v2 v2.6.0 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.1-0.20230911200830-875f5bc594a4 // indirect
@@ -893,6 +895,7 @@ require (
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/nginxinc/nginx-prometheus-exporter v0.11.0 // indirect
+	github.com/oklog/run v1.1.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.0 // indirect
 	github.com/open-telemetry/opamp-go v0.14.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector v0.98.0 // indirect
