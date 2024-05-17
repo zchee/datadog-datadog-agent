@@ -1,0 +1,33 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "tags",
+    srcs = [
+        "builder.go",
+        "tags.go",
+    ],
+    importpath = "github.com/DataDog/datadog-agent/pkg/util/kubernetes/tags",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/util/cache",
+        "//pkg/util/kubernetes",
+        "//pkg/util/log",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1/unstructured",
+    ],
+)
+
+go_test(
+    name = "tags_test",
+    srcs = [
+        "builder_test.go",
+        "tags_test.go",
+    ],
+    embed = [":tags"],
+    deps = [
+        "//pkg/util/cache",
+        "@com_github_stretchr_testify//assert",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_apimachinery//pkg/types",
+    ],
+)
