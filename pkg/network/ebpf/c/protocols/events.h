@@ -28,7 +28,7 @@
         return val > 0;                                                                                 \
     }                                                                                                   \
                                                                                                         \
-    static __always_inline void name##_batch_flush(struct pt_regs *ctx) {                               \
+    static __always_inline void name##_batch_flush(void *ctx) {                                         \
         if (!is_##name##_monitoring_enabled()) {                                                        \
             return;                                                                                     \
         }                                                                                               \

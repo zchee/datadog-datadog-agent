@@ -2,6 +2,7 @@
 #define __SHARED_LIBRARIES_PROBES_H
 
 #include "bpf_telemetry.h"
+#include "bpf_tracing.h"
 #include "shared-libraries/types.h"
 
 static __always_inline void fill_path_safe(lib_path_t *path, const char *path_argument) {
@@ -42,11 +43,11 @@ static __always_inline void do_sys_open_helper_enter(const char *filename) {
     return;
 }
 
-static __always_inline void do_sys_open_helper_exit(exit_sys_openat_ctx *args) {
+static __always_inline void do_sys_open_helper_exit(void *ctx, int ret) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
 
     // If file couldn't be opened, bail out
-    if (args->ret < 0) {
+    if (ret < 0) {
         goto cleanup;
     }
 
@@ -85,33 +86,33 @@ static __always_inline void do_sys_open_helper_exit(exit_sys_openat_ctx *args) {
     }
 
     u32 cpu = bpf_get_smp_processor_id();
-    bpf_perf_event_output((void*)args, &shared_libraries, cpu, path, sizeof(lib_path_t));
+    bpf_perf_event_output(ctx, &shared_libraries, cpu, path, sizeof(lib_path_t));
 cleanup:
     bpf_map_delete_elem(&open_at_args, &pid_tgid);
     return;
 }
 
 SEC("tracepoint/syscalls/sys_enter_openat")
-int tracepoint__syscalls__sys_enter_openat(enter_sys_openat_ctx* args) {
-    do_sys_open_helper_enter(args->filename);
+int BPF_TP_SYSCALL_ENTER(tracepoint__syscalls__sys_enter_openat, int dfd, const char *filename) {
+    do_sys_open_helper_enter(filename);
     return 0;
 }
 
 SEC("tracepoint/syscalls/sys_exit_openat")
-int tracepoint__syscalls__sys_exit_openat(exit_sys_openat_ctx *args) {
-    do_sys_open_helper_exit(args);
+int BPF_TP_SYSCALL_EXIT(tracepoint__syscalls__sys_exit_openat, int ret) {
+    do_sys_open_helper_exit(ctx, ret);
     return 0;
 }
 
 SEC("tracepoint/syscalls/sys_enter_openat2")
-int tracepoint__syscalls__sys_enter_openat2(enter_sys_openat2_ctx* args) {
-    do_sys_open_helper_enter(args->filename);
+int BPF_TP_SYSCALL_ENTER(tracepoint__syscalls__sys_enter_openat2, int dfd, const char *filename) {
+    do_sys_open_helper_enter(filename);
     return 0;
 }
 
 SEC("tracepoint/syscalls/sys_exit_openat2")
-int tracepoint__syscalls__sys_exit_openat2(exit_sys_openat_ctx *args) {
-    do_sys_open_helper_exit(args);
+int BPF_TP_SYSCALL_EXIT(tracepoint__syscalls__sys_exit_openat2, int ret) {
+    do_sys_open_helper_exit(ctx, ret);
     return 0;
 }
 
