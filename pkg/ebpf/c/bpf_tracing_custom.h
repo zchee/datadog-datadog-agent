@@ -58,9 +58,13 @@
 #define ___bpf_kprobe_args9(x, args...) ___bpf_kprobe_args8(args), (void *)PT_REGS_PARM9(ctx)
 
 #ifndef COMPILE_CORE
-#define _LINUX_PERF_EVENT_H
-#define _LINUX_MODULE_H
-#include <linux/trace_events.h> // for trace_entry
+// TODO this will not let runtime compilation adjust to changes in this struct
+struct trace_entry {
+	short unsigned int type;
+	unsigned char flags;
+	unsigned char preempt_count;
+	int pid;
+};
 
 struct trace_event_raw_sys_enter {
 	struct trace_entry ent;
