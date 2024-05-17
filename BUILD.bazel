@@ -85,7 +85,7 @@ pkg_files(
         group = "root",
         user = "root",
     ),
-    prefix = "opt/datadig-agent/bin/agent",
+    prefix = "opt/datadog-agent/bin/agent",
     strip_prefix = strip_prefix.from_pkg(),
 )
 

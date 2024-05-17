@@ -1,14 +1,18 @@
 bazel_dep(name = "rules_go", version = "0.47.1")
-bazel_dep(name = "rules_pkg", version = "0.10.1")
 bazel_dep(name = "gazelle", version = "0.36.0")
 bazel_dep(name = "platforms", version = "0.0.10")
 
 # For packaging
 bazel_dep(name = "rules_pkg", version = "0.10.1")
+
 # Avoid relying on system Python, maybe?
 bazel_dep(name = "rules_python", version = "0.31.0")
+
 python = use_extension("@rules_python//extensions:python.bzl", "python")
-python.toolchain(python_version = "3.11", is_default = True)
+python.toolchain(
+    is_default = True,
+    python_version = "3.11",
+)
 
 # For rtloader
 bazel_dep(name = "rules_foreign_cc", version = "0.10.1")
@@ -32,19 +36,19 @@ http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "ht
 
 http_archive(
     name = "python3",
-    url = "https://www.python.org/ftp/python/3.11.8/Python-3.11.8.tgz",
-    strip_prefix = "Python-3.11.8",
-    sha256 = "d3019a613b9e8761d260d9ebe3bd4df63976de30464e5c0189566e1ae3f61889",
     build_file = "@//bazel/third_party:python3.BUILD.bzl",
-)
-http_archive(
-    name = "zlib",
-    url = "https://zlib.net/fossils/zlib-1.3.1.tar.gz",
-    strip_prefix = "zlib-1.3.1",
-    sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
-    build_file = "@//bazel/third_party:zlib.BUILD.bzl",
+    sha256 = "d3019a613b9e8761d260d9ebe3bd4df63976de30464e5c0189566e1ae3f61889",
+    strip_prefix = "Python-3.11.8",
+    url = "https://www.python.org/ftp/python/3.11.8/Python-3.11.8.tgz",
 )
 
+http_archive(
+    name = "zlib",
+    build_file = "@//bazel/third_party:zlib.BUILD.bzl",
+    sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
+    strip_prefix = "zlib-1.3.1",
+    url = "https://zlib.net/fossils/zlib-1.3.1.tar.gz",
+)
 
 ##################
 ## GO / GAZELLE ##
