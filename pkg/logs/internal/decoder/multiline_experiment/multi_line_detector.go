@@ -8,6 +8,7 @@ package multilineexperiment
 
 import (
 	"encoding/json"
+	"os"
 	"regexp"
 	"sort"
 	"time"
@@ -279,7 +280,12 @@ func (m *MultiLineDetector) reportAnalytics(force bool) {
 }
 
 func compileModel(tokenLength int) ModelMatcher {
-	model := NewTrie()
+	var model ModelMatcher
+	if len(os.Getenv("USE_TRIE_TABLE")) > 0 {
+		model = NewTrie()
+	} else {
+		model = NewMarkovChain()
+	}
 
 	timestamps := []string{
 		"2024-03-28T13:45:30.123456Z",
