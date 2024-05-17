@@ -6,6 +6,7 @@
 #include "bpf_builtins.h"
 #include "bpf_tracing.h"
 #include "bpf_endian.h"
+#include "tracepoints.h"
 
 #ifdef COMPILE_PREBUILT
 #include "prebuilt/offsets.h"
@@ -1051,12 +1052,6 @@ int kretprobe__inet6_bind(struct pt_regs *ctx) {
     return sys_exit_bind(ret);
 }
 
-// Represents the parameters being passed to the tracepoint net/net_dev_queue
-struct net_dev_queue_ctx {
-    u64 unused;
-    struct sk_buff* skb;
-};
-
 static __always_inline struct sock* sk_buff_sk(struct sk_buff *skb) {
     struct sock * sk = NULL;
 #ifdef COMPILE_PREBUILT
@@ -1069,8 +1064,8 @@ static __always_inline struct sock* sk_buff_sk(struct sk_buff *skb) {
 }
 
 SEC("tracepoint/net/net_dev_queue")
-int tracepoint__net__net_dev_queue(struct net_dev_queue_ctx* ctx) {
-    struct sk_buff* skb = ctx->skb;
+int tracepoint__net__net_dev_queue(struct trace_event_raw_net_dev_template___dd *ctx) {
+    struct sk_buff *skb = (struct sk_buff *)ctx->skbaddr;
     if (!skb) {
         return 0;
     }
