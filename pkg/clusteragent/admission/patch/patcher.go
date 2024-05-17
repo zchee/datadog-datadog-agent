@@ -64,8 +64,11 @@ func (p *patcher) patchNamespaces(req Request) error {
 		log.Debug("Not leader, skipping")
 		return nil
 	}
+	log.Infof("LILIYAB: starting patchNamespaces")
 
 	enabledNamespaces := p.getNamespacesToInstrument(req.K8sTarget.ClusterTargets)
+
+	log.Infof("LILIYAB: enabled namespaces %v", enabledNamespaces)
 
 	for _, ns := range enabledNamespaces {
 		namespace, err := p.k8sClient.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
@@ -97,10 +100,12 @@ func (p *patcher) patchNamespaces(req Request) error {
 		}
 		patch, err := jsonpatch.CreateMergePatch(oldObj, newObj)
 		if err != nil {
+			log.Infof("LILIYAB: patch error")
 			return fmt.Errorf("failed to build the JSON patch: %v", err)
 		}
 
 		if _, err = p.k8sClient.CoreV1().Namespaces().Patch(context.TODO(), ns, types.StrategicMergePatchType, patch, metav1.PatchOptions{}); err != nil {
+			log.Infof("LILIYAB: applied patch")
 			p.telemetryCollector.SendRemoteConfigPatchEvent(req.getApmRemoteConfigEvent(err, telemetry.FailedToMutateConfig))
 			return err
 		}
@@ -140,6 +145,7 @@ func (p *patcher) getNamespacesToInstrument(targets []K8sClusterTarget) []string
 }
 
 func enableConfig(ns *v1.Namespace, req Request) {
+	log.Infof("LILIYAB: enable config")
 	if ns.ObjectMeta.Labels == nil {
 		ns.ObjectMeta.Labels = make(map[string]string)
 	}
@@ -153,6 +159,7 @@ func enableConfig(ns *v1.Namespace, req Request) {
 }
 
 func disableConfig(ns *v1.Namespace) {
+	log.Infof("LILIYAB: disable config")
 	rcIDLabelVal, ok := ns.ObjectMeta.Labels[k8sutil.RcIDLabelKey]
 	if !ok {
 		log.Errorf("")
@@ -163,6 +170,7 @@ func disableConfig(ns *v1.Namespace) {
 }
 
 func deleteConfig(ns *v1.Namespace) {
+	log.Infof("LILIYAB: delete config")
 	delete(ns.ObjectMeta.Labels, k8sutil.RcIDLabelKey)
 	if len(ns.ObjectMeta.Labels) == 0 {
 		ns.Labels = nil

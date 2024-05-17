@@ -417,22 +417,22 @@ func start(log log.Component,
 	}
 
 	if config.GetBool("admission_controller.enabled") {
-		if config.GetBool("admission_controller.auto_instrumentation.patcher.enabled") {
-			patchCtx := admissionpatch.ControllerContext{
-				IsLeaderFunc:        le.IsLeader,
-				LeaderSubscribeFunc: le.Subscribe,
-				K8sClient:           apiCl.Cl,
-				RcClient:            rcClient,
-				ClusterName:         clusterName,
-				ClusterID:           clusterId,
-				StopCh:              stopCh,
-			}
-			if err := admissionpatch.StartControllers(patchCtx); err != nil {
-				log.Errorf("Cannot start auto instrumentation patcher: %v", err)
-			}
-		} else {
-			log.Info("Auto instrumentation patcher is disabled")
+		//if config.GetBool("admission_controller.auto_instrumentation.patcher.enabled") {
+		patchCtx := admissionpatch.ControllerContext{
+			IsLeaderFunc:        le.IsLeader,
+			LeaderSubscribeFunc: le.Subscribe,
+			K8sClient:           apiCl.Cl,
+			RcClient:            rcClient,
+			ClusterName:         clusterName,
+			ClusterID:           clusterId,
+			StopCh:              stopCh,
 		}
+		if err := admissionpatch.StartControllers(patchCtx); err != nil {
+			log.Errorf("Cannot start auto instrumentation patcher: %v", err)
+		}
+		//} else {
+		//	log.Info("Auto instrumentation patcher is disabled")
+		//}
 
 		admissionCtx := admissionpkg.ControllerContext{
 			IsLeaderFunc:        le.IsLeader,

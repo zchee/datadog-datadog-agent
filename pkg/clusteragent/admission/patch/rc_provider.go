@@ -70,7 +70,7 @@ func (rcp *remoteConfigProvider) process(update map[string]state.RawConfig, _ fu
 	log.Infof("Got %d updates from remote-config", len(update))
 	var valid, invalid float64
 	for path, config := range update {
-		log.Debugf("Parsing config %s from path %s", config.Config, path)
+		log.Infof("Parsing config %s from path %s", config.Config, path)
 		var req Request
 		err := json.Unmarshal(config.Config, &req)
 		if err != nil {
