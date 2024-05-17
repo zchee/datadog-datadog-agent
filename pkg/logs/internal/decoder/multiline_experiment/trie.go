@@ -1,11 +1,14 @@
 package multilineexperiment
 
+import "fmt"
+
 type TrieTable struct {
 	states    [][]int
 	nextState int
 	maxToken  int
 	table     []int
 	rowSize   int
+	numRows   int
 }
 
 func NewTrie() *TrieTable {
@@ -49,7 +52,8 @@ func (t *TrieTable) transition(row []int, value int) ([]int, int) {
 
 func (t *TrieTable) Compile() {
 	t.rowSize = nextLargestPowerOf2(t.maxToken + 1)
-	t.table = make([]int, len(t.states)*t.rowSize)
+	t.numRows = len(t.states)
+	t.table = make([]int, t.numRows*t.rowSize)
 	for i, row := range t.states {
 		// copy the row
 		for j, value := range row {
@@ -80,4 +84,14 @@ func (t *TrieTable) MatchProbability(input []Token) float64 {
 		}
 	}
 	return 1.0
+}
+
+func (t *TrieTable) Show() {
+	for i := 0; i < t.numRows; i++ {
+		for j := 0; j < t.rowSize; j++ {
+			k := i * t.rowSize + j
+			fmt.Printf("%d ", t.table[k])
+		}
+		fmt.Printf("\n")
+	}
 }

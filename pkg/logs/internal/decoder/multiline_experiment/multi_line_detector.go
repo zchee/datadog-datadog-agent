@@ -358,5 +358,8 @@ func compileModel(tokenLength int) ModelMatcher {
 		model.Add(tokenize([]byte(str), tokenLength))
 	}
 	model.Compile()
+	if len(os.Getenv("SHOW_MODEL")) > 0 {
+		model.Show()
+	}
 	return model
 }

@@ -6,7 +6,10 @@
 //revive:disable
 package multilineexperiment
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 type MarkovChain struct {
 	countTable      [][]uint
@@ -58,6 +61,10 @@ func (m *MarkovChain) MatchProbability(tokens []Token) float64 {
 	}
 	// return geoMean(trimStateSet(out))
 	return geoMean(out)
+}
+
+func (m *MarkovChain) Show() {
+	fmt.Printf("TODO\n")
 }
 
 // Removes leading and trailing zeros
