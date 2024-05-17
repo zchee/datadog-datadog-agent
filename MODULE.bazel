@@ -1,7 +1,13 @@
 bazel_dep(name = "rules_go", version = "0.47.1")
-bazel_dep(name = "rules_pkg", version = "0.10.1")
 bazel_dep(name = "gazelle", version = "0.36.0")
 bazel_dep(name = "platforms", version = "0.0.10")
+
+# For packaging
+bazel_dep(name = "rules_pkg", version = "0.10.1")
+# Avoid relying on system Python, maybe?
+bazel_dep(name = "rules_python", version = "0.31.0")
+python = use_extension("@rules_python//extensions:python.bzl", "python")
+python.toolchain(python_version = "3.11", is_default = True)
 
 # For rtloader
 bazel_dep(name = "rules_foreign_cc", version = "0.10.1")
