@@ -45,7 +45,6 @@ func TestTokenizer(t *testing.T) {
 // }
 
 func TestModel(t *testing.T) {
-
 	detector := NewMultiLineDetector(func(m *message.Message) {}, 1000)
 
 	test := func(input string) {
@@ -167,8 +166,9 @@ func BenchmarkTest1(b *testing.B) {
 }
 
 func BenchmarkTest2(b *testing.B) {
-	m := NewMarkovChain()
-	var samples = []string{
+	m := NewModelMatcher()
+
+	samples := []string{
 		"12-12-12T12:12:21Z12:12",
 		"ab ab 1 1:1:1 1",
 		"ab ab 1 1:1:1 abc 12",
@@ -187,12 +187,18 @@ func BenchmarkTest2(b *testing.B) {
 	for _, in := range samples {
 		m.Add(tokenize([]byte(in), 40))
 	}
+	m.Compile()
+
+	tokenizedData := [][]Token{}
+	for _, text := range testData {
+		tokenizedData = append(tokenizedData, tokenize([]byte(text), 40))
+	}
 
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		for _, s := range testData {
-			m.MatchProbability(tokenize([]byte(s), 40))
+		for _, s := range tokenizedData {
+			m.MatchProbability(s)
 		}
 	}
 }

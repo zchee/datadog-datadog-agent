@@ -400,6 +400,13 @@ func (m *MultiLineDetector) reportAnalytics(force bool) {
 	log.Infof("MULTI_LINE_EXPERIMENT: payload: %v", string(payloadBytes))
 }
 
+func NewModelMatcher() ModelMatcher {
+	if len(os.Getenv("USE_TRIE_TABLE")) > 0 {
+		return NewTrie()
+	}
+	return NewMarkovChain()
+}
+
 func compileModel(tokenLength int) ModelMatcher {
 	var model ModelMatcher
 	if len(os.Getenv("USE_TRIE_TABLE")) > 0 {
