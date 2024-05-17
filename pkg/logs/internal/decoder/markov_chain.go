@@ -15,6 +15,7 @@ func NewMarkovChain() *MarkovChain {
 		countTable: make([][]uint, END),
 	}
 }
+
 func (m *MarkovChain) Add(tokens []Token) {
 	lastToken := tokens[0]
 	for _, token := range tokens[1:] {
@@ -24,6 +25,10 @@ func (m *MarkovChain) Add(tokens []Token) {
 		m.countTable[lastToken][token] += 1
 		lastToken = token
 	}
+}
+
+func (m *MarkovChain) Compile() {
+	// pass
 }
 
 func (m *MarkovChain) MatchProbability(tokens []Token) float64 {
