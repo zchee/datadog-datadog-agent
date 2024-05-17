@@ -58,7 +58,7 @@ func eksHttpbinEnvProvisioner() e2e.PulumiEnvRunFunc[eksHttpbinEnv] {
 		}
 
 		// install docker.io
-		manager, _, err := docker.NewManager(&awsEnv, httpbinHost)
+		manager, err := docker.NewManager(&awsEnv, httpbinHost)
 		if err != nil {
 			return err
 		}
