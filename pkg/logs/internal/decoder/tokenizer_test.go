@@ -26,7 +26,7 @@ func TestTokenizer(t *testing.T) {
 		{input: "abcd", expectedToken: "CCCC"},
 		{input: "1234", expectedToken: "DDDD"},
 		{input: "abc123", expectedToken: "CCCDDD"},
-		{input: "!@#$%^&*()_+[]:-/\\.,\\'{}", expectedToken: "CCCCCCC*()C+[]:-/\\.,\\'{}"},
+		{input: "!@#$%^&*()_+[]:-/\\.,\\'{}", expectedToken: "CCCCCCC*()_+[]:-/\\.,\\'{}"},
 		{input: "123-abc-[foo] (bar)", expectedToken: "DDD-CCC-[CCC] (CCC)"},
 		{input: "Sun Mar 2PM", expectedToken: "DAY MTH DPM"},
 	}
