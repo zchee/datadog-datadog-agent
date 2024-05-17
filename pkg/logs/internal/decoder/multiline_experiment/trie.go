@@ -1,6 +1,6 @@
 package multilineexperiment
 
-type Trie struct {
+type TrieTable struct {
 	states    [][]int
 	nextState int
 	maxToken  int
@@ -8,14 +8,14 @@ type Trie struct {
 	rowSize   int
 }
 
-func NewTrie() *Trie {
-	return &Trie{
+func NewTrie() *TrieTable {
+	return &TrieTable{
 		states:    make([][]int, 0),
 		nextState: 1,
 	}
 }
 
-func (t *Trie) Add(input []Token) {
+func (t *TrieTable) Add(input []Token) {
 	currState := 0
 	for _, value := range input {
 		var row []int
@@ -30,7 +30,7 @@ func (t *Trie) Add(input []Token) {
 	}
 }
 
-func (t *Trie) transition(row []int, value int) ([]int, int) {
+func (t *TrieTable) transition(row []int, value int) ([]int, int) {
 	if value > t.maxToken {
 		t.maxToken = value
 	}
@@ -47,7 +47,7 @@ func (t *Trie) transition(row []int, value int) ([]int, int) {
 	return row, row[value]
 }
 
-func (t *Trie) Compile() {
+func (t *TrieTable) Compile() {
 	t.rowSize = nextLargestPowerOf2(t.maxToken + 1)
 	t.table = make([]int, len(t.states)*t.rowSize)
 	for i, row := range t.states {
@@ -67,7 +67,7 @@ func nextLargestPowerOf2(n int) int {
 	return answer
 }
 
-func (t *Trie) MatchProbability(input []Token) float64 {
+func (t *TrieTable) MatchProbability(input []Token) float64 {
 	currState := 0
 	for _, value := range input {
 		k := int(value) + t.rowSize*currState

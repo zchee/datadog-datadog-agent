@@ -53,12 +53,6 @@ type tokenCluster struct {
 	sample               string
 }
 
-type Model interface {
-	Add(input []Token)
-	Compile()
-	MatchProbability([]Token) float64
-}
-
 // MultiLineDetector is collects data about logs and reports metrics if we think they are multi-line.
 type MultiLineDetector struct {
 	enabled             bool
@@ -73,7 +67,7 @@ type MultiLineDetector struct {
 	totalSamples        int
 	containsJSON        bool
 	id                  string
-	timestampModel      Model
+	timestampModel      ModelMatcher
 
 	clusterTable []*tokenCluster
 }
@@ -284,7 +278,7 @@ func (m *MultiLineDetector) reportAnalytics(force bool) {
 	log.Infof("MULTI_LINE_EXPERIMENT: payload: %v", string(payloadBytes))
 }
 
-func compileModel(tokenLength int) Model {
+func compileModel(tokenLength int) ModelMatcher {
 	model := NewTrie()
 
 	timestamps := []string{
