@@ -7,6 +7,7 @@ package decoder
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,6 +95,104 @@ func TestModel(t *testing.T) {
 	test("2024/05/16 14:47:42 Datadog Tracer v1.64")
 	test("2024/05/16 19:46:15 Datadog Tracer v1.64.0-rc.1 ")
 	test("127.0.0.1 - - [16/May/2024:19:49:17 +0000]")
+	test("127.0.0.1 - - [17/May/2024:13:51:52 +0000] \"GET /probe?debug=1 HTTP/1.1\" 200 0	")
 	test("'/conf.d/..data/container_lifecycle.yaml' ")
-	test("commit: 04a34f1e96d7eb8795b0f944b1ea388281990fc8") // TODO Fix
+	test("commit: 04a34f1e96d7eb8795b0f944b1ea388281990fc8")
+	test(" auth.handler: auth handler stopped")
+}
+
+var testData = []string{
+	"2021-03-28 13:45:30 App started successfully",
+	" .  a at some log",
+	"13:45:30 2021-03-28 ",
+	"abc this 13:45:30  is a log ",
+	"abc this 13 45:30  is a log ",
+	"12:30:2017 - info App started successfully",
+	"12:30:20 - info App started successfully",
+	"2023-03.28T14-33:53-7430Z App started successfully",
+	" [java] 1234-12-12",
+	"      at system.com.blah",
+	"Info - this is an info message App started successfully",
+	"2023-03-28T14:33:53.743350Z App started successfully",
+	"2023-03-27 12:34:56 INFO App started successfully",
+	"[2023-03-27 12:34:56] [INFO] App started successfully",
+	"[INFO] App started successfully",
+	"[INFO] test.swift:123 App started successfully",
+	"ERROR in | myFile.go:53:123 App started successfully",
+	"9/28/2022 2:23:15 PM",
+	"2024-05-15 17:04:12,369 - root - DEBUG -",
+	"[2024-05-15T18:03:23.501Z] Info : All routes applied.",
+	"2024-05-15 14:03:13 EDT | CORE | INFO | (pkg/logs/tailers/file/tailer.go:353 in forwardMessages) | ",
+	"20171223-22:15:29:606|Step_LSC|30002312|onStandStepChanged 3579",
+	"Jun 14 15:16:01 combo sshd(pam_unix)[19939]: authentication failure; logname= uid=0 euid=0 tty=NODEVssh ruser= rhost=218.188.2.4 ",
+	"Jul  1 09:00:55 calvisitor-10-105-160-95 kernel[0]: IOThunderboltSwitch<0>(0x0)::listenerCallback -",
+	"nova-api.log.1.2017-05-16_13:53:08 2017-05-16 00:00:00.008 25746 INFO nova.osapi",
+	"54fadb412c4e40cdbaed9335e4c35a9e - - -] 10.11.10.1 ",
+	"[Sun Dec 04 04:47:44 2005] [notice] workerEnv.init() ok /etc/httpd/conf/workers2.properties",
+	"2024/05/16 14:47:42 Datadog Tracer v1.64",
+	"2024/05/16 19:46:15 Datadog Tracer v1.64.0-rc.1 ",
+	"127.0.0.1 - - [16/May/2024:19:49:17 +0000]",
+	"'/conf.d/..data/container_lifecycle.yaml' ",
+	"commit: 04a34f1e96d7eb8795b0f944b1ea388281990fc8",
+}
+
+func BenchmarkTest1(b *testing.B) {
+	// make sure to prepend it with `^`
+	formatsToTry := []*regexp.Regexp{
+		// time.RFC3339,
+		regexp.MustCompile(`^\d+-\d+-\d+T\d+:\d+:\d+(\.\d+)?(Z\d*:?\d*)?`),
+		regexp.MustCompile(`^[A-Za-z_]+ [A-Za-z_]+ +\d+ \d+:\d+:\d+ \d+`),
+		regexp.MustCompile(`^[A-Za-z_]+ [A-Za-z_]+ +\d+ \d+:\d+:\d+( [A-Za-z_]+ \d+)?`),
+		regexp.MustCompile(`^[A-Za-z_]+ [A-Za-z_]+ \d+ \d+:\d+:\d+ [\-\+]\d+ \d+`),
+		regexp.MustCompile(`^\d+ [A-Za-z_]+ \d+ \d+:\d+ [A-Za-z_]+`),
+		regexp.MustCompile(`^\d+ [A-Za-z_]+ \d+ \d+:\d+ -\d+`),
+		regexp.MustCompile(`^[A-Za-z_]+, \d+-[A-Za-z_]+-\d+ \d+:\d+:\d+ [A-Za-z_]+`),
+		regexp.MustCompile(`^[A-Za-z_]+, \d+ [A-Za-z_]+ \d+ \d+:\d+:\d+ [A-Za-z_]+`),
+		regexp.MustCompile(`^[A-Za-z_]+, \d+ [A-Za-z_]+ \d+ \d+:\d+:\d+ -\d+`),
+		regexp.MustCompile(`^\d+-\d+-\d+[A-Za-z_]+\d+:\d+:\d+\.\d+[A-Za-z_]+\d+:\d+`),
+		regexp.MustCompile(`^\d+-\d+-\d+ \d+:\d+:\d+(,\d+)?`),
+		regexp.MustCompile(`^[A-Za-z_]+ \d+, \d+ \d+:\d+:\d+ (AM|PM)`),
+		regexp.MustCompile(`^\d{4}-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])`),
+	}
+
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		for _, s := range testData {
+			for _, regex := range formatsToTry {
+				regex.Match([]byte(s))
+			}
+		}
+	}
+}
+
+func BenchmarkTest2(b *testing.B) {
+	m := NewMarkovChain()
+	var samples = []string{
+		"12-12-12T12:12:21Z12:12",
+		"ab ab 1 1:1:1 1",
+		"ab ab 1 1:1:1 abc 12",
+		"ab ab 1 1:1:1 +2 1",
+		"12 av 12 12:12 ab",
+		"12 ab 12 12:12 -12",
+		"ab, 12-ab-12 12:12:12 ab",
+		"ab, 12 ab 12 12:12:12 ab",
+		"ab, 12 ab 12 12:12:12 -1",
+		"12-12-12T12:12:12.12T12:12",
+		"12-12-12 12:12:12,1",
+		"ab 12, 12 12:12:12 AM",
+		"1234-12-21",
+	}
+
+	for _, in := range samples {
+		m.Add(tokenize([]byte(in), 40))
+	}
+
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		for _, s := range testData {
+			m.MatchProbability(tokenize([]byte(s), 40))
+		}
+	}
 }
