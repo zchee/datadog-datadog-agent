@@ -16,6 +16,9 @@ bazel_dep(name = "rules_foreign_cc", version = "0.10.1")
 # to be able to build using `rules_foreign_cc` on MacOS M1
 register_toolchains("@@rules_foreign_cc~//toolchains:built_ninja_toolchain")
 
+# Dependency for patching RPATHs in binaries
+bazel_dep(name = "patchelf", version = "0.18.0")
+
 ## THIRD-PARTY DEPS
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 

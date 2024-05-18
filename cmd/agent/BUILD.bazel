@@ -118,6 +118,12 @@ go_binary(
     visibility = ["//visibility:public"],
 )
 
+load("//:bazel/rules/patch_rpath.bzl", "patch_rpath")
+patch_rpath(
+    name = "patched_agent",
+    deps = [":agent"],
+    rpaths = ["/opt/embedded/lib"],
+)
 pkg_tar(
     name = "agent_tar",
     srcs = [":agent"],
