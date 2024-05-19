@@ -645,6 +645,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	for i := 0; i < 15; i++ {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				tt.context.extras["topic_name"] = s.getTopicName()
 				if tt.teardown != nil {
 					t.Cleanup(func() {
 						tt.teardown(t, tt.context)
