@@ -1,6 +1,6 @@
 {
   "lockFileVersion": 6,
-  "moduleFileHash": "ab9e036ee9f027c85b2e63ce10e4d60cb565339b609d9e5420fac477fec06343",
+  "moduleFileHash": "f16d841dd1f27b00ac0b3557d0c23e381e2fad19b6b4fc3d8b0773000c025251",
   "flags": {
     "cmdRegistries": [
       "https://bcr.bazel.build/"
@@ -82,7 +82,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 22,
+                "line": 25,
                 "column": 13
               }
             },
@@ -98,7 +98,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 29,
+                "line": 32,
                 "column": 13
               }
             }
@@ -112,7 +112,7 @@
           "usingModule": "<root>",
           "location": {
             "file": "@@//:MODULE.bazel",
-            "line": 49,
+            "line": 51,
             "column": 23
           },
           "imports": {},
@@ -126,7 +126,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 50,
+                "line": 52,
                 "column": 16
               }
             }
@@ -140,7 +140,7 @@
           "usingModule": "<root>",
           "location": {
             "file": "@@//:MODULE.bazel",
-            "line": 52,
+            "line": 54,
             "column": 24
           },
           "imports": {
@@ -653,7 +653,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 53,
+                "line": 55,
                 "column": 18
               }
             },
@@ -672,7 +672,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 57,
+                "line": 59,
                 "column": 25
               }
             },
@@ -687,7 +687,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 69,
+                "line": 71,
                 "column": 25
               }
             },
@@ -702,7 +702,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 75,
+                "line": 77,
                 "column": 25
               }
             },
@@ -717,7 +717,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 81,
+                "line": 83,
                 "column": 25
               }
             },
@@ -732,7 +732,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 87,
+                "line": 89,
                 "column": 25
               }
             },
@@ -747,7 +747,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 93,
+                "line": 95,
                 "column": 25
               }
             },
@@ -762,7 +762,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 99,
+                "line": 101,
                 "column": 25
               }
             },
@@ -777,7 +777,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 105,
+                "line": 107,
                 "column": 25
               }
             },
@@ -792,7 +792,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 111,
+                "line": 113,
                 "column": 25
               }
             },
@@ -807,7 +807,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 122,
+                "line": 124,
                 "column": 24
               }
             },
@@ -822,7 +822,7 @@
               "devDependency": false,
               "location": {
                 "file": "@@//:MODULE.bazel",
-                "line": 135,
+                "line": 137,
                 "column": 24
               }
             }
@@ -838,6 +838,7 @@
         "rules_pkg": "rules_pkg@0.10.1",
         "rules_python": "rules_python@0.31.0",
         "rules_foreign_cc": "rules_foreign_cc@0.10.1",
+        "patchelf": "patchelf@0.18.0",
         "bazel_tools": "bazel_tools@_",
         "local_config_platform": "local_config_platform@_"
       }
@@ -1306,6 +1307,35 @@
             "https://bcr.bazel.build/modules/rules_foreign_cc/0.10.1/patches/module_dot_bazel.patch": "sha256-hDvLi+Nx91lvhEd2qRrPfPu0RjiG5w3a/c4N4AiJb3U="
           },
           "remote_patch_strip": 0
+        }
+      }
+    },
+    "patchelf@0.18.0": {
+      "name": "patchelf",
+      "version": "0.18.0",
+      "key": "patchelf@0.18.0",
+      "repoName": "patchelf",
+      "executionPlatformsToRegister": [],
+      "toolchainsToRegister": [],
+      "extensionUsages": [],
+      "deps": {
+        "bazel_tools": "bazel_tools@_",
+        "local_config_platform": "local_config_platform@_"
+      },
+      "repoSpec": {
+        "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
+        "ruleClassName": "http_archive",
+        "attributes": {
+          "urls": [
+            "https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0.tar.gz"
+          ],
+          "integrity": "sha256-ZN4Q5Ma4uDedt+h/WAMPM26nR8BRXzgRMugQ2/hKhuc=",
+          "strip_prefix": "patchelf-0.18.0",
+          "remote_patches": {
+            "https://bcr.bazel.build/modules/patchelf/0.18.0/patches/0001-Add-MODULE.bazel.patch": "sha256-Z+FqoJDCCuMJroFSn/dQRBtOCtq4ZY8wCAkRkXGX9mM=",
+            "https://bcr.bazel.build/modules/patchelf/0.18.0/patches/0002-Add-BUILD.bazel.patch": "sha256-H/tH14FO0cEmkl7Ff8vhIYCVfhLFGab2RJHMoEymQPE="
+          },
+          "remote_patch_strip": 1
         }
       }
     },

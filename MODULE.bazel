@@ -37,7 +37,6 @@ http_archive(
     build_file = "@//bazel/third_party:zlib.BUILD.bzl",
 )
 
-
 ##################
 ## GO / GAZELLE ##
 ##################
