@@ -1,9 +1,14 @@
 #ifndef __ERPC_DISPATCHER_H
 #define __ERPC_DISPATCHER_H
 
-#include "bpf_helpers.h"
-#include "protocols/tls/java/types.h"
-#include "protocols/tls/java/maps.h"
+#include "bpf_helpers.h"               // for log_debug, __always_inline, SEC, bpf_get_current_pid_tgid, bpf_probe_r...
+#include "bpf_tracing.h"               // for pt_regs, user_pt_regs, PT_REGS_PARM3, PT_REGS_PARM4
+#include "ktypes.h"                    // for u64, u8, u32
+#include "protocols/tls/java/maps.h"   // for java_tls_erpc_handlers
+
+#ifdef DEBUG
+#include "protocols/tls/java/types.h"  // for MAX_MESSAGE_TYPE
+#endif
 
 #define USM_IOCTL_ID 0xda7ad09
 

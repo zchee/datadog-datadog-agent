@@ -1,21 +1,21 @@
-#include "ktypes.h"
-
 #ifdef COMPILE_RUNTIME
 #include "kconfig.h"
 #include <linux/tcp.h>
+#endif
 
+#include "bpf_helpers.h"                 // for SEC, bpf_get_current_pid_tgid, bpf_map_lookup_elem, bpf_map_update_elem
+#include "bpf_tracing.h"                 // for BPF_CORE_READ, ___arrow1, ___arrow2, ___core_read0, BPF_KPROBE, BPF_...
+#include "cgroup.h"                      // for get_cgroup_name
+#include "ktypes.h"                      // for pt_regs, sock, tcp_sock, u32, u64, BPF_ANY, user_pt_regs, BPF_NOEXIST
+#include "map-defs.h"                    // for BPF_HASH_MAP, BPF_PERCPU_HASH_MAP
+#include "tcp-queue-length-kern-user.h"  // for stats_value, stats_key
+
+#ifdef COMPILE_RUNTIME
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
 // 4.8 is the first version where `bpf_get_current_task` is available
 #error Versions of Linux previous to 4.8.0 are not supported by this probe
 #endif
 #endif
-
-#include "tcp-queue-length-kern-user.h"
-#include "cgroup.h"
-
-#include "bpf_tracing.h"
-#include "bpf_core_read.h"
-#include "map-defs.h"
 
 /*
  * The `tcp_queue_stats` map is used to share with the userland program system-probe

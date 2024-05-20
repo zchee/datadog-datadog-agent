@@ -1,7 +1,9 @@
 #ifndef __NATIVE_TLS_MAPS_H
 #define __NATIVE_TLS_MAPS_H
 
-#include "map-defs.h"
+#include "ktypes.h"                // for u64, __u32, __u64
+#include "map-defs.h"              // for BPF_LRU_MAP
+#include "protocols/http/types.h"  // for ssl_read_args_t, ssl_read_ex_args_t, ssl_sock_t, ssl_write_args_t, ssl_wri...
 
 BPF_LRU_MAP(ssl_sock_by_ctx, void *, ssl_sock_t, 1)
 

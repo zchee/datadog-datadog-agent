@@ -1,34 +1,38 @@
-#include "bpf_tracing.h"
-#include "bpf_builtins.h"
-#include "bpf_telemetry.h"
-
-#include "ktypes.h"
 #ifdef COMPILE_RUNTIME
 #include "kconfig.h"
+#include <net/sock.h>                                     // for sock
 #endif
 
-#include "ip.h"
-#include "ipv6.h"
-#include "sock.h"
-#include "port_range.h"
+#include "bpf_builtins.h"                                 // for bpf_memcpy
+#include "bpf_helpers.h"                                  // for log_debug, bpf_map_delete_elem, NULL, SEC, bpf_get_...
+#include "bpf_tracing.h"                                  // for BPF_CORE_READ, BPF_KPROBE
+#include "conn_tuple.h"                                   // for conn_tuple_t
+#include "ip.h"                                           // for flip_tuple
+#include "ktypes.h"                                       // for pt_regs, u64, uint64_t, __u64
+#include "port_range.h"                                   // for normalize_tuple
+#include "protocols/classification/dispatcher-helpers.h"  // for dispatch_kafka, protocol_dispatcher_entrypoint
+#include "protocols/http/usm-events.h"                    // for http_batch_flush
+#include "protocols/http2/usm-events.h"                   // for http2_batch_flush, terminated_http2_batch_flush
+#include "protocols/kafka/usm-events.h"                   // for kafka_batch_flush
+#include "protocols/postgres/usm-events.h"                // for postgres_batch_flush
+#include "protocols/tls/go-tls-conn.h"                    // for conn_tup_from_tls_conn
+#include "protocols/tls/go-tls-goid.h"                    // for read_goroutine_id, get_tls_base
+#include "protocols/tls/go-tls-location.h"                // for read_location
+#include "protocols/tls/go-tls-maps.h"                    // for go_tls_write_args, go_tls_read_args, conn_tup_by_go...
+#include "protocols/tls/go-tls-types.h"                   // for tls_offsets_data_t, go_tls_function_args_key_t, go_...
+#include "protocols/tls/https.h"                          // for get_offsets_data, tls_process, map_ssl_ctx_to_sock
+#include "protocols/tls/tags-types.h"                     // for GO
 
-#include "protocols/classification/dispatcher-helpers.h"
-#include "protocols/http/buffer.h"
-#include "protocols/http/http.h"
-#include "protocols/http2/decoding.h"
-#include "protocols/http2/decoding-tls.h"
-#include "protocols/kafka/kafka-parsing.h"
-#include "protocols/postgres/decoding.h"
-#include "protocols/sockfd-probes.h"
-#include "protocols/tls/java/erpc_dispatcher.h"
-#include "protocols/tls/java/erpc_handlers.h"
-#include "protocols/tls/go-tls-types.h"
-#include "protocols/tls/go-tls-goid.h"
-#include "protocols/tls/go-tls-location.h"
-#include "protocols/tls/go-tls-conn.h"
-#include "protocols/tls/https.h"
-#include "protocols/tls/native-tls.h"
-#include "protocols/tls/tags-types.h"
+// includes kept below because they declare eBPF program entrypoints
+#include "protocols/http/http.h"                          // IWYU pragma: keep
+#include "protocols/http2/decoding.h"                     // IWYU pragma: keep
+#include "protocols/http2/decoding-tls.h"                 // IWYU pragma: keep
+#include "protocols/kafka/kafka-parsing.h"                // IWYU pragma: keep
+#include "protocols/postgres/decoding.h"                  // IWYU pragma: keep
+#include "protocols/sockfd-probes.h"                      // IWYU pragma: keep
+#include "protocols/tls/java/erpc_dispatcher.h"           // IWYU pragma: keep
+#include "protocols/tls/java/erpc_handlers.h"             // IWYU pragma: keep
+#include "protocols/tls/native-tls.h"                     // IWYU pragma: keep
 
 // The entrypoint for all packets classification & decoding in universal service monitoring.
 SEC("socket/protocol_dispatcher")

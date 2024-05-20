@@ -1,7 +1,9 @@
 #ifndef __GO_TLS_LOCATION_H
 #define __GO_TLS_LOCATION_H
 
-#include "bpf_helpers.h"
+#include "bpf_helpers.h"                 // for __always_inline, NULL, bpf_probe_read_user
+#include "ktypes.h"                      // for pt_regs, u64, int64_t
+#include "protocols/tls/go-tls-types.h"  // for location_t
 
 #define REG_SIZE 8
 #ifdef __TARGET_ARCH_arm64

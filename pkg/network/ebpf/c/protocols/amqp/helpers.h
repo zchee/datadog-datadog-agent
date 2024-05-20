@@ -1,10 +1,12 @@
 #ifndef __AMQP_HELPERS_H
 #define __AMQP_HELPERS_H
 
-#include "bpf_endian.h"
-
-#include "protocols/amqp/defs.h"
-#include "protocols/classification/common.h"
+#include "bpf_builtins.h"                     // for bpf_memcmp
+#include "bpf_endian.h"                       // for bpf_ntohs
+#include "bpf_helpers.h"                      // for __always_inline
+#include "ktypes.h"                           // for __u16, false, true, bool, __u32, __u8
+#include "protocols/amqp/defs.h"              // for amqp_header, AMQP_PREFACE, AMQP_BASIC_CLASS, AMQP_CHANNEL_CLASS
+#include "protocols/classification/common.h"  // for CHECK_PRELIMINARY_BUFFER_CONDITIONS
 
 // The method checks if the given buffer includes the protocol header which must be sent in the start of a new connection.
 // Ref: https://www.rabbitmq.com/resources/specs/amqp0-9-1.pdf

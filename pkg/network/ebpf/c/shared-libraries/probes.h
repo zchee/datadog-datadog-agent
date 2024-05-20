@@ -1,8 +1,11 @@
 #ifndef __SHARED_LIBRARIES_PROBES_H
 #define __SHARED_LIBRARIES_PROBES_H
 
-#include "bpf_telemetry.h"
-#include "shared-libraries/types.h"
+#include "bpf_helpers.h"             // for SEC, __always_inline, bpf_get_current_pid_tgid, BPF_ANY, NULL, bpf_get_s...
+#include "bpf_telemetry.h"           // for FN_INDX_bpf_probe_read_user, bpf_map_update_with_telemetry, bpf_probe_re...
+#include "ktypes.h"                  // for u64, bool, false, true, u32
+#include "shared-libraries/maps.h"   // for open_at_args, shared_libraries
+#include "shared-libraries/types.h"  // for lib_path_t, exit_sys_openat_ctx, LIB_PATH_MAX_SIZE, enter_sys_openat2_ctx
 
 static __always_inline void fill_path_safe(lib_path_t *path, const char *path_argument) {
 #pragma unroll

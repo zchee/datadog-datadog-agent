@@ -1,10 +1,11 @@
 #ifndef __PROTOCOL_DISPATCHER_MAPS_H
 #define __PROTOCOL_DISPATCHER_MAPS_H
 
-#include "map-defs.h"
-
-#include "protocols/classification/defs.h"
-#include "protocols/classification/shared-tracer-maps.h"
+#include "conn_tuple.h"                        // for conn_tuple_t
+#include "ktypes.h"                            // for u32
+#include "map-defs.h"                          // for BPF_PROG_ARRAY, BPF_PERCPU_ARRAY_MAP, BPF_HASH_MAP
+#include "protocols/classification/defs.h"     // for DISPATCHER_PROG_MAX, PROG_MAX, TLS_DISPATCHER_PROG_MAX, TLS_PR...
+#include "protocols/classification/structs.h"  // for dispatcher_arguments_t, tls_dispatcher_arguments_t
 
 // Maps a connection tuple to latest tcp segment we've processed. Helps to detect same packets that travels multiple
 // interfaces or retransmissions.

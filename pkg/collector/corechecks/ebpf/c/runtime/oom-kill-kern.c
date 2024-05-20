@@ -1,23 +1,22 @@
-#include "ktypes.h"
-
 #ifdef COMPILE_RUNTIME
 #include "kconfig.h"
 #include <linux/oom.h>
+#endif
 
+#include "bpf_helpers.h"         // for NULL, SEC, bpf_get_current_comm, bpf_get_current_pid_tgid, bpf_map_lookup_elem
+#include "bpf_tracing.h"         // for ___arrow1, ___core_read0, BPF_CORE_READ_INTO, ___bpf_field_ref1, bpf_core_fi...
+#include "cgroup.h"              // for get_cgroup_name
+#include "ktypes.h"              // for oom_control, pt_regs, task_struct, u32, BPF_FUNC_get_current_comm, BPF_FUNC_...
+#include "map-defs.h"            // for BPF_HASH_MAP
+#include "oom-kill-kern-user.h"  // for oom_stats, TASK_COMM_LEN
+
+#ifdef COMPILE_RUNTIME
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 // 4.8 is the first version where `struct oom_control*` is the first argument of `oom_kill_process`
 // 4.9 is the first version where the field `totalpages` is available in `struct oom_control`
 #error Versions of Linux previous to 4.9.0 are not supported by this probe
 #endif
-
 #endif
-
-#include "oom-kill-kern-user.h"
-#include "cgroup.h"
-
-#include "bpf_tracing.h"
-#include "bpf_core_read.h"
-#include "map-defs.h"
 
 /*
  * The `oom_stats` hash map is used to share with the userland program system-probe

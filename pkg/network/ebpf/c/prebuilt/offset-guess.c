@@ -1,14 +1,30 @@
 #include "kconfig.h"
-#include "offset-guess.h"
-#include "bpf_tracing.h"
-#include "map-defs.h"
+#include <uapi/asm-generic/errno-base.h>    // for EFAULT
+#include <linux/net.h>                      // for socket
+#include <linux/socket.h>                   // for AF_INET6, SOL_TCP
+#include <net/flow.h>                       // for flowi4, flowi6
+#include <net/net_namespace.h>              // for possible_net_t
+#include <net/netfilter/nf_conntrack.h>     // for nf_conn
+#include <net/sock.h>                       // for sock
+#include <uapi/linux/tcp.h>                 // for TCP_INFO
 
-#include <net/net_namespace.h>
-#include <net/sock.h>
-#include <net/flow.h>
-#include <uapi/linux/ptrace.h>
-#include <uapi/linux/tcp.h>
-#include <uapi/linux/ip.h>
+#include "bpf_helpers.h"        // for bpf_probe_read_kernel, NULL, SEC, bpf_map_lookup_elem, __always_inline, BPF_ANY
+#include "bpf_tracing.h"        // for user_pt_regs, pt_regs, PT_REGS_PARM1, PT_REGS_PARM2, PT_REGS_PARM3, PT_REGS_P...
+#include "map-defs.h"           // for BPF_HASH_MAP
+#include "offset-guess.h"
+
+static __always_inline bool proc_t_comm_equals(proc_t a, proc_t b) {
+    for (int i = 0; i < TASK_COMM_LEN; i++) {
+        if (a.comm[i] != b.comm[i]) {
+            return false;
+        }
+        // if chars equal but a NUL terminator, both strings equal
+        if (!a.comm[i]) {
+            break;
+        }
+    }
+    return true;
+}
 
 // aligned_offset returns an offset that when added to
 // p, would produce an address that is mod size (aligned).
@@ -38,19 +54,6 @@ BPF_HASH_MAP(connectsock_ipv6, __u64, void*, 1024)
 
 BPF_HASH_MAP(tracer_status, __u64, tracer_status_t, 1)
 BPF_HASH_MAP(conntrack_status, __u64, conntrack_status_t, 1)
-
-static __always_inline bool proc_t_comm_equals(proc_t a, proc_t b) {
-    for (int i = 0; i < TASK_COMM_LEN; i++) {
-        if (a.comm[i] != b.comm[i]) {
-            return false;
-        }
-        // if chars equal but a NUL terminator, both strings equal
-        if (!a.comm[i]) {
-            break;
-        }
-    }
-    return true;
-}
 
 static __always_inline bool check_family(struct sock* sk, tracer_status_t* status, u16 expected_family) {
     u16 family = 0;
@@ -221,15 +224,13 @@ static __always_inline bool is_sk_buff_event(__u64 what) {
 }
 
 SEC("kprobe/ip_make_skb")
-int kprobe__ip_make_skb(struct pt_regs* ctx) {
+int BPF_KPROBE(kprobe__ip_make_skb, struct sock *sk, struct flowi4 *fl4) {
     u64 zero = 0;
     tracer_status_t* status = bpf_map_lookup_elem(&tracer_status, &zero);
 
     if (status == NULL || is_sk_buff_event(status->what)) {
         return 0;
     }
-
-    struct flowi4* fl4 = (struct flowi4*)PT_REGS_PARM2(ctx);
     guess_offsets(status, (char*)fl4);
     return 0;
 }
@@ -241,7 +242,7 @@ int kprobe__ip6_make_skb(struct pt_regs* ctx) {
     if (status == NULL || is_sk_buff_event(status->what)) {
         return 0;
     }
-    struct flowi6* fl6 = (struct flowi6*)PT_REGS_PARM7(ctx);
+    struct flowi6 *fl6 = (struct flowi6 *)PT_REGS_PARM7(ctx);
     guess_offsets(status, (char*)fl6);
     return 0;
 }
@@ -253,16 +254,14 @@ int kprobe__ip6_make_skb__pre_4_7_0(struct pt_regs* ctx) {
     if (status == NULL || is_sk_buff_event(status->what)) {
         return 0;
     }
-    struct flowi6* fl6 = (struct flowi6*)PT_REGS_PARM9(ctx);
+    struct flowi6 *fl6 = (struct flowi6 *)PT_REGS_PARM9(ctx);
     guess_offsets(status, (char*)fl6);
     return 0;
 }
 
 /* Used exclusively for offset guessing */
 SEC("kprobe/tcp_getsockopt")
-int kprobe__tcp_getsockopt(struct pt_regs* ctx) {
-    int level = (int)PT_REGS_PARM2(ctx);
-    int optname = (int)PT_REGS_PARM3(ctx);
+int BPF_KPROBE(kprobe__tcp_getsockopt, struct sock *sk, int level, int optname) {
     if (level != SOL_TCP || optname != TCP_INFO) {
         return 0;
     }
@@ -272,7 +271,6 @@ int kprobe__tcp_getsockopt(struct pt_regs* ctx) {
     if (status == NULL || status->what == GUESS_SOCKET_SK || is_sk_buff_event(status->what)) {
         return 0;
     }
-    struct sock* sk = (struct sock*)PT_REGS_PARM1(ctx);
     status->tcp_info_kprobe_status = 1;
     guess_offsets(status, (char*)sk);
 
@@ -281,28 +279,22 @@ int kprobe__tcp_getsockopt(struct pt_regs* ctx) {
 
 /* Used for offset guessing the struct socket->sk field */
 SEC("kprobe/sock_common_getsockopt")
-int kprobe__sock_common_getsockopt(struct pt_regs* ctx) {
+int BPF_KPROBE(kprobe__sock_common_getsockopt, struct socket *socket) {
     u64 zero = 0;
     tracer_status_t* status = bpf_map_lookup_elem(&tracer_status, &zero);
     if (status == NULL || status->what != GUESS_SOCKET_SK) {
         return 0;
     }
 
-    struct socket* socket = (struct socket*)PT_REGS_PARM1(ctx);
     guess_offsets(status, (char*)socket);
     return 0;
 }
 
 // Used for offset guessing (see: pkg/ebpf/offsetguess.go)
 SEC("kprobe/tcp_v6_connect")
-int kprobe__tcp_v6_connect(struct pt_regs* ctx) {
-    struct sock* sk;
+int BPF_KPROBE(kprobe__tcp_v6_connect, struct sock *sk) {
     u64 pid = bpf_get_current_pid_tgid();
-
-    sk = (struct sock*)PT_REGS_PARM1(ctx);
-
     bpf_map_update_elem(&connectsock_ipv6, &pid, &sk, BPF_ANY);
-
     return 0;
 }
 
@@ -427,14 +419,13 @@ static __always_inline bool is_ct_event(u64 what) {
 }
 
 SEC("kprobe/__nf_conntrack_hash_insert")
-int kprobe___nf_conntrack_hash_insert(struct pt_regs* ctx) {
+int BPF_KPROBE(kprobe___nf_conntrack_hash_insert, struct nf_conn *ct) {
     u64 zero = 0;
     conntrack_status_t* status = bpf_map_lookup_elem(&conntrack_status, &zero);
     if (status == NULL || !is_ct_event(status->what)) {
         return 0;
     }
 
-    void *ct = (void*)PT_REGS_PARM1(ctx);
     guess_conntrack_offsets(status, (char*)ct);
     return 0;
 }

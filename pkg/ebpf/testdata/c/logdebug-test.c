@@ -1,10 +1,6 @@
-#include "kconfig.h"
-#include "ktypes.h"
-#include <uapi/linux/ptrace.h>
-#include "bpf_tracing.h"
-#include "bpf_helpers.h"
-#include "bpf_helpers_custom.h"
-#include <uapi/linux/bpf.h>
+#include "bpf_helpers.h"  // for log_debug, bpf_get_smp_processor_id, SEC, __always_inline
+#include "bpf_tracing.h"  // for pt_regs, PT_REGS_PARM3, user_pt_regs
+#include "ktypes.h"       // for u32
 
 char __license[] SEC("license") = "GPL";
 

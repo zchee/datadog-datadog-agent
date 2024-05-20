@@ -5,7 +5,7 @@
  * This will bring in asm_volatile_goto and asm_inline macro definitions
  * if enabled by compiler and config options.
  */
-#include <linux/types.h>
+#include <linux/compiler_types.h>  // for asm_inline, asm_volatile_goto
 
 #ifdef asm_volatile_goto
 #undef asm_volatile_goto

@@ -1,6 +1,11 @@
 #ifndef __HTTP2_MAPS_DEFS_H
 #define __HTTP2_MAPS_DEFS_H
 
+#include "conn_tuple.h"                        // for conn_tuple_t
+#include "map-defs.h"                          // for BPF_HASH_MAP, BPF_PERCPU_ARRAY_MAP, BPF_ARRAY_MAP
+#include "protocols/classification/structs.h"  // for dispatcher_arguments_t, tls_dispatcher_arguments_t
+#include "protocols/http2/decoding-defs.h"     // for http2_tail_call_state_t, http2_stream_t, http2_telemetry_t
+
 // http2_remainder maps a connection tuple to the remainder from the previous packet.
 // It is possible for frames to be split to multiple tcp packets, so we need to associate the remainder from the previous
 // packet, to the current one.

@@ -1,20 +1,14 @@
 #include "kconfig.h"
-#include <linux/version.h>
-
-#include "bpf_helpers.h"
-#include "bpf_endian.h"
-#include "bpf_telemetry.h"
-
-#include "offsets.h"
+#include <net/netfilter/nf_conntrack.h> // for nf_conn
 #include "conntrack.h"
-#include "conntrack/maps.h"
-#include "ip.h"
-#include "ipv6.h"
+#include "bpf_helpers.h"     // for BPF_ANY, SEC, log_debug, bpf_get_current_pid_tgid
+#include "bpf_telemetry.h"   // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"     // for pt_regs, user_pt_regs, PT_REGS_PARM1, PT_REGS_PARM5
+#include "conntrack/maps.h"  // for conntrack
+#include "ktypes.h"          // for u32
 
 SEC("kprobe/__nf_conntrack_hash_insert")
-int kprobe___nf_conntrack_hash_insert(struct pt_regs* ctx) {
-    struct nf_conn *ct = (struct nf_conn*)PT_REGS_PARM1(ctx);
-
+int BPF_KPROBE(kprobe___nf_conntrack_hash_insert, struct nf_conn *ct) {
     log_debug("kprobe/__nf_conntrack_hash_insert: netns: %u", get_netns(ct));
 
     conntrack_tuple_t orig = {}, reply = {};

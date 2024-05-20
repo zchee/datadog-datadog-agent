@@ -1,12 +1,6 @@
 #ifndef __SKB_H
 #define __SKB_H
 
-#include "bpf_telemetry.h"
-#include "bpf_helpers.h"
-#include "bpf_helpers_custom.h"
-#include "bpf_endian.h"
-#include "bpf_builtins.h"
-
 #ifndef COMPILE_CORE
 #include <linux/skbuff.h>
 #include <uapi/linux/in.h>
@@ -16,9 +10,16 @@
 #include <uapi/linux/tcp.h>
 #endif
 
-#include "ip.h"
-#include "sock.h"
-#include "ipv6.h"
+#include "bpf_builtins.h"        // for bpf_memset
+#include "bpf_endian.h"          // for bpf_ntohs
+#include "bpf_helpers.h"         // for log_debug, __always_inline, NULL
+#include "bpf_telemetry.h"       // for FN_INDX_bpf_probe_read_kernel, bpf_probe_read_kernel_with_telemetry
+#include "bpf_tracing.h"         // for BPF_CORE_READ_INTO
+#include "compiler.h"            // IWYU pragma: keep // for LOAD_CONSTANT
+#include "conn_tuple.h"          // for conn_tuple_t, CONN_TYPE_TCP, CONN_TYPE_UDP, CONN_V4, CONN_V6
+#include "ipv6.h"                // for read_in6_addr, is_tcpv6_enabled, is_udpv6_enabled
+#include "ktypes.h"              // for __u16, u16
+#include "sock.h"                // for get_proto
 
 #ifdef COMPILE_PREBUILT
 static __always_inline __u64 offset_sk_buff_head() {

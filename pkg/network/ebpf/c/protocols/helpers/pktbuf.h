@@ -1,8 +1,13 @@
 #ifndef __PKTBUF_H
 #define __PKTBUF_H
 
-#include "protocols/helpers/big_endian.h"
-#include "protocols/read_into_buffer.h"
+#include "bpf_helpers.h"                       // for __always_inline, __maybe_unused, __sk_buff, bpf_probe_read_user
+#include "bpf_telemetry.h"                     // for FN_INDX_bpf_probe_read_user, FN_INDX_bpf_skb_load_bytes, bpf_p...
+#include "ip.h"                                // for skb_info_t
+#include "ktypes.h"                            // for u32, false, bool, s16, s32, s8
+#include "protocols/classification/structs.h"  // for tls_dispatcher_arguments_t
+#include "protocols/helpers/big_endian.h"      // for read_big_endian_s16, read_big_endian_s32, read_big_endian_s8
+#include "protocols/read_into_buffer.h"        // for READ_INTO_BUFFER, READ_INTO_USER_BUFFER
 
 enum pktbuf_type {
     PKTBUF_SKB,

@@ -2,11 +2,13 @@
 #define BPF_CGROUP_H
 
 #ifdef COMPILE_RUNTIME
+#include "kconfig.h"
 #include <linux/cgroup.h>
 #endif
 
-#include "bpf_core_read.h"
-#include "bpf_tracing.h"
+#include "bpf_helpers.h"         // for __always_inline, bpf_get_current_task, bpf_probe_read_kernel_str
+#include "bpf_tracing.h"         // for ___nolast5, ___last5, ___nolast3, ___nolast4, BPF_CORE_READ, ___arrow1, ___a...
+#include "ktypes.h"              // for task_struct, css_set, cgroup_subsys_state, cgroup, kernfs_node, BPF_FUNC_get...
 
 static __always_inline int get_cgroup_name(char *buf, size_t sz) {
     if (!bpf_helper_exists(BPF_FUNC_get_current_task)) {

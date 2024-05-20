@@ -1,24 +1,25 @@
 #ifndef BPF_TELEMETRY_H
 #define BPF_TELEMETRY_H
 
-#include "bpf_helpers.h"
-#include "telemetry_types.h"
-#include "map-defs.h"
+#include "bpf_helpers.h"      // for bpf_map_lookup_elem, bpf_probe_read_kernel, bpf_map_update_elem
+#include "compiler.h"         // for LOAD_CONSTANT
+#include "map-defs.h"         // for BPF_HASH_MAP
+#include "telemetry_types.h"  // for T_MAX_ERRNO, helper_err_telemetry_t, map_err_telemetry_t, read_kernel_indx, rea...
 
 #define STR(x) #x
 #define MK_KEY(key) STR(key##_telemetry_key)
 
-BPF_HASH_MAP(map_err_telemetry_map, unsigned long, map_err_telemetry_t, 128)
-BPF_HASH_MAP(helper_err_telemetry_map, unsigned long, helper_err_telemetry_t, 256)
+BPF_HASH_MAP(map_err_telemetry_map, __u64, map_err_telemetry_t, 128)
+BPF_HASH_MAP(helper_err_telemetry_map, __u64, helper_err_telemetry_t, 256)
 
 #define PATCH_TARGET_TELEMETRY -1
-static void *(*bpf_telemetry_update_patch)(unsigned long, ...) = (void *)PATCH_TARGET_TELEMETRY;
+static void *(*bpf_telemetry_update_patch)(__u64 *, ...) = (void *)PATCH_TARGET_TELEMETRY;
 
 #define map_update_with_telemetry(fn, map, args...)                                \
     ({                                                                             \
         long errno_ret, errno_slot;                                                \
         errno_ret = fn(&map, args);                                                \
-        unsigned long err_telemetry_key;                                           \
+        __u64 err_telemetry_key;                                           \
         LOAD_CONSTANT(MK_KEY(map), err_telemetry_key);                             \
         if (errno_ret < 0 && err_telemetry_key > 0) {                              \
             map_err_telemetry_t *entry =                                           \
@@ -30,13 +31,13 @@ static void *(*bpf_telemetry_update_patch)(unsigned long, ...) = (void *)PATCH_T
                     errno_slot &= (T_MAX_ERRNO - 1);                               \
                 }                                                                  \
                 errno_slot &= (T_MAX_ERRNO - 1);                                   \
-                long *target = &entry->err_count[errno_slot];                      \
-                unsigned long add = 1;                                             \
+                __u64 *target = &entry->err_count[errno_slot];                      \
+                __u64 add = 1;                                             \
                 /* Patched instruction for 4.14+: __sync_fetch_and_add(target, 1);
                  * This patch point is placed here because the above instruction
                  * fails on the 4.4 verifier. On 4.4 this instruction is replaced
                  * with a nop: r1 = r1 */                                          \
-                bpf_telemetry_update_patch((unsigned long)target, add);            \
+                bpf_telemetry_update_patch(target, add);            \
             }                                                                      \
         }                                                                          \
         errno_ret;                                                                 \
@@ -60,7 +61,7 @@ static void *(*bpf_telemetry_update_patch)(unsigned long, ...) = (void *)PATCH_T
         int helper_indx = -1;                                                                   \
         long errno_slot;                                                                        \
         long errno_ret = fn(__VA_ARGS__);                                                       \
-        unsigned long telemetry_program_id;                                                     \
+        __u64 telemetry_program_id = 0;                                                 \
         LOAD_CONSTANT("telemetry_program_id_key", telemetry_program_id);                        \
         if (errno_ret < 0 && telemetry_program_id > 0) {                                        \
             helper_err_telemetry_t *entry =                                                     \
@@ -78,13 +79,13 @@ static void *(*bpf_telemetry_update_patch)(unsigned long, ...) = (void *)PATCH_T
                 }                                                                               \
                 errno_slot &= (T_MAX_ERRNO - 1);                                                \
                 if (helper_indx >= 0) {                                                         \
-                    long *target = &entry->err_count[(helper_indx * T_MAX_ERRNO) + errno_slot]; \
-                    unsigned long add = 1;                                                      \
+                    __u64 *target = &entry->err_count[(helper_indx * T_MAX_ERRNO) + errno_slot]; \
+                    __u64 add = 1;                                                      \
                     /* Patched instruction for 4.14+: __sync_fetch_and_add(target, 1);
                      * This patch point is placed here because the above instruction
                      * fails on the 4.4 verifier. On 4.4 this instruction is replaced
                      * with a nop: r1 = r1 */                                                   \
-                    bpf_telemetry_update_patch((unsigned long)target, add);                     \
+                    bpf_telemetry_update_patch(target, add);                     \
                 }                                                                               \
             }                                                                                   \
         }                                                                                       \

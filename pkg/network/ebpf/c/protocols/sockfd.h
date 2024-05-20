@@ -1,11 +1,10 @@
 #ifndef __SOCKFD_H
 #define __SOCKFD_H
 
-#include "ktypes.h"
-#include "bpf_builtins.h"
-#include "map-defs.h"
-
-#include "pid_fd.h"
+#include "conn_tuple.h"  // for conn_tuple_t
+#include "ktypes.h"      // for __u32, __u64
+#include "map-defs.h"    // for BPF_HASH_MAP
+#include "pid_fd.h"      // for pid_fd_t
 
 // This map is used to to temporarily store function arguments (sockfd) for
 // sockfd_lookup_light function calls, so they can be accessed by the corresponding kretprobe.

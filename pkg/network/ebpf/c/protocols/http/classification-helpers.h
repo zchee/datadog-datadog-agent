@@ -1,7 +1,11 @@
 #ifndef __HTTP_HELPERS_H
 #define __HTTP_HELPERS_H
 
-#include "protocols/classification/common.h"
+#include "bpf_builtins.h"                        // for bpf_memcmp
+#include "bpf_helpers.h"                         // for __always_inline
+#include "ktypes.h"                              // for bool, __u32
+#include "protocols/classification/common.h"     // for CHECK_PRELIMINARY_BUFFER_CONDITIONS
+#include "protocols/http/classification-defs.h"  // for HTTP_MIN_SIZE
 
 // Checks if the given buffers start with `HTTP` prefix (represents a response) or starts with `<method> /` which represents
 // a request, where <method> is one of: GET, POST, PUT, DELETE, HEAD, OPTIONS, PATCH, or TRACE.

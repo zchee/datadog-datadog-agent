@@ -1,18 +1,18 @@
 #ifndef __TRACER_TELEMETRY_H
 #define __TRACER_TELEMETRY_H
 
-#include "ktypes.h"
-
-#if defined(COMPILE_RUNTIME) || defined(COMPILE_PREBUILT)
-#include <linux/socket.h>
-#include <uapi/linux/in.h>
+#ifndef COMPILE_CORE
+#include <linux/in6.h>      // for sockaddr_in6, in6_addr, in6_addr::(anonymous)
+#include <linux/socket.h>   // for AF_INET, AF_INET6, sockaddr
+#include <uapi/linux/in.h>  // for sockaddr_in, in_addr
 #endif
 
-#include "bpf_endian.h"
-
-#include "ip.h"
-#include "tracer/maps.h"
-#include "compiler.h"
+#include "bpf_endian.h"     // for bpf_ntohs
+#include "bpf_helpers.h"    // for bpf_probe_read_kernel, NULL, __always_inline, __maybe_unused, bpf_map_lookup_elem
+#include "conn_tuple.h"     // for CONN_V4, CONN_V6
+#include "ktypes.h"         // for __u16, u16, u64, NULL, __be16, __be32, __u64, __u8, u32
+#include "tracer/maps.h"    // for telemetry
+#include "tracer/tracer.h"  // for telemetry_t
 
 enum telemetry_counter
 {

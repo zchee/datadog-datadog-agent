@@ -1,58 +1,21 @@
 #ifndef __IP_H
 #define __IP_H
 
-#include "ktypes.h"
-#include "bpf_builtins.h"
-#include "bpf_core_read.h"
-#include "bpf_endian.h"
-#include "bpf_tracing.h"
-#include "compiler.h"
-
-#include "conn_tuple.h"
-
-#define TCPHDR_FIN 0x01
-#define TCPHDR_RST 0x04
-#define TCPHDR_ACK 0x10
-
-#ifdef COMPILE_CORE
-#define AF_INET 2 /* Internet IP Protocol */
-#define AF_INET6 10 /* IP version 6 */
-
-// from uapi/linux/if_ether.h
-#define ETH_HLEN 14 /* Total octets in header. */
-#define ETH_P_IP 0x0800 /* Internet Protocol packet */
-#define ETH_P_IPV6 0x86DD /* IPv6 over bluebook */
-#else
+#ifndef COMPILE_CORE
 #include <uapi/linux/if_ether.h>
+#include <uapi/linux/in.h>
 #include <uapi/linux/ip.h>
 #include <uapi/linux/ipv6.h>
+#include <uapi/linux/tcp.h>
 #include <uapi/linux/udp.h>
+#include <net/tcp.h>
 #endif
 
-// from uapi/linux/tcp.h
-struct __tcphdr {
-	__be16	source;
-	__be16	dest;
-	__be32	seq;
-	__be32	ack_seq;
-	__u16	res1:4,
-		doff:4,
-		fin:1,
-		syn:1,
-		rst:1,
-		psh:1,
-		ack:1,
-		urg:1,
-		ece:1,
-		cwr:1;
-	__be16	window;
-	__sum16	check;
-	__be16	urg_ptr;
-};
-
-// from uapi/linux/in.h
-#define __IPPROTO_TCP 6
-#define __IPPROTO_UDP 17
+#include "bpf_builtins.h"       // for bpf_memcmp, bpf_memset
+#include "bpf_endian.h"         // for bpf_ntohll, bpf_ntohl, bpf_htonl, bpf_htons
+#include "bpf_helpers.h"        // for offsetof, __always_inline, __maybe_unused, bpf_skb_load_bytes, load_byte, loa...
+#include "conn_tuple.h"         // for conn_tuple_t, CONN_V6, CONN_TYPE_TCP, CONN_TYPE_UDP, CONN_V4, TCP_FLAGS_OFFSET
+#include "ktypes.h"             // for __u64, u32, __u32, __u16, u64, __be16
 
 // TODO: these are mostly hacky placeholders until we decide on what is the best
 // approach to work around the eBPF bug described here:
@@ -162,21 +125,21 @@ __maybe_unused static __always_inline __u64 read_conn_tuple_skb(struct __sk_buff
     }
 
     switch (l4_proto) {
-    case __IPPROTO_UDP:
+    case IPPROTO_UDP:
         tup->metadata |= CONN_TYPE_UDP;
         tup->sport = __load_half(skb, info->data_off + offsetof(struct udphdr, source));
         tup->dport = __load_half(skb, info->data_off + offsetof(struct udphdr, dest));
         info->data_off += sizeof(struct udphdr);
         break;
-    case __IPPROTO_TCP:
+    case IPPROTO_TCP:
         tup->metadata |= CONN_TYPE_TCP;
-        tup->sport = __load_half(skb, info->data_off + offsetof(struct __tcphdr, source));
-        tup->dport = __load_half(skb, info->data_off + offsetof(struct __tcphdr, dest));
+        tup->sport = __load_half(skb, info->data_off + offsetof(struct tcphdr, source));
+        tup->dport = __load_half(skb, info->data_off + offsetof(struct tcphdr, dest));
 
-        info->tcp_seq = __load_word(skb, info->data_off + offsetof(struct __tcphdr, seq));
+        info->tcp_seq = __load_word(skb, info->data_off + offsetof(struct tcphdr, seq));
         info->tcp_flags = __load_byte(skb, info->data_off + TCP_FLAGS_OFFSET);
         // TODO: Improve readability and explain the bit twiddling below
-        info->data_off += ((__load_byte(skb, info->data_off + offsetof(struct __tcphdr, ack_seq) + 4) & 0xF0) >> 4) * 4;
+        info->data_off += ((__load_byte(skb, info->data_off + offsetof(struct tcphdr, ack_seq) + 4) & 0xF0) >> 4) * 4;
         break;
     default:
         return 0;

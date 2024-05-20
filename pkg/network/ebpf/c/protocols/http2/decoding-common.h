@@ -1,16 +1,16 @@
 #ifndef __HTTP2_DECODING_COMMON_H
 #define __HTTP2_DECODING_COMMON_H
 
-#include "bpf_builtins.h"
-#include "bpf_helpers.h"
-#include "decoding-defs.h"
-#include "map-defs.h"
-#include "ip.h"
-
-#include "protocols/http2/decoding-defs.h"
-#include "protocols/http2/helpers.h"
-#include "protocols/http2/maps-defs.h"
-#include "protocols/classification/defs.h"
+#include "bpf_builtins.h"                   // for bpf_memcpy, bpf_memset
+#include "bpf_endian.h"                     // for bpf_ntohl
+#include "bpf_helpers.h"                    // for __always_inline, NULL, bpf_map_lookup_elem, BPF_NOEXIST, bpf_ktim...
+#include "conn_tuple.h"                     // for conn_tuple_t
+#include "ktypes.h"                         // for __u32, __u64, bool, __u8, false, true
+#include "protocols/http2/decoding-defs.h"  // for http2_stream_t, http2_header_t, HTTP2_TELEMETRY_PATH_BUCKETS_SIZE
+#include "protocols/http2/defs.h"           // for http2_frame_t, kContinuationFrame
+#include "protocols/http2/helpers.h"        // for is_empty_frame_header
+#include "protocols/http2/maps-defs.h"      // for http2_in_flight, http2_dynamic_counter_table, http2_dynamic_table
+#include "protocols/http2/usm-events.h"     // for http2_batch_enqueue
 
 // Returns true if the given index represents a path index.
 static __always_inline bool is_path_index(const __u64 index) {

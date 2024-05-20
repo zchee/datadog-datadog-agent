@@ -1,20 +1,15 @@
 #ifndef __CONNTRACK_H
 #define __CONNTRACK_H
 
-#include <net/netfilter/nf_conntrack.h>
-#include <linux/types.h>
-#include <linux/sched.h>
-
-#include "bpf_builtins.h"
-
-#include "ip.h"
-#include "ipv6.h"
-#include "sock.h"
-
-#include "conntrack/types.h"
-#include "conntrack/maps.h"
-#include "conntrack/helpers.h"
-
+#include <net/netfilter/nf_conntrack.h>        // for nf_conn
+#include <net/netfilter/nf_conntrack_tuple.h>  // for nf_conntrack_tuple
+#include "bpf_helpers.h"                       // for __always_inline, log_debug, NULL
+#include "bpf_telemetry.h"                     // for FN_INDX_bpf_probe_read_kernel, bpf_probe_read_kernel_with_tele...
+#include "compiler.h"                          // for LOAD_CONSTANT
+#include "conntrack/helpers.h"                 // for nf_conntrack_tuple_to_conntrack_tuple, print_translation
+#include "conntrack/maps.h"                    // IWYU pragma: keep
+#include "conntrack/types.h"                   // for conntrack_tuple_t
+#include "ktypes.h"                            // for __u64, u64, u32, bool
 
 #define offset_ct(f) \
     static __always_inline u64 offset_ct_##f() { \
@@ -35,8 +30,8 @@ offset_ct(ino)
     }
 
 static __always_inline bool is_conn_nat(const conntrack_tuple_t* orig, const conntrack_tuple_t* reply) {
-    return orig->daddr_l != reply->saddr_l || orig->dport != reply->sport || 
-        orig->saddr_l != reply->daddr_l || orig->sport != reply->dport || 
+    return orig->daddr_l != reply->saddr_l || orig->dport != reply->sport ||
+        orig->saddr_l != reply->daddr_l || orig->sport != reply->dport ||
         orig->daddr_h != reply->saddr_h;
 }
 

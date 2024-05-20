@@ -1,8 +1,13 @@
 #ifndef __MONGO_HELPERS_H
 #define __MONGO_HELPERS_H
 
-#include "protocols/classification/common.h"
-#include "protocols/mongo/defs.h"
+#include "bpf_helpers.h"                       // for __always_inline, BPF_ANY, bpf_map_delete_elem, bpf_map_lookup_...
+#include "conn_tuple.h"                        // for conn_tuple_t
+#include "ktypes.h"                            // for false, bool, true, __s32, NULL, __u32
+#include "protocols/classification/common.h"   // for CHECK_PRELIMINARY_BUFFER_CONDITIONS
+#include "protocols/classification/maps.h"     // for mongo_request_id
+#include "protocols/classification/structs.h"  // for mongo_msg_header, mongo_key
+#include "protocols/mongo/defs.h"              // for MONGO_HEADER_LENGTH, MONGO_OP_COMPRESSED, MONGO_OP_DELETE, MON...
 
 static __always_inline void mongo_handle_request(conn_tuple_t *tup, __s32 request_id) {
     // mongo_request_id acts as a set, and we only check for existence in that set.

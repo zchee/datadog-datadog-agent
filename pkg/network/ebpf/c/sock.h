@@ -1,17 +1,25 @@
 #ifndef __SOCK_H
 #define __SOCK_H
 
-#include "ktypes.h"
+#ifndef COMPILE_CORE
+#include <linux/net.h>      // for socket
+#include <linux/socket.h>   // for AF_INET, AF_INET6
+#include <net/sock.h>       // for sock
+#include <uapi/linux/in6.h> // for in6_addr
+#endif
 
-#include "bpf_core_read.h"
-
-#include "ip.h"
-#include "ipv6.h"
-#include "netns.h"
+#include "bpf_builtins.h"         // for bpf_memset
+#include "bpf_endian.h"           // for bpf_ntohs
+#include "bpf_helpers.h"          // for __always_inline, log_debug, NULL, bpf_probe_read_kernel
+#include "bpf_telemetry.h"        // for FN_INDX_bpf_probe_read_kernel, bpf_probe_read_kernel_with_telemetry
+#include "bpf_tracing.h"          // for BPF_CORE_READ_INTO
+#include "conn_tuple.h"           // for conn_tuple_t, CONN_TYPE_TCP, CONN_V4, metadata_mask_t, CONN_TYPE_UDP, CONN_V6
+#include "ipv6.h"                 // for read_in6_addr, is_ipv4_mapped_ipv6, is_tcpv6_enabled, is_udpv6_enabled
+#include "ktypes.h"               // for u16, u32, ...
+#include "netns.h"                // for get_netns_from_sock
+#include "offsets.h"     // for offset_socket_sk
 
 #ifdef COMPILE_CORE
-
-#include "ip.h" // for AF_INET and AF_INET6
 
 static __always_inline struct tcp_sock *tcp_sk(const struct sock *sk)
 {
@@ -23,36 +31,7 @@ static __always_inline struct inet_sock *inet_sk(const struct sock *sk)
     return (struct inet_sock *)sk;
 }
 
-// source include/net/inet_sock.h
-#define inet_daddr sk.__sk_common.skc_daddr
-#define inet_rcv_saddr sk.__sk_common.skc_rcv_saddr
-#define inet_dport sk.__sk_common.skc_dport
-#define inet_num sk.__sk_common.skc_num
-// source include/net/sock.h
-#define sk_num __sk_common.skc_num
-#define sk_dport __sk_common.skc_dport
-#define sk_v6_rcv_saddr __sk_common.skc_v6_rcv_saddr
-#define sk_v6_daddr __sk_common.skc_v6_daddr
-#define sk_daddr __sk_common.skc_daddr
-#define sk_rcv_saddr __sk_common.skc_rcv_saddr
-#define sk_family __sk_common.skc_family
-// source include/net/flow.h
-#define fl4_sport uli.ports.sport
-#define fl4_dport uli.ports.dport
-#define fl6_sport uli.ports.sport
-#define fl6_dport uli.ports.dport
-
-#elif defined(COMPILE_RUNTIME) || defined(COMPILE_PREBUILT)
-
-#include <linux/socket.h>
-#include <linux/tcp.h>
-#include <net/inet_sock.h>
-
 #endif // COMPILE_CORE
-
-#ifdef COMPILE_PREBUILT
-static __always_inline u64 offset_socket_sk();
-#endif
 
 #ifndef MSG_SPLICE_PAGES
 #define MSG_SPLICE_PAGES 0x8000000

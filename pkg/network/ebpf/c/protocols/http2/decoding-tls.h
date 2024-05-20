@@ -1,9 +1,22 @@
 #ifndef __HTTP2_DECODING_TLS_H
 #define __HTTP2_DECODING_TLS_H
 
-#include "protocols/http2/decoding-common.h"
-#include "protocols/http2/usm-events.h"
-#include "protocols/http/types.h"
+#include "bpf_builtins.h"                              // for bpf_memcpy, bpf_memset
+#include "bpf_helpers.h"                               // for NULL, bpf_map_lookup_elem, bpf_probe_read_user, __alwa...
+#include "bpf_tracing.h"                               // for pt_regs
+#include "ip.h"                                        // for flip_tuple
+#include "ktypes.h"                                    // for false, bool, __u8, true, __u64, __u32, __u16
+#include "port_range.h"                                // for normalize_tuple
+#include "protocols/classification/defs.h"             // for TLS_HTTP2_EOS_PARSER, TLS_HTTP2_HEADERS_PARSER, TLS_HT...
+#include "protocols/classification/dispatcher-maps.h"  // for tls_dispatcher_arguments, tls_process_progs
+#include "protocols/classification/structs.h"          // for tls_dispatcher_arguments_t
+#include "protocols/http2/decoding-common.h"           // for format_http2_frame_header, is_method_index, is_path_index
+#include "protocols/http2/decoding-defs.h"             // for http2_tail_call_state_t, http2_header_t, http2_stream_t
+#include "protocols/http2/defs.h"                      // for HTTP2_FRAME_HEADER_SIZE, http2_frame_t, HTTP2_MARKER_SIZE
+#include "protocols/http2/helpers.h"                   // for is_http2_preface
+#include "protocols/http2/maps-defs.h"                 // for http2_remainder, tls_http2_iterations, tls_http2_telem...
+#include "protocols/http2/usm-events.h"                // for terminated_http2_batch_enqueue
+#include "protocols/read_into_buffer.h"                // for READ_INTO_USER_BUFFER_WITHOUT_TELEMETRY
 
 READ_INTO_USER_BUFFER_WITHOUT_TELEMETRY(http2_preface, HTTP2_MARKER_SIZE)
 READ_INTO_USER_BUFFER_WITHOUT_TELEMETRY(http2_frame_header, HTTP2_FRAME_HEADER_SIZE)
@@ -589,7 +602,7 @@ static __always_inline void tls_find_relevant_frames(tls_dispatcher_arguments_t 
 // Once we have the first frame, we can continue to the regular frame filtering
 // program.
 SEC("uprobe/http2_tls_handle_first_frame")
-int uprobe__http2_tls_handle_first_frame(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__http2_tls_handle_first_frame) {
     const __u32 zero = 0;
     http2_frame_t current_frame = {};
 
@@ -688,7 +701,7 @@ int uprobe__http2_tls_handle_first_frame(struct pt_regs *ctx) {
 // the TLS probes. Interesting frames are saved to be parsed in
 // http2_tls_headers_parser.
 SEC("uprobe/http2_tls_filter")
-int uprobe__http2_tls_filter(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__http2_tls_filter) {
     const __u32 zero = 0;
 
     tls_dispatcher_arguments_t dispatcher_args_copy;
@@ -758,7 +771,7 @@ int uprobe__http2_tls_filter(struct pt_regs *ctx) {
 // The program is being called after uprobe__http2_tls_filter, and it is being called only if we have interesting frames.
 // The program calls uprobe__http2_dynamic_table_cleaner to clean the dynamic table if needed.
 SEC("uprobe/http2_tls_headers_parser")
-int uprobe__http2_tls_headers_parser(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__http2_tls_headers_parser) {
     const __u32 zero = 0;
 
     tls_dispatcher_arguments_t dispatcher_args_copy;
@@ -849,7 +862,7 @@ delete_iteration:
 // The program is responsible for cleaning the dynamic table.
 // The program calls uprobe__http2_tls_eos_parser to finalize the streams and enqueue them to be sent to the user mode.
 SEC("uprobe/http2_dynamic_table_cleaner")
-int uprobe__http2_dynamic_table_cleaner(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__http2_dynamic_table_cleaner) {
     const __u32 zero = 0;
 
     tls_dispatcher_arguments_t dispatcher_args_copy;
@@ -907,7 +920,7 @@ next:
 // The program is ready to be called multiple times (via "self call" of tail calls) in case we have more frames to
 // process than the maximum number of frames we can process in a single tail call.
 SEC("uprobe/http2_tls_eos_parser")
-int uprobe__http2_tls_eos_parser(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__http2_tls_eos_parser) {
     const __u32 zero = 0;
 
     tls_dispatcher_arguments_t dispatcher_args_copy;
@@ -1013,7 +1026,7 @@ delete_iteration:
 // http2_tls_termination is responsible for cleaning up the state of the HTTP2
 // decoding once the TLS connection is terminated.
 SEC("uprobe/http2_tls_termination")
-int uprobe__http2_tls_termination(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__http2_tls_termination) {
     const __u32 zero = 0;
 
     tls_dispatcher_arguments_t *args = bpf_map_lookup_elem(&tls_dispatcher_arguments, &zero);

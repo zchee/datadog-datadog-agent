@@ -1,28 +1,15 @@
-#include "ktypes.h"
 #ifdef COMPILE_RUNTIME
 #include "kconfig.h"
-#endif
-
-#include "bpf_tracing.h"
-#include "bpf_telemetry.h"
-#include "bpf_endian.h"
-
-#ifdef COMPILE_RUNTIME
-#include <linux/version.h>
 #include <uapi/linux/ip.h>
 #include <uapi/linux/ipv6.h>
 #include <uapi/linux/udp.h>
 #endif
 
-#include "defs.h"
 #include "conntrack.h"
-#include "conntrack/maps.h"
-#include "netns.h"
-#include "ip.h"
-
-#if defined(FEATURE_TCPV6_ENABLED) || defined(FEATURE_UDPV6_ENABLED)
-#include "ipv6.h"
-#endif
+#include "bpf_telemetry.h"   // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"     // for BPF_KPROBE, PT_REGS_PARM5
+#include "conntrack/maps.h"  // for conntrack
+#include "ktypes.h"          // for u32, BPF_ANY, pt_regs
 
 SEC("kprobe/__nf_conntrack_hash_insert")
 int BPF_KPROBE(kprobe___nf_conntrack_hash_insert, struct nf_conn *ct) {

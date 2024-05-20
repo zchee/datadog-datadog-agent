@@ -1,7 +1,13 @@
 #ifndef __HTTP2_SKB_COMMON_H
 #define __HTTP2_SKB_COMMON_H
 
-#include "protocols/http2/helpers.h"
+#include "bpf_builtins.h"                   // for bpf_memset
+#include "bpf_helpers.h"                    // for __always_inline, bpf_skb_load_bytes
+#include "ip.h"                             // for skb_info_t
+#include "ktypes.h"                         // for __u64, bool, false, __u8, true
+#include "protocols/http2/decoding-defs.h"  // for HTTP2_MAX_DYNAMIC_TABLE_UPDATE_ITERATIONS, MAX_7_BITS
+#include "protocols/http2/defs.h"           // for HTTP2_MARKER_SIZE
+#include "protocols/http2/helpers.h"        // for is_http2_preface
 
 // Similar to read_hpack_int, but with a small optimization of getting the
 // current character as input argument.

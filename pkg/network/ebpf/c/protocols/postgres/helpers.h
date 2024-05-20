@@ -1,8 +1,13 @@
 #ifndef __POSTGRES_HELPERS_H
 #define __POSTGRES_HELPERS_H
 
-#include "defs.h"
-#include "protocols/sql/helpers.h"
+#include "bpf_builtins.h"                     // for bpf_memcmp
+#include "bpf_endian.h"                       // for bpf_ntohl
+#include "bpf_helpers.h"                      // for __always_inline
+#include "defs.h"                             // for pg_message_header, pg_startup_header, PG_STARTUP_USER_PARAM
+#include "ktypes.h"                           // for __u32, bool, false
+#include "protocols/classification/common.h"  // for CHECK_PRELIMINARY_BUFFER_CONDITIONS
+#include "protocols/sql/helpers.h"            // for is_sql_command
 
 // is_postgres_connect checks if the buffer is a Postgres startup message.
 static __always_inline bool is_postgres_connect(const char *buf, __u32 buf_size) {

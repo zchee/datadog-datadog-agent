@@ -17,9 +17,9 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-variable"
-#include "bpf_helper_defs.h"
+#include "bpf_helper_defs.h" // IWYU pragma: export
 #pragma clang diagnostic pop
-#include "bpf_helpers_custom.h"
+#include "bpf_helpers_custom.h" // IWYU pragma: export
 
 #define __uint(name, val) int (*name)[val]
 #define __type(name, val) typeof(val) *name

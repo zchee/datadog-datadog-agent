@@ -1,16 +1,20 @@
 #ifndef __POSTGRES_DECODING_H
 #define __POSTGRES_DECODING_H
 
-#include "bpf_builtins.h"
-#include "bpf_telemetry.h"
-
-#include "protocols/sockfd.h"
-
-#include "protocols/postgres/decoding-maps.h"
-#include "protocols/postgres/defs.h"
-#include "protocols/postgres/types.h"
-#include "protocols/postgres/usm-events.h"
-#include "protocols/read_into_buffer.h"
+#include "bpf_builtins.h"                                 // for bpf_memcpy
+#include "bpf_endian.h"                                   // for bpf_ntohl
+#include "bpf_helpers.h"                                  // for __always_inline, __sk_buff, bpf_map_delete_elem
+#include "bpf_telemetry.h"                                // for FN_INDX_bpf_skb_load_bytes
+#include "conn_tuple.h"                                   // for conn_tuple_t
+#include "ip.h"                                           // for skb_info_t, flip_tuple
+#include "ktypes.h"                                       // for __u32, bool, false, true, u32
+#include "port_range.h"                                   // for normalize_tuple
+#include "protocols/classification/dispatcher-helpers.h"  // for fetch_dispatching_arguments, is_tcp_termination
+#include "protocols/postgres/decoding-maps.h"             // for postgres_in_flight, postgres_scratch_buffer
+#include "protocols/postgres/defs.h"                      // for pg_message_header, POSTGRES_COMMAND_COMPLETE_MAGIC_...
+#include "protocols/postgres/types.h"                     // for postgres_transaction_t, postgres_event_t, POSTGRES_...
+#include "protocols/postgres/usm-events.h"                // for postgres_batch_enqueue
+#include "protocols/read_into_buffer.h"                   // for BLK_SIZE, READ_INTO_BUFFER
 
 READ_INTO_BUFFER(postgres_query, POSTGRES_BUFFER_SIZE, BLK_SIZE)
 

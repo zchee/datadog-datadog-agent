@@ -20,7 +20,7 @@ import (
 
 var (
 	// CIncludePattern is the regex for #include headers of C files
-	CIncludePattern = `^\s*#include\s+"(.*)"$`
+	CIncludePattern = `^\s*#include\s+"(.*)"`
 	includeRegexp   *regexp.Regexp
 	ignoredHeaders  = map[string]struct{}{"vmlinux.h": {}}
 )
@@ -153,7 +153,7 @@ func processIncludes(path string, out io.Writer, ps *pathSearcher, includedFiles
 	scanner := bufio.NewScanner(sourceReader)
 	for scanner.Scan() {
 		match := includeRegexp.FindSubmatch(scanner.Bytes())
-		if len(match) == 2 {
+		if len(match) >= 2 {
 			headerName := string(match[1])
 			if _, ok := ignoredHeaders[headerName]; ok {
 				continue

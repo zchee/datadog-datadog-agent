@@ -1,8 +1,9 @@
 #ifndef __TLS_H
 #define __TLS_H
 
-#include "ktypes.h"
-#include "bpf_builtins.h"
+#include "bpf_endian.h"   // for bpf_ntohs
+#include "bpf_helpers.h"  // for __always_inline
+#include "ktypes.h"       // for __u16, false, __u32, bool, __u8, true
 
 #define SSL_VERSION20 0x0200
 #define SSL_VERSION30 0x0300

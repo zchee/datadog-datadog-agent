@@ -1,7 +1,8 @@
 #ifndef _MAP_DEFS_H_
 #define _MAP_DEFS_H_
 
-#include "bpf_helpers.h"
+#include "bpf_helpers.h"  // for __uint, __type, SEC, BPF_MAP_TYPE_HASH, BPF_MAP_TYPE_LRU_HASH, BPF_MAP_TYPE_PERCPU_...
+#include "ktypes.h"       // for u32
 
 #define BPF_MAP(_name, _type, _key_type, _value_type, _max_entries, _pin, _map_flags) \
     struct {                                                                         \

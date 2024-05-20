@@ -1,7 +1,10 @@
 #ifndef __TRACER_PORT_H
 #define __TRACER_PORT_H
 
-#include "tracer/tracer.h"
+#include "bpf_helpers.h"    // for bpf_map_lookup_elem, BPF_NOEXIST, __alway...
+#include "bpf_telemetry.h"  // for bpf_map_update_with_telemetry
+#include "ktypes.h"         // for __u32
+#include "tracer/tracer.h"  // for port_binding_t
 
 #define add_port_bind(pb, pb_map)                                   \
     do {                                                            \

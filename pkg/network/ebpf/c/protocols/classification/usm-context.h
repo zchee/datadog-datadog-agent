@@ -1,11 +1,14 @@
 #ifndef __USM_CONTEXT_H
 #define __USM_CONTEXT_H
 
-#include "tracer/tracer.h"
-#include "protocols/classification/common.h"
-#include "protocols/classification/defs.h"
-#include "protocols/classification/maps.h"
-#include "protocols/classification/stack-helpers.h"
+#include "bpf_builtins.h"                     // for bpf_memset
+#include "bpf_helpers.h"                      // for __always_inline, __sk_buff, bpf_map_lookup_elem, log_debug
+#include "conn_tuple.h"                       // for conn_tuple_t
+#include "ip.h"                               // for skb_info_t
+#include "ktypes.h"                           // for NULL, size_t, KERNEL_VERSION, LINUX_VERSION_CODE, u16, u32
+#include "map-defs.h"                         // for BPF_PERCPU_ARRAY_MAP
+#include "protocols/classification/common.h"  // for read_into_buffer_for_classification
+#include "protocols/classification/defs.h"    // for CLASSIFICATION_MAX_BUFFER, classification_prog_t
 
 // from uapi/linux/if_packet.h
 #define PACKET_OUTGOING 4

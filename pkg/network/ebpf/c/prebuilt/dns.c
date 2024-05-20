@@ -1,10 +1,8 @@
-#include "kconfig.h"
-
-#include "bpf_helpers.h"
-#include "bpf_builtins.h"
-
-#include "offsets.h"
-#include "ip.h"
+#include "bpf_builtins.h"  // for bpf_memset
+#include "bpf_helpers.h"   // for SEC, __sk_buff
+#include "conn_tuple.h"    // for conn_tuple_t
+#include "ip.h"            // for read_conn_tuple_skb, skb_info_t
+#include "offsets.h"       // for dns_stats_enabled
 
 // This function is meant to be used as a BPF_PROG_TYPE_SOCKET_FILTER.
 // When attached to a RAW_SOCKET, this code filters out everything but DNS traffic.

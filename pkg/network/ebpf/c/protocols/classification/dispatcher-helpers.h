@@ -1,22 +1,26 @@
 #ifndef __PROTOCOL_DISPATCHER_HELPERS_H
 #define __PROTOCOL_DISPATCHER_HELPERS_H
 
-#include "ktypes.h"
-
-#include "ip.h"
-
-#include "protocols/classification/defs.h"
-#include "protocols/classification/maps.h"
-#include "protocols/classification/structs.h"
-#include "protocols/classification/dispatcher-maps.h"
-#include "protocols/http/classification-helpers.h"
-#include "protocols/http/usm-events.h"
-#include "protocols/http2/helpers.h"
-#include "protocols/http2/usm-events.h"
-#include "protocols/kafka/kafka-classification.h"
-#include "protocols/kafka/usm-events.h"
-#include "protocols/postgres/helpers.h"
-#include "protocols/postgres/usm-events.h"
+#include "bpf_builtins.h"                                 // for bpf_memcpy, bpf_memset
+#include "bpf_helpers.h"                                  // for __always_inline, log_debug, NULL, bpf_map_lookup_elem
+#include "conn_tuple.h"                                   // for conn_tuple_t
+#include "ip.h"                                           // for skb_info_t, read_conn_tuple_skb, flip_tuple, TCPHDR...
+#include "ktypes.h"                                       // for bool, size_t, false, u32, __u32, true
+#include "port_range.h"                                   // for normalize_tuple
+#include "protocols/classification/common.h"              // for read_into_buffer_for_classification, is_payload_empty
+#include "protocols/classification/defs.h"                // for PROTOCOL_UNKNOWN, CLASSIFICATION_MAX_BUFFER, protoc...
+#include "protocols/classification/dispatcher-maps.h"     // for connection_states, dispatcher_arguments, protocols_...
+#include "protocols/classification/shared-tracer-maps.h"  // for delete_protocol_stack, get_protocol_stack, update_p...
+#include "protocols/classification/stack-helpers.h"       // for get_protocol_from_stack, is_protocol_layer_known
+#include "protocols/classification/structs.h"             // for dispatcher_arguments_t
+#include "protocols/http/classification-helpers.h"        // for is_http
+#include "protocols/http/usm-events.h"                    // for is_http_monitoring_enabled
+#include "protocols/http2/helpers.h"                      // for is_http2
+#include "protocols/http2/usm-events.h"                   // for is_http2_monitoring_enabled
+#include "protocols/kafka/kafka-classification.h"         // for is_kafka
+#include "protocols/kafka/usm-events.h"                   // for is_kafka_monitoring_enabled
+#include "protocols/postgres/helpers.h"                   // for is_postgres
+#include "protocols/postgres/usm-events.h"                // for is_postgres_monitoring_enabled
 
 __maybe_unused static __always_inline protocol_prog_t protocol_to_program(protocol_t proto) {
     switch(proto) {

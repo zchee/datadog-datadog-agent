@@ -1,15 +1,6 @@
-#include "bpf_tracing.h"
-#include "bpf_builtins.h"
-
-#include "ktypes.h"
-#ifdef COMPILE_RUNTIME
-#include "kconfig.h"
-#include <linux/ptrace.h>
-#endif
-
-#include "shared-libraries/types.h"
-#include "shared-libraries/maps.h"
+#include "bpf_helpers.h"  // for SEC
+#include "shared-libraries/maps.h" // IWYU pragma: keep
 // all probes are shared among prebuilt and runtime, and can be found here
-#include "shared-libraries/probes.h"
+#include "shared-libraries/probes.h" // IWYU pragma: keep
 
 char _license[] SEC("license") = "GPL";

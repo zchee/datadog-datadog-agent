@@ -1,10 +1,8 @@
 #ifndef __KAFKA_MAPS_H
 #define __KAFKA_MAPS_H
 
-#include "map-defs.h"
-
-#include "protocols/kafka/defs.h"
-#include "protocols/kafka/types.h"
+#include "map-defs.h"              // for BPF_PERCPU_ARRAY_MAP
+#include "protocols/kafka/defs.h"  // for CLIENT_ID_SIZE_TO_VALIDATE, TOPIC_NAME_MAX_STRING_SIZE_TO_VALIDATE
 
 // LINUX_VERSION_CODE doesn't work with co-re and is relevant to runtime compilation only
 #ifdef COMPILE_RUNTIME

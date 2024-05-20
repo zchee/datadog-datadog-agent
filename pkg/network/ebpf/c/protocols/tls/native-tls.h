@@ -1,10 +1,18 @@
 #ifndef __NATIVE_TLS_H
 #define __NATIVE_TLS_H
 
-#include "ktypes.h"
-#include "bpf_builtins.h"
-
-#include "protocols/tls/native-tls-maps.h"
+#include "bpf_builtins.h"                   // for bpf_memcpy
+#include "bpf_helpers.h"                    // for log_debug, SEC, bpf_get_current_pid_tgid, NULL, bpf_map_delete_elem
+#include "bpf_telemetry.h"                  // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"                    // for pt_regs, user_pt_regs, PT_REGS_PARM1, PT_REGS_PARM2, PT_REGS_RC
+#include "conn_tuple.h"                     // for conn_tuple_t
+#include "ip.h"                             // for flip_tuple
+#include "ktypes.h"                         // for u64, u32, size_t, __u64, ssize_t, false
+#include "port_range.h"                     // for normalize_tuple
+#include "protocols/http/types.h"           // for ssl_write_args_t, ssl_read_args_t, ssl_read_ex_args_t, ssl_write_...
+#include "protocols/tls/https.h"            // for tup_from_ssl_ctx, tls_process, init_ssl_sock, tls_finish
+#include "protocols/tls/native-tls-maps.h"  // for ssl_read_args, ssl_write_args, ssl_ctx_by_pid_tgid, ssl_read_ex_args
+#include "protocols/tls/tags-types.h"       // for LIBSSL, NODEJS, ISTIO, LIBGNUTLS
 
 SEC("uprobe/SSL_do_handshake")
 int uprobe__SSL_do_handshake(struct pt_regs *ctx) {

@@ -1,11 +1,19 @@
 #ifndef __KAFKA_CLASSIFICATION_H
 #define __KAFKA_CLASSIFICATION_H
 
-#include "protocols/helpers/big_endian.h"
-#include "protocols/helpers/pktbuf.h"
-#include "protocols/kafka/defs.h"
-#include "protocols/kafka/maps.h"
-#include "protocols/kafka/types.h"
+#include "bpf_builtins.h"                      // for bpf_memset
+#include "bpf_endian.h"                        // for bpf_ntohs, bpf_ntohl
+#include "bpf_helpers.h"                       // for __always_inline, NULL, bpf_map_lookup_elem, __maybe_unused
+#include "bpf_telemetry.h"                     // for FN_INDX_bpf_probe_read_user, FN_INDX_bpf_skb_load_bytes
+#include "ip.h"                                // for skb_info_t
+#include "ktypes.h"                            // for false, __u32, u32, bool, s16, __u16, s32, true, s8, u16
+#include "protocols/classification/common.h"   // for CHECK_PRELIMINARY_BUFFER_CONDITIONS
+#include "protocols/classification/structs.h"  // for tls_dispatcher_arguments_t
+#include "protocols/helpers/pktbuf.h"          // for pktbuf_read_big_endian_s16, pktbuf_t, PKTBUF_READ_BIG_ENDIAN_W...
+#include "protocols/kafka/defs.h"              // for CLIENT_ID_SIZE_TO_VALIDATE, TOPIC_NAME_MAX_STRING_SIZE_TO_VALI...
+#include "protocols/kafka/maps.h"              // for kafka_client_id, kafka_topic_name
+#include "protocols/kafka/types.h"             // for kafka_header_t, KAFKA_FETCH, KAFKA_PRODUCE, KAFKA_MIN_LENGTH
+#include "protocols/read_into_buffer.h"        // for BLK_SIZE
 
 #define STRINGIFY(a) #a
 

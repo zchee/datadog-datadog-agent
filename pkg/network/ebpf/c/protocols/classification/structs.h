@@ -1,9 +1,9 @@
 #ifndef __PROTOCOL_CLASSIFICATION_STRUCTS_H
 #define __PROTOCOL_CLASSIFICATION_STRUCTS_H
 
-#include "ktypes.h"
-
-#include "conn_tuple.h"
+#include "conn_tuple.h"  // for conn_tuple_t
+#include "ip.h"          // for skb_info_t
+#include "ktypes.h"      // for __s32, size_t, __u64
 
 typedef struct {
     __s32   message_length; // total message size, including this

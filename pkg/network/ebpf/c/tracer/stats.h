@@ -1,26 +1,29 @@
 #ifndef __TRACER_STATS_H
 #define __TRACER_STATS_H
 
-#include "bpf_builtins.h"
-#include "bpf_core_read.h"
-#include "defs.h"
-
-#include "tracer/tracer.h"
-#include "tracer/maps.h"
-#include "tracer/telemetry.h"
-#include "cookie.h"
-#include "sock.h"
-#include "port_range.h"
-#include "protocols/classification/shared-tracer-maps.h"
-#include "protocols/classification/stack-helpers.h"
-#include "protocols/tls/tags-types.h"
-#include "ip.h"
-#include "skb.h"
-
-#ifdef COMPILE_PREBUILT
-static __always_inline __u64 offset_rtt();
-static __always_inline __u64 offset_rtt_var();
+#ifndef COMPILE_CORE
+#include <linux/skbuff.h>                                 // for sk_buff
+#include <net/sock.h>                                     // for sock
 #endif
+
+#include "bpf_builtins.h"                                 // for bpf_memset
+#include "bpf_helpers.h"                                  // for __always_inline, bpf_map_lookup_elem, NULL, BPF_NOE...
+#include "bpf_telemetry.h"                                // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"                                  // for BPF_CORE_READ_INTO
+#include "conn_tuple.h"                                   // for conn_tuple_t, CONN_TYPE_TCP
+#include "cookie.h"                                       // for get_sk_cookie
+#include "ip.h"                                           // for flip_tuple
+#include "ktypes.h"                                       // for u32, __u32, size_t, u64, __u64, u8
+#include "netns.h"                                        // for get_netns_from_sock
+#include "port_range.h"                                   // for normalize_tuple
+#include "offsets.h"                             // for offset_rtt, offset_rtt_var
+#include "protocols/classification/defs.h"                // for FLAG_NPM_ENABLED, protocol_stack_t, FLAG_CLIENT_SIDE
+#include "protocols/classification/shared-tracer-maps.h"  // for __get_protocol_stack
+#include "protocols/classification/stack-helpers.h"       // for set_protocol_flag, merge_protocol_stacks, is_fully_...
+#include "skb.h"                                          // for sk_buff_to_tuple
+#include "sock.h"                                         // for read_conn_tuple, get_tcp_segment_counts
+#include "tracer/maps.h"                                  // for conn_stats, tcp_retransmits, tcp_stats, conn_tuple_...
+#include "tracer/tracer.h"                                // for conn_stats_ts_t, tcp_stats_t, CONN_DIRECTION_UNKNOWN
 
 static __always_inline conn_stats_ts_t *get_conn_stats(conn_tuple_t *t, struct sock *sk) {
     conn_stats_ts_t *cs = bpf_map_lookup_elem(&conn_stats, t);

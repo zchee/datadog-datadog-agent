@@ -1,9 +1,12 @@
 #ifndef __HTTP2_HELPERS_H
 #define __HTTP2_HELPERS_H
 
-#include "bpf_endian.h"
-
-#include "protocols/http2/defs.h"
+#include "bpf_builtins.h"                     // for bpf_memcmp
+#include "bpf_endian.h"                       // for bpf_ntohl
+#include "bpf_helpers.h"                      // for __always_inline
+#include "ktypes.h"                           // for __u32, bool, false, NULL, size_t
+#include "protocols/classification/common.h"  // for CHECK_PRELIMINARY_BUFFER_CONDITIONS
+#include "protocols/http2/defs.h"             // for http2_frame_t, HTTP2_FRAME_HEADER_SIZE, HTTP2_MARKER_SIZE, HTTP...
 
 // This function checks if the http2 frame header is empty.
 static __always_inline bool is_empty_frame_header(const char *frame) {

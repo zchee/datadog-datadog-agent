@@ -2,37 +2,43 @@
 #define __HTTPS_H
 
 #ifdef COMPILE_CORE
-#include "ktypes.h"
 #define MINORBITS	20
 #define MINORMASK	((1U << MINORBITS) - 1)
 #define MAJOR(dev)	((unsigned int) ((dev) >> MINORBITS))
 #define MINOR(dev)	((unsigned int) ((dev) & MINORMASK))
 #else
-#include <linux/dcache.h>
-#include <linux/fs.h>
-#include <linux/mm_types.h>
-#include <linux/sched.h>
+#include <linux/fs.h>                                     // for inode, file, super_block
+#include <linux/kdev_t.h>                                 // for MAJOR, MINOR
+#include <linux/mm_types.h>                               // for mm_struct, mm_struct::(anonymous)
+#include <linux/sched.h>                                  // for task_struct
+#include <net/sock.h>                                     // for sock
 #endif
 
-#include "bpf_builtins.h"
-#include "port_range.h"
-#include "sock.h"
+#include "bpf_builtins.h"                                 // for bpf_memcpy, bpf_memset
+#include "bpf_helpers.h"                                  // for NULL, bpf_map_lookup_elem, __always_inline, log_debug
+#include "bpf_telemetry.h"                                // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"                                  // for BPF_CORE_READ_INTO, pt_regs
+#include "conn_tuple.h"                                   // for conn_tuple_t, CONN_TYPE_TCP
+#include "ktypes.h"                                       // for __u32, __u64, bool, dev_t, size_t, u64, u32
+#include "pid_fd.h"                                       // for pid_fd_t
+#include "port_range.h"                                   // for normalize_tuple
+#include "protocols/classification/defs.h"                // for LAYER_APPLICATION, PROTOCOL_UNKNOWN, protocol_stack_t
+#include "protocols/classification/dispatcher-helpers.h"  // for classify_protocol_for_dispatcher
+#include "protocols/classification/dispatcher-maps.h"     // for tls_dispatcher_arguments, tls_process_progs, tls_di...
+#include "protocols/classification/shared-tracer-maps.h"  // for get_protocol_stack
+#include "protocols/classification/stack-helpers.h"       // for get_protocol_from_stack, set_protocol, is_protocol_...
+#include "protocols/classification/structs.h"             // for tls_dispatcher_arguments_t
+#include "protocols/http/buffer.h"                        // for read_into_user_buffer_classification
+#include "protocols/http/types.h"                         // for ssl_sock_t
+#include "protocols/kafka/kafka-classification.h"         // for tls_is_kafka
+#include "protocols/kafka/usm-events.h"                   // for is_kafka_monitoring_enabled
+#include "protocols/sockfd.h"                             // for tuple_by_pid_fd
+#include "protocols/tls/go-tls-maps.h"                    // for offsets_data
+#include "protocols/tls/go-tls-types.h"                   // for go_tls_offsets_data_key_t, tls_offsets_data_t
+#include "protocols/tls/native-tls-maps.h"                // for ssl_ctx_by_pid_tgid, ssl_sock_by_ctx
+#include "protocols/tls/tls-maps.h"                       // for tls_classification_heap
+#include "sock.h"                                         // for read_conn_tuple
 
-#include "protocols/classification/dispatcher-helpers.h"
-#include "protocols/classification/dispatcher-maps.h"
-#include "protocols/http/buffer.h"
-#include "protocols/http/types.h"
-#include "protocols/http/maps.h"
-#include "protocols/http/http.h"
-#include "protocols/tls/go-tls-maps.h"
-#include "protocols/tls/go-tls-types.h"
-#include "protocols/tls/native-tls-maps.h"
-#include "protocols/tls/tags-types.h"
-#include "protocols/tls/tls-maps.h"
-
-#define HTTPS_PORT 443
-
-static __always_inline void http_process(http_event_t *event, skb_info_t *skb_info, __u64 tags);
 
 /* this function is called by all TLS hookpoints (OpenSSL, GnuTLS and GoTLS, JavaTLS) and */
 /* it's used for classify the subset of protocols that is supported by `classify_protocol_for_dispatcher` */

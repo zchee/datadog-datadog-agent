@@ -1,8 +1,8 @@
 #ifndef __OFFSET_GUESS_H
 #define __OFFSET_GUESS_H
 
-#include <linux/types.h>
-#include <linux/sched.h>
+#include <linux/sched.h>  // for TASK_COMM_LEN
+#include "ktypes.h"       // for __u8, __u64, __u16, __u32
 
 #ifndef TASK_COMM_LEN
 #define TASK_COMM_LEN 16

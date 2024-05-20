@@ -1,6 +1,8 @@
 #ifndef __AMQP_DEFS_H
 #define __AMQP_DEFS_H
 
+#include "ktypes.h"  // for __u16
+
 #define AMQP_PREFACE "AMQP"
 
 // RabbitMQ supported classes.

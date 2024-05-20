@@ -1,7 +1,8 @@
 #ifndef __POSTGRES_TYPES_H
 #define __POSTGRES_TYPES_H
 
-#include "conn_tuple.h"
+#include "conn_tuple.h"  // for conn_tuple_t
+#include "ktypes.h"      // for __u64, __u32
 
 // Controls the number of Postgres transactions read from userspace at a time.
 #define POSTGRES_BATCH_SIZE 25

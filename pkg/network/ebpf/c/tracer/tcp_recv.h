@@ -1,12 +1,16 @@
 #ifndef __TCP_RECV_H
 #define __TCP_RECV_H
 
-#include "bpf_helpers.h"
-#include "bpf_telemetry.h"
-#include "tracer/stats.h"
-#include "tracer/events.h"
-#include "tracer/maps.h"
-#include "sock.h"
+#ifndef COMPILE_CORE
+#include <linux/socket.h>   // for MSG_PEEK
+#endif
+
+#include "bpf_helpers.h"    // for SEC, bpf_get_current_pid_tgid, BPF_ANY, bpf_map_delete_elem, bpf_map_lookup_elem
+#include "bpf_telemetry.h"  // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"    // for user_pt_regs, pt_regs, PT_REGS_PARM1, PT_REGS_RC, PT_REGS_PARM2, PT_REGS_PARM4
+#include "ktypes.h"         // for u64, KERNEL_VERSION, LINUX_VERSION_CODE
+#include "tracer/maps.h"    // for tcp_recvmsg_args
+#include "tracer/stats.h"   // for handle_tcp_recv
 
 SEC("kprobe/tcp_recvmsg")
 int kprobe__tcp_recvmsg(struct pt_regs *ctx) {

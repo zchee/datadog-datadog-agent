@@ -1,14 +1,9 @@
 #ifndef __TRACER_TRACER_H
 #define __TRACER_TRACER_H
 
-#include "ktypes.h"
-
-#include "conn_tuple.h"
-#include "protocols/classification/defs.h"
-
-#define bool _Bool
-#define true 1
-#define false 0
+#include "conn_tuple.h"                     // for conn_tuple_t
+#include "ktypes.h"                         // for __u64, __u32, __u16, __u8, size_t
+#include "protocols/classification/defs.h"  // for protocol_stack_t
 
 typedef enum
 {

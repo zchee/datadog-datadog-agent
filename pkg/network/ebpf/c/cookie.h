@@ -1,10 +1,13 @@
 #ifndef __COOKIE_H__
 #define __COOKIE_H__
 
-#include "ktypes.h"
-#include "bpf_helpers.h"
+#ifndef COMPILE_CORE
+#include <net/sock.h>       // for sock
+#endif
 
-#include "defs.h"
+#include "bpf_helpers.h"    // for KERNEL_VERSION, __always_inline, bpf_ktime_get_ns
+#include "bpf_telemetry.h"  // for FN_INDX_bpf_probe_read_kernel, bpf_probe_read_kernel_with_telemetry
+#include "ktypes.h"         // for __u64, u32, sock
 
 static __always_inline u32 get_sk_cookie(struct sock *sk) {
 #if defined(COMPILE_RUNTIME) && LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)

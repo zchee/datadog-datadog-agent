@@ -1,7 +1,7 @@
 #ifndef __BPF_HELPERS_CUSTOM__
 #define __BPF_HELPERS_CUSTOM__
 
-#include "bpf_cross_compile.h"
+#include "bpf_cross_compile.h" // IWYU pragma: export
 
 extern void __format_check(const char *fmt, ...) __attribute__ ((format(printf, 1, 2)));
 
@@ -38,5 +38,9 @@ unsigned long long load_half(void *skb,
     unsigned long long off) asm("llvm.bpf.load.half");
 unsigned long long load_word(void *skb,
     unsigned long long off) asm("llvm.bpf.load.word");
+
+#ifndef __maybe_unused
+#define __maybe_unused		__attribute__((__unused__))
+#endif
 
 #endif

@@ -1,7 +1,8 @@
 #ifndef __HTTP_TYPES_H
 #define __HTTP_TYPES_H
 
-#include "conn_tuple.h"
+#include "conn_tuple.h"  // for conn_tuple_t
+#include "ktypes.h"      // for __u64, __u32, size_t, __u16, __u8
 
 // This determines the size of the payload fragment that is captured for each HTTP request
 #define HTTP_BUFFER_SIZE (8 * 26)

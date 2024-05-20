@@ -1,10 +1,12 @@
 #ifndef __PROTOCOL_ROUTING_H
 #define __PROTOCOL_ROUTING_H
 
-#include "ktypes.h"
-#include "protocols/classification/defs.h"
-#include "protocols/classification/stack-helpers.h"
-#include "protocols/classification/routing-helpers.h"
+#include "bpf_helpers.h"                               // for __always_inline, log_debug, bpf_tail_call_compat
+#include "ktypes.h"                                    // for bool, u16
+#include "map-defs.h"                                  // for BPF_PROG_ARRAY
+#include "protocols/classification/defs.h"             // for protocol_stack_t, classification_prog_t, CLASSIFICATIO...
+#include "protocols/classification/routing-helpers.h"  // for has_available_program, get_current_program_layer, next...
+#include "protocols/classification/usm-context.h"      // for usm_context_t
 
 // This entry point is needed to bypass a memory limit on socket filters.
 // There is a limitation on number of instructions can be attached to a socket filter,

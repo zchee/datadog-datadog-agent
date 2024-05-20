@@ -1,7 +1,9 @@
 #ifndef __KAFKA_TYPES_H
 #define __KAFKA_TYPES_H
 
-#include "defs.h"
+#include "conn_tuple.h"  // for conn_tuple_t
+#include "defs.h"        // for KAFKA_TELEMETRY_TOPIC_NAME_NUM_OF_BUCKETS, TOPIC_NAME_MAX_STRING_SIZE
+#include "ktypes.h"      // for __s32, __u8, __s16, __u32, __u64
 
 typedef enum {
     KAFKA_PRODUCE = 0,

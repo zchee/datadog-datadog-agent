@@ -1,7 +1,12 @@
 #ifndef __USM_EVENTS_H
 #define __USM_EVENTS_H
 
-#include "protocols/events-types.h"
+#include "bpf_builtins.h"            // for bpf_memcpy
+#include "bpf_helpers.h"             // for __always_inline, log_debug, NULL, bpf_map_lookup_elem, bpf_get_smp_proce...
+#include "compiler.h"                // for LOAD_CONSTANT
+#include "ktypes.h"                  // for bool, u32, u64, __u32, __u64, false, size_t, true
+#include "map-defs.h"                // for BPF_HASH_MAP, BPF_PERCPU_ARRAY_MAP, BPF_PERF_EVENT_ARRAY_MAP
+#include "protocols/events-types.h"  // for batch_data_t, batch_key_t, batch_state_t, BATCH_PAGES_PER_CPU, BATCH_BUF...
 #define _STR(x) #x
 
 /* USM_EVENTS_INIT defines two functions used for the purposes of buffering and sending
@@ -28,7 +33,7 @@
         return val > 0;                                                                                 \
     }                                                                                                   \
                                                                                                         \
-    static __always_inline void name##_batch_flush(struct pt_regs *ctx) {                               \
+    static __always_inline void name##_batch_flush(void *ctx) {                                         \
         if (!is_##name##_monitoring_enabled()) {                                                        \
             return;                                                                                     \
         }                                                                                               \

@@ -1,13 +1,8 @@
-#include "kconfig.h"
-#include "ktypes.h"
-#include "bpf_helpers.h"
-#include "bpf_builtins.h"
-
-#include <uapi/linux/ptrace.h>
-
-#include "defs.h"
-#include "map-defs.h"
-#include "protocols/events.h"
+#include "bpf_helpers.h"             // for SEC, bpf_get_current_pid_tgid
+#include "ktypes.h"                  // for __u32, u64, __u64, size_t
+#include "map-defs.h"                // for BPF_LRU_MAP
+#include "protocols/events-types.h"  // for BATCH_PAGES_PER_CPU
+#include "protocols/events.h"        // for USM_EVENTS_INIT
 
 // --------------------------------------------------------
 // this is a test program for pkg/networks/protocols/events

@@ -95,10 +95,11 @@ def ninja_define_ebpf_compiler(nw, strip_object_files=False, kernel_release=None
     nw.variable("target", "-emit-llvm")
     nw.variable("ebpfflags", get_ebpf_build_flags(with_unit_test))
     nw.variable("kheaders", get_kernel_headers_flags(kernel_release))
+    nw.variable("compiler", "clang")
 
     nw.rule(
         name="ebpfclang",
-        command="clang -MD -MF $out.d $target $ebpfflags $kheaders $flags -c $in -o $out",
+        command="$compiler -MD -MF $out.d $target $ebpfflags $kheaders $flags -c $in -o $out",
         depfile="$out.d",
     )
     strip = "&& llvm-strip -g $out" if strip_object_files else ""
@@ -113,7 +114,7 @@ def ninja_define_co_re_compiler(nw):
 
     nw.rule(
         name="ebpfcoreclang",
-        command="clang -MD -MF $out.d -target bpf $ebpfcoreflags $flags -c $in -o $out",
+        command="$compiler -MD -MF $out.d -target bpf $ebpfcoreflags $flags -c $in -o $out",
         depfile="$out.d",
     )
 
@@ -232,19 +233,19 @@ def ninja_security_ebpf_programs(nw, build_dir, debug, kernel_release):
     nw.build(rule="phony", inputs=outfiles, outputs=["cws"])
 
 
-def ninja_network_ebpf_program(nw, infile, outfile, flags):
-    ninja_ebpf_program(nw, infile, outfile, {"flags": flags})
+def ninja_network_ebpf_program(nw, infile, outfile, flags, compiler="clang"):
+    ninja_ebpf_program(nw, infile, outfile, {"flags": flags, "compiler": compiler})
     root, ext = os.path.splitext(outfile)
-    ninja_ebpf_program(nw, infile, f"{root}-debug{ext}", {"flags": flags + " -DDEBUG=1"})
+    ninja_ebpf_program(nw, infile, f"{root}-debug{ext}", {"flags": flags + " -DDEBUG=1", "compiler": compiler})
 
 
-def ninja_network_ebpf_co_re_program(nw, infile, outfile, flags):
-    ninja_ebpf_co_re_program(nw, infile, outfile, {"flags": flags})
+def ninja_network_ebpf_co_re_program(nw, infile, outfile, flags, compiler="clang"):
+    ninja_ebpf_co_re_program(nw, infile, outfile, {"flags": flags, "compiler": compiler})
     root, ext = os.path.splitext(outfile)
-    ninja_ebpf_co_re_program(nw, infile, f"{root}-debug{ext}", {"flags": flags + " -DDEBUG=1"})
+    ninja_ebpf_co_re_program(nw, infile, f"{root}-debug{ext}", {"flags": flags + " -DDEBUG=1", "compiler": compiler})
 
 
-def ninja_network_ebpf_programs(nw, build_dir, co_re_build_dir):
+def ninja_network_ebpf_programs(nw, build_dir, co_re_build_dir, compiler="clang", extra_flags=None):
     network_bpf_dir = os.path.join("pkg", "network", "ebpf")
     network_c_dir = os.path.join(network_bpf_dir, "c")
 
@@ -268,27 +269,29 @@ def ninja_network_ebpf_programs(nw, build_dir, co_re_build_dir):
     for prog in network_programs:
         infile = os.path.join(network_c_dir, f"{prog}.c")
         outfile = os.path.join(build_dir, f"{os.path.basename(prog)}.o")
-        ninja_network_ebpf_program(nw, infile, outfile, ' '.join(network_flags + extra_cflags))
+        ninja_network_ebpf_program(nw, infile, outfile, ' '.join(network_flags + extra_cflags + extra_flags), compiler)
 
     for prog in network_programs_wo_instrumentation:
         infile = os.path.join(network_c_dir, f"{prog}.c")
         outfile = os.path.join(build_dir, f"{os.path.basename(prog)}.o")
-        ninja_network_ebpf_program(nw, infile, outfile, ' '.join(network_flags))
+        ninja_network_ebpf_program(nw, infile, outfile, ' '.join(network_flags + extra_flags), compiler)
 
     for prog_path in network_co_re_programs:
         prog = os.path.basename(prog_path)
         src_dir = os.path.join(network_c_dir, os.path.dirname(prog_path))
-        network_co_re_flags = [f"-I{src_dir}", "-Ipkg/network/ebpf/c"] + extra_cflags
+        network_co_re_flags = [f"-I{src_dir}", "-Ipkg/network/ebpf/c"] + extra_cflags + extra_flags
 
         infile = os.path.join(src_dir, f"{prog}.c")
         outfile = os.path.join(co_re_build_dir, f"{prog}.o")
-        ninja_network_ebpf_co_re_program(nw, infile, outfile, ' '.join(network_co_re_flags))
+        ninja_network_ebpf_co_re_program(nw, infile, outfile, ' '.join(network_co_re_flags), compiler)
 
 
-def ninja_test_ebpf_programs(nw, build_dir):
+def ninja_test_ebpf_programs(nw, build_dir, compiler="clang", extra_flags=None):
     ebpf_bpf_dir = os.path.join("pkg", "ebpf")
     ebpf_c_dir = os.path.join(ebpf_bpf_dir, "testdata", "c")
     test_flags = "-g -DDEBUG=1"
+    if extra_flags:
+        test_flags = f"{test_flags} {' '.join(extra_flags)}"
 
     test_programs = ["logdebug-test"]
 
@@ -296,22 +299,30 @@ def ninja_test_ebpf_programs(nw, build_dir):
         infile = os.path.join(ebpf_c_dir, f"{prog}.c")
         outfile = os.path.join(build_dir, f"{os.path.basename(prog)}.o")
         ninja_ebpf_program(
-            nw, infile, outfile, {"flags": test_flags}
+            nw, infile, outfile, {"flags": test_flags, "compiler": compiler}
         )  # All test ebpf programs are just for testing, so we always build them with debug symbols
 
 
-def ninja_container_integrations_ebpf_programs(nw, co_re_build_dir):
+def ninja_container_integrations_ebpf_programs(nw, co_re_build_dir, compiler="clang", extra_flags=None):
     container_integrations_co_re_dir = os.path.join("pkg", "collector", "corechecks", "ebpf", "c", "runtime")
     container_integrations_co_re_flags = f"-I{container_integrations_co_re_dir}"
     container_integrations_co_re_programs = ["oom-kill", "tcp-queue-length", "ebpf"]
 
+    if extra_flags:
+        container_integrations_co_re_flags = f"{container_integrations_co_re_flags} {' '.join(extra_flags)}"
+
     for prog in container_integrations_co_re_programs:
         infile = os.path.join(container_integrations_co_re_dir, f"{prog}-kern.c")
         outfile = os.path.join(co_re_build_dir, f"{prog}.o")
-        ninja_ebpf_co_re_program(nw, infile, outfile, {"flags": container_integrations_co_re_flags})
+        ninja_ebpf_co_re_program(
+            nw, infile, outfile, {"flags": container_integrations_co_re_flags, "compiler": compiler}
+        )
         root, ext = os.path.splitext(outfile)
         ninja_ebpf_co_re_program(
-            nw, infile, f"{root}-debug{ext}", {"flags": container_integrations_co_re_flags + " -DDEBUG=1"}
+            nw,
+            infile,
+            f"{root}-debug{ext}",
+            {"flags": f"{container_integrations_co_re_flags} -DDEBUG=1", "compiler": compiler},
         )
 
 
@@ -478,6 +489,7 @@ def ninja_generate(
     strip_object_files=False,
     kernel_release=None,
     with_unit_test=False,
+    compiler="clang",
 ):
     build_dir = os.path.join("pkg", "ebpf", "bytecode", "build")
     co_re_build_dir = os.path.join(build_dir, "co-re")
@@ -506,13 +518,17 @@ def ninja_generate(
             rcin = "cmd/system-probe/windows_resources/system-probe.rc"
             nw.build(inputs=[rcin], outputs=["cmd/system-probe/rsrc.syso"], rule="windres")
         else:
+            iwyu_flags = []
+            if compiler == "include-what-you-use":
+                iwyu_flags = get_iwyu_flags()
+
             gobin = get_gobin(ctx)
             ninja_define_ebpf_compiler(nw, strip_object_files, kernel_release, with_unit_test)
             ninja_define_co_re_compiler(nw)
-            ninja_network_ebpf_programs(nw, build_dir, co_re_build_dir)
-            ninja_test_ebpf_programs(nw, build_dir)
+            ninja_network_ebpf_programs(nw, build_dir, co_re_build_dir, compiler=compiler, extra_flags=iwyu_flags)
+            ninja_test_ebpf_programs(nw, build_dir, compiler=compiler, extra_flags=iwyu_flags)
             ninja_security_ebpf_programs(nw, build_dir, debug, kernel_release)
-            ninja_container_integrations_ebpf_programs(nw, co_re_build_dir)
+            ninja_container_integrations_ebpf_programs(nw, co_re_build_dir, compiler=compiler, extra_flags=iwyu_flags)
             ninja_runtime_compilation_files(nw, gobin)
 
         ninja_cgo_type_files(nw)
@@ -534,6 +550,7 @@ def build(
     with_unit_test=False,
     bundle=True,
     instrument_trampoline=False,
+    compiler="clang",
 ):
     """
     Build the system-probe
@@ -547,6 +564,7 @@ def build(
             strip_object_files=strip_object_files,
             with_unit_test=with_unit_test,
             instrument_trampoline=instrument_trampoline,
+            compiler=compiler,
         )
 
     build_sysprobe_binary(
@@ -1170,6 +1188,25 @@ def get_co_re_build_flags():
     return flags
 
 
+def get_iwyu_flags():
+    return [
+        # often used in individual build modes, prevent mode-specific advice
+        '-Xiwyu --keep=pkg/ebpf/c/bpf_telemetry.h',
+        '-Xiwyu --keep=pkg/ebpf/c/bpf_tracing.h',
+        '-Xiwyu --keep=pkg/network/ebpf/c/offsets.h',
+        '-Xiwyu --keep=pkg/ebpf/c/kconfig.h',
+        '-Xiwyu --max_line_length=120',
+        '-Xiwyu --no_fwd_decls',
+        '-Xiwyu --check_also=pkg/ebpf/c/**/*.h',
+        '-Xiwyu --check_also=pkg/network/ebpf/c/*.h',
+        '-Xiwyu --check_also=pkg/network/ebpf/c/**/*.h',
+        '-Xiwyu --check_also=pkg/collector/corechecks/ebpf/c/runtime/*.h',
+        '-Xiwyu --check_also=pkg/ebpf/c/bpf_telemetry.h',
+        '-Xiwyu --mapping_file=pkg/ebpf/c/ebpf.imp',
+        '-Xiwyu --no_default_mappings',
+    ]
+
+
 def get_kernel_headers_flags(kernel_release=None, minimal_kernel_release=None):
     return [
         f"-isystem{d}"
@@ -1181,7 +1218,7 @@ def check_for_inline(ctx):
     print("checking for invalid inline usage...")
     src_dirs = ["pkg/ebpf/c/", "pkg/network/ebpf/c/", "pkg/security/ebpf/c/"]
     grep_filter = "--include='*.c' --include '*.h'"
-    grep_exclude = "--exclude='bpf_helpers.h'"
+    grep_exclude = "--exclude='bpf_helpers.h' --exclude='compiler.h'"
     pattern = "'^[^/]*\\binline\\b'"
     grep_res = ctx.run(f"grep -n {grep_filter} {grep_exclude} -r {pattern} {' '.join(src_dirs)}", warn=True, hide=True)
     if grep_res.ok:
@@ -1200,17 +1237,28 @@ def run_ninja(
     debug=False,
     strip_object_files=False,
     with_unit_test=False,
+    compiler="clang",
 ):
     check_for_ninja(ctx)
     nf_path = os.path.join(ctx.cwd, 'system-probe.ninja')
-    ninja_generate(ctx, nf_path, major_version, debug, strip_object_files, kernel_release, with_unit_test)
+    ninja_generate(
+        ctx,
+        nf_path,
+        major_version,
+        debug,
+        strip_object_files,
+        kernel_release,
+        with_unit_test,
+        compiler,
+    )
     explain_opt = "-d explain" if explain else ""
+    fail_jobs = "-k 0" if compiler == "include-what-you-use" else ""
     if task:
         ctx.run(f"ninja {explain_opt} -f {nf_path} -t {task}")
     else:
         with open("compile_commands.json", "w") as compiledb:
             ctx.run(f"ninja -f {nf_path} -t compdb {target}", out_stream=compiledb)
-        ctx.run(f"ninja {explain_opt} -f {nf_path} {target}")
+        ctx.run(f"ninja {explain_opt} {fail_jobs} -f {nf_path} {target}")
 
 
 def setup_runtime_clang(ctx):
@@ -1265,6 +1313,7 @@ def build_object_files(
     strip_object_files=False,
     with_unit_test=False,
     instrument_trampoline=False,
+    compiler="clang",
 ):
     build_dir = os.path.join("pkg", "ebpf", "bytecode", "build")
 
@@ -1283,7 +1332,7 @@ def build_object_files(
 
     global extra_cflags
     if instrument_trampoline:
-        extra_cflags = extra_cflags + ["-pg", "-DINSTRUMENTATION_ENABLED"]
+        extra_cflags.extend(["-pg", "-DINSTRUMENTATION_ENABLED"])
 
     run_ninja(
         ctx,
@@ -1293,6 +1342,7 @@ def build_object_files(
         debug=debug,
         strip_object_files=strip_object_files,
         with_unit_test=with_unit_test,
+        compiler=compiler,
     )
 
     if not is_windows:
@@ -1349,7 +1399,27 @@ def build_cws_object_files(
 
 @task
 def object_files(ctx, kernel_release=None, with_unit_test=False):
-    build_object_files(ctx, kernel_release=kernel_release, with_unit_test=with_unit_test, instrument_trampoline=False)
+    build_object_files(
+        ctx,
+        kernel_release=kernel_release,
+        with_unit_test=with_unit_test,
+        instrument_trampoline=False,
+    )
+
+
+@task
+def iwyu(ctx):
+    """
+    Run a build using include-what-you-use which will output guidance on #include statements to add/remove.
+    Requires include-what-you-use to be in the PATH and a symlink setup it can find the clang built-in headers.
+    See https://github.com/include-what-you-use/include-what-you-use/tree/clang_12?tab=readme-ov-file#how-to-install
+
+    This command will always have a non-zero exit code so that ninja doesn't think any of the builds succeeded.
+    """
+    build_object_files(
+        ctx,
+        compiler="include-what-you-use",
+    )
 
 
 def clean_object_files(ctx, major_version='7', kernel_release=None, debug=False, strip_object_files=False):

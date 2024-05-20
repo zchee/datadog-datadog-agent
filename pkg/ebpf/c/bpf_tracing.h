@@ -3,6 +3,7 @@
 #define __BPF_TRACING_H__
 
 #include "bpf_helpers.h"
+#include "bpf_core_read.h" // IWYU pragma: export
 
 /* Scan the ARCH passed in from ARCH env variable (see Makefile) */
 #if defined(__TARGET_ARCH_x86)
@@ -560,6 +561,13 @@ ____##name(struct pt_regs *ctx, ##args)
 
 #define BPF_KPROBE_SYSCALL BPF_KSYSCALL
 
-#include "bpf_tracing_custom.h"
+/* BPF_UPROBE and BPF_URETPROBE are identical to BPF_KPROBE and BPF_KRETPROBE,
+ * but are named way less confusingly for SEC("uprobe") and SEC("uretprobe")
+ * use cases.
+ */
+#define BPF_UPROBE(name, args...)  BPF_KPROBE(name, ##args)
+#define BPF_URETPROBE(name, args...)  BPF_KRETPROBE(name, ##args)
+
+#include "bpf_tracing_custom.h" // IWYU pragma: export
 
 #endif

@@ -1,14 +1,16 @@
 #ifndef __IPV6_H
 #define __IPV6_H
 
-#include "bpf_core_read.h"
-#include "bpf_telemetry.h"
-
-#include "defs.h"
-
 #ifndef COMPILE_CORE
+#include "kconfig.h"
 #include <uapi/linux/in6.h>
 #endif
+
+#include "bpf_telemetry.h"   // for FN_INDX_bpf_probe_read_kernel, bpf_probe_read_kernel_with_telemetry
+#include "bpf_tracing.h"     // for BPF_CORE_READ_INTO
+#include "bpf_helpers.h"     // for __always_inline, __maybe_unused
+#include "compiler.h"        // for LOAD_CONSTANT, ENABLED
+#include "ktypes.h"          // for __u64, u64, bool, __u32
 
 /* check if IPs are IPv4 mapped to IPv6 ::ffff:xxxx:xxxx
  * https://tools.ietf.org/html/rfc4291#section-2.5.5

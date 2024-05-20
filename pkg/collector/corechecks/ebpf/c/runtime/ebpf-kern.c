@@ -1,9 +1,8 @@
-#include "vmlinux.h"
-#include "bpf_helpers.h"
-#include "bpf_tracing.h"
-#include "bpf_core_read.h"
-#include "map-defs.h"
-#include "ebpf-kern-user.h"
+#include "bpf_helpers.h"     // for bpf_map_update_elem, bpf_map_lookup_elem, SEC, bpf_get_current_pid_tgid, log_debug
+#include "bpf_tracing.h"     // for BPF_CORE_READ, ___arrow1, ___arrow2, ___core_read0, BPF_KPROBE, ___bpf_kprobe_args1
+#include "ebpf-kern-user.h"  // for mmap_region_t, perf_buffer_key_t, ring_mmap_t
+#include "map-defs.h"        // for BPF_LRU_MAP, BPF_HASH_MAP
+#include "vmlinux.h"         // for u32, u64, BPF_ANY, pt_regs, bpf_attr, bpf_map, perf_event_attr, bpf_attr::(anony...
 
 #define F_DUPFD_CLOEXEC 1030
 

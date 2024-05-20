@@ -1,9 +1,9 @@
 #ifndef __HTTP2_DECODING_DEFS_H
 #define __HTTP2_DECODING_DEFS_H
 
-#include "ktypes.h"
-
-#include "protocols/http2/defs.h"
+#include "conn_tuple.h"            // for conn_tuple_t
+#include "ktypes.h"                // for __u64, __u32, __u8, bool, __u16
+#include "protocols/http2/defs.h"  // for HTTP2_FRAME_HEADER_SIZE, http2_fra...
 
 // Represents the maximum number of frames we'll process in a single tail call in `handle_eos_frames` program.
 #define HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL 200

@@ -1,18 +1,16 @@
 #ifndef __GO_TLS_GOID_H
 #define __GO_TLS_GOID_H
 
-#include "ktypes.h"
 #if defined(COMPILE_PREBUILT) || defined(COMPILE_RUNTIME)
 #include "kconfig.h"
 #include <linux/sched.h>
 #endif
 
-#include "bpf_helpers.h"
-
-#include "protocols/http/maps.h"
-
-#include "protocols/tls/go-tls-types.h"
-#include "protocols/tls/go-tls-location.h"
+#include "bpf_helpers.h"                    // for __always_inline, bpf_probe_read_user, NULL, bpf_get_current_task
+#include "ktypes.h"                         // for int64_t, uint64_t, uintptr_t, pt_regs
+#include "protocols/http/maps.h"            // IWYU pragma: keep
+#include "protocols/tls/go-tls-location.h"  // for read_register_indirect
+#include "protocols/tls/go-tls-types.h"     // for goroutine_id_metadata_t
 
 // Implemented either in c/runtime/runtime-get-tls-base.h or in ____ (TODO add offset-guessed version)
 static void* get_tls_base(struct task_struct* task);

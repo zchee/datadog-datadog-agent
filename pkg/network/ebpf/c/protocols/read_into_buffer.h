@@ -1,10 +1,10 @@
 #ifndef __READ_INTO_BUFFER_H
 #define __READ_INTO_BUFFER_H
 
-#include "ktypes.h"
-
-#include "bpf_builtins.h"
-#include "bpf_telemetry.h"
+#include "bpf_builtins.h"   // for bpf_memset
+#include "bpf_helpers.h"    // for __always_inline, __sk_buff
+#include "bpf_telemetry.h"  // for bpf_skb_load_bytes_with_telemetry, bpf_probe_read_user_with_telemetry
+#include "ktypes.h"         // for s64, u32, __u64
 
 #define BLK_SIZE (16)
 

@@ -1,11 +1,8 @@
 #ifndef __CONNTRACK_MAPS_H
 #define __CONNTRACK_MAPS_H
 
-#include "bpf_helpers.h"
-#include "map-defs.h"
-
-#include "conn_tuple.h"
-#include "conntrack/types.h"
+#include "conntrack/types.h"  // for conntrack_tuple_t
+#include "map-defs.h"         // for BPF_HASH_MAP
 
 /* This map is used for tracking conntrack entries
  */

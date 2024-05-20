@@ -1,9 +1,14 @@
 #ifndef __PROTOCOL_CLASSIFICATION_SHARED_TRACER_MAPS_H
 #define __PROTOCOL_CLASSIFICATION_SHARED_TRACER_MAPS_H
 
-#include "map-defs.h"
-#include "port_range.h"
-#include "protocols/classification/stack-helpers.h"
+#include "bpf_helpers.h"                             // for __always_inline, __maybe_unused
+#include "bpf_telemetry.h"                           // for bpf_map_update_w...
+#include "conn_tuple.h"                              // for conn_tuple_t
+#include "ktypes.h"                                  // for u8
+#include "map-defs.h"                                // for BPF_HASH_MAP
+#include "port_range.h"                              // for normalize_tuple
+#include "protocols/classification/defs.h"           // for protocol_stack_t
+#include "protocols/classification/stack-helpers.h"  // for set_protocol
 
 // Maps a connection tuple to its classified protocol. Used to reduce redundant
 // classification procedures on the same connection

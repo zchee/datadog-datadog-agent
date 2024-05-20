@@ -1,8 +1,12 @@
 #ifndef __REDIS_HELPERS_H
 #define __REDIS_HELPERS_H
 
-#include "protocols/classification/common.h"
-#include "protocols/redis/defs.h"
+#include "bpf_builtins.h"                     // for bpf_memcmp
+#include "bpf_helpers.h"                      // for __always_inline
+#include "ktypes.h"                           // for bool, false, __u32, true
+#include "protocols/classification/common.h"  // for CHECK_PRELIMINARY_BUFFER_CONDITIONS
+#include "protocols/classification/defs.h"    // for CLASSIFICATION_MAX_BUFFER
+#include "protocols/redis/defs.h"             // for REDIS_MIN_FRAME_LENGTH
 
 // Checks the buffer represent a standard response (OK) or any of redis commands
 // https://redis.io/commands/

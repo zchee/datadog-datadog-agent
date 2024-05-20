@@ -1,21 +1,25 @@
 #ifndef __SOCKFD_PROBES_H
 #define __SOCKFD_PROBES_H
 
-#include "ktypes.h"
-#include "bpf_builtins.h"
-#include "map-defs.h"
-
 #ifndef COMPILE_CORE
-#include <linux/ptrace.h>
-#include <linux/net.h>
+#include <linux/net.h>            // for proto_ops, socket, SOCK_STREAM, sock_type
+#include <linux/socket.h>         // for AF_INET, AF_INET6
+#include <net/sock.h>             // for sock
 #endif
 
-#include "sock.h"
-#include "sockfd.h"
+#include "bpf_helpers.h"          // for NULL, BPF_ANY, SEC, bpf_get_current_pid_tgid, bpf_map_delete_elem, bpf_map_...
+#include "bpf_telemetry.h"        // for FN_INDX_bpf_probe_read_kernel, bpf_map_update_with_telemetry, bpf_probe_rea...
+#include "bpf_tracing.h"          // for pt_regs, user_pt_regs, PT_REGS_PARM1, PT_REGS_RC
+#include "conn_tuple.h"           // for conn_tuple_t, CONN_TYPE_TCP
+#include "ktypes.h"               // for u64, true
+#include "pid_fd.h"               // for pid_fd_t
+#include "offsets.h"     // for offset_socket_sk
+#include "protocols/tls/https.h"  // for tls_finish
+#include "sock.h"                 // for read_conn_tuple, socket_sk
+#include "sockfd.h"               // for pid_fd_by_tuple, sockfd_lookup_args, tuple_by_pid_fd
 
 SEC("kprobe/tcp_close")
-int kprobe__tcp_close(struct pt_regs *ctx) {
-    struct sock *sk = (struct sock *)PT_REGS_PARM1(ctx);
+int BPF_KPROBE(kprobe__tcp_close, struct sock *sk) {
     if (sk == NULL) {
         return 0;
     }

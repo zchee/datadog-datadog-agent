@@ -1,13 +1,13 @@
 #ifndef __PROTOCOL_CLASSIFICATION_COMMON_H
 #define __PROTOCOL_CLASSIFICATION_COMMON_H
 
-#include "ktypes.h"
-
-#include "defs.h"
-#include "bpf_builtins.h"
-#include "bpf_telemetry.h"
-
-#include "protocols/read_into_buffer.h"
+#include "bpf_helpers.h"                 // for __always_inline
+#include "bpf_telemetry.h"               // for FN_INDX_bpf_skb_load_bytes
+#include "conn_tuple.h"                  // for conn_tuple_t, CONN_TYPE_TCP
+#include "defs.h"                        // for CLASSIFICATION_MAX_BUFFER
+#include "ip.h"                          // for skb_info_t
+#include "ktypes.h"                      // for false, NULL, bool
+#include "protocols/read_into_buffer.h"  // for BLK_SIZE, READ_INTO_BUFFER
 
 #define CHECK_PRELIMINARY_BUFFER_CONDITIONS(buf, buf_size, min_buff_size) \
     do {                                                                  \

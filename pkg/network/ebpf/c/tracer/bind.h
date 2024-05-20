@@ -1,9 +1,22 @@
 #ifndef __TRACER_BIND_H
 #define __TRACER_BIND_H
 
-#include "tracer/tracer.h"
-#include "tracer/maps.h"
-#include "tracer/port.h"
+#ifndef COMPILE_CORE
+#include <linux/in.h>       // for sockaddr_in
+#include <linux/in6.h>      // for sockaddr_in6
+#include <linux/net.h>      // for SOCK_DGRAM, socket
+#include <linux/socket.h>   // for sa_family_t, AF_INET, AF_INET6, sockaddr
+#endif
+
+#include "bpf_endian.h"     // for bpf_ntohs
+#include "bpf_helpers.h"    // for log_debug, __always_inline, bpf_get_current_pid_tgid, BPF_ANY, bpf_map_delete_elem
+#include "bpf_telemetry.h"  // for FN_INDX_bpf_probe_read_kernel, bpf_probe_read_kernel_with_telemetry, bpf_map_upda...
+#include "ktypes.h"         // for u16, __u16, NULL, __u64, __s64
+#include "netns.h"          // for get_netns_from_sock
+#include "sock.h"           // for read_sport, socket_sk
+#include "tracer/maps.h"    // for pending_bind, udp_port_bindings
+#include "tracer/port.h"    // for add_port_bind
+#include "tracer/tracer.h"  // for bind_syscall_args_t, port_binding_t
 
 static __always_inline u16 sockaddr_sin_port(struct sockaddr *addr) {
     u16 sin_port = 0;

@@ -1,10 +1,10 @@
 #ifndef __GO_TLS_MAPS_H
 #define __GO_TLS_MAPS_H
 
-#include "bpf_helpers.h"
-#include "map-defs.h"
-
-#include "protocols/tls/go-tls-types.h"
+#include "conn_tuple.h"                  // for conn_tuple_t
+#include "ktypes.h"                      // for __u32
+#include "map-defs.h"                    // for BPF_HASH_MAP, BPF_LRU_MAP
+#include "protocols/tls/go-tls-types.h"  // for go_tls_function_args_key_t, go_tls_offsets_data_key_t, go_tls_read_a...
 
 // offsets_data map contains the information about the locations of structs in the inspected binary, mapped by the binary's inode number.
 BPF_HASH_MAP(offsets_data, go_tls_offsets_data_key_t, tls_offsets_data_t, 1024)

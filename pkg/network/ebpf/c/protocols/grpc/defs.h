@@ -1,6 +1,8 @@
 #ifndef __GRPC_DEFS_H
 #define __GRPC_DEFS_H
 
+#include "ktypes.h"  // for __u32
+
 typedef enum {
     PAYLOAD_UNDETERMINED,
     PAYLOAD_GRPC,

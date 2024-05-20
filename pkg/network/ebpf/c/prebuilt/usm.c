@@ -1,23 +1,27 @@
+#ifndef COMPILE_CORE
 #include "kconfig.h"
-#include "bpf_tracing.h"
-#include "bpf_telemetry.h"
-#include "bpf_builtins.h"
+#include <net/sock.h>                                     // for sock
+#endif
 
-#include "offsets.h"
+#include "bpf_helpers.h"                                  // for SEC, __sk_buff, log_debug
+#include "bpf_tracing.h"                                  // for pt_regs, BPF_KPROBE, ___bpf_kprobe_args1, user_pt_regs
+#include "protocols/classification/dispatcher-helpers.h"  // for dispatch_kafka, protocol_dispatcher_entrypoint
+#include "protocols/http/usm-events.h"                    // for http_batch_flush
+#include "protocols/http2/usm-events.h"                   // for http2_batch_flush, terminated_http2_batch_flush
+#include "protocols/kafka/usm-events.h"                   // for kafka_batch_flush
+#include "protocols/postgres/usm-events.h"                // for postgres_batch_flush
+#include "protocols/tls/https.h"                          // for map_ssl_ctx_to_sock, tls_dispatch_kafka
 
-#include "protocols/classification/dispatcher-helpers.h"
-#include "protocols/http/buffer.h"
-#include "protocols/http/http.h"
-#include "protocols/http2/decoding.h"
-#include "protocols/http2/decoding-tls.h"
-#include "protocols/kafka/kafka-parsing.h"
-#include "protocols/postgres/decoding.h"
-#include "protocols/sockfd-probes.h"
-#include "protocols/tls/java/erpc_dispatcher.h"
-#include "protocols/tls/java/erpc_handlers.h"
-#include "protocols/tls/https.h"
-#include "protocols/tls/native-tls.h"
-#include "protocols/tls/tags-types.h"
+// includes kept below because they declare eBPF program entrypoints
+#include "protocols/http/http.h"                          // IWYU pragma: keep
+#include "protocols/http2/decoding.h"                     // IWYU pragma: keep
+#include "protocols/http2/decoding-tls.h"                 // IWYU pragma: keep
+#include "protocols/kafka/kafka-parsing.h"                // IWYU pragma: keep
+#include "protocols/postgres/decoding.h"                  // IWYU pragma: keep
+#include "protocols/sockfd-probes.h"                      // IWYU pragma: keep
+#include "protocols/tls/java/erpc_dispatcher.h"           // IWYU pragma: keep
+#include "protocols/tls/java/erpc_handlers.h"             // IWYU pragma: keep
+#include "protocols/tls/native-tls.h"                     // IWYU pragma: keep
 
 SEC("socket/protocol_dispatcher")
 int socket__protocol_dispatcher(struct __sk_buff *skb) {

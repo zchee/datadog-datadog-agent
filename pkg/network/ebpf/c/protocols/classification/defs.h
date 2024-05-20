@@ -1,17 +1,8 @@
 #ifndef __PROTOCOL_CLASSIFICATION_DEFS_H
 #define __PROTOCOL_CLASSIFICATION_DEFS_H
 
-#include "ktypes.h"
-#include "compiler.h"
-#include "bpf_helpers_custom.h"
-
-#include "protocols/amqp/defs.h"
-#include "protocols/http/classification-defs.h"
-#include "protocols/http2/defs.h"
-#include "protocols/mongo/defs.h"
-#include "protocols/mysql/defs.h"
-#include "protocols/redis/defs.h"
-#include "protocols/sql/defs.h"
+#include "ktypes.h"                // for __u8, __u64
+#include "protocols/http2/defs.h"  // for HTTP2_MARKER_SIZE
 
 // Represents the max buffer size required to classify protocols .
 // We need to round it to be multiplication of 16 since we are reading blocks of 16 bytes in read_into_buffer_skb_all_kernels.

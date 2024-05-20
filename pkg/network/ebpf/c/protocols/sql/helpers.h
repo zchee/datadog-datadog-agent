@@ -1,9 +1,10 @@
 #ifndef __SQL_HELPERS_H
 #define __SQL_HELPERS_H
 
-#include "bpf_builtins.h"
-
-#include "protocols/sql/defs.h"
+#include "bpf_builtins.h"        // for bpf_memcmp
+#include "bpf_helpers.h"         // for __always_inline
+#include "ktypes.h"              // for __u32, bool
+#include "protocols/sql/defs.h"  // for SQL_COMMAND_MAX_SIZE, SQL_ALTER, SQL_CREATE, SQL_DELETE, SQL_DROP, SQL_INSERT
 
 // Check that we can read the amount of memory we want, then to the comparison.
 // Note: we use `sizeof(command) - 1` to *not* compare with the null-terminator of

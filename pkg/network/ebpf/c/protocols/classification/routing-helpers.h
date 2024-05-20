@@ -1,8 +1,10 @@
 #ifndef __PROTOCOL_ROUTING_HELPERS_H
 #define __PROTOCOL_ROUTING_HELPERS_H
 
-#include "ktypes.h"
-#include "protocols/classification/defs.h"
+#include "bpf_helpers.h"                           // for __always_inline
+#include "ktypes.h"                                // for u16, bool, false, true
+#include "protocols/classification/defs.h"         // for __PROG_API, __PROG_ENCRYPTION, classification_prog_t, __PR...
+#include "protocols/classification/usm-context.h"  // for usm_context_t
 
 // has_available_program returns true when there is another program from within
 // the same protocol layer or false otherwise

@@ -1,11 +1,27 @@
 #ifndef __KAFKA_PARSING
 #define __KAFKA_PARSING
 
-#include "bpf_builtins.h"
-#include "bpf_telemetry.h"
-#include "protocols/kafka/types.h"
-#include "protocols/kafka/parsing-maps.h"
-#include "protocols/kafka/usm-events.h"
+#include "bpf_builtins.h"                                 // for bpf_memcpy, bpf_memset
+#include "bpf_endian.h"                                   // for bpf_ntohl, bpf_ntohs
+#include "bpf_helpers.h"                                  // for __always_inline, bpf_map_lookup_elem, NULL, bpf_map...
+#include "bpf_telemetry.h"                                // for FN_INDX_bpf_probe_read_user, FN_INDX_bpf_skb_load_b...
+#include "bpf_tracing.h"                                  // for BPF_UPROBE, pt_regs
+#include "conn_tuple.h"                                   // for conn_tuple_t
+#include "ip.h"                                           // for skb_info_t, flip_tuple, TCPHDR_FIN, TCPHDR_RST
+#include "ktypes.h"                                       // for s32, u32, __u32, s64, false, u8, s16, bool, __u16, s8
+#include "port_range.h"                                   // for normalize_tuple
+#include "protocols/classification/common.h"              // for is_payload_empty
+#include "protocols/classification/defs.h"                // for PROG_KAFKA_RESPONSE_PARSER, TLS_KAFKA_RESPONSE_PARSER
+#include "protocols/classification/dispatcher-helpers.h"  // for fetch_dispatching_arguments, is_tcp_termination
+#include "protocols/classification/dispatcher-maps.h"     // for tls_dispatcher_arguments, protocols_progs, tls_proc...
+#include "protocols/classification/structs.h"             // for tls_dispatcher_arguments_t
+#include "protocols/helpers/pktbuf.h"                     // for pktbuf_read_big_endian_s32, pktbuf_load_bytes, pktb...
+#include "protocols/kafka/defs.h"                         // for KAFKA_RESPONSE_PARSER_MAX_ITERATIONS, KAFKA_TELEMET...
+#include "protocols/kafka/kafka-classification.h"         // for get_topic_offset_from_fetch_request, get_topic_offs...
+#include "protocols/kafka/parsing-maps.h"                 // for kafka_response, kafka_heap, kafka_in_flight, kafka_...
+#include "protocols/kafka/types.h"                        // for kafka_response_context_t, kafka_header_t, kafka_tra...
+#include "protocols/kafka/usm-events.h"                   // for kafka_batch_enqueue
+#include "protocols/read_into_buffer.h"                   // for BLK_SIZE
 
 // forward declaration
 static __always_inline bool kafka_allow_packet(skb_info_t *skb_info);
@@ -92,7 +108,7 @@ int socket__kafka_filter(struct __sk_buff* skb) {
 }
 
 SEC("uprobe/kafka_tls_filter")
-int uprobe__kafka_tls_filter(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__kafka_tls_filter) {
     const __u32 zero = 0;
 
     kafka_info_t *kafka = bpf_map_lookup_elem(&kafka_heap, &zero);
@@ -108,7 +124,7 @@ int uprobe__kafka_tls_filter(struct pt_regs *ctx) {
     kafka_telemetry_t *kafka_tel = bpf_map_lookup_elem(&kafka_telemetry, &zero);
     if (kafka_tel == NULL) {
         return 0;
-    }    
+    }
 
     // On stack for 4.14
     conn_tuple_t tup = args->tup;
@@ -124,7 +140,7 @@ int uprobe__kafka_tls_filter(struct pt_regs *ctx) {
 }
 
 SEC("uprobe/kafka_tls_termination")
-int uprobe__kafka_tls_termination(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__kafka_tls_termination) {
     const __u32 zero = 0;
 
     tls_dispatcher_arguments_t *args = bpf_map_lookup_elem(&tls_dispatcher_arguments, &zero);

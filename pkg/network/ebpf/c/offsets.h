@@ -1,10 +1,10 @@
 #ifndef __OFFSETS_H
 #define __OFFSETS_H
+#ifdef COMPILE_PREBUILT
 
-#include "ktypes.h"
-#include "compiler.h"
-
-#include "defs.h"
+#include "bpf_helpers.h"  // for __always_inline
+#include "compiler.h"     // for LOAD_CONSTANT, ENABLED
+#include "ktypes.h"       // for __u64, bool
 
 static __always_inline bool dns_stats_enabled() {
     __u64 val = 0;
@@ -144,4 +144,5 @@ static __always_inline __u64 offset_sk_buff_sock() {
     return val;
 }
 
+#endif // COMPILE_PREBUILT
 #endif // __OFFSETS_H

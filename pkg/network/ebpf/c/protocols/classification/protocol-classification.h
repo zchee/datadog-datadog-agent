@@ -1,29 +1,28 @@
 #ifndef __PROTOCOL_CLASSIFICATION_H
 #define __PROTOCOL_CLASSIFICATION_H
 
-#include "bpf_builtins.h"
-#include "bpf_telemetry.h"
-#include "ip.h"
-#include "port_range.h"
-
-#include "protocols/amqp/helpers.h"
-#include "protocols/classification/common.h"
-#include "protocols/classification/defs.h"
-#include "protocols/classification/maps.h"
-#include "protocols/classification/structs.h"
-#include "protocols/classification/stack-helpers.h"
-#include "protocols/classification/usm-context.h"
-#include "protocols/classification/routing.h"
-#include "protocols/grpc/defs.h"
-#include "protocols/grpc/helpers.h"
-#include "protocols/http/classification-helpers.h"
-#include "protocols/http2/helpers.h"
-#include "protocols/kafka/kafka-classification.h"
-#include "protocols/mongo/helpers.h"
-#include "protocols/mysql/helpers.h"
-#include "protocols/redis/helpers.h"
-#include "protocols/postgres/helpers.h"
-#include "protocols/tls/tls.h"
+#include "bpf_helpers.h"                                  // for __always_inline
+#include "compiler.h"                                     // for __maybe_unused, LOAD_CONSTANT
+#include "conn_tuple.h"                                   // for conn_tuple_t
+#include "ip.h"                                           // for skb_info_t, read_conn_tuple_skb
+#include "ktypes.h"                                       // for __u32, __u64, bool
+#include "protocols/amqp/helpers.h"                       // for is_amqp
+#include "protocols/classification/common.h"              // for is_payload_empty, is_tcp
+#include "protocols/classification/defs.h"                // for protocol_t, PROTOCOL_UNKNOWN, protocol_stack_t, PRO...
+#include "protocols/classification/routing.h"             // for classification_next_program, init_routing_cache
+#include "protocols/classification/shared-tracer-maps.h"  // for get_protocol_stack
+#include "protocols/classification/stack-helpers.h"       // for mark_as_fully_classified, get_protocol_from_stack
+#include "protocols/classification/usm-context.h"         // for usm_context_t, usm_context, classification_buffer_t
+#include "protocols/grpc/defs.h"                          // for PAYLOAD_GRPC, PAYLOAD_UNDETERMINED, grpc_status_t
+#include "protocols/grpc/helpers.h"                       // for is_grpc
+#include "protocols/http/classification-helpers.h"        // for is_http
+#include "protocols/http2/helpers.h"                      // for is_http2
+#include "protocols/kafka/kafka-classification.h"         // for is_kafka
+#include "protocols/mongo/helpers.h"                      // for is_mongo
+#include "protocols/mysql/helpers.h"                      // for is_mysql
+#include "protocols/postgres/helpers.h"                   // for is_postgres
+#include "protocols/redis/helpers.h"                      // for is_redis
+#include "protocols/tls/tls.h"                            // for is_tls
 
 // Some considerations about multiple protocol classification:
 //

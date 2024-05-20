@@ -1,9 +1,12 @@
 #ifndef __MYSQL_HELPERS_H
 #define __MYSQL_HELPERS_H
 
-#include "protocols/classification/common.h"
-#include "protocols/mysql/defs.h"
-#include "protocols/sql/helpers.h"
+#include "bpf_helpers.h"                      // for __always_inline
+#include "conn_tuple.h"                       // for conn_tuple_t
+#include "ktypes.h"                           // for __u32, false, bool, u32
+#include "protocols/classification/common.h"  // for CHECK_PRELIMINARY_BUFFER_CONDITIONS
+#include "protocols/mysql/defs.h"             // for mysql_hdr, MAX_VERSION_COMPONENT, MIN_VERSION_SIZE, MYSQL_COMMA...
+#include "protocols/sql/helpers.h"            // for is_sql_command
 
 // Validates the given buffer is of the format <number><delimiter> where the number is up to 2 digits.
 // The buffer cannot be just the delimiter. On error returns -1, on success the location of the next element.

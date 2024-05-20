@@ -1,7 +1,11 @@
 #ifndef __BIG_ENDIAN_HELPERS_H
 #define __BIG_ENDIAN_HELPERS_H
 
-#include "bpf_endian.h"
+#include "bpf_builtins.h"   // for bpf_memset
+#include "bpf_endian.h"     // for bpf_ntohl, bpf_ntohs
+#include "bpf_helpers.h"    // for __always_inline, __sk_buff, bpf_probe_rea...
+#include "bpf_telemetry.h"  // for bpf_skb_load_bytes_with_telemetry, FN_IND...
+#include "ktypes.h"         // for s16, s32, s8, u32, __u32, false, true, bool
 
 #define identity_transformer(x) (x)
 

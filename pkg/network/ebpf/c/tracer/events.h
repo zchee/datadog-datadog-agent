@@ -1,21 +1,25 @@
 #ifndef __TRACER_EVENTS_H
 #define __TRACER_EVENTS_H
 
-#include "bpf_helpers.h"
-#include "bpf_telemetry.h"
-#include "bpf_builtins.h"
-
-#include "tracer/tracer.h"
-#include "tracer/maps.h"
-#include "tracer/stats.h"
-#include "tracer/telemetry.h"
-#include "cookie.h"
-#include "ip.h"
-#include "port_range.h"
-
-#ifdef COMPILE_CORE
-#define MSG_PEEK 2
+#ifndef COMPILE_CORE
+#include <net/sock.h>                                     // for sock
+#include <net/tcp_states.h>                               // for TCP_CLOSE
 #endif
+
+#include "bpf_builtins.h"                                 // for bpf_memcpy
+#include "bpf_helpers.h"                                  // for NULL, bpf_map_lookup_elem, __always_inline, bpf_map...
+#include "compiler.h"                                     // for LOAD_CONSTANT, __maybe_unused
+#include "conn_tuple.h"                                   // for conn_tuple_t, CONN_TYPE_TCP, CONN_TYPE_UDP
+#include "cookie.h"                                       // for get_sk_cookie
+#include "ktypes.h"                                       // for u32, bool, __u64, size_t
+#include "port_range.h"                                   // for normalize_tuple
+#include "protocols/classification/defs.h"                // for FLAG_TCP_CLOSE_DELETION
+#include "protocols/classification/shared-tracer-maps.h"  // for delete_protocol_stack
+#include "sock.h"                                         // for get_proto
+#include "tracer/maps.h"                                  // for conn_close_batch, conn_close_event, conn_stats, con...
+#include "tracer/stats.h"                                 // for determine_connection_direction
+#include "tracer/telemetry.h"                             // for increment_telemetry_count, udp_dropped_conns, unbat...
+#include "tracer/tracer.h"                                // for conn_t, batch_t, conn_stats_ts_t, tcp_stats_t, CONN...
 
 static __always_inline void clean_protocol_classification(conn_tuple_t *tup) {
     conn_tuple_t conn_tuple = *tup;

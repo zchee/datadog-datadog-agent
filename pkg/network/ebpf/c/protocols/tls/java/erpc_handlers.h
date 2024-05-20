@@ -1,10 +1,15 @@
 #ifndef __ERPC_HANDLERS_H
 #define __ERPC_HANDLERS_H
 
-#include "conn_tuple.h"
-#include "protocols/tls/tags-types.h"
-#include "protocols/tls/https.h"
-#include "port_range.h"
+#include "bpf_helpers.h"               // for log_debug, bpf_probe_read_user, SEC, BPF_ANY, bpf_get_current_pid_tgid
+#include "bpf_tracing.h"               // for PT_REGS_PARM4, pt_regs, user_pt_regs
+#include "conn_tuple.h"                // for conn_tuple_t
+#include "ktypes.h"                    // for u32, u64, bool, true, false
+#include "port_range.h"                // for normalize_tuple
+#include "protocols/tls/https.h"       // for tls_process, tls_finish
+#include "protocols/tls/java/maps.h"   // for java_tls_connections, java_conn_tuple_by_peer
+#include "protocols/tls/java/types.h"  // for connection_by_peer_key_t, peer_t
+#include "protocols/tls/tags-types.h"  // for JAVA_TLS
 
 // macro to get the data pointer from the ctx, we skip the 1st byte as it is the operation byte read by the erpc dispatcher
 #define GET_DATA_PTR(ctx) ((void *)(PT_REGS_PARM4(ctx) + 1))

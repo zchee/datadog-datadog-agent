@@ -1,10 +1,10 @@
 #ifndef __TRACER_MAPS_H
 #define __TRACER_MAPS_H
 
-#include "map-defs.h"
-#include "bpf_helpers.h"
-
-#include "conn_tuple.h"
+#include "conn_tuple.h"     // for conn_tuple_t
+#include "ktypes.h"         // for __u64, __u32
+#include "map-defs.h"       // for BPF_HASH_MAP, BPF_ARRAY_MAP, BPF_PERF_EVENT_ARRAY_MAP, BPF_PROG_ARRAY
+#include "tracer/tracer.h"  // for port_binding_t, udp_recv_sock_t, batch_t, bind_syscall_args_t, conn_stats_ts_t
 
 /* This is a key/value store with the keys being a conn_tuple_t for send & recv calls
  * and the values being conn_stats_ts_t *.

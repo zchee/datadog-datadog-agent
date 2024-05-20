@@ -1,6 +1,8 @@
 #ifndef __POSTGRES_DEFS_H
 #define __POSTGRES_DEFS_H
 
+#include "ktypes.h"  // for __u32, __u8
+
 // The minimum size we want to be able to check for a startup message. This size includes:
 // - The length field: 4 bytes
 // - The protocol major version: 2 bytes

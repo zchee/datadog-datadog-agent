@@ -1,22 +1,39 @@
-#include "ktypes.h"
 #ifndef COMPILE_CORE
 #include "kconfig.h"
+#include <linux/err.h>                                         // for IS_ERR_OR_NULL
+#include <linux/in6.h>                                         // for in6_addr
+#include <linux/skbuff.h>                                      // for sk_buff
+#include <linux/socket.h>                                      // for MSG_PEEK, msghdr, sockaddr
+#include <linux/udp.h>                                         // for udphdr
+#include <net/flow.h>                                          // for flowi4, flowi6
+#include <net/sock.h>                                          // for sock
+#include <net/tcp_states.h>                                    // for TCP_ESTABLISHED
 #endif
-#include "bpf_telemetry.h"
-#include "bpf_builtins.h"
-#include "bpf_tracing.h"
-#include "bpf_endian.h"
 
-#ifdef COMPILE_PREBUILT
-#include "prebuilt/offsets.h"
-#endif
-#include "skb.h"
-#include "tracer/bind.h"
-#include "tracer/events.h"
-#include "tracer/maps.h"
-#include "tracer/port.h"
-#include "tracer/tcp_recv.h"
-#include "protocols/classification/protocol-classification.h"
+#include "bpf_builtins.h"                                      // for bpf_memset
+#include "bpf_endian.h"                                        // for bpf_ntohs
+#include "bpf_helpers.h"                                       // for SEC, log_debug, bpf_get_current_pid_tgid, BPF_ANY
+#include "bpf_telemetry.h"                                     // for bpf_map_update_with_telemetry, FN_INDX_bpf_pro...
+#include "bpf_tracing.h"                                       // for user_pt_regs, pt_regs, PT_REGS_PARM1, PT_REGS_...
+#include "compiler.h"                                          // for LOAD_CONSTANT, __maybe_unused
+#include "conn_tuple.h"                                        // for conn_tuple_t, CONN_TYPE_TCP, CONN_TYPE_UDP
+#include "ip.h"                                                // for is_equal
+#include "ipv6.h"                                              // for read_in6_addr, is_ipv4_mapped_ipv6
+#include "ktypes.h"                                            // for u64, size_t, u16, __u16, u32, KERNEL_VERSION
+#include "netns.h"                                             // for get_netns_from_sock
+#include "offsets.h"                                           // for are_fl4_offsets_known, are_fl6_offsets_known
+#include "port_range.h"                                        // for normalize_tuple
+#include "protocols/classification/protocol-classification.h"  // for is_protocol_classification_supported, protocol...
+#include "skb.h"                                               // for sk_buff_to_tuple
+#include "sock.h"                                              // for read_conn_tuple, get_tcp_segment_counts, read_...
+#include "tracer/bind.h"                                       // for sys_enter_bind, sys_exit_bind
+#include "tracer/events.h"                                     // for flush_conn_close_if_full, cleanup_conn, clean_...
+#include "tracer/maps.h"                                       // for ip_make_skb_args, udp_recv_sock, pending_tcp_r...
+#include "tracer/port.h"                                       // for remove_port_bind, add_port_bind
+#include "tracer/stats.h"                                      // for handle_message, handle_tcp_stats, handle_skb_c...
+#include "tracer/tcp_recv.h"                                   // IWYU pragma: keep // for eBPF program entrypoints
+#include "tracer/telemetry.h"                                  // for increment_telemetry_count, udp_send_missed
+#include "tracer/tracer.h"                                     // for ip_make_skb_args_t, port_binding_t, udp_recv_s...
 
 SEC("socket/classifier_entry")
 int socket__classifier_entry(struct __sk_buff *skb) {

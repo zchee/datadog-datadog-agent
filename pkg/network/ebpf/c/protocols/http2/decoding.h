@@ -1,10 +1,24 @@
 #ifndef __HTTP2_DECODING_H
 #define __HTTP2_DECODING_H
 
-#include "protocols/http2/decoding-common.h"
-#include "protocols/http2/usm-events.h"
-#include "protocols/http2/skb-common.h"
-#include "protocols/http/types.h"
+#include "bpf_builtins.h"                                 // for bpf_memcpy, bpf_memset
+#include "bpf_helpers.h"                                  // for NULL, bpf_map_lookup_elem, bpf_skb_load_bytes, __sk...
+#include "bpf_telemetry.h"                                // for FN_INDX_bpf_skb_load_bytes
+#include "conn_tuple.h"                                   // for conn_tuple_t
+#include "ip.h"                                           // for skb_info_t, flip_tuple
+#include "ktypes.h"                                       // for false, bool, true, __u32, __u8, __u64, __u16
+#include "port_range.h"                                   // for normalize_tuple
+#include "protocols/classification/defs.h"                // for PROG_HTTP2_EOS_PARSER, PROG_HTTP2_FRAME_FILTER, PRO...
+#include "protocols/classification/dispatcher-helpers.h"  // for fetch_dispatching_arguments, is_tcp_termination
+#include "protocols/classification/dispatcher-maps.h"     // for protocols_progs, dispatcher_arguments
+#include "protocols/classification/structs.h"             // for dispatcher_arguments_t
+#include "protocols/http2/decoding-common.h"              // for format_http2_frame_header, is_method_index, is_path...
+#include "protocols/http2/decoding-defs.h"                // for http2_tail_call_state_t, http2_header_t, frame_head...
+#include "protocols/http2/defs.h"                         // for HTTP2_FRAME_HEADER_SIZE, http2_frame_t, kHeadersFrame
+#include "protocols/http2/maps-defs.h"                    // for http2_remainder, http2_iterations, http2_telemetry
+#include "protocols/http2/skb-common.h"                   // for read_hpack_int, read_hpack_int_with_given_current_char
+#include "protocols/http2/usm-events.h"                   // for terminated_http2_batch_enqueue
+#include "protocols/read_into_buffer.h"                   // for BLK_SIZE, READ_INTO_BUFFER
 
 READ_INTO_BUFFER(path, HTTP2_MAX_PATH_LEN, BLK_SIZE)
 

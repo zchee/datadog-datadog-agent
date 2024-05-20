@@ -4,29 +4,7 @@
 #ifndef __BPF_COMPILER_H_
 #define __BPF_COMPILER_H_
 
-#ifndef __maybe_unused
-# define __maybe_unused		__attribute__((__unused__))
-#endif
-
-#ifndef __nobuiltin
-# if __clang_major__ >= 10
-#  define __nobuiltin(X)	__attribute__((no_builtin(X)))
-# else
-#  define __nobuiltin(X)
-# endif
-#endif
-
-#ifndef __throw_build_bug
-# define __throw_build_bug()	__builtin_trap()
-#endif
-
-#ifndef barrier
-# define barrier()		asm volatile("": : :"memory")
-#endif
-
-#ifndef barrier_data
-# define barrier_data(ptr)	asm volatile("": :"r"(ptr) :"memory")
-#endif
+#define ENABLED 1
 
 /* The LOAD_CONSTANT macro is used to define a named constant that will be replaced
  * at runtime by the Go code. This replaces usage of a bpf_map for storing values, which

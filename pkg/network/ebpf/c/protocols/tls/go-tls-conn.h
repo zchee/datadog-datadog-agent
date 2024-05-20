@@ -1,12 +1,14 @@
 #ifndef __GO_TLS_CONN_H
 #define __GO_TLS_CONN_H
 
-#include "bpf_helpers.h"
-#include "ip.h"
-#include "port_range.h"
-
-#include "protocols/http/maps.h"
-#include "protocols/tls/go-tls-types.h"
+#include "bpf_builtins.h"                // for bpf_memcpy
+#include "bpf_helpers.h"                 // for NULL, bpf_probe_read_user, __always_inline, bpf_map_lookup_elem, bpf...
+#include "conn_tuple.h"                  // for conn_tuple_t
+#include "ktypes.h"                      // for __u32, uint64_t
+#include "pid_fd.h"                      // for pid_fd_t
+#include "protocols/sockfd.h"            // for tuple_by_pid_fd
+#include "protocols/tls/go-tls-maps.h"   // for conn_tup_by_go_tls_conn
+#include "protocols/tls/go-tls-types.h"  // for tls_conn_layout_t, interface_t, tls_offsets_data_t
 
 static __always_inline conn_tuple_t* __tuple_via_tcp_conn(tls_conn_layout_t* cl, void* tcp_conn_ptr, pid_fd_t* pid_fd) {
     void* tcp_conn_inner_conn_ptr = tcp_conn_ptr + cl->tcp_conn_inner_conn_offset;

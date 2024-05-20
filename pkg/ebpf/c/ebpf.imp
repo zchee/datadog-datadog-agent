@@ -1,0 +1,10 @@
+[
+{ "include": ["<asm/int-ll64.h>", "private", "\"ktypes.h\"", "public"] },
+{ "include": ["<linux/bpf.h>", "private", "\"bpf_helpers.h\"", "public"] },
+{ "include": ["<linux/compiler_attributes.h>", "private", "\"bpf_helpers.h\"", "public"] },
+{ "include": ["<linux/types.h>", "private", "\"ktypes.h\"", "public"] },
+{ "include": ["<linux/stddef.h>", "private", "\"bpf_helpers.h\"", "public"] },
+{ "include": ["<asm/ptrace.h>", "private", "\"bpf_tracing.h\"", "public"] },
+{ "include": ["<asm/errno-base.h>", "private", "<uapi/asm-generic/errno-base.h>", "public"] },
+{ "include": ["\"bpf_core_read.h\"", "private", "\"bpf_tracing.h\"", "public"] },
+]

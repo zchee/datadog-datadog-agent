@@ -2,17 +2,22 @@
 #define __CONNTRACK_HELPERS_H
 
 #ifndef COMPILE_CORE
-#include <net/netfilter/nf_conntrack.h>
-#include <linux/types.h>
-#include <linux/sched.h>
+#include <linux/in.h>                                   // for IPPROTO_TCP, IPPROTO_UDP
+#include <linux/netfilter.h>                            // for nf_inet_addr
+#include <linux/netfilter/nf_conntrack_tuple_common.h>  // for nf_conntrack_man_proto, nf_conntrack_man_proto::(anon...
+#include <linux/socket.h>                               // for AF_INET, AF_INET6
+#include <net/netfilter/nf_conntrack_tuple.h>           // for nf_conntrack_tuple, nf_conntrack_man, nf_conntrack_tu...
 #endif
 
-#include "bpf_builtins.h"
-
-#include "conntrack/types.h"
-#include "ip.h"
-#include "netns.h"
-#include "ipv6.h"
+#include "bpf_endian.h"                                 // for bpf_ntohs
+#include "bpf_helpers.h"                                // for log_debug, __always_inline, NULL, bpf_map_lookup_elem
+#include "compiler.h"                                   // for LOAD_CONSTANT
+#include "conn_tuple.h"                                 // for CONN_TYPE_TCP, CONN_TYPE_UDP, CONN_V4, CONN_V6
+#include "conntrack/types.h"                            // for conntrack_tuple_t, conntrack_telemetry_t
+#include "ip.h"                                         // for print_ip
+#include "ipv6.h"                                       // for read_in6_addr, is_tcpv6_enabled, is_udpv6_enabled
+#include "ktypes.h"                                     // for __u16, __u32, __u64, u64
+#include "map-defs.h"                                   // for BPF_ARRAY_MAP
 
 /* This map is used for conntrack telemetry in kernelspace
  * only key 0 is used
@@ -98,7 +103,5 @@ static __always_inline void increment_telemetry_registers_count() {
     }
     __sync_fetch_and_add(&val->registers, 1);
 }
-
-
 
 #endif /* __CONNTRACK_HELPERS_H */

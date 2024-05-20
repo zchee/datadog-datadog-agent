@@ -1,20 +1,21 @@
-#include "ktypes.h"
-#include "bpf_telemetry.h"
-#include "bpf_endian.h"
-#include "bpf_tracing.h"
-
-#include "ip.h"
-#include "ipv6.h"
-#include "sock.h"
-#include "skb.h"
-
-#include "tracer/tracer.h"
-#include "tracer/events.h"
-#include "tracer/bind.h"
-#include "tracer/maps.h"
-#include "tracer/stats.h"
-#include "tracer/telemetry.h"
-#include "tracer/port.h"
+#include "bpf_endian.h"        // for bpf_ntohs
+#include "bpf_helpers.h"       // for SEC, log_debug, bpf_get_current_pid_tgid, __always_inline, bpf_map_delete_elem
+#include "bpf_telemetry.h"     // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"       // for BPF_PROG, ___bpf_ctx_cast4, ___bpf_ctx_cast1, ___bpf_ctx_cast3, ___bpf_ctx_cast6
+#include "compiler.h"          // for LOAD_CONSTANT
+#include "conn_tuple.h"        // for conn_tuple_t, CONN_TYPE_UDP, CONN_TYPE_TCP, metadata_mask_t, CONN_V4, CONN_V6
+#include "ipv6.h"              // for read_in6_addr, is_ipv4_mapped_ipv6
+#include "ktypes.h"            // for size_t, u64, msghdr, sk_buff, __u16, __u32, flowi4, flowi6, sockaddr, socket
+#include "map-defs.h"          // for BPF_PERCPU_HASH_MAP
+#include "netns.h"             // for get_netns_from_sock
+#include "sock.h"              // for read_conn_tuple, tcp_sk, get_tcp_segment_counts, read_sport, fl4_dport, fl4_sport
+#include "tracer/bind.h"       // for sys_enter_bind, sys_exit_bind
+#include "tracer/events.h"     // for flush_conn_close_if_full, cleanup_conn, MSG_PEEK
+#include "tracer/maps.h"       // for pending_tcp_retransmit_skb, port_bindings, tcp_ongoing_connect_pid, udp_recv_sock
+#include "tracer/port.h"       // for remove_port_bind, add_port_bind
+#include "tracer/stats.h"      // for handle_message, handle_tcp_stats, handle_skb_consume_udp, handle_tcp_recv, han...
+#include "tracer/telemetry.h"  // for increment_telemetry_count, udp_send_missed
+#include "tracer/tracer.h"     // for port_binding_t, tcp_retransmit_skb_args_t, CONN_DIRECTION_UNKNOWN, PACKET_COUN...
 
 BPF_PERCPU_HASH_MAP(udp6_send_skb_args, u64, u64, 1024)
 BPF_PERCPU_HASH_MAP(udp_send_skb_args, u64, conn_tuple_t, 1024)

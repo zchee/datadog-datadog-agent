@@ -1,11 +1,10 @@
 #ifndef __JAVA_MAPS_H
 #define __JAVA_MAPS_H
 
-#include "bpf_helpers.h"
-#include "map-defs.h"
-#include "conn_tuple.h"
-
-#include "protocols/tls/java/types.h"
+#include "conn_tuple.h"                // for conn_tuple_t
+#include "ktypes.h"                    // for bool
+#include "map-defs.h"                  // for BPF_HASH_MAP, BPF_PROG_ARRAY
+#include "protocols/tls/java/types.h"  // for MAX_MESSAGE_TYPE, connection_by_peer_key_t
 
 /* A set (map from a key to a const bool value, we care only if the key exists in the map, and not its value) to
    mark if we've seen a specific java tls connection.

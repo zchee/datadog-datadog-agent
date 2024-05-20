@@ -1,8 +1,9 @@
 #ifndef __PROTOCOL_STACK_HELPERS_H
 #define __PROTOCOL_STACK_HELPERS_H
 
-#include "ktypes.h"
-#include "protocols/classification/defs.h"
+#include "bpf_helpers.h"                    // for __always_inline, __maybe_unused
+#include "ktypes.h"                         // for __u16, __u8, bool, false, u16, u8
+#include "protocols/classification/defs.h"  // for protocol_stack_t, PROTOCOL_UNKNOWN, protocol_layer_t, protocol_t
 
 // get_protocol_layer retrieves the `protocol_layer_t` associated to the given `protocol_t`.
 // Example:

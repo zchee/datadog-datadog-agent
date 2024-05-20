@@ -1,7 +1,11 @@
 #ifndef __PORT_RANGE_H
 #define __PORT_RANGE_H
 
-#include "ip.h"
+#include "bpf_helpers.h"  // for __always_inline
+#include "compiler.h"     // for LOAD_CONSTANT
+#include "conn_tuple.h"   // for conn_tuple_t
+#include "ip.h"           // for flip_tuple
+#include "ktypes.h"       // for __u16, __u64, false, bool, true, u16
 
 static __always_inline __u16 ephemeral_range_begin() {
     __u64 val = 0;

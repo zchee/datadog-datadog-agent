@@ -1,6 +1,8 @@
 #ifndef __MYSQL_DEFS_H
 #define __MYSQL_DEFS_H
 
+#include "ktypes.h"  // for __u8, __u32
+
 // Each MySQL command starts with mysql_hdr, thus the minimum length is sizeof(mysql_hdr).
 #define MYSQL_MIN_LENGTH 5
 

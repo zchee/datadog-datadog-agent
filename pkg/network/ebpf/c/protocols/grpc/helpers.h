@@ -1,13 +1,15 @@
 #ifndef __GRPC_HELPERS_H
 #define __GRPC_HELPERS_H
 
-#include "bpf_builtins.h"
-
-#include "protocols/http2/decoding-defs.h"
-#include "protocols/http2/defs.h"
-#include "protocols/http2/helpers.h"
-#include "protocols/http2/skb-common.h"
-#include "protocols/grpc/defs.h"
+#include "bpf_builtins.h"                   // for bpf_memcmp
+#include "bpf_helpers.h"                    // for bpf_skb_load_bytes, __always_inline, __sk_buff
+#include "ip.h"                             // for skb_info_t
+#include "ktypes.h"                         // for __u8, __u32, __u64, bool, false, true
+#include "protocols/grpc/defs.h"            // for PAYLOAD_UNDETERMINED, grpc_status_t, PAYLOAD_NOT_GRPC, PAYLOAD_GRPC
+#include "protocols/http2/decoding-defs.h"  // for HTTP2_CONTENT_TYPE_IDX, MAX_4_BITS, MAX_6_BITS
+#include "protocols/http2/defs.h"           // for string_literal_header_t, HTTP2_FRAME_HEADER_SIZE, http2_frame_t
+#include "protocols/http2/helpers.h"        // for read_http2_frame_header
+#include "protocols/http2/skb-common.h"     // for handle_dynamic_table_update, process_and_skip_literal_headers
 
 // Number of frames to filter in a single packet, while looking for the first headers frame.
 #define GRPC_MAX_FRAMES_TO_FILTER 90

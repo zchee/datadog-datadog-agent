@@ -1,5 +1,6 @@
 #ifndef __KCONFIG_H
 #define __KCONFIG_H
+#ifndef COMPILE_CORE
 
 #include <linux/kconfig.h>
 // include asm/compiler.h to fix `error: expected string literal in 'asm'` compilation error coming from mte-kasan.h
@@ -8,4 +9,5 @@
 #include <asm/compiler.h>
 #endif
 
+#endif
 #endif

@@ -1,17 +1,24 @@
 #ifndef __HTTP_H
 #define __HTTP_H
 
-#include "bpf_builtins.h"
-#include "bpf_telemetry.h"
-
-#include "protocols/sockfd.h"
-
-#include "protocols/classification/common.h"
-
-#include "protocols/http/types.h"
-#include "protocols/http/maps.h"
-#include "protocols/http/usm-events.h"
-#include "protocols/tls/https.h"
+#include "bpf_builtins.h"                                 // for bpf_memcpy, bpf_memset
+#include "bpf_helpers.h"                                  // for __always_inline, NULL, bpf_map_lookup_elem, log_debug
+#include "bpf_telemetry.h"                                // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"                                  // for BPF_UPROBE
+#include "conn_tuple.h"                                   // for conn_tuple_t
+#include "ip.h"                                           // for skb_info_t, TCPHDR_FIN, TCPHDR_RST
+#include "ktypes.h"                                       // for bool, false, __u32, true, __u64, u16, u32
+#include "port_range.h"                                   // for normalize_tuple
+#include "protocols/classification/common.h"              // for is_payload_empty
+#include "protocols/classification/dispatcher-helpers.h"  // for fetch_dispatching_arguments
+#include "protocols/classification/dispatcher-maps.h"     // for tls_dispatcher_arguments
+#include "protocols/classification/structs.h"             // for tls_dispatcher_arguments_t
+#include "protocols/http/buffer.h"                        // for read_into_buffer_skb, read_into_user_buffer_http
+#include "protocols/http/maps.h"                          // for http_in_flight, http_scratch_buffer
+#include "protocols/http/types.h"                         // for http_transaction_t, http_event_t, HTTP_REQUEST, htt...
+#include "protocols/http/usm-events.h"                    // for http_batch_flush, http_batch_enqueue
+#include "protocols/tls/defs.h"                           // for HTTPS_PORT
+#include "protocols/tls/tags-types.h"                     // for NO_TAGS
 
 static __always_inline int http_responding(http_transaction_t *http) {
     return (http != NULL && http->response_status_code != 0);
@@ -252,7 +259,7 @@ int socket__http_filter(struct __sk_buff* skb) {
 }
 
 SEC("uprobe/http_process")
-int uprobe__http_process(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__http_process) {
     const __u32 zero = 0;
     tls_dispatcher_arguments_t *args = bpf_map_lookup_elem(&tls_dispatcher_arguments, &zero);
     if (args == NULL) {
@@ -270,7 +277,7 @@ int uprobe__http_process(struct pt_regs *ctx) {
 }
 
 SEC("uprobe/http_termination")
-int uprobe__http_termination(struct pt_regs *ctx) {
+int BPF_UPROBE(uprobe__http_termination) {
     const __u32 zero = 0;
     tls_dispatcher_arguments_t *args = bpf_map_lookup_elem(&tls_dispatcher_arguments, &zero);
     if (args == NULL) {
