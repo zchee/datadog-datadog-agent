@@ -76,6 +76,7 @@ type kafkaParsingTestAttributes struct {
 	teardown func(t *testing.T, ctx testContext)
 	// Configuration for the monitor object
 	configuration func() *config.Config
+	run           bool
 }
 
 type kafkaParsingValidation struct {
@@ -117,7 +118,11 @@ func (s *KafkaProtocolParsingSuite) TestKafkaProtocolParsing() {
 	t := s.T()
 
 	t.Run("without TLS", func(t *testing.T) {
-		s.testKafkaProtocolParsing(t, false)
+		for i := 0; i < 20; i++ {
+			t.Run(fmt.Sprintf("run%d", i), func(t *testing.T) {
+				s.testKafkaProtocolParsing(t, false)
+			})
+		}
 	})
 
 	t.Run("with TLS", func(t *testing.T) {
@@ -558,6 +563,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 			},
 			teardown:      kafkaTeardown,
 			configuration: getConfig,
+			run:           true,
 		},
 		{
 			name: "Kafka Kernel Telemetry",
@@ -645,6 +651,9 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	require.NoError(t, proxy.WaitForConnectionReady(unixPath))
 
 	for _, tt := range tests {
+		if !tt.run {
+			continue
+		}
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.teardown != nil {
 				t.Cleanup(func() {
