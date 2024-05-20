@@ -127,6 +127,9 @@ omnibus/.tarball-version
 omnibus/files/sources
 omnibus/resources/agent/msi/cal/packages/
 
+# bazel files
+/bazel-*
+
 # serverless artifact
 cmd/serverless/serverless
 
@@ -184,13 +187,10 @@ pkg/network/netlink/testdata/message_dump*
 .dir-locals.el
 
 # etags
-TAGS
+#TAGS
 
 # cscope
 cscope.out
-
-# Go workspace until we have proper support in the tooling
-go.work*
 
 tools/windows/DatadogAgentInstaller/.vs/
 tools/windows/DatadogAgentInstaller/packages/
@@ -220,3 +220,5 @@ pkg/serverless/trace/install.json
 
 # Files used for eBPF complexity analysis
 ebpf-calculator
+
+/go.work.sum
