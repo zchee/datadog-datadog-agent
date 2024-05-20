@@ -12,6 +12,7 @@ cmake(
         "DISABLE_PYTHON2:BOOL": "ON",
         "BUILD_DEMO": "OFF",
         "CMAKE_PREFIX_PATH": "$EXT_BUILD_DEPS/python3",
+        "CMAKE_INSTALL_RPATH": "/opt/datadog-agent/embedded/lib",
         "Python3_FIND_STRATEGY": "LOCATION",
     },
     lib_source = ":srcs",

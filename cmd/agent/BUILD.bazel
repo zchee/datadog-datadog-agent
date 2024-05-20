@@ -1,6 +1,7 @@
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
-load("@rules_pkg//:pkg.bzl", "pkg_deb", "pkg_tar")
 load("@rules_pkg//:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
+load("@rules_pkg//:pkg.bzl", "pkg_deb", "pkg_tar")
+load("//:bazel/rules/patch_rpath.bzl", "patch_rpath")
 
 go_library(
     name = "agent_lib",
@@ -116,60 +117,64 @@ go_library(
 go_binary(
     name = "agent",
     embed = [":agent_lib"],
+    gc_linkopts = [
+        "-r=/opt/datadog-agent/embedded/lib",  # keep
+    ],
+    visibility = ["//visibility:public"],
     x_defs = {
         # keep: Hard-code these things to avoid touching rtloader initialization logic for now
         "github.com/DataDog/datadog-agent/pkg/collector/python.pythonHome3": "/opt/datadog-agent/embedded",  # keep
         "github.com/DataDog/datadog-agent/pkg/config/setup.DefaultPython": "3",  # keep
     },
-    visibility = ["//visibility:public"],
 )
 
-load("//:bazel/rules/patch_rpath.bzl", "patch_rpath")
 patch_rpath(
     name = "patched_agent",
-    deps = [":agent"],
     rpaths = ["/opt/datadog-agent/embedded/lib"],
+    deps = [":agent"],
 )
+
 patch_rpath(
     name = "patched_rtloader",
-    deps = ["//rtloader"],
     rpaths = ["/opt/datadog-agent/embedded/lib"],
+    deps = ["//rtloader"],
 )
+
 patch_rpath(
     name = "patched_python3",
-    deps = ["@python3"],
     rpaths = ["/opt/datadog-agent/embedded/lib"],
+    deps = ["@python3"],
 )
 
 # Packaging stuff
 
 pkg_files(
     name = "agent_bin",
-    srcs = [":patched_agent"],
-    prefix = "bin/agent",
+    srcs = [":agent"],
     attributes = pkg_attributes(mode = "0755"),
+    prefix = "bin/agent",
 )
 
 pkg_files(
     name = "rtloader_files",
-    srcs = [":patched_rtloader"],
+    srcs = ["//rtloader"],
     prefix = "embedded",
-    strip_prefix = strip_prefix.from_pkg("patched/rtloader/rtloader"),
+    strip_prefix = strip_prefix.from_pkg("rtloader"),
 )
 
 pkg_files(
     name = "python3_files",
-    srcs = [":patched_python3"],
+    srcs = ["@python3"],
     prefix = "embedded",
-    strip_prefix = strip_prefix.from_pkg("_main~_repo_rules~python3/python3"),
+    strip_prefix = strip_prefix.from_pkg("python3"),
 )
 
 pkg_filegroup(
     name = "agent_installation",
     srcs = [
         ":agent_bin",
-        ":rtloader_files",
         ":python3_files",
+        ":rtloader_files",
     ],
     prefix = "/opt/datadog-agent",
 )
