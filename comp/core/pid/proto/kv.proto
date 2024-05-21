@@ -5,6 +5,10 @@ syntax = "proto3";
 package proto;
 option go_package = "./proto";
 
+message InitRequest {
+    string pidFilePath = 1;
+}
+
 message GetRequest {
     string key = 1;
 }
@@ -21,6 +25,7 @@ message PutRequest {
 message Empty {}
 
 service KV {
+    rpc Init(InitRequest) returns (Empty);
     rpc Get(GetRequest) returns (GetResponse);
     rpc Put(PutRequest) returns (Empty);
 }

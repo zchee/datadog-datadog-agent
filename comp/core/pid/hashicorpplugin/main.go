@@ -13,6 +13,11 @@ import (
 
 type PidImpl struct{}
 
+func (pid *PidImpl) Init(pidFilePath string) error {
+	pid.Put("Hello", []byte(pidFilePath))
+	return nil
+}
+
 func (PidImpl) Put(key string, value []byte) error {
 	value = []byte(fmt.Sprintf("%s\n\nWritten from plugin-go-grpc", string(value)))
 	return ioutil.WriteFile("kv_"+key, value, 0644)

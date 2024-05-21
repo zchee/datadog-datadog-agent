@@ -20,6 +20,13 @@ func (m *GRPCClient) Put(key string, value []byte) error {
 	return err
 }
 
+func (m *GRPCClient) Init(pidFilePath string) error {
+	_, err := m.client.Init(context.Background(), &proto.InitRequest{
+		PidFilePath: pidFilePath,
+	})
+	return err
+}
+
 func (m *GRPCClient) Get(key string) ([]byte, error) {
 	resp, err := m.client.Get(context.Background(), &proto.GetRequest{
 		Key: key,
@@ -48,4 +55,10 @@ func (m *GRPCServer) Get(
 	req *proto.GetRequest) (*proto.GetResponse, error) {
 	v, err := m.Impl.Get(req.Key)
 	return &proto.GetResponse{Value: v}, err
+}
+
+func (m *GRPCServer) Init(
+	ctx context.Context,
+	req *proto.InitRequest) (*proto.Empty, error) {
+	return &proto.Empty{}, m.Impl.Init(req.PidFilePath)
 }

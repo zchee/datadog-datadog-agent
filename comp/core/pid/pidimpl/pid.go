@@ -21,7 +21,7 @@ import (
 // Module defines the fx options for this component.
 func Module() fxutil.Module {
 	return fxutil.Component(
-		fx.Provide(newPID),
+		fx.Provide(NewPID),
 	)
 }
 
@@ -37,14 +37,14 @@ func NewParams(pidfilePath string) Params {
 	}
 }
 
-type dependencies struct {
+type Dependencies struct {
 	fx.In
 	Lc     fx.Lifecycle
 	Log    log.Component
 	Params Params
 }
 
-func newPID(deps dependencies) (pid.Component, error) {
+func NewPID(deps Dependencies) (pid.Component, error) {
 	pidfilePath := deps.Params.PIDfilePath
 	if pidfilePath != "" {
 		err := pidfile.WritePID(pidfilePath)

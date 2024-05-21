@@ -30,6 +30,7 @@ var PluginMap = map[string]plugin.Plugin{
 
 // Pid is the interface that we're exposing as a plugin.
 type Pid interface {
+	Init(pidFilePath string) error
 	Put(key string, value []byte) error
 	Get(key string) ([]byte, error)
 }
