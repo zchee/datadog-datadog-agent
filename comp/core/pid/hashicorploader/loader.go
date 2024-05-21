@@ -4,14 +4,15 @@
 package hashicorploader
 
 import (
-	"fmt"
 	"os/exec"
 
+	"github.com/DataDog/datadog-agent/comp/core/pid"
+	"github.com/DataDog/datadog-agent/comp/core/pid/pidimpl"
 	"github.com/DataDog/datadog-agent/comp/core/pid/shared"
 	"github.com/hashicorp/go-plugin"
 )
 
-func CreateComponent() error {
+func NewPluginPID(deps pidimpl.Dependencies) (pid.Component, error) {
 	// We're a host. Start by launching the plugin process.
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
@@ -20,29 +21,24 @@ func CreateComponent() error {
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC, plugin.ProtocolGRPC},
 	})
-	defer client.Kill()
+	//defer client.Kill()
 
 	// Connect via RPC
 	rpcClient, err := client.Client()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Request the plugin
 	raw, err := rpcClient.Dispense(shared.PluginName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	kv := raw.(shared.Pid)
-	if err := kv.Init("Init called"); err != nil {
-		return err
+	pid := raw.(shared.Pid)
+	if err := pid.Init(deps.Params.PIDfilePath); err != nil {
+		return nil, err
 	}
 
-	result, err := kv.PIDFilePath()
-	if err != nil {
-		return err
-	}
-	fmt.Println("-----------------", string(result))
-	return nil
+	return pid, nil
 }

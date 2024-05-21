@@ -48,8 +48,8 @@ type pidImpl struct {
 	pidFilePath string
 }
 
-func (pid pidImpl) GetPIDFilePath() string {
-	return pid.pidFilePath
+func (pid pidImpl) PIDFilePath() (string, error) {
+	return pid.pidFilePath, nil
 }
 
 func NewPID(deps Dependencies) (pid.Component, error) {

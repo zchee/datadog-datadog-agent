@@ -11,5 +11,5 @@ package pid
 
 // Component is the component type.
 type Component interface {
-	GetPIDFilePath() string
+	PIDFilePath() (string, error)
 }
