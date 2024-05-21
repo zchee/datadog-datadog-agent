@@ -10,4 +10,6 @@ package pid
 // team: agent-shared-components
 
 // Component is the component type.
-type Component interface{}
+type Component interface {
+	GetPIDFilePath() string
+}

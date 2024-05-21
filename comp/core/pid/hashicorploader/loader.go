@@ -35,23 +35,11 @@ func CreateComponent() error {
 	}
 
 	kv := raw.(shared.Pid)
-	if err := kv.Init("TEST42"); err != nil {
+	if err := kv.Init("Init called"); err != nil {
 		return err
 	}
-	//func NewPID(deps Dependencies) (pid.Component, error) {
-	// type Dependencies struct {
-	// 	fx.In
-	// 	Lc     fx.Lifecycle
-	// 	Log    log.Component
-	// 	Params Params
-	// }
 
-	// err = kv.Put("Hello", []byte("World"))
-	// if err != nil {
-	// 	return err
-	// }
-
-	result, err := kv.Get("Hello")
+	result, err := kv.PIDFilePath()
 	if err != nil {
 		return err
 	}

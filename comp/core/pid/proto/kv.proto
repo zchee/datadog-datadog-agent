@@ -9,23 +9,13 @@ message InitRequest {
     string pidFilePath = 1;
 }
 
-message GetRequest {
-    string key = 1;
-}
-
-message GetResponse {
-    bytes value = 1;
-}
-
-message PutRequest {
-    string key = 1;
-    bytes value = 2;
+message PIDFilePathResponse {
+    string value = 1;
 }
 
 message Empty {}
 
-service KV {
+service PID {
     rpc Init(InitRequest) returns (Empty);
-    rpc Get(GetRequest) returns (GetResponse);
-    rpc Put(PutRequest) returns (Empty);
+    rpc PIDFilePath(Empty) returns (PIDFilePathResponse);
 }

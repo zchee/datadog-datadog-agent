@@ -44,12 +44,20 @@ type Dependencies struct {
 	Params Params
 }
 
+type pidImpl struct {
+	pidFilePath string
+}
+
+func (pid pidImpl) GetPIDFilePath() string {
+	return pid.pidFilePath
+}
+
 func NewPID(deps Dependencies) (pid.Component, error) {
 	pidfilePath := deps.Params.PIDfilePath
 	if pidfilePath != "" {
 		err := pidfile.WritePID(pidfilePath)
 		if err != nil {
-			return struct{}{}, deps.Log.Errorf("Error while writing PID file, exiting: %v", err)
+			return pidImpl{}, deps.Log.Errorf("Error while writing PID file, exiting: %v", err)
 		}
 		deps.Log.Infof("pid '%d' written to pid file '%s'", os.Getpid(), pidfilePath)
 
@@ -59,5 +67,5 @@ func NewPID(deps Dependencies) (pid.Component, error) {
 				return nil
 			}})
 	}
-	return struct{}{}, nil
+	return pidImpl{}, nil
 }

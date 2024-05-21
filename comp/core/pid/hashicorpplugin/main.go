@@ -4,27 +4,21 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-
 	"github.com/DataDog/datadog-agent/comp/core/pid/shared"
 	"github.com/hashicorp/go-plugin"
 )
 
-type PidImpl struct{}
+type PidImpl struct {
+	pidFilePath string
+}
 
 func (pid *PidImpl) Init(pidFilePath string) error {
-	pid.Put("Hello", []byte(pidFilePath))
+	pid.pidFilePath = pidFilePath
 	return nil
 }
 
-func (PidImpl) Put(key string, value []byte) error {
-	value = []byte(fmt.Sprintf("%s\n\nWritten from plugin-go-grpc", string(value)))
-	return ioutil.WriteFile("kv_"+key, value, 0644)
-}
-
-func (PidImpl) Get(key string) ([]byte, error) {
-	return ioutil.ReadFile("kv_" + key)
+func (pid *PidImpl) PIDFilePath() (string, error) {
+	return pid.pidFilePath, nil
 }
 
 func main() {

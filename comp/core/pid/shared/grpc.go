@@ -10,15 +10,7 @@ import (
 )
 
 // GRPCClient is an implementation of KV that talks over RPC.
-type GRPCClient struct{ client proto.KVClient }
-
-func (m *GRPCClient) Put(key string, value []byte) error {
-	_, err := m.client.Put(context.Background(), &proto.PutRequest{
-		Key:   key,
-		Value: value,
-	})
-	return err
-}
+type GRPCClient struct{ client proto.PIDClient }
 
 func (m *GRPCClient) Init(pidFilePath string) error {
 	_, err := m.client.Init(context.Background(), &proto.InitRequest{
@@ -27,12 +19,10 @@ func (m *GRPCClient) Init(pidFilePath string) error {
 	return err
 }
 
-func (m *GRPCClient) Get(key string) ([]byte, error) {
-	resp, err := m.client.Get(context.Background(), &proto.GetRequest{
-		Key: key,
-	})
+func (m *GRPCClient) PIDFilePath() (string, error) {
+	resp, err := m.client.PIDFilePath(context.Background(), &proto.Empty{})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return resp.Value, nil
@@ -44,17 +34,11 @@ type GRPCServer struct {
 	Impl Pid
 }
 
-func (m *GRPCServer) Put(
+func (m *GRPCServer) PIDFilePath(
 	ctx context.Context,
-	req *proto.PutRequest) (*proto.Empty, error) {
-	return &proto.Empty{}, m.Impl.Put(req.Key, req.Value)
-}
-
-func (m *GRPCServer) Get(
-	ctx context.Context,
-	req *proto.GetRequest) (*proto.GetResponse, error) {
-	v, err := m.Impl.Get(req.Key)
-	return &proto.GetResponse{Value: v}, err
+	req *proto.Empty) (*proto.PIDFilePathResponse, error) {
+	v, err := m.Impl.PIDFilePath()
+	return &proto.PIDFilePathResponse{Value: v}, err
 }
 
 func (m *GRPCServer) Init(
