@@ -186,6 +186,7 @@ func (a *Agent) Run() {
 		workers = 1
 	}
 
+	log.Infof("Processing Pipeline configured with %d workers", workers)
 	for i := 0; i < workers; i++ {
 		go a.work()
 	}
