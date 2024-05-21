@@ -53,19 +53,29 @@ func (pid pidImpl) PIDFilePath() (string, error) {
 }
 
 func NewPID(deps Dependencies) (pid.Component, error) {
-	pidfilePath := deps.Params.PIDfilePath
+	comp, err := NewPIDWithoutLifecycle(deps.Params, deps.Log)
+	if err != nil {
+		return nil, err
+	}
+	deps.Lc.Append(fx.Hook{OnStop: comp.OnStop})
+
+	return pidImpl{}, nil
+}
+
+func NewPIDWithoutLifecycle(params Params, log log.Component) (pidImpl, error) {
+	pidfilePath := params.PIDfilePath
+	log.Infof("NewPIDWithoutLifecycle: pidfilePath: %s", pidfilePath)
 	if pidfilePath != "" {
 		err := pidfile.WritePID(pidfilePath)
 		if err != nil {
-			return pidImpl{}, deps.Log.Errorf("Error while writing PID file, exiting: %v", err)
+			return pidImpl{}, log.Errorf("Error while writing PID file, exiting: %v", err)
 		}
-		deps.Log.Infof("pid '%d' written to pid file '%s'", os.Getpid(), pidfilePath)
-
-		deps.Lc.Append(fx.Hook{
-			OnStop: func(context.Context) error {
-				_ = os.Remove(pidfilePath)
-				return nil
-			}})
+		log.Infof("pid '%d' written to pid file '%s'", os.Getpid(), pidfilePath)
 	}
 	return pidImpl{}, nil
+}
+
+func (p pidImpl) OnStop(_ context.Context) error {
+	_ = os.Remove(p.pidFilePath)
+	return nil
 }
