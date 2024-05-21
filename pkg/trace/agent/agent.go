@@ -177,11 +177,11 @@ func (a *Agent) Run() {
 
 	go a.StatsWriter.Run()
 
-	// Having GOMAXPROCS/2 processor threads is
-	// enough to keep the downstream writer busy.
+	// Having GOMAXPROCS processor threads is
+	// enough to keep the agent busy.
 	// Having more processor threads would not speed
 	// up processing, but just expand memory.
-	workers := runtime.GOMAXPROCS(0) / 2
+	workers := runtime.GOMAXPROCS(0)
 	if workers < 1 {
 		workers = 1
 	}
