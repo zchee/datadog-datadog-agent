@@ -12,8 +12,9 @@ type PidImpl struct {
 	pidFilePath string
 }
 
-func (pid *PidImpl) Init(pidFilePath string) error {
+func (pid *PidImpl) Init(pidFilePath string, logger shared.Logger) error {
 	pid.pidFilePath = pidFilePath
+	logger.Log("PID file path set to: " + pidFilePath)
 	return nil
 }
 

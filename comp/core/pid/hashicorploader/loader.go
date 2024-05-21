@@ -4,6 +4,7 @@
 package hashicorploader
 
 import (
+	"fmt"
 	"os/exec"
 
 	"github.com/DataDog/datadog-agent/comp/core/pid"
@@ -36,9 +37,17 @@ func NewPluginPID(deps pidimpl.Dependencies) (pid.Component, error) {
 	}
 
 	pid := raw.(shared.Pid)
-	if err := pid.Init(deps.Params.PIDfilePath); err != nil {
+	if err := pid.Init(deps.Params.PIDfilePath, &Logger{}); err != nil {
 		return nil, err
 	}
 
 	return pid, nil
+}
+
+type Logger struct {
+}
+
+func (l *Logger) Log(message string) error {
+	fmt.Println("LOGGER", message)
+	return nil
 }

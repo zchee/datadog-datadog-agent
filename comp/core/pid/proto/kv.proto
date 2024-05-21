@@ -7,6 +7,7 @@ option go_package = "./proto";
 
 message InitRequest {
     string pidFilePath = 1;
+    uint32 log_server = 2;
 }
 
 message PIDFilePathResponse {
@@ -18,4 +19,13 @@ message Empty {}
 service PID {
     rpc Init(InitRequest) returns (Empty);
     rpc PIDFilePath(Empty) returns (PIDFilePathResponse);
+}
+
+
+message LogRequest {
+    string message = 1;
+}
+
+service Logger {
+    rpc Log(LogRequest) returns (Empty);
 }

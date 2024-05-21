@@ -7,15 +7,38 @@ import (
 	"context"
 
 	"github.com/DataDog/datadog-agent/comp/core/pid/proto"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin"
+	"google.golang.org/grpc"
 )
 
 // GRPCClient is an implementation of KV that talks over RPC.
-type GRPCClient struct{ client proto.PIDClient }
+type GRPCClient struct {
+	broker *plugin.GRPCBroker
+	client proto.PIDClient
+}
 
-func (m *GRPCClient) Init(pidFilePath string) error {
+func (m *GRPCClient) Init(pidFilePath string, logger Logger) error {
+	loggerServer := &GRPCLoggerServer{Impl: logger}
+
+	var s *grpc.Server
+	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
+		s = grpc.NewServer(opts...)
+		proto.RegisterLoggerServer(s, loggerServer)
+
+		return s
+	}
+
+	brokerID := m.broker.NextId()
+	go m.broker.AcceptAndServe(brokerID, serverFunc)
+
 	_, err := m.client.Init(context.Background(), &proto.InitRequest{
+		LogServer:   brokerID,
 		PidFilePath: pidFilePath,
 	})
+
+	s.Stop()
+
 	return err
 }
 
@@ -31,7 +54,8 @@ func (m *GRPCClient) PIDFilePath() (string, error) {
 // Here is the gRPC server that GRPCClient talks to.
 type GRPCServer struct {
 	// This is the real implementation
-	Impl Pid
+	Impl   Pid
+	broker *plugin.GRPCBroker
 }
 
 func (m *GRPCServer) PIDFilePath(
@@ -44,5 +68,40 @@ func (m *GRPCServer) PIDFilePath(
 func (m *GRPCServer) Init(
 	ctx context.Context,
 	req *proto.InitRequest) (*proto.Empty, error) {
-	return &proto.Empty{}, m.Impl.Init(req.PidFilePath)
+	conn, err := m.broker.Dial(req.LogServer)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	l := &GRPCLoggerClient{proto.NewLoggerClient(conn)}
+
+	return &proto.Empty{}, m.Impl.Init(req.PidFilePath, l)
+}
+
+type GRPCLoggerClient struct{ client proto.LoggerClient }
+
+func (m *GRPCLoggerClient) Log(message string) error {
+	_, err := m.client.Log(context.Background(), &proto.LogRequest{
+		Message: message,
+	})
+	if err != nil {
+		hclog.Default().Info("Log", "client", err)
+		return err
+	}
+	return err
+}
+
+// Here is the gRPC server that GRPCClient talks to.
+type GRPCLoggerServer struct {
+	// This is the real implementation
+	Impl Logger
+}
+
+func (m *GRPCLoggerServer) Log(ctx context.Context, req *proto.LogRequest) (*proto.Empty, error) {
+	err := m.Impl.Log(req.Message)
+	if err != nil {
+		return nil, err
+	}
+	return &proto.Empty{}, err
 }

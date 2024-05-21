@@ -30,23 +30,29 @@ var PluginMap = map[string]plugin.Plugin{
 
 // Pid is the interface that we're exposing as a plugin.
 type Pid interface {
-	Init(pidFilePath string) error
+	Init(pidFilePath string, logger Logger) error
 	PIDFilePath() (string, error)
+}
+
+type Logger interface {
+	Log(message string) error
 }
 
 type PidPlugin struct {
 	// GRPCPlugin must still implement the Plugin interface
-	plugin.Plugin
+	plugin.NetRPCUnsupportedPlugin
 	// Concrete implementation, written in Go. This is only used for plugins
 	// that are written in Go.
 	Impl Pid
 }
 
 func (p *PidPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	proto.RegisterPIDServer(s, &GRPCServer{Impl: p.Impl})
+	proto.RegisterPIDServer(s, &GRPCServer{Impl: p.Impl, broker: broker})
 	return nil
 }
 
 func (p *PidPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
-	return &GRPCClient{client: proto.NewPIDClient(c)}, nil
+	return &GRPCClient{client: proto.NewPIDClient(c), broker: broker}, nil
 }
+
+var _ plugin.GRPCPlugin = &PidPlugin{}
