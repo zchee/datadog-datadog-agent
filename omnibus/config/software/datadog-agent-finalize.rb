@@ -122,15 +122,17 @@ build do
             move "#{install_dir}/etc/datadog-agent/datadog.yaml.example", "/etc/datadog-agent"
             move "#{install_dir}/etc/datadog-agent/conf.d", "/etc/datadog-agent", :force=>true
             unless heroku_target?
-              move "#{install_dir}/etc/datadog-agent/system-probe.yaml.example", "/etc/datadog-agent"
+              # XXX: Leave out for local build
+              # move "#{install_dir}/etc/datadog-agent/system-probe.yaml.example", "/etc/datadog-agent"
               move "#{install_dir}/etc/datadog-agent/security-agent.yaml.example", "/etc/datadog-agent", :force=>true
               move "#{install_dir}/etc/datadog-agent/runtime-security.d", "/etc/datadog-agent", :force=>true
               move "#{install_dir}/etc/datadog-agent/compliance.d", "/etc/datadog-agent"
 
-              # Move SELinux policy
-              if debian_target? || redhat_target?
-                move "#{install_dir}/etc/datadog-agent/selinux", "/etc/datadog-agent/selinux"
-              end
+              # XXX: For local building
+              # # Move SELinux policy
+              # if debian_target? || redhat_target?
+              #   move "#{install_dir}/etc/datadog-agent/selinux", "/etc/datadog-agent/selinux"
+              # end
             end
 
             # Create empty directories so that they're owned by the package
