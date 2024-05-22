@@ -188,19 +188,17 @@ func (w *TraceWriter) FlushSync() error {
 	return nil
 }
 
-// WriteChunks writes and serializes the provided chunks
-func (w *TraceWriter) WriteChunks(pkg *SampledChunks) {
-	w.stats.Spans.Add(pkg.SpanCount)
-	w.stats.Traces.Add(int64(len(pkg.TracerPayload.Chunks)))
-	w.stats.Events.Add(pkg.EventCount)
-
+// appendChunks adds sampled chunks to the current payload, and in the case the payload
+// is full, returns a finished payload which needs to be written out.
+func (w *TraceWriter) appendChunks(pkg *SampledChunks) []*pb.TracerPayload {
+	var toflush []*pb.TracerPayload
 	w.mu.Lock()
+	defer w.mu.Unlock()
 	size := pkg.Size
 	if size+w.bufferedSize > MaxPayloadSize {
 		// reached maximum allowed buffered size
 		// reset the buffer so we can add our payload and defer a flush.
-		payloads := w.tracerPayloads
-		defer w.flushPayloads(payloads)
+		toflush = w.tracerPayloads
 		w.resetBuffer()
 	}
 	if len(pkg.TracerPayload.Chunks) > 0 {
@@ -208,9 +206,19 @@ func (w *TraceWriter) WriteChunks(pkg *SampledChunks) {
 		w.tracerPayloads = append(w.tracerPayloads, pkg.TracerPayload)
 	}
 	w.bufferedSize += size
-	// This cannot be deferred above, or it will encapsulate the flushPayloads as well, which will
-	// serialize all payload writes.
-	w.mu.Unlock()
+	return toflush
+}
+
+// WriteChunks writes and serializes the provided chunks
+func (w *TraceWriter) WriteChunks(pkg *SampledChunks) {
+	w.stats.Spans.Add(pkg.SpanCount)
+	w.stats.Traces.Add(int64(len(pkg.TracerPayload.Chunks)))
+	w.stats.Events.Add(pkg.EventCount)
+
+	toflush := w.appendChunks(pkg)
+	if toflush != nil {
+		w.flushPayloads(toflush)
+	}
 }
 
 func (w *TraceWriter) resetBuffer() {
@@ -220,11 +228,13 @@ func (w *TraceWriter) resetBuffer() {
 
 const headerLanguages = "X-Datadog-Reported-Languages"
 
+// w must be locked for a flush.
 func (w *TraceWriter) flush() {
 	defer w.resetBuffer()
-	w.flushpayloads(w.tracerPayloads)
+	w.flushPayloads(w.tracerPayloads)
 }
 
+// w does not need to be locked during flushPayloads.
 func (w *TraceWriter) flushPayloads(payloads []*pb.TracerPayload) {
 	w.flushTicker.Reset(w.tick) // reset the flush timer whenever we flush
 	if len(w.tracerPayloads) == 0 {
