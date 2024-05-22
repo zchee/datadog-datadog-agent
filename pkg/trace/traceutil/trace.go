@@ -94,26 +94,20 @@ func ChildrenMap(t pb.Trace) map[uint64][]*pb.Span {
 //     being the highest ancestor of other spans belonging to this service and
 //     attached to it).
 func ComputeTopLevel(trace pb.Trace) {
-	spanIDToIndex := make(map[uint64]int, len(trace))
-	for i, span := range trace {
-		spanIDToIndex[span.SpanID] = i
-	}
 	for _, span := range trace {
 		if span.ParentID == 0 {
 			// span is a root span
 			SetTopLevel(span, true)
 			continue
 		}
-		parentIndex, ok := spanIDToIndex[span.ParentID]
-		if !ok {
-			// span has no parent in chunk
-			SetTopLevel(span, true)
-			continue
+		for _, sp2 := range trace {
+			if sp2.ParentID == span.ParentID {
+				if sp2.Service != span.Service {
+					SetTopLevel(span, true)
+				}
+				continue
+			}
 		}
-		if trace[parentIndex].Service != span.Service {
-			// parent is not in the same service
-			SetTopLevel(span, true)
-			continue
-		}
+		SetTopLevel(span, true)
 	}
 }

@@ -223,7 +223,7 @@ func (a *Agent) normalizeTrace(ts *info.TagStats, t pb.Trace) error {
 		return errors.New("trace is empty (reason:empty_trace)")
 	}
 
-	spanIDs := make(map[uint64]struct{})
+	//spanIDs := make(map[uint64]struct{})
 	firstSpan := t[0]
 
 	for _, span := range t {
@@ -240,11 +240,11 @@ func (a *Agent) normalizeTrace(ts *info.TagStats, t pb.Trace) error {
 		if err := a.normalize(ts, span); err != nil {
 			return err
 		}
-		if _, ok := spanIDs[span.SpanID]; ok {
-			ts.SpansMalformed.DuplicateSpanID.Inc()
-			log.Debugf("Found malformed trace with duplicate span ID (reason:duplicate_span_id): %s", span)
-		}
-		spanIDs[span.SpanID] = struct{}{}
+		//if _, ok := spanIDs[span.SpanID]; ok {
+		//	ts.SpansMalformed.DuplicateSpanID.Inc()
+		//	log.Debugf("Found malformed trace with duplicate span ID (reason:duplicate_span_id): %s", span)
+		//}
+		//spanIDs[span.SpanID] = struct{}{}
 	}
 
 	return nil

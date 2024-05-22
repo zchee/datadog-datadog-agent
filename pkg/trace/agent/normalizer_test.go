@@ -7,8 +7,10 @@ package agent
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -598,4 +600,34 @@ func BenchmarkNormalization(b *testing.B) {
 
 		a.normalize(ts, span)
 	}
+}
+
+func BenchmarkComputeTopLevel(b *testing.B) {
+	// 10traces210spans.msgp
+	// 3885traces3891spans.msgp
+	src := "10traces210spans.msgp"
+	//src := "3885traces3891spans.msgp"
+
+	f, err := os.Open(src)
+	if err != nil {
+		b.Fatal(err)
+	}
+	bs, err := io.ReadAll(f)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	var traces pb.Traces
+	_, err = traces.UnmarshalMsg(bs)
+
+	//ts := newTagStats()
+	//a := &Agent{conf: config.New()}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, t := range traces {
+			traceutil.ComputeTopLevel(t)
+		}
+	}
+
 }

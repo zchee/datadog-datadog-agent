@@ -395,11 +395,11 @@ func (a *Agent) Process(p *api.Payload) {
 	}
 	sampledChunks.TracerPayload = p.TracerPayload
 	sampledChunks.TracerPayload.Chunks = newChunksArray(p.TracerPayload.Chunks)
-	if sampledChunks.Size > 0 {
-		a.TraceWriter.WriteChunks(sampledChunks)
-	}
 	if len(statsInput.Traces) > 0 {
 		a.Concentrator.Add(statsInput)
+	}
+	if sampledChunks.Size > 0 {
+		a.TraceWriter.WriteChunks(sampledChunks)
 	}
 }
 
