@@ -50,12 +50,6 @@ import (
 func NewTestAgent(ctx context.Context, conf *config.AgentConfig, telemetryCollector telemetry.TelemetryCollector) *Agent {
 	a := NewAgent(ctx, conf, telemetryCollector, &statsd.NoOpClient{})
 	a.Concentrator = &mockConcentrator{}
-	a.Concentrator.Start()
-	go func() {
-		<-ctx.Done()
-		a.Concentrator.Stop()
-	}()
-
 	a.TraceWriter = &mockTraceWriter{}
 	return a
 }
@@ -80,36 +74,13 @@ func (m *mockTraceWriter) FlushSync() error {
 type mockConcentrator struct {
 	stats []stats.Input
 	mu    sync.Mutex
-	wg    sync.WaitGroup
-	cIn   chan stats.Input
 }
 
-func (c *mockConcentrator) Start() {
-	c.cIn = make(chan stats.Input, 0)
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		for i := range c.cIn {
-			c.add(i)
-		}
-	}()
-}
-
-func (c *mockConcentrator) Stop() {
-	close(c.cIn)
-	c.wg.Wait()
-}
-
-func (c *mockConcentrator) Flush() {
-	c.Stop()
-	c.Start()
-}
-
-func (c *mockConcentrator) In() chan<- stats.Input {
-	return c.cIn
-}
-
-func (c *mockConcentrator) add(t stats.Input) {
+func (c *mockConcentrator) Start() {}
+func (c *mockConcentrator) Stop()  {}
+func (c *mockConcentrator) Add(t stats.Input) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.stats = append(c.stats, t)
 }
 func (c *mockConcentrator) Reset() []stats.Input {
@@ -767,13 +738,11 @@ func TestConcentratorInput(t *testing.T) {
 			tc.in.Source = agent.Receiver.Stats.GetTagStats(info.Tags{})
 			agent.Process(tc.in)
 			mco := agent.Concentrator.(*mockConcentrator)
-			mco.Flush()
 
 			if len(tc.expected.Traces) == 0 {
 				assert.Len(t, mco.stats, 0)
 				return
 			}
-
 			require.Len(t, mco.stats, 1)
 			assert.Equal(t, tc.expected, mco.stats[0])
 
@@ -1058,7 +1027,6 @@ func TestClientComputedStats(t *testing.T) {
 			ClientComputedStats: true,
 		})
 		mco := agnt.Concentrator.(*mockConcentrator)
-		mco.Flush()
 		assert.Len(t, mco.stats, 0)
 	})
 
@@ -1069,7 +1037,6 @@ func TestClientComputedStats(t *testing.T) {
 			ClientComputedStats: false,
 		})
 		mco := agnt.Concentrator.(*mockConcentrator)
-		mco.Flush()
 		assert.Len(t, mco.stats, 1)
 	})
 }
@@ -1428,8 +1395,6 @@ func TestPartialSamplingFree(t *testing.T) {
 		conf:              cfg,
 		Timing:            &timing.NoopReporter{},
 	}
-	agnt.Concentrator.Start()
-	t.Cleanup(agnt.Concentrator.Stop)
 	agnt.Receiver = api.NewHTTPReceiver(cfg, dynConf, in, agnt, telemetry.NewNoopCollector(), statsd, &timing.NoopReporter{})
 	now := time.Now()
 	smallKeptSpan := &pb.Span{
@@ -2339,7 +2304,6 @@ func TestSpanSampling(t *testing.T) {
 			sampledChunks := traceAgent.TraceWriter.(*mockTraceWriter).payloads[0]
 			tc.checks(t, tc.payload, sampledChunks.TracerPayload.Chunks)
 			mco := traceAgent.Concentrator.(*mockConcentrator)
-			mco.Flush()
 			require.Len(t, mco.stats, 1)
 			stats := mco.stats[0]
 			assert.Equal(t, len(tc.payload.Chunks[0].Spans), len(stats.Traces[0].TraceChunk.Spans))

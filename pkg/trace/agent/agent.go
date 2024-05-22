@@ -68,8 +68,7 @@ type traceWriter interface {
 type concentrator interface {
 	Start()
 	Stop()
-	//Add(t stats.Input)
-	In() chan<- stats.Input
+	Add(t stats.Input)
 }
 
 // Agent struct holds all the sub-routines structs and make the data flow between them
@@ -400,8 +399,7 @@ func (a *Agent) Process(p *api.Payload) {
 		a.TraceWriter.WriteChunks(sampledChunks)
 	}
 	if len(statsInput.Traces) > 0 {
-		//a.Concentrator.Add(statsInput)
-		a.Concentrator.In() <- statsInput
+		a.Concentrator.Add(statsInput)
 	}
 }
 
