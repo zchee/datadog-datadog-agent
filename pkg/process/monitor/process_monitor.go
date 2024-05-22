@@ -358,8 +358,8 @@ func (pm *ProcessMonitor) Initialize() error {
 
 			pm.processMonitorWG.Add(1)
 			// Setting up the main loop
-			pm.netlinkDoneChannel = make(chan struct{})
 			pm.netlinkErrorsChannel = make(chan error, 10)
+			pm.netlinkDoneChannel = make(chan struct{})
 			pm.netlinkEventsChannel = make(chan netlink.ProcEvent, processMonitorEventQueueSize)
 
 			go pm.mainEventLoop()
@@ -403,6 +403,8 @@ func (pm *ProcessMonitor) SubscribeExec(callback ProcessCallback) func() {
 	pm.hasExecCallbacks.Store(true)
 	pm.processExecCallbacks[&callback] = struct{}{}
 	pm.processExecCallbacksMutex.Unlock()
+
+	// fake change
 
 	// UnSubscribe()
 	return func() {
