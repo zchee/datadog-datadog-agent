@@ -35,7 +35,7 @@ static __always_inline bool is_postgres_query(const char *buf, __u32 buf_size) {
         return false;
     }
 
-    return is_sql_command(buf + sizeof(*hdr), buf_size - sizeof(*hdr));
+    return is_sql_command(buf, sizeof(*hdr), buf_size);
 }
 
 static __always_inline bool is_postgres(const char *buf, __u32 buf_size) {
