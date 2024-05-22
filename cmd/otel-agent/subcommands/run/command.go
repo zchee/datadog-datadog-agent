@@ -19,12 +19,11 @@ import (
 	corelog "github.com/DataDog/datadog-agent/comp/core/log"
 	corelogimpl "github.com/DataDog/datadog-agent/comp/core/log/logimpl"
 	"github.com/DataDog/datadog-agent/comp/core/secrets"
-	"github.com/DataDog/datadog-agent/comp/core/sysprobeconfig"
-	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+
 	"github.com/DataDog/datadog-agent/comp/forwarder"
 	"github.com/DataDog/datadog-agent/comp/forwarder/defaultforwarder"
 	"github.com/DataDog/datadog-agent/comp/forwarder/orchestrator/orchestratorinterface"
-	"github.com/DataDog/datadog-agent/comp/metadata/inventoryagent/inventoryagentimpl"
+
 	collectorcontribFx "github.com/DataDog/datadog-agent/comp/otelcol/collector-contrib/fx"
 	collectordef "github.com/DataDog/datadog-agent/comp/otelcol/collector/def"
 	collectorfx "github.com/DataDog/datadog-agent/comp/otelcol/collector/fx"
@@ -77,10 +76,10 @@ func runOTelAgentCommand(_ context.Context, params *subcommands.GlobalParams, op
 	err := fxutil.Run(
 		forwarder.Bundle(),
 		corelogimpl.Module(),
-		inventoryagentimpl.Module(),
-		workloadmeta.Module(),
+		// inventoryagentimpl.Module(),
+		// workloadmeta.Module(),
 		hostnameimpl.Module(),
-		sysprobeconfig.NoneModule(),
+		// sysprobeconfig.NoneModule(),
 		fetchonlyimpl.Module(),
 		collectorfx.Module(),
 		collectorcontribFx.Module(),
@@ -94,9 +93,9 @@ func runOTelAgentCommand(_ context.Context, params *subcommands.GlobalParams, op
 			return c, nil
 		}),
 
-		fx.Provide(func() workloadmeta.Params {
-			return workloadmeta.NewParams()
-		}),
+		// fx.Provide(func() workloadmeta.Params {
+		// 	return workloadmeta.NewParams()
+		// }),
 		fx.Provide(func() []string {
 			return append(params.ConfPaths, params.Sets...)
 		}),
