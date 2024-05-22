@@ -93,18 +93,14 @@ build do
     end
 
     if ENV["ENABLE_BAZEL"]
-      # Workaround to be able to maintain and make use of a long-running bazel server.
-      # Omnibus wants to work on a copy of the datadog-agent repo; but we prefer to work on the original
-      # because the Bazel server is attached to a specific workspace
-      original_repo_dir = File.absolute_path(File.join(project.filepath, '..', '..', '..', '..'))
       # Copy rtloader libs to where Bazel will pick them up
-      command "invoke bazel.copy-prebuilt --rtloader-src rtloader --rtloader-build rtloader/build", cwd: original_repo_dir
+      command "invoke bazel.copy-prebuilt --rtloader-src rtloader --rtloader-build rtloader/build"
       # Run the Bazel build
       target = "//cmd/agent:agent_dist"
-      command "bazel build #{target}", cwd: original_repo_dir
+      command "bazel build #{target}"
       # For convenience the build produces a tar file that includes the configs in the directory structure
       # that the rest of the omnibus script expects
-      command "tar -xf $(bazel cquery --output=files #{target}) -C #{project_dir}", cwd: original_repo_dir
+      command "tar -xf $(bazel cquery --output=files #{target}) -C #{project_dir}"
     else
       command "inv -e agent.build --exclude-rtloader #{include_sds} --python-runtimes #{py_runtimes_arg} --major-version #{major_version_arg} --rebuild --no-development --install-path=#{install_dir} --embedded-path=#{install_dir}/embedded --python-home-2=#{install_dir}/embedded --python-home-3=#{install_dir}/embedded --flavor #{flavor_arg} #{bundle_arg}", env: env
 
