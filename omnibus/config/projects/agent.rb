@@ -222,6 +222,11 @@ if linux_target?
   dependency 'datadog-security-agent-policies'
 end
 
+ENV['FIPS_ENABLED'] = 'true'
+if fips_enabled?
+  dependency 'openssl-fips'
+end
+
 # Include traps db file in snmp.d/traps_db/
 dependency 'snmp-traps'
 
