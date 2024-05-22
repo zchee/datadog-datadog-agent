@@ -195,17 +195,22 @@ func (w *TraceWriter) WriteChunks(pkg *SampledChunks) {
 	w.stats.Events.Add(pkg.EventCount)
 
 	w.mu.Lock()
-	defer w.mu.Unlock()
 	size := pkg.Size
 	if size+w.bufferedSize > MaxPayloadSize {
 		// reached maximum allowed buffered size
-		w.flush()
+		// reset the buffer so we can add our payload and defer a flush.
+		payloads := w.tracerPayloads
+		defer w.flushPayloads(payloads)
+		w.resetBuffer()
 	}
 	if len(pkg.TracerPayload.Chunks) > 0 {
 		log.Tracef("Writer: handling new tracer payload with %d spans: %v", pkg.SpanCount, pkg.TracerPayload)
 		w.tracerPayloads = append(w.tracerPayloads, pkg.TracerPayload)
 	}
 	w.bufferedSize += size
+	// This cannot be deferred above, or it will encapsulate the flushPayloads as well, which will
+	// serialize all payload writes.
+	w.mu.Unlock()
 }
 
 func (w *TraceWriter) resetBuffer() {
@@ -216,6 +221,11 @@ func (w *TraceWriter) resetBuffer() {
 const headerLanguages = "X-Datadog-Reported-Languages"
 
 func (w *TraceWriter) flush() {
+	defer w.resetBuffer()
+	w.flushpayloads(w.tracerPayloads)
+}
+
+func (w *TraceWriter) flushPayloads(payloads []*pb.TracerPayload) {
 	w.flushTicker.Reset(w.tick) // reset the flush timer whenever we flush
 	if len(w.tracerPayloads) == 0 {
 		// nothing to do
@@ -223,7 +233,6 @@ func (w *TraceWriter) flush() {
 	}
 
 	defer w.timing.Since("datadog.trace_agent.trace_writer.encode_ms", time.Now())
-	defer w.resetBuffer()
 
 	log.Debugf("Serializing %d tracer payloads.", len(w.tracerPayloads))
 	p := pb.AgentPayload{
@@ -233,7 +242,7 @@ func (w *TraceWriter) flush() {
 		TargetTPS:          w.prioritySampler.GetTargetTPS(),
 		ErrorTPS:           w.errorsSampler.GetTargetTPS(),
 		RareSamplerEnabled: w.rareSampler.IsEnabled(),
-		TracerPayloads:     w.tracerPayloads,
+		TracerPayloads:     payloads,
 	}
 	log.Debugf("Reported agent rates: target_tps=%v errors_tps=%v rare_sampling=%v", p.TargetTPS, p.ErrorTPS, p.RareSamplerEnabled)
 
