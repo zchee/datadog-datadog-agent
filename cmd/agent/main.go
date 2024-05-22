@@ -14,7 +14,7 @@ import (
 	"path"
 	"strings"
 
-	_ "crypto/tls/fipsonly"
+	//_ "crypto/tls/fipsonly"
 
 	"github.com/DataDog/datadog-agent/cmd/agent/command"
 	"github.com/DataDog/datadog-agent/cmd/agent/subcommands"
