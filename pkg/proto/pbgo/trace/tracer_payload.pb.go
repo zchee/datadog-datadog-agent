@@ -146,6 +146,8 @@ type TracerPayload struct {
 	// version specifies `version` tag that set with the tracer.
 	// @gotags: json:"app_version" msg:"app_version"
 	AppVersion string `protobuf:"bytes,10,opt,name=appVersion,proto3" json:"app_version" msg:"app_version"`
+
+	Free func()
 }
 
 func (x *TracerPayload) Reset() {

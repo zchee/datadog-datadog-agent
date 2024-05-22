@@ -5,6 +5,7 @@
 package trace
 
 import (
+	sync "sync"
 	binary "encoding/binary"
 	fmt "fmt"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -19,12 +20,27 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+var BSpool = sync.Pool{}
+
+func getdAtA(size int) []byte {
+	s := BSpool.Get()
+	if s == nil {
+		return make([]byte, size)
+	}
+	ss := s.([]byte)
+	if cap(ss) < size {
+		return make([]byte, size)
+	}
+	return ss[:size]
+}
+
 func (m *AgentPayload) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
 	size := m.SizeVT()
-	dAtA = make([]byte, size)
+	//dAtA = make([]byte, size)
+	dAtA = getdAtA(size)
 	n, err := m.MarshalToSizedBufferVT(dAtA[:size])
 	if err != nil {
 		return nil, err

@@ -267,7 +267,9 @@ func normMetricNameParse(name string) (string, bool) {
 	}
 
 	var i, ptr int
-	res := make([]byte, 0, len(name))
+	//res := make([]byte, 0, len(name))
+	var resb [MaxNameLen]byte
+	var res = resb[:0]
 
 	// skip non-alphabetic characters
 	for ; i < len(name) && !isAlpha(name[i]); i++ {

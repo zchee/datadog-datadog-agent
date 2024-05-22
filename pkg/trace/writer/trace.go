@@ -8,6 +8,7 @@ package writer
 import (
 	"compress/gzip"
 	"errors"
+	"io"
 	"strings"
 	"sync"
 	"time"
@@ -259,11 +260,32 @@ func (w *TraceWriter) flushPayloads(payloads []*pb.TracerPayload) {
 	w.serialize(&p)
 }
 
+var gzwriterpool = sync.Pool{}
+
+func getgzwriter(w io.Writer) (*gzip.Writer, error) {
+	var writer *gzip.Writer
+	var err error
+	writerI := gzwriterpool.Get()
+	if writerI == nil {
+		writer, err = gzip.NewWriterLevel(w, gzip.BestSpeed)
+	} else {
+		writer = writerI.(*gzip.Writer)
+		writer.Reset(w)
+	}
+	return writer, err
+}
+
 func (w *TraceWriter) serialize(pl *pb.AgentPayload) {
 	b, err := pl.MarshalVT()
 	if err != nil {
 		log.Errorf("Failed to serialize payload, data dropped: %v", err)
 		return
+	}
+
+	for _, p := range pl.TracerPayloads {
+		if p.Free != nil {
+			p.Free()
+		}
 	}
 
 	w.stats.BytesUncompressed.Add(int64(len(b)))
@@ -273,7 +295,7 @@ func (w *TraceWriter) serialize(pl *pb.AgentPayload) {
 		headerLanguages:    strings.Join(info.Languages(), "|"),
 	})
 	p.body.Grow(len(b) / 2)
-	gzipw, err := gzip.NewWriterLevel(p.body, gzip.BestSpeed)
+	gzipw, err := getgzwriter(p.body) //gzip.NewWriterLevel(p.body, gzip.BestSpeed)
 	if err != nil {
 		// it will never happen, unless an invalid compression is chosen;
 		// we know gzip.BestSpeed is valid.
@@ -286,6 +308,8 @@ func (w *TraceWriter) serialize(pl *pb.AgentPayload) {
 	if err := gzipw.Close(); err != nil {
 		log.Errorf("Error closing gzip stream when writing trace payload: %v", err)
 	}
+	pb.BSpool.Put(b)
+	gzwriterpool.Put(gzipw)
 	sendPayloads(w.senders, p, w.syncMode)
 
 }

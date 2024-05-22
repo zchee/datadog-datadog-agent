@@ -424,7 +424,7 @@ func decodeTracerPayload(v Version, req *http.Request, cIDProvider IDProvider, l
 			LanguageName:    lang,
 			LanguageVersion: langVersion,
 			ContainerID:     cIDProvider.GetContainerID(req.Context(), req.Header),
-			Chunks:          traceChunksFromTraces(traces),
+			Chunks:          traceChunksFromTraces(&traces),
 			TracerVersion:   tracerVersion,
 		}, true, err
 	case V07:
@@ -437,8 +437,9 @@ func decodeTracerPayload(v Version, req *http.Request, cIDProvider IDProvider, l
 		_, err = tracerPayload.UnmarshalMsg(buf.Bytes())
 		return &tracerPayload, true, err
 	default:
-		var traces pb.Traces
-		if ranHook, err = decodeRequest(req, &traces); err != nil {
+		//var traces pb.Traces
+		traces := getTracerPayload()
+		if ranHook, err = decodeRequest(req, traces); err != nil {
 			return nil, false, err
 		}
 		return &pb.TracerPayload{
@@ -447,8 +448,20 @@ func decodeTracerPayload(v Version, req *http.Request, cIDProvider IDProvider, l
 			ContainerID:     cIDProvider.GetContainerID(req.Context(), req.Header),
 			Chunks:          traceChunksFromTraces(traces),
 			TracerVersion:   tracerVersion,
+			Free:            func() { TPool.Put(traces) },
 		}, ranHook, nil
 	}
+}
+
+var TPool = sync.Pool{}
+
+func getTracerPayload() *pb.Traces {
+	p := TPool.Get()
+	if p == nil {
+		return &pb.Traces{}
+	}
+	pp := p.(*pb.Traces)
+	return pp
 }
 
 // replyOK replies to the given http.ResponseWriter w based on the endpoint version, with either status 200/OK
@@ -792,16 +805,15 @@ func traceChunksFromSpans(spans []*pb.Span) []*pb.TraceChunk {
 	return traceChunks
 }
 
-func traceChunksFromTraces(traces pb.Traces) []*pb.TraceChunk {
-	traceChunks := make([]*pb.TraceChunk, 0, len(traces))
-	for _, trace := range traces {
+func traceChunksFromTraces(traces *pb.Traces) []*pb.TraceChunk {
+	traceChunks := make([]*pb.TraceChunk, 0, len(*traces))
+	for _, trace := range *traces {
 		traceChunks = append(traceChunks, &pb.TraceChunk{
 			Priority: int32(sampler.PriorityNone),
 			Spans:    trace,
 			Tags:     make(map[string]string),
 		})
 	}
-
 	return traceChunks
 }
 
