@@ -28,6 +28,7 @@
 
 #define POSTGRES_QUERY_MAGIC_BYTE 'Q'
 #define POSTGRES_COMMAND_COMPLETE_MAGIC_BYTE 'C'
+#define POSTGRES_PARSE_MAGIC_BYTE 'P'
 
 // Regular format of postgres message: | byte tag | int32_t len | string payload |
 // From https://www.postgresql.org/docs/current/protocol-overview.html:
