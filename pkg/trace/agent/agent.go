@@ -181,7 +181,7 @@ func (a *Agent) Run() {
 	// enough to keep the agent busy.
 	// Having more processor threads would not speed
 	// up processing, but just expand memory.
-	workers := runtime.GOMAXPROCS(0)
+	workers := runtime.GOMAXPROCS(0) / 2
 	if workers < 1 {
 		workers = 1
 	}
