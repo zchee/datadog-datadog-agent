@@ -100,9 +100,11 @@ build do
       # Copy rtloader libs to where Bazel will pick them up
       command "invoke bazel.copy-prebuilt --rtloader-src rtloader --rtloader-build rtloader/build", cwd: original_repo_dir
       # Run the Bazel build
-      command "bazel build //cmd/agent", cwd: original_repo_dir
-      # Copy the build output to where invoke would put it
-      command "cp $(bazel cquery --output=files //cmd/agent) #{File.join(project_dir, 'bin', 'agent')}", cwd: original_repo_dir
+      target = "//cmd/agent:agent_dist"
+      command "bazel build #{target}", cwd: original_repo_dir
+      # For convenience the build produces a tar file that includes the configs in the directory structure
+      # that the rest of the omnibus script expects
+      command "tar -xf $(bazel cquery --output=files #{target}) -C #{project_dir}", cwd: original_repo_dir
     else
       command "inv -e agent.build --exclude-rtloader #{include_sds} --python-runtimes #{py_runtimes_arg} --major-version #{major_version_arg} --rebuild --no-development --install-path=#{install_dir} --embedded-path=#{install_dir}/embedded --python-home-2=#{install_dir}/embedded --python-home-3=#{install_dir}/embedded --flavor #{flavor_arg} #{bundle_arg}", env: env
 
