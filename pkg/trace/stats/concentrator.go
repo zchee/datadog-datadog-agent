@@ -33,6 +33,7 @@ type statsAdder interface {
 // Gets an imperial shitton of traces, and outputs pre-computed data structures
 // allowing to find the gold (stats) amongst the traces.
 type Concentrator struct {
+	cIn chan Input
 	Out statsAdder
 
 	// bucket duration in nanoseconds
@@ -117,6 +118,7 @@ func NewConcentrator(conf *config.AgentConfig, out statsAdder, now time.Time, st
 		oldestTs: alignTs(now.UnixNano(), bsize),
 		// TODO: Move to configuration.
 		bufferLen:              defaultBufferLen,
+		cIn:                    make(chan Input, 1),
 		Out:                    out,
 		exit:                   make(chan struct{}),
 		agentEnv:               conf.DefaultEnv,
@@ -152,6 +154,14 @@ func (c *Concentrator) Run() {
 
 	log.Debug("Starting concentrator")
 
+	c.exitWG.Add(1)
+	go func() {
+		defer c.exitWG.Done()
+		for inputs := range c.cIn {
+			c.add(inputs)
+		}
+	}()
+
 	for {
 		select {
 		case <-flushTicker.C:
@@ -164,9 +174,14 @@ func (c *Concentrator) Run() {
 	}
 }
 
+func (c *Concentrator) In() chan<- Input {
+	return c.cIn
+}
+
 // Stop stops the main Run loop.
 func (c *Concentrator) Stop() {
 	close(c.exit)
+	close(c.cIn)
 	c.exitWG.Wait()
 }
 
@@ -205,9 +220,9 @@ func NewStatsInput(numChunks int, containerID string, clientComputedStats bool, 
 }
 
 // Add applies the given input to the concentrator.
-func (c *Concentrator) Add(t Input) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (c *Concentrator) add(t Input) {
+	//c.mu.Lock()
+	//defer c.mu.Unlock()
 	for _, trace := range t.Traces {
 		c.addNow(&trace, t.ContainerID)
 	}
