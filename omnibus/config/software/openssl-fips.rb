@@ -22,10 +22,7 @@ build do
            extract: :seven_zip,
            target_filename: "#{OPENSSL_FILENAME}"
     
-    command "ls"
-    command "ls #{project_dir}"
-    command "tar xvzf /omnibus/src/openssl-fips/#{OPENSSL_FILENAME} -C ."
-    command "cd openssl-#{OPENSSL_VERSION}"
+    command "cd /omnibus/src/openssl-fips-provider"
 
     command "./Configure --prefix=\"#{DIST_DIR}\" \
                 --libdir=lib \
