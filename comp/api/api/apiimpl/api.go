@@ -16,7 +16,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/api/authtoken"
 	"github.com/DataDog/datadog-agent/comp/collector/collector"
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery"
-	"github.com/DataDog/datadog-agent/comp/core/flare"
+	"github.com/DataDog/datadog-agent/comp/core/gui"
 	"github.com/DataDog/datadog-agent/comp/core/secrets"
 	"github.com/DataDog/datadog-agent/comp/core/status"
 	"github.com/DataDog/datadog-agent/comp/core/tagger"
@@ -33,7 +33,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/metadata/inventoryhost"
 	"github.com/DataDog/datadog-agent/comp/metadata/packagesigning"
 	"github.com/DataDog/datadog-agent/comp/remote-config/rcservice"
-	"github.com/DataDog/datadog-agent/comp/remote-config/rcserviceha"
+	"github.com/DataDog/datadog-agent/comp/remote-config/rcservicemrf"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
@@ -46,7 +46,6 @@ func Module() fxutil.Module {
 }
 
 type apiServer struct {
-	flare                 flare.Component
 	dogstatsdServer       dogstatsdServer.Component
 	capture               replay.Component
 	pidMap                pidmap.Component
@@ -61,14 +60,20 @@ type apiServer struct {
 	statusComponent       status.Component
 	eventPlatformReceiver eventplatformreceiver.Component
 	rcService             optional.Option[rcservice.Component]
-	rcServiceHA           optional.Option[rcserviceha.Component]
+	rcServiceMRF          optional.Option[rcservicemrf.Component]
 	authToken             authtoken.Component
+	taggerComp            tagger.Component
+	autoConfig            autodiscovery.Component
+	logsAgentComp         optional.Option[logsAgent.Component]
+	wmeta                 workloadmeta.Component
+	collector             optional.Option[collector.Component]
+	gui                   optional.Option[gui.Component]
+	endpointProviders     []api.EndpointProvider
 }
 
 type dependencies struct {
 	fx.In
 
-	Flare                 flare.Component
 	DogstatsdServer       dogstatsdServer.Component
 	Capture               replay.Component
 	PidMap                pidmap.Component
@@ -83,15 +88,21 @@ type dependencies struct {
 	StatusComponent       status.Component
 	EventPlatformReceiver eventplatformreceiver.Component
 	RcService             optional.Option[rcservice.Component]
-	RcServiceHA           optional.Option[rcserviceha.Component]
+	RcServiceMRF          optional.Option[rcservicemrf.Component]
 	AuthToken             authtoken.Component
+	Tagger                tagger.Component
+	AutoConfig            autodiscovery.Component
+	LogsAgentComp         optional.Option[logsAgent.Component]
+	WorkloadMeta          workloadmeta.Component
+	Collector             optional.Option[collector.Component]
+	Gui                   optional.Option[gui.Component]
+	EndpointProviders     []api.EndpointProvider `group:"agent_endpoint"`
 }
 
 var _ api.Component = (*apiServer)(nil)
 
 func newAPIServer(deps dependencies) api.Component {
 	return &apiServer{
-		flare:                 deps.Flare,
 		dogstatsdServer:       deps.DogstatsdServer,
 		capture:               deps.Capture,
 		pidMap:                deps.PidMap,
@@ -106,42 +117,40 @@ func newAPIServer(deps dependencies) api.Component {
 		statusComponent:       deps.StatusComponent,
 		eventPlatformReceiver: deps.EventPlatformReceiver,
 		rcService:             deps.RcService,
-		rcServiceHA:           deps.RcServiceHA,
+		rcServiceMRF:          deps.RcServiceMRF,
 		authToken:             deps.AuthToken,
+		taggerComp:            deps.Tagger,
+		autoConfig:            deps.AutoConfig,
+		logsAgentComp:         deps.LogsAgentComp,
+		wmeta:                 deps.WorkloadMeta,
+		collector:             deps.Collector,
+		gui:                   deps.Gui,
+		endpointProviders:     deps.EndpointProviders,
 	}
 }
 
 // StartServer creates the router and starts the HTTP server
 func (server *apiServer) StartServer(
-	wmeta workloadmeta.Component,
-	taggerComp tagger.Component,
-	ac autodiscovery.Component,
-	logsAgent optional.Option[logsAgent.Component],
 	senderManager sender.DiagnoseSenderManager,
-	collector optional.Option[collector.Component],
 ) error {
 	return StartServers(server.rcService,
-		server.rcServiceHA,
-		server.flare,
+		server.rcServiceMRF,
 		server.dogstatsdServer,
 		server.capture,
 		server.pidMap,
 		server.serverDebug,
-		wmeta,
-		taggerComp,
-		logsAgent,
+		server.wmeta,
+		server.taggerComp,
+		server.logsAgentComp,
 		senderManager,
-		server.hostMetadata,
-		server.invAgent,
 		server.demux,
-		server.invHost,
 		server.secretResolver,
-		server.invChecks,
-		server.pkgSigning,
 		server.statusComponent,
-		collector,
+		server.collector,
 		server.eventPlatformReceiver,
-		ac,
+		server.autoConfig,
+		server.gui,
+		server.endpointProviders,
 	)
 }
 

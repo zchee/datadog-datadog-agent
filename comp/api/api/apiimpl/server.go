@@ -15,9 +15,10 @@ import (
 	"github.com/cihub/seelog"
 
 	"github.com/DataDog/datadog-agent/comp/aggregator/demultiplexer"
+	"github.com/DataDog/datadog-agent/comp/api/api"
 	"github.com/DataDog/datadog-agent/comp/collector/collector"
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery"
-	"github.com/DataDog/datadog-agent/comp/core/flare"
+	"github.com/DataDog/datadog-agent/comp/core/gui"
 	"github.com/DataDog/datadog-agent/comp/core/secrets"
 	"github.com/DataDog/datadog-agent/comp/core/status"
 	"github.com/DataDog/datadog-agent/comp/core/tagger"
@@ -28,13 +29,8 @@ import (
 	dogstatsddebug "github.com/DataDog/datadog-agent/comp/dogstatsd/serverDebug"
 	"github.com/DataDog/datadog-agent/comp/forwarder/eventplatformreceiver"
 	logsAgent "github.com/DataDog/datadog-agent/comp/logs/agent"
-	"github.com/DataDog/datadog-agent/comp/metadata/host"
-	"github.com/DataDog/datadog-agent/comp/metadata/inventoryagent"
-	"github.com/DataDog/datadog-agent/comp/metadata/inventorychecks"
-	"github.com/DataDog/datadog-agent/comp/metadata/inventoryhost"
-	"github.com/DataDog/datadog-agent/comp/metadata/packagesigning"
 	"github.com/DataDog/datadog-agent/comp/remote-config/rcservice"
-	"github.com/DataDog/datadog-agent/comp/remote-config/rcserviceha"
+	"github.com/DataDog/datadog-agent/comp/remote-config/rcservicemrf"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -67,8 +63,7 @@ func stopServer(listener net.Listener, name string) {
 // StartServers creates certificates and starts API + IPC servers
 func StartServers(
 	configService optional.Option[rcservice.Component],
-	configServiceHA optional.Option[rcserviceha.Component],
-	flare flare.Component,
+	configServiceMRF optional.Option[rcservicemrf.Component],
 	dogstatsdServer dogstatsdServer.Component,
 	capture replay.Component,
 	pidMap pidmap.Component,
@@ -77,17 +72,14 @@ func StartServers(
 	taggerComp tagger.Component,
 	logsAgent optional.Option[logsAgent.Component],
 	senderManager sender.DiagnoseSenderManager,
-	hostMetadata host.Component,
-	invAgent inventoryagent.Component,
 	demux demultiplexer.Component,
-	invHost inventoryhost.Component,
 	secretResolver secrets.Component,
-	invChecks inventorychecks.Component,
-	pkgSigning packagesigning.Component,
 	statusComponent status.Component,
 	collector optional.Option[collector.Component],
 	eventPlatformReceiver eventplatformreceiver.Component,
 	ac autodiscovery.Component,
+	gui optional.Option[gui.Component],
+	providers []api.EndpointProvider,
 ) error {
 	apiAddr, err := getIPCAddressPort()
 	if err != nil {
@@ -118,8 +110,7 @@ func StartServers(
 		tlsConfig,
 		tlsCertPool,
 		configService,
-		configServiceHA,
-		flare,
+		configServiceMRF,
 		dogstatsdServer,
 		capture,
 		pidMap,
@@ -128,17 +119,14 @@ func StartServers(
 		taggerComp,
 		logsAgent,
 		senderManager,
-		hostMetadata,
-		invAgent,
 		demux,
-		invHost,
 		secretResolver,
-		invChecks,
-		pkgSigning,
 		statusComponent,
 		collector,
 		eventPlatformReceiver,
 		ac,
+		gui,
+		providers,
 	); err != nil {
 		return fmt.Errorf("unable to start CMD API server: %v", err)
 	}
