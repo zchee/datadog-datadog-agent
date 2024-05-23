@@ -126,3 +126,18 @@ func (a *asset) verify(source ProtectedFile) error {
 func (a *asset) GetTelemetry() CompilationTelemetry {
 	return a.tm
 }
+
+// Clean removes the output object file, if it exists
+func (a *asset) Clean(cfg *ebpf.Config, additionalFlags []string) error {
+	outputDir := cfg.RuntimeCompilerOutputDir
+	_, flagHash := computeFlagsAndHash(additionalFlags)
+	outputFile, err := getOutputFilePath(outputDir, a.filename, a.hash, flagHash)
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(outputFile); err == nil {
+		return os.Remove(outputFile)
+	}
+	return nil
+}

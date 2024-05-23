@@ -15,6 +15,7 @@ import (
 	"github.com/cilium/ebpf/asm"
 	"github.com/stretchr/testify/require"
 
+	"github.com/DataDog/datadog-agent/pkg/ebpf/bytecode/runtime"
 	"github.com/DataDog/datadog-agent/pkg/ebpf/ebpftest"
 	"github.com/DataDog/datadog-agent/pkg/network/config"
 )
@@ -23,6 +24,7 @@ func TestTracerCompile(t *testing.T) {
 	ebpftest.TestBuildMode(t, ebpftest.RuntimeCompiled, "", func(t *testing.T) {
 		cfg := config.New()
 		cfg.BPFDebug = true
+		require.NoError(t, runtime.Tracer.Clean(&cfg.Config, getCFlags(cfg)))
 		out, err := getRuntimeCompiledTracer(cfg)
 		require.NoError(t, err)
 		_ = out.Close()

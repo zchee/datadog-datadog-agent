@@ -215,6 +215,7 @@ func testOffsetGuess(t *testing.T) {
 		}
 	}
 
+	require.NoError(t, runtime.OffsetguessTest.Clean(&cfg.Config, getCFlags(cfg)))
 	buf, err := runtime.OffsetguessTest.Compile(&cfg.Config, getCFlags(cfg), nil /* llc flags */, statsd.Client)
 	require.NoError(t, err)
 	defer buf.Close()
