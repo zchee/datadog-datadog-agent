@@ -17,6 +17,8 @@ build do
            extract: :seven_zip,
            target_filename: "#{OPENSSL_FIPS_MODULE_FILENAME}"
     
+    command "ls"
+    command "ls #P{project_dir"
     command "tar xvzf #{project_dir}/#{OPENSSL_FIPS_MODULE_FILENAME}"
     
     # Exact build steps from security policy:

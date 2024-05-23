@@ -22,6 +22,8 @@ build do
            extract: :seven_zip,
            target_filename: "#{OPENSSL_FILENAME}"
     
+    command "ls"
+    command "ls #P{project_dir"
     command "tar xvzf #{project_dir}/#{OPENSSL_FILENAME}"
 
     command "./Configure --prefix=\"#{DIST_DIR}\" \
