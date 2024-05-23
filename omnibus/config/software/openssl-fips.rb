@@ -23,9 +23,9 @@ build do
     
     command "tar xvzf #{project_dir}/${OPENSSL_FILENAME}"
 
-    command "./Configure --prefix="${DIST_DIR}" \
+    command "./Configure --prefix=\"#{DIST_DIR}\" \
                 --libdir=lib \
-                -Wl,-rpath="${DIST_DIR}/lib" \
+                -Wl,-rpath=\"#{DIST_DIR}/lib\" \
                 no-asm no-comp no-ssl2 no-ssl3 \
                 shared zlib"
     
