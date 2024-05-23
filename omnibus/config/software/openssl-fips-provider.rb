@@ -7,7 +7,7 @@ name "openssl-fips-provider"
 default_version "0.0.1"
 
 OPENSSL_FIPS_MODULE_VERSION="3.0.8"
-OPENSSL_FIPS_MODULE_FILENAME="openssl-${OPENSSL_FIPS_MODULE_VERSION}.tar.gz"
+OPENSSL_FIPS_MODULE_FILENAME="openssl-#{OPENSSL_FIPS_MODULE_VERSION}.tar.gz"
 OPENSSL_FIPS_MODULE_SHA256_SUM="6c13d2bf38fdf31eac3ce2a347073673f5d63263398f1f69d0df4a41253e4b3e"
 
 
@@ -16,7 +16,7 @@ build do
            sha256: "#{OPENSSL_FIPS_MODULE_SHA256_SUM}",
            extract: :seven_zip
     
-    command "tar xvzf #{project_dir}/${OPENSSL_FIPS_MODULE_FILENAME}"
+    command "tar xvzf #{project_dir}/#{OPENSSL_FIPS_MODULE_FILENAME}"
     
     # Exact build steps from security policy:
     # https://csrc.nist.gov/CSRC/media/projects/cryptographic-module-validation-program/documents/security-policies/140sp4282.pdf
