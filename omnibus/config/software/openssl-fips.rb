@@ -4,6 +4,7 @@
 # Copyright 2016-present Datadog, Inc.
 
 name "openssl-fips"
+default_version "0.0.1"
 
 resources_path="#{Omnibus::Config.project_root}/resources/fips"
 
