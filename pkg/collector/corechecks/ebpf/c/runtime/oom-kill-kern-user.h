@@ -5,6 +5,11 @@
 #include <linux/sched.h>         // for TASK_COMM_LEN
 #endif
 
+// necessary for go type generation
+#ifndef TASK_COMM_LEN
+#define TASK_COMM_LEN 16
+#endif
+
 #include "ktypes.h"
 
 struct oom_stats {

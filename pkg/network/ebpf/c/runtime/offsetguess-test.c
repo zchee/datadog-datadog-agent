@@ -1,13 +1,20 @@
 #include "kconfig.h"
-#include "bpf_tracing.h"
-#include "map-defs.h"
+#include <linux/net.h>                                  // for socket
+#include <linux/netfilter/nf_conntrack_tuple_common.h>  // for IP_CT_DIR_ORIGINAL, IP_CT_DIR_REPLY
+#include <linux/ns_common.h>                            // for _LINUX_NS_COMMON_H, ns_common
+#include <linux/skbuff.h>                               // for sk_buff
+#include <linux/tcp.h>                                  // for tcp_sock
+#include <net/flow.h>                                   // for flowi4, flowi6, fl4_dport, fl4_sport, fl6_dport, fl6_...
+#include <net/inet_sock.h>                              // for inet_sock
+#include <net/net_namespace.h>                          // for net
+#include <net/netfilter/nf_conntrack.h>                 // for nf_conn
+#include <net/netfilter/nf_conntrack_tuple.h>           // for nf_conntrack_tuple_hash
+#include <net/sock.h>                                   // for sock, sk_daddr, sk_dport, sk_family, sk_net, sk_rcv_s...
 
-#include <net/net_namespace.h>
-#include <net/sock.h>
-#include <net/inet_sock.h>
-#include <net/flow.h>
-#include <net/netfilter/nf_conntrack.h>
-#include <linux/tcp.h>
+#include "bpf_helpers.h"                                // for __sk_buff, offsetof, BPF_ANY, sk_msg_md, bpf_sock_ops
+#include "bpf_tracing.h"                                // for pt_regs
+#include "ktypes.h"                                     // for __u32, __u64, __s32, __s64, u64, __be16, __be32, __wsum
+#include "map-defs.h"                                   // for BPF_HASH_MAP
 
 typedef enum {
     OFFSET_SADDR = 0,
