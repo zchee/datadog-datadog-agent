@@ -28,7 +28,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/kversion"
-	"github.com/uptrace/bun"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/net/http2"
@@ -1115,6 +1114,29 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 	}
 }
 
+const (
+	createTableQuery       = "CREATE TABLE dummy (id SERIAL PRIMARY KEY, foo TEXT)"
+	updateSingleValueQuery = "UPDATE dummy SET foo = 'updated' WHERE id = 1"
+	selectAllQuery         = "SELECT * FROM dummy"
+	dropTableQuery         = "DROP TABLE IF EXISTS dummy"
+)
+
+func createInsertQuery(values ...string) string {
+	return fmt.Sprintf("INSERT INTO dummy (foo) VALUES ('%s')", strings.Join(values, "'), ('"))
+}
+
+func generateTestValues(startingIndex, count int) []string {
+	values := make([]string, count)
+	for i := 0; i < count; i++ {
+		values[i] = fmt.Sprintf("value-%d", startingIndex+i)
+	}
+	return values
+}
+
+func generateSelectLimitQuery(limit int) string {
+	return fmt.Sprintf("SELECT * FROM dummy limit %d", limit)
+}
+
 func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
 	skipFunc := composeSkips(skipIfUsingNAT)
 	skipFunc(t, testContext{
@@ -1128,14 +1150,13 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 	}
 
 	postgresTeardown := func(t *testing.T, ctx testContext) {
-		dbEntry, ok := ctx.extras["db"]
+		pgClient, ok := ctx.extras["pg"]
 		if !ok {
 			return
 		}
-		db := dbEntry.(*bun.DB)
-		defer db.Close()
-		taskCtx := ctx.extras["ctx"].(context.Context)
-		_, _ = db.NewDropTable().Model((*pgutils.DummyTable)(nil)).Exec(taskCtx)
+		client := pgClient.(*pgutils.PGClient)
+		defer client.Close()
+		_ = client.RunQuery(dropTableQuery)
 	}
 
 	// Setting one instance of postgres server for all tests.
@@ -1153,10 +1174,12 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 				extras:        make(map[string]interface{}),
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				pg := pgutils.GetPGHandle(t, ctx.serverAddress)
-				conn, err := pg.Conn(context.Background())
+				pg, err := pgutils.NewPGClient(pgutils.ConnectionOptions{
+					ServerAddress: ctx.serverAddress,
+				})
 				require.NoError(t, err)
-				defer conn.Close()
+				require.NoError(t, pg.Connect())
+				ctx.extras["pg"] = pg
 			},
 			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.Postgres}),
 			teardown:   postgresTeardown,
@@ -1170,11 +1193,17 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 				extras:        make(map[string]interface{}),
 			},
 			preTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.ConnectAndGetDB(t, ctx.serverAddress, ctx.extras)
-				pgutils.RunCreateQuery(t, ctx.extras)
+				pg, err := pgutils.NewPGClient(pgutils.ConnectionOptions{
+					ServerAddress: ctx.serverAddress,
+				})
+				require.NoError(t, err)
+				require.NoError(t, pg.Connect())
+				ctx.extras["pg"] = pg
+				require.NoError(t, pg.RunQuery(createTableQuery))
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.RunInsertQuery(t, 1, ctx.extras)
+				pg := ctx.extras["pg"].(*pgutils.PGClient)
+				require.NoError(t, pg.RunQuery(createInsertQuery("value-1")))
 			},
 			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.Postgres}),
 			teardown:   postgresTeardown,
@@ -1188,12 +1217,18 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 				extras:        make(map[string]interface{}),
 			},
 			preTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.ConnectAndGetDB(t, ctx.serverAddress, ctx.extras)
-				pgutils.RunCreateQuery(t, ctx.extras)
-				pgutils.RunInsertQuery(t, 1, ctx.extras)
+				pg, err := pgutils.NewPGClient(pgutils.ConnectionOptions{
+					ServerAddress: ctx.serverAddress,
+				})
+				require.NoError(t, err)
+				require.NoError(t, pg.Connect())
+				ctx.extras["pg"] = pg
+				require.NoError(t, pg.RunQuery(createTableQuery))
+				require.NoError(t, pg.RunQuery(createInsertQuery("value-1")))
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.RunDeleteQuery(t, ctx.extras)
+				pg := ctx.extras["pg"].(*pgutils.PGClient)
+				require.NoError(t, pg.RunQuery("DELETE FROM dummy WHERE foo = 'value-1'"))
 			},
 			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.Postgres}),
 			teardown:   postgresTeardown,
@@ -1207,11 +1242,17 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 				extras:        make(map[string]interface{}),
 			},
 			preTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.ConnectAndGetDB(t, ctx.serverAddress, ctx.extras)
-				pgutils.RunCreateQuery(t, ctx.extras)
+				pg, err := pgutils.NewPGClient(pgutils.ConnectionOptions{
+					ServerAddress: ctx.serverAddress,
+				})
+				require.NoError(t, err)
+				require.NoError(t, pg.Connect())
+				ctx.extras["pg"] = pg
+				require.NoError(t, pg.RunQuery(createTableQuery))
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.RunSelectQuery(t, ctx.extras)
+				pg := ctx.extras["pg"].(*pgutils.PGClient)
+				require.NoError(t, pg.RunQuery(selectAllQuery))
 			},
 			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.Postgres}),
 			teardown:   postgresTeardown,
@@ -1225,12 +1266,18 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 				extras:        make(map[string]interface{}),
 			},
 			preTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.ConnectAndGetDB(t, ctx.serverAddress, ctx.extras)
-				pgutils.RunCreateQuery(t, ctx.extras)
-				pgutils.RunInsertQuery(t, 1, ctx.extras)
+				pg, err := pgutils.NewPGClient(pgutils.ConnectionOptions{
+					ServerAddress: ctx.serverAddress,
+				})
+				require.NoError(t, err)
+				require.NoError(t, pg.Connect())
+				ctx.extras["pg"] = pg
+				require.NoError(t, pg.RunQuery(createTableQuery))
+				require.NoError(t, pg.RunQuery(createInsertQuery("value-1")))
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.RunUpdateQuery(t, ctx.extras)
+				pg := ctx.extras["pg"].(*pgutils.PGClient)
+				require.NoError(t, pg.RunQuery(updateSingleValueQuery))
 			},
 			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.Postgres}),
 			teardown:   postgresTeardown,
@@ -1244,12 +1291,18 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 				extras:        make(map[string]interface{}),
 			},
 			preTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.ConnectAndGetDB(t, ctx.serverAddress, ctx.extras)
-				pgutils.RunCreateQuery(t, ctx.extras)
-				pgutils.RunInsertQuery(t, 1, ctx.extras)
+				pg, err := pgutils.NewPGClient(pgutils.ConnectionOptions{
+					ServerAddress: ctx.serverAddress,
+				})
+				require.NoError(t, err)
+				require.NoError(t, pg.Connect())
+				ctx.extras["pg"] = pg
+				require.NoError(t, pg.RunQuery(createTableQuery))
+				require.NoError(t, pg.RunQuery(createInsertQuery("value-1")))
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.RunDropQuery(t, ctx.extras)
+				pg := ctx.extras["pg"].(*pgutils.PGClient)
+				require.NoError(t, pg.RunQuery(dropTableQuery))
 			},
 			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.Postgres}),
 			teardown:   postgresTeardown,
@@ -1263,11 +1316,17 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 				extras:        make(map[string]interface{}),
 			},
 			preTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.ConnectAndGetDB(t, ctx.serverAddress, ctx.extras)
-				pgutils.RunCreateQuery(t, ctx.extras)
+				pg, err := pgutils.NewPGClient(pgutils.ConnectionOptions{
+					ServerAddress: ctx.serverAddress,
+				})
+				require.NoError(t, err)
+				require.NoError(t, pg.Connect())
+				ctx.extras["pg"] = pg
+				require.NoError(t, pg.RunQuery(createTableQuery))
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.RunAlterQuery(t, ctx.extras)
+				pg := ctx.extras["pg"].(*pgutils.PGClient)
+				require.NoError(t, pg.RunQuery("ALTER TABLE dummy ADD COLUMN bar TEXT"))
 			},
 			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.Postgres}),
 			teardown:   postgresTeardown,
@@ -1283,22 +1342,25 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 				extras:        make(map[string]interface{}),
 			},
 			preTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.ConnectAndGetDB(t, ctx.serverAddress, ctx.extras)
-				pgutils.RunCreateQuery(t, ctx.extras)
+				pg, err := pgutils.NewPGClient(pgutils.ConnectionOptions{
+					ServerAddress: ctx.serverAddress,
+				})
+				require.NoError(t, err)
+				require.NoError(t, pg.Connect())
+				ctx.extras["pg"] = pg
+				require.NoError(t, pg.RunQuery(createTableQuery))
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				db := ctx.extras["db"].(*bun.DB)
-				taskCtx := ctx.extras["ctx"].(context.Context)
-
+				pg := ctx.extras["pg"].(*pgutils.PGClient)
 				// This will fail but it should make a query and be classified
-				_, _ = db.NewInsert().Model(&pgutils.DummyTable{Foo: strings.Repeat("#", 16384)}).Exec(taskCtx)
+				require.Error(t, pg.RunQuery(createInsertQuery(strings.Repeat("#", 16384))))
 			},
 			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.Postgres}),
 			teardown:   postgresTeardown,
 		},
 		{
 			// Test that we classify long queries that would be
-			// splitted between multiple packets correctly
+			// split between multiple packets correctly
 			name: "postgres - long response",
 			context: testContext{
 				serverPort:    postgresPort,
@@ -1307,14 +1369,22 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 				extras:        make(map[string]interface{}),
 			},
 			preTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.ConnectAndGetDB(t, ctx.serverAddress, ctx.extras)
-				pgutils.RunCreateQuery(t, ctx.extras)
-				for i := int64(1); i < 200; i++ {
-					pgutils.RunInsertQuery(t, i, ctx.extras)
+				pg, err := pgutils.NewPGClient(pgutils.ConnectionOptions{
+					ServerAddress: ctx.serverAddress,
+				})
+				require.NoError(t, err)
+				require.NoError(t, pg.Connect())
+				ctx.extras["pg"] = pg
+				require.NoError(t, pg.RunQuery(createTableQuery))
+				values := make([]string, 200)
+				for i := range values {
+					values[i] = fmt.Sprintf("newValue%d", i+1)
 				}
+				require.NoError(t, pg.RunQuery(createInsertQuery(values...)))
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				pgutils.RunSelectQuery(t, ctx.extras)
+				pg := ctx.extras["pg"].(*pgutils.PGClient)
+				require.NoError(t, pg.RunQuery(selectAllQuery))
 			},
 			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.Postgres}),
 			teardown:   postgresTeardown,
