@@ -195,10 +195,11 @@ def build(
             build_tags = get_build_tags(include_tags, exclude_tags)
 
             all_tags |= set(build_tags)
-        build_tags = list(all_tags)
 
         if fips_mode:
-            build_tags |= set(FIPS_AGENT_TAGS)
+            all_tags |= set(FIPS_AGENT_TAGS)
+
+        build_tags = list(all_tags)
 
     cmd = "go build -mod={go_mod} {race_opt} {build_type} -tags \"{go_build_tags}\" "
 
