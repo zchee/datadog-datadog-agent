@@ -18,9 +18,9 @@ build do
            target_filename: "#{OPENSSL_FIPS_MODULE_FILENAME}"
     
     command "ls"
-    command "ls #P{project_dir"
-    command "tar xvzf #{project_dir}/#{OPENSSL_FIPS_MODULE_FILENAME}"
-    
+    command "ls #{project_dir}"
+    command "tar xvzf #{OPENSSL_FIPS_MODULE_FILENAME}"
+    command "cd openssl-#{OPENSSL_FIPS_MODULE_VERSION}" 
     # Exact build steps from security policy:
     # https://csrc.nist.gov/CSRC/media/projects/cryptographic-module-validation-program/documents/security-policies/140sp4282.pdf
     #

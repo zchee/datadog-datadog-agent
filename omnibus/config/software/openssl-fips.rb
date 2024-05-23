@@ -23,8 +23,9 @@ build do
            target_filename: "#{OPENSSL_FILENAME}"
     
     command "ls"
-    command "ls #P{project_dir"
-    command "tar xvzf #{project_dir}/#{OPENSSL_FILENAME}"
+    command "ls #{project_dir}"
+    command "tar xvzf #{OPENSSL_FILENAME}"
+    command "cd openssl-#{OPENSSL_VERSION}"
 
     command "./Configure --prefix=\"#{DIST_DIR}\" \
                 --libdir=lib \
