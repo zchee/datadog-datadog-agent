@@ -19,14 +19,14 @@ import (
 )
 
 // deb writes a new deb package to the given writer using the given info.
-func deb(pkg string, version string, conflicts []string, out io.Writer) error {
+func deb(pkg string, version string, conflicts []string, postrm []byte, out io.Writer) error {
 	mtime := time.Now()
 
 	dataTar, err := createDataTar()
 	if err != nil {
 		return fmt.Errorf("cannot create data tarball: %w", err)
 	}
-	controlTar, err := createControlTar(pkg, version, conflicts, mtime)
+	controlTar, err := createControlTar(pkg, version, conflicts, postrm, mtime)
 	if err != nil {
 		return fmt.Errorf("cannot create control tarball: %w", err)
 	}
@@ -66,7 +66,7 @@ func createDataTar() ([]byte, error) {
 	return archive.Bytes(), nil
 }
 
-func createControlTar(pkg string, version string, conflicts []string, mtime time.Time) ([]byte, error) {
+func createControlTar(pkg string, version string, conflicts []string, postrm []byte, mtime time.Time) ([]byte, error) {
 	var archive bytes.Buffer
 	gw := gzip.NewWriter(&archive)
 	defer gw.Close()
@@ -76,11 +76,15 @@ func createControlTar(pkg string, version string, conflicts []string, mtime time
 	control := buildControlFile(pkg, version, conflicts)
 	md5sums := []byte(``)
 
-	err := writeTarFile(tw, "./control", control, mtime)
+	err := writeTarFile(tw, "./control", control, mtime, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("cannot write control file to tar: %w", err)
 	}
-	err = writeTarFile(tw, "./md5sums", md5sums, mtime)
+	err = writeTarFile(tw, "./postrm", postrm, mtime, 0755)
+	if err != nil {
+		return nil, fmt.Errorf("cannot write postrm file to tar: %w", err)
+	}
+	err = writeTarFile(tw, "./md5sums", md5sums, mtime, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("cannot write md5sums file to tar: %w", err)
 	}
@@ -95,10 +99,10 @@ func createControlTar(pkg string, version string, conflicts []string, mtime time
 	return archive.Bytes(), nil
 }
 
-func writeTarFile(tw *tar.Writer, name string, content []byte, mtime time.Time) error {
+func writeTarFile(tw *tar.Writer, name string, content []byte, mtime time.Time, mode int64) error {
 	err := tw.WriteHeader(&tar.Header{
 		Name:     name,
-		Mode:     0644,
+		Mode:     mode,
 		Size:     int64(len(content)),
 		ModTime:  mtime,
 		Typeflag: tar.TypeReg,

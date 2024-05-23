@@ -38,6 +38,7 @@ func InstallConflictPackage(ctx context.Context, tmpDir string, pkg string, vers
 	span.SetTag("package.version", version)
 	span.SetTag("package.conflicts", conflicts)
 
+	postrm := buildPostrmFile(pkg)
 	pkg = conflictPackageName(pkg)
 	tmpPath, err := os.CreateTemp(tmpDir, "*.deb")
 	if err != nil {
@@ -45,17 +46,13 @@ func InstallConflictPackage(ctx context.Context, tmpDir string, pkg string, vers
 	}
 	defer os.Remove(tmpPath.Name())
 
-	err = deb(pkg, version, conflicts, tmpPath)
+	err = deb(pkg, version, conflicts, postrm, tmpPath)
 	if err != nil {
 		return fmt.Errorf("cannot create deb package: %w", err)
 	}
 	output, err := exec.CommandContext(ctx, "dpkg", "-i", tmpPath.Name()).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("cannot install deb package: %w\n%s", err, output)
-	}
-	output, err = exec.CommandContext(ctx, "apt-mark", "hold", pkg).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("cannot hold deb package: %w\n%s", err, output)
 	}
 	return nil
 }
@@ -80,4 +77,10 @@ func RemoveConflictPackage(ctx context.Context, pkg string) (err error) {
 
 func conflictPackageName(pkg string) string {
 	return fmt.Sprintf("%s-by-installer", pkg)
+}
+
+func buildPostrmFile(pkg string) []byte {
+	return []byte(fmt.Sprintf(`#!/bin/sh
+datadog-installer remove %s
+`, pkg))
 }
