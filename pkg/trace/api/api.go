@@ -418,14 +418,15 @@ func decodeTracerPayload(v Version, req *http.Request, cIDProvider IDProvider, l
 		if _, err = copyRequestBody(buf, req); err != nil {
 			return nil, false, err
 		}
-		var traces pb.Traces
+		traces := getTracerPayload()
 		err = traces.UnmarshalMsgDictionary(buf.Bytes())
 		return &pb.TracerPayload{
 			LanguageName:    lang,
 			LanguageVersion: langVersion,
 			ContainerID:     cIDProvider.GetContainerID(req.Context(), req.Header),
-			Chunks:          traceChunksFromTraces(&traces),
+			Chunks:          traceChunksFromTraces(traces),
 			TracerVersion:   tracerVersion,
+			Free:            func() { TPool.Put(traces) },
 		}, true, err
 	case V07:
 		buf := getBuffer()
