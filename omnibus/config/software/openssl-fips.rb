@@ -29,7 +29,7 @@ build do
                 no-asm no-comp no-ssl2 no-ssl3 \
                 shared zlib"
     
-    comamnd "make depend -j"
+    command "make depend -j"
     command "make -j"
     command "make install_sw -j"
     command "openssl version -v"
