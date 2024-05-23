@@ -10,7 +10,7 @@ resources_path="#{Omnibus::Config.project_root}/resources/fips"
 
 OPENSSL_VERSION="3.0.13"
 OPENSSL_SHA256_SUM="88525753f79d3bec27d2fa7c66aa0b92b3aa9498dafd93d7cfa4b3780cdae313"
-OPENSSL_FILENAME="openssl-#{OPENSSL_VER}.tar.gz"
+OPENSSL_FILENAME="openssl-#{OPENSSL_VERSION}.tar.gz"
 
 DIST_DIR="#{install_dir}/embedded"
 
