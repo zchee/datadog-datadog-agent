@@ -14,7 +14,8 @@ OPENSSL_FIPS_MODULE_SHA256_SUM="6c13d2bf38fdf31eac3ce2a347073673f5d63263398f1f69
 build do
     source url: "https://www.openssl.org/source/#{OPENSSL_FIPS_MODULE_FILENAME}",
            sha256: "#{OPENSSL_FIPS_MODULE_SHA256_SUM}",
-           extract: :seven_zip
+           extract: :seven_zip,
+           target_filename: "#{OPENSSL_FIPS_MODULE_FILENAME}"
     
     command "tar xvzf #{project_dir}/#{OPENSSL_FIPS_MODULE_FILENAME}"
     

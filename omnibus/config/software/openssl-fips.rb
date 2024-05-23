@@ -19,7 +19,8 @@ build do
 
     source url: "https://www.openssl.org/source/#{OPENSSL_FILENAME}",
            sha256: "#{OPENSSL_SHA256_SUM}",
-           extract: :seven_zip
+           extract: :seven_zip,
+           target_filename: "#{OPENSSL_FILENAME}"
     
     command "tar xvzf #{project_dir}/#{OPENSSL_FILENAME}"
 
