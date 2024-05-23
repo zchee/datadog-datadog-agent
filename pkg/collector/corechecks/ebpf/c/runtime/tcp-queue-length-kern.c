@@ -1,6 +1,7 @@
 #ifdef COMPILE_RUNTIME
 #include "kconfig.h"
-#include <linux/tcp.h>
+#include <linux/tcp.h>                   // for tcp_sock
+#include <net/sock.h>                    // for sock
 #endif
 
 #include "bpf_helpers.h"                 // for SEC, bpf_get_current_pid_tgid, bpf_map_lookup_elem, bpf_map_update_elem

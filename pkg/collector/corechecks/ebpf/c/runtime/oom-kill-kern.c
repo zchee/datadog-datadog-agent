@@ -1,6 +1,7 @@
 #ifdef COMPILE_RUNTIME
 #include "kconfig.h"
-#include <linux/oom.h>
+#include <linux/oom.h>           // for oom_control
+#include <linux/sched.h>         // for task_struct, TASK_COMM_LEN, mem_cgroup
 #endif
 
 #include "bpf_helpers.h"         // for NULL, SEC, bpf_get_current_comm, bpf_get_current_pid_tgid, bpf_map_lookup_elem
@@ -39,7 +40,7 @@ int BPF_KPROBE(kprobe__oom_kill_process, struct oom_control *oc) {
     s->pid = pid;
     get_cgroup_name(s->cgroup_name, sizeof(s->cgroup_name));
 
-    struct task_struct *p = (struct task_struct *)BPF_CORE_READ(oc, chosen);
+    struct task_struct *p = BPF_CORE_READ(oc, chosen);
     if (!p) {
         return 0;
     }

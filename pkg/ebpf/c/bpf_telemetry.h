@@ -3,6 +3,7 @@
 
 #include "bpf_helpers.h"      // for bpf_map_lookup_elem, bpf_probe_read_kernel, bpf_map_update_elem
 #include "compiler.h"         // for LOAD_CONSTANT
+#include "ktypes.h"           // for __u64
 #include "map-defs.h"         // for BPF_HASH_MAP
 #include "telemetry_types.h"  // for T_MAX_ERRNO, helper_err_telemetry_t, map_err_telemetry_t, read_kernel_indx, rea...
 

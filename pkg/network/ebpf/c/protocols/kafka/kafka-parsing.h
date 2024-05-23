@@ -1,13 +1,17 @@
 #ifndef __KAFKA_PARSING
 #define __KAFKA_PARSING
 
+#ifndef COMPILE_CORE
+#include <net/tcp.h>                                      // for TCPHDR_FIN, TCPHDR_RST, TCPHDR_ACK
+#endif
+
 #include "bpf_builtins.h"                                 // for bpf_memcpy, bpf_memset
 #include "bpf_endian.h"                                   // for bpf_ntohl, bpf_ntohs
 #include "bpf_helpers.h"                                  // for __always_inline, bpf_map_lookup_elem, NULL, bpf_map...
 #include "bpf_telemetry.h"                                // for FN_INDX_bpf_probe_read_user, FN_INDX_bpf_skb_load_b...
 #include "bpf_tracing.h"                                  // for BPF_UPROBE, pt_regs
 #include "conn_tuple.h"                                   // for conn_tuple_t
-#include "ip.h"                                           // for skb_info_t, flip_tuple, TCPHDR_FIN, TCPHDR_RST
+#include "ip.h"                                           // for skb_info_t, flip_tuple
 #include "ktypes.h"                                       // for s32, u32, __u32, s64, false, u8, s16, bool, __u16, s8
 #include "port_range.h"                                   // for normalize_tuple
 #include "protocols/classification/common.h"              // for is_payload_empty

@@ -1,10 +1,14 @@
 #ifndef __PROTOCOL_DISPATCHER_HELPERS_H
 #define __PROTOCOL_DISPATCHER_HELPERS_H
 
+#ifndef COMPILE_CORE
+#include <net/tcp.h>                                      // for TCPHDR_FIN, TCPHDR_RST, TCPHDR_ACK
+#endif
+
 #include "bpf_builtins.h"                                 // for bpf_memcpy, bpf_memset
 #include "bpf_helpers.h"                                  // for __always_inline, log_debug, NULL, bpf_map_lookup_elem
 #include "conn_tuple.h"                                   // for conn_tuple_t
-#include "ip.h"                                           // for skb_info_t, read_conn_tuple_skb, flip_tuple, TCPHDR...
+#include "ip.h"                                           // for skb_info_t, read_conn_tuple_skb, flip_tuple
 #include "ktypes.h"                                       // for bool, size_t, false, u32, __u32, true
 #include "port_range.h"                                   // for normalize_tuple
 #include "protocols/classification/common.h"              // for read_into_buffer_for_classification, is_payload_empty

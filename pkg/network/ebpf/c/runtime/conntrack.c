@@ -1,15 +1,16 @@
 #ifdef COMPILE_RUNTIME
 #include "kconfig.h"
-#include <uapi/linux/ip.h>
-#include <uapi/linux/ipv6.h>
-#include <uapi/linux/udp.h>
+#include <net/netfilter/nf_conntrack.h>                 // for nf_conn
+#include <uapi/linux/netfilter/nf_conntrack_common.h>   // for IPS_CONFIRMED, IPS_NAT_MASK
 #endif
 
-#include "conntrack.h"
-#include "bpf_telemetry.h"   // for bpf_map_update_with_telemetry
-#include "bpf_tracing.h"     // for BPF_KPROBE, PT_REGS_PARM5
-#include "conntrack/maps.h"  // for conntrack
-#include "ktypes.h"          // for u32, BPF_ANY, pt_regs
+#include "conntrack.h"          // for nf_conn_to_conntrack_tuples
+#include "bpf_helpers.h"        // for SEC, log_debug, bpf_get_current_pid_tgid
+#include "bpf_telemetry.h"      // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"        // for BPF_KPROBE, PT_REGS_PARM5, BPF_CORE_READ_INTO
+#include "conntrack/helpers.h"  // for increment_telemetry_registers_count
+#include "conntrack/maps.h"     // for conntrack
+#include "ktypes.h"             // for u32, BPF_ANY, pt_regs
 
 SEC("kprobe/__nf_conntrack_hash_insert")
 int BPF_KPROBE(kprobe___nf_conntrack_hash_insert, struct nf_conn *ct) {
@@ -34,14 +35,14 @@ int BPF_KPROBE(kprobe___nf_conntrack_hash_insert, struct nf_conn *ct) {
 }
 
 SEC("kprobe/ctnetlink_fill_info")
-int kprobe_ctnetlink_fill_info(struct pt_regs* ctx) {
+int BPF_KPROBE(kprobe_ctnetlink_fill_info) {
     u32 pid = bpf_get_current_pid_tgid() >> 32;
     if (pid != systemprobe_pid()) {
         log_debug("skipping kprobe/ctnetlink_fill_info invocation from non-system-probe process");
         return 0;
     }
 
-    struct nf_conn *ct = (struct nf_conn*)PT_REGS_PARM5(ctx);
+    struct nf_conn *ct = (struct nf_conn *)PT_REGS_PARM5(ctx);
 
     u32 status = 0;
     BPF_CORE_READ_INTO(&status, ct, status);

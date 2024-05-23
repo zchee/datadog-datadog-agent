@@ -1,12 +1,16 @@
 #ifndef __HTTP_H
 #define __HTTP_H
 
+#ifndef COMPILE_CORE
+#include <net/tcp.h>                                      // for TCPHDR_FIN, TCPHDR_RST, TCPHDR_ACK
+#endif
+
 #include "bpf_builtins.h"                                 // for bpf_memcpy, bpf_memset
 #include "bpf_helpers.h"                                  // for __always_inline, NULL, bpf_map_lookup_elem, log_debug
 #include "bpf_telemetry.h"                                // for bpf_map_update_with_telemetry
 #include "bpf_tracing.h"                                  // for BPF_UPROBE
 #include "conn_tuple.h"                                   // for conn_tuple_t
-#include "ip.h"                                           // for skb_info_t, TCPHDR_FIN, TCPHDR_RST
+#include "ip.h"                                           // for skb_info_t
 #include "ktypes.h"                                       // for bool, false, __u32, true, __u64, u16, u32
 #include "port_range.h"                                   // for normalize_tuple
 #include "protocols/classification/common.h"              // for is_payload_empty

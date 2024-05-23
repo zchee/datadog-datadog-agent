@@ -4,6 +4,8 @@
 #ifndef COMPILE_CORE
 #include <linux/net.h>      // for socket
 #include <linux/socket.h>   // for AF_INET, AF_INET6
+#include <linux/tcp.h>      // IWYU pragma: keep // for tcp_sk, tcp_sock
+#include <net/inet_sock.h>  // IWYU pragma: keep // for inet_sk, inet_sock, inet_daddr, inet_dport
 #include <net/sock.h>       // for sock
 #include <uapi/linux/in6.h> // for in6_addr
 #endif

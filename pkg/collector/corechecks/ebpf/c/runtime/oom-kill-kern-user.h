@@ -1,11 +1,11 @@
 #ifndef OOM_KILL_KERN_USER_H
 #define OOM_KILL_KERN_USER_H
 
-#include "ktypes.h"
-
-#ifndef TASK_COMM_LEN
-#define TASK_COMM_LEN 16
+#ifndef COMPILE_CORE
+#include <linux/sched.h>         // for TASK_COMM_LEN
 #endif
+
+#include "ktypes.h"
 
 struct oom_stats {
     char cgroup_name[129];

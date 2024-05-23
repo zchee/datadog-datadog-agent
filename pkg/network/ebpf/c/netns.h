@@ -3,15 +3,16 @@
 
 #ifndef COMPILE_CORE
 #include "kconfig.h"
-#include <net/net_namespace.h> // for possible_net_t and net
-#include <net/sock.h> // for sock
+#include <net/net_namespace.h>  // IWYU pragma: keep // for possible_net_t and net
+#include <net/sock.h>           // for sock
+#include <linux/ns_common.h>    // IWYU pragma: keep // for _LINUX_NS_COMMON_H, ns_common
 #endif
 
-#include "bpf_helpers.h"  // for NULL, __always_inline
+#include "bpf_helpers.h"        // for NULL, __always_inline
 #include "bpf_telemetry.h"      // for FN_INDX_bpf_probe_read_kernel, bpf_probe_read_kernel_with_telemetry
-#include "bpf_tracing.h"  // for BPF_CORE_READ_INTO, bpf_core_field_exists, BPF_PROBE_READ_INTO
-#include "ktypes.h"       // for u32, __u32
-#include "offsets.h"   // for offset_netns, offset_ino
+#include "bpf_tracing.h"        // for BPF_CORE_READ_INTO, bpf_core_field_exists, BPF_PROBE_READ_INTO
+#include "ktypes.h"             // for u32, __u32
+#include "offsets.h"            // for offset_netns, offset_ino
 
 #ifdef COMPILE_PREBUILT
 

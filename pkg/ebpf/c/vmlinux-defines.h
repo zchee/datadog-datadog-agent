@@ -49,5 +49,8 @@ static __attribute__((always_inline)) __attribute__((__unused__)) bool IS_ERR_OR
     return !ptr || IS_ERR_VALUE((unsigned long)ptr);
 }
 
+// source include/linux/sched.h
+#define TASK_COMM_LEN 16
+
 #endif
 #endif

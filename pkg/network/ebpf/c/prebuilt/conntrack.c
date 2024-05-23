@@ -1,11 +1,12 @@
 #include "kconfig.h"
 #include <net/netfilter/nf_conntrack.h> // for nf_conn
-#include "conntrack.h"
-#include "bpf_helpers.h"     // for BPF_ANY, SEC, log_debug, bpf_get_current_pid_tgid
-#include "bpf_telemetry.h"   // for bpf_map_update_with_telemetry
-#include "bpf_tracing.h"     // for pt_regs, user_pt_regs, PT_REGS_PARM1, PT_REGS_PARM5
-#include "conntrack/maps.h"  // for conntrack
-#include "ktypes.h"          // for u32
+#include "conntrack.h"                  // for nf_conn_to_conntrack_tuples
+#include "bpf_helpers.h"                // for BPF_ANY, SEC, log_debug, bpf_get_current_pid_tgid
+#include "bpf_telemetry.h"              // for bpf_map_update_with_telemetry
+#include "bpf_tracing.h"                // for pt_regs, user_pt_regs, PT_REGS_PARM1, PT_REGS_PARM5
+#include "conntrack/helpers.h"          // for increment_telemetry_registers_count
+#include "conntrack/maps.h"             // for conntrack
+#include "ktypes.h"                     // for u32
 
 SEC("kprobe/__nf_conntrack_hash_insert")
 int BPF_KPROBE(kprobe___nf_conntrack_hash_insert, struct nf_conn *ct) {

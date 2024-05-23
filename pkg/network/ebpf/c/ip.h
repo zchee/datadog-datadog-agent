@@ -2,13 +2,12 @@
 #define __IP_H
 
 #ifndef COMPILE_CORE
-#include <uapi/linux/if_ether.h>
-#include <uapi/linux/in.h>
-#include <uapi/linux/ip.h>
-#include <uapi/linux/ipv6.h>
-#include <uapi/linux/tcp.h>
-#include <uapi/linux/udp.h>
-#include <net/tcp.h>
+#include <uapi/linux/if_ether.h>    // for ETH_HLEN, ETH_P_IP, ETH_P_IPV6, ethhdr
+#include <uapi/linux/in.h>          // for IPPROTO_TCP, IPPROTO_UDP
+#include <uapi/linux/ip.h>          // for iphdr
+#include <uapi/linux/ipv6.h>        // for ipv6hdr
+#include <uapi/linux/tcp.h>         // for tcphdr
+#include <uapi/linux/udp.h>         // for udphdr
 #endif
 
 #include "bpf_builtins.h"       // for bpf_memcmp, bpf_memset
