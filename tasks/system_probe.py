@@ -1191,19 +1191,19 @@ def get_co_re_build_flags():
 def get_iwyu_flags():
     return [
         # often used in individual build modes, prevent mode-specific advice
-        '-Xiwyu --keep=pkg/ebpf/c/bpf_telemetry.h',
-        '-Xiwyu --keep=pkg/ebpf/c/bpf_tracing.h',
-        '-Xiwyu --keep=pkg/network/ebpf/c/offsets.h',
-        '-Xiwyu --keep=pkg/ebpf/c/kconfig.h',
-        '-Xiwyu --max_line_length=120',
-        '-Xiwyu --no_fwd_decls',
-        '-Xiwyu --check_also=pkg/ebpf/c/**/*.h',
-        '-Xiwyu --check_also=pkg/network/ebpf/c/*.h',
-        '-Xiwyu --check_also=pkg/network/ebpf/c/**/*.h',
-        '-Xiwyu --check_also=pkg/collector/corechecks/ebpf/c/runtime/*.h',
-        '-Xiwyu --check_also=pkg/ebpf/c/bpf_telemetry.h',
-        '-Xiwyu --mapping_file=pkg/ebpf/c/ebpf.imp',
-        '-Xiwyu --no_default_mappings',
+        "-Xiwyu --keep=pkg/ebpf/c/bpf_telemetry.h",
+        "-Xiwyu --keep=pkg/ebpf/c/bpf_tracing.h",
+        "-Xiwyu --keep=pkg/network/ebpf/c/offsets.h",
+        "-Xiwyu --keep=pkg/ebpf/c/kconfig.h",
+        "-Xiwyu --max_line_length=120",
+        "-Xiwyu --no_fwd_decls",
+        "-Xiwyu --check_also=pkg/ebpf/c/**/*.h",
+        "-Xiwyu --check_also=pkg/network/ebpf/c/*.h",
+        "-Xiwyu --check_also=pkg/network/ebpf/c/**/*.h",
+        "-Xiwyu --check_also=pkg/collector/corechecks/ebpf/c/runtime/*.h",
+        "-Xiwyu --check_also=pkg/ebpf/c/bpf_telemetry.h",
+        "-Xiwyu --mapping_file=pkg/ebpf/c/ebpf.imp",
+        "-Xiwyu --no_default_mappings",
     ]
 
 
