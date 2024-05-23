@@ -33,8 +33,8 @@ build do
     command "make install_sw -j"
     command "openssl version -v"
 
-    copy "/usr/local/ssl/fipsmodule.cnf" "#{install_dir}/ssl/fipsmodule.cnf"
-    copy "/usr/local/lib/ossl-modules/fips.so" "#{install_dir}/lib/ossl-modules/fips.so"
+    copy "/usr/local/ssl/fipsmodule.cnf", "#{install_dir}/ssl/fipsmodule.cnf"
+    copy "/usr/local/lib/ossl-modules/fips.so", "#{install_dir}/lib/ossl-modules/fips.so"
     copy '#{resources_path}/openssl.cnf', "#{install_dir}/embedded/ssl/openssl.cnf.tmp"
     copy '#{resources_path}/fipsinstall.sh', "#{install_dir}/embedded/bin/fipsinstall.sh"
 end 
