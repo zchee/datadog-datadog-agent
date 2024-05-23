@@ -24,7 +24,7 @@ build do
     
     command "ls"
     command "ls #{project_dir}"
-    command "tar xvzf #{OPENSSL_FILENAME}"
+    command "tar xvzf /omnibus/src/openssl-fips/#{OPENSSL_FILENAME} -C ."
     command "cd openssl-#{OPENSSL_VERSION}"
 
     command "./Configure --prefix=\"#{DIST_DIR}\" \

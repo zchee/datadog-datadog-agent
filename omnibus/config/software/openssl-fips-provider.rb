@@ -19,7 +19,7 @@ build do
     
     command "ls"
     command "ls #{project_dir}"
-    command "tar xvzf #{OPENSSL_FIPS_MODULE_FILENAME}"
+    command "tar xvzf /omnibus/src/openssl-fips-provider/#{OPENSSL_FIPS_MODULE_FILENAME} -C ."
     command "cd openssl-#{OPENSSL_FIPS_MODULE_VERSION}" 
     # Exact build steps from security policy:
     # https://csrc.nist.gov/CSRC/media/projects/cryptographic-module-validation-program/documents/security-policies/140sp4282.pdf
