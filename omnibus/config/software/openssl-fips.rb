@@ -14,7 +14,6 @@ OPENSSL_FILENAME="openssl-${OPENSSL_VER}.tar.gz"
 DIST_DIR="#{install_dir}/embedded"
 
 build do
-
     dependency "openssl-fips-provider"
 
     source url: "https://www.openssl.org/source/#{OPENSSL_FILENAME}",
@@ -35,7 +34,7 @@ build do
     command "openssl version -v"
 
     copy "/usr/local/ssl/fipsmodule.cnf" "#{install_dir}/ssl/fipsmodule.cnf"
-    copy "/usr/local/lib*/ossl-modules/fips.so" "#{install_dir}/lib/ossl-modules/fips.so"
+    copy "/usr/local/lib/ossl-modules/fips.so" "#{install_dir}/lib/ossl-modules/fips.so"
     copy '#{resources_path}/openssl.cnf', "#{install_dir}/embedded/ssl/openssl.cnf.tmp"
     copy '#{resources_path}/fipsinstall.sh', "#{install_dir}/embedded/bin/fipsinstall.sh"
 end 
