@@ -1,7 +1,6 @@
 #include "kconfig.h"
 #include <linux/net.h>                                  // for socket
 #include <linux/netfilter/nf_conntrack_tuple_common.h>  // for IP_CT_DIR_ORIGINAL, IP_CT_DIR_REPLY
-#include <linux/ns_common.h>                            // for _LINUX_NS_COMMON_H, ns_common
 #include <linux/skbuff.h>                               // for sk_buff
 #include <linux/tcp.h>                                  // for tcp_sock
 #include <net/flow.h>                                   // for flowi4, flowi6, fl4_dport, fl4_sport, fl6_dport, fl6_...

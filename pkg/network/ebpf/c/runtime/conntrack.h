@@ -3,7 +3,6 @@
 
 #ifdef COMPILE_RUNTIME
 #include "kconfig.h"
-#include <linux/ns_common.h>                   // for _LINUX_NS_COMMON_H
 #include <net/netfilter/nf_conntrack.h>        // for nf_conn
 #include <net/netfilter/nf_conntrack_tuple.h>  // for nf_conntrack_tuple, nf_conntrack_tuple_hash
 #include <net/net_namespace.h>                 // for net

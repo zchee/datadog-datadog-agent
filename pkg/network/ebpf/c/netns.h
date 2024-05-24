@@ -5,7 +5,6 @@
 #include "kconfig.h"
 #include <net/net_namespace.h>  // IWYU pragma: keep // for possible_net_t and net
 #include <net/sock.h>           // for sock
-#include <linux/ns_common.h>    // IWYU pragma: keep // for _LINUX_NS_COMMON_H, ns_common
 #endif
 
 #include "bpf_helpers.h"        // for NULL, __always_inline
