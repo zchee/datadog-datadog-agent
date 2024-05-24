@@ -100,7 +100,7 @@ build do
       command "bazel build #{target}"
       # For convenience the build produces a tar file that includes the configs in the directory structure
       # that the rest of the omnibus script expects
-      command "tar -xf $(bazel cquery --output=files #{target}) -C #{project_dir}"
+      command "tar -xf $(bazel cquery --output=files #{target})"
     else
       command "inv -e agent.build --exclude-rtloader #{include_sds} --python-runtimes #{py_runtimes_arg} --major-version #{major_version_arg} --rebuild --no-development --install-path=#{install_dir} --embedded-path=#{install_dir}/embedded --python-home-2=#{install_dir}/embedded --python-home-3=#{install_dir}/embedded --flavor #{flavor_arg} #{bundle_arg}", env: env
 
@@ -134,16 +134,16 @@ build do
     copy 'bin/agent/dist', "#{install_dir}/bin/agent"
     mkdir Omnibus::Config.package_dir() unless Dir.exists?(Omnibus::Config.package_dir())
   end
-
-  if not bundled_agents.include? "trace-agent"
+  if ENV["ENABLE_BAZEL"]
+    # Run the Bazel build
+    target = "//cmd/trace-agent"
+    command "bazel build #{target}"
+    # Get the binary out
+    mkdir "bin/trace-agent"
+    command "cp $(bazel cquery --output=files #{target}) bin/trace-agent"
+  elsif not ENV["ENABLE_BAZEL"] and not bundled_agents.include? "trace-agent"
     platform = windows_arch_i386? ? "x86" : "x64"
     command "invoke trace-agent.build --python-runtimes #{py_runtimes_arg} --install-path=#{install_dir} --major-version #{major_version_arg} --arch #{platform} --flavor #{flavor_arg}", :env => env
-  end
-
-  if windows_target?
-    copy 'bin/trace-agent/trace-agent.exe', "#{install_dir}/bin/agent"
-  else
-    copy 'bin/trace-agent/trace-agent', "#{install_dir}/embedded/bin"
   end
 
   # Build the process-agent with the correct go version for windows
@@ -156,8 +156,10 @@ build do
 
   if windows_target?
     copy 'bin/process-agent/process-agent.exe', "#{install_dir}/bin/agent"
+    copy 'bin/trace-agent/trace-agent.exe', "#{install_dir}/bin/agent"
   else
     copy 'bin/process-agent/process-agent', "#{install_dir}/embedded/bin"
+    copy 'bin/trace-agent/trace-agent', "#{install_dir}/embedded/bin"
   end
 
   # Commented out for local testing purposes
