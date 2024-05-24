@@ -14,16 +14,16 @@ OPENSSL_FILENAME="openssl-#{OPENSSL_VERSION}.tar.gz"
 
 DIST_DIR="#{install_dir}/embedded"
 
-build do
-    dependency "openssl-fips-provider"
-
-    source url: "https://www.openssl.org/source/#{OPENSSL_FILENAME}",
+source url: "https://www.openssl.org/source/#{OPENSSL_FILENAME}",
            sha256: "#{OPENSSL_SHA256_SUM}",
            extract: :seven_zip,
            target_filename: "#{OPENSSL_FILENAME}"
-    
-    command "cd /omnibus/src/openssl-fips-provider"
 
+relative_path "openssl-#{OPENSSL_VERSION}"
+
+dependency "openssl-fips-provider"
+
+build do
     command "./Configure --prefix=\"#{DIST_DIR}\" \
                 --libdir=lib \
                 -Wl,-rpath=\"#{DIST_DIR}/lib\" \
