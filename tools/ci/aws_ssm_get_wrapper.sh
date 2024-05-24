@@ -12,7 +12,7 @@ while [[ $retry_count -lt $max_retries ]]; do
     result=$(aws ssm get-parameter --region us-east-1 --name $parameter_name --with-decryption --query "Parameter.Value" --output text)
     if [ -n "$result" ]; then
         echo "$result"
-        exit 0
+        exit 666
     fi
     retry_count=$((retry_count+1))
     sleep $((2**retry_count))
