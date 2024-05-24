@@ -13,7 +13,7 @@ OPENSSL_FIPS_MODULE_SHA256_SUM="6c13d2bf38fdf31eac3ce2a347073673f5d63263398f1f69
 source url: "https://www.openssl.org/source/#{OPENSSL_FIPS_MODULE_FILENAME}",
         sha256: "#{OPENSSL_FIPS_MODULE_SHA256_SUM}",
         extract: :seven_zip,
-        target_filename: "#{OPENSSL_FILENAME}"
+        target_filename: "#{OPENSSL_FIPS_MODULE_FILENAME}"
     
 relative_path "openssl-#{OPENSSL_FIPS_MODULE_VERSION}"
 
