@@ -31,7 +31,8 @@
   - $CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $SSH_KEY_SSM_NAME > $AWS_EC2_SSH_KEY_FILE || EXIT_CODE=$?
   - |
     if [ $EXIT_CODE -ne 0 ]; then
-      exit $EXIT_CODE
+      echo $EXIT_CODE
+      exit 666
     fi
   - set -e
   # Without the newline ssh silently fails and moves on to try other auth methods
