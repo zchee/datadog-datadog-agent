@@ -15,9 +15,9 @@ build do
     source url: "https://www.openssl.org/source/#{OPENSSL_FIPS_MODULE_FILENAME}",
            sha256: "#{OPENSSL_FIPS_MODULE_SHA256_SUM}",
            extract: :seven_zip,
-           target_filename: "openssl-fips-provider.tar.gz"
+           target_filename: "openssl-#{OPENSSL_FIPS_MODULE_VERSION}"
     
-    command "tar -xvf openssl-fips-provider.tar.gz"
+    #command "tar -xvf openssl-fips-provider.tar.gz"
     command "cd openssl-#{OPENSSL_FIPS_MODULE_VERSION}"
     # Exact build steps from security policy:
     # https://csrc.nist.gov/CSRC/media/projects/cryptographic-module-validation-program/documents/security-policies/140sp4282.pdf
