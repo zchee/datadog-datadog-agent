@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
@@ -247,6 +248,22 @@ func runAgent() {
 				log.Errorf("Error setting up the logs agent: %s", err)
 			}
 			serverlessDaemon.SetLogsAgent(logsAgent)
+			msgReceiver := logsAgent.GetMessageReceiver()
+			if msgReceiver == nil {
+				log.Error("Can't get the message receiver from the logs agent")
+				return
+			}
+			if !msgReceiver.SetEnabled(true) {
+				log.Error("Another client is already streaming logs")
+				return
+			}
+			go func() {
+				log.Debug("Starting to stream logs")
+				for line := range msgReceiver.Filter(nil, stopCh) {
+					fmt.Printf("[stream-logs] %s\n", line)
+				}
+				msgReceiver.SetEnabled(false)
+			}()
 		}
 	}()
 
