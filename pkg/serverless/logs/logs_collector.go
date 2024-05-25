@@ -103,7 +103,6 @@ func (lc *LambdaLogsCollector) Start() {
 
 		go func() {
 			for messages := range lc.In {
-				log.Debugf("Message from the Lambda Logs API: %+v", messages)
 				lc.processLogMessages(messages)
 			}
 

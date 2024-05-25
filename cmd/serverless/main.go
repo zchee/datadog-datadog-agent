@@ -10,6 +10,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
@@ -333,9 +334,15 @@ func runAgent() {
 	// this log line is used for performance checks during CI
 	// please be careful before modifying/removing it
 	log.Debugf("serverless agent ready in %v", time.Since(startTime))
+	buf := make([]byte, 1<<16)
+	runtime.Stack(buf, true)
+	log.Debugf("[START goroutine dump] %s", buf)
 
 	// block here until we receive a stop signal
 	<-stopCh
+	buf = make([]byte, 1<<16)
+	runtime.Stack(buf, true)
+	log.Debugf("[END goroutine dump] %s", buf)
 	//nolint:gosimple // TODO(SERV) Fix gosimple linter
 	return
 }
