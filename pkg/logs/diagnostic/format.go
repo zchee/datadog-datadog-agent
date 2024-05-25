@@ -28,6 +28,9 @@ type logFormatter struct {
 
 //nolint:revive // TODO(AML) Fix revive linter
 func (l *logFormatter) Format(m *message.Message, eventType string, redactedMsg []byte) string {
+	if m == nil {
+		return ""
+	}
 	var hname string
 	var err error
 	if l.hostname == nil {
@@ -44,6 +47,7 @@ func (l *logFormatter) Format(m *message.Message, eventType string, redactedMsg 
 	// TODO(remy): should we consider renaming the "Timestamp: %s" to mention
 	// it's only concerning the serverless agent?
 	if !m.ServerlessExtra.Timestamp.IsZero() {
+		log.Debugf("Using serverless timestamp: %s", m.ServerlessExtra.Timestamp)
 		ts = m.ServerlessExtra.Timestamp
 	}
 
