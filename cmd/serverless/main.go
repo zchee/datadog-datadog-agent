@@ -257,10 +257,11 @@ func runAgent() {
 				return
 			}
 			go func() {
-				log.Debug("Starting to stream logs")
+				log.Debug("Starting to stream-logs")
 				for line := range msgReceiver.Filter(nil, stopCh) {
 					fmt.Printf("[stream-logs] %s\n", line)
 				}
+				log.Debug("stream-logs ended")
 				msgReceiver.SetEnabled(false)
 			}()
 		}
