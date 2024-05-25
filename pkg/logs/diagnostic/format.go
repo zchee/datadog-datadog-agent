@@ -12,6 +12,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/comp/core/hostname/hostnameinterface"
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 // Formatter defines how a particular message.Message should be formatted
@@ -27,9 +28,16 @@ type logFormatter struct {
 
 //nolint:revive // TODO(AML) Fix revive linter
 func (l *logFormatter) Format(m *message.Message, eventType string, redactedMsg []byte) string {
-	hname, err := l.hostname.Get(context.TODO())
-	if err != nil {
+	var hname string
+	var err error
+	if l.hostname == nil {
 		hname = "unknown"
+	} else {
+		hname, err = l.hostname.Get(context.TODO())
+		if err != nil {
+			hname = "unknown"
+			log.Warnf("failed to get hostname, fallback to %q: %s", hname, err)
+		}
 	}
 
 	ts := time.Now().UTC()
