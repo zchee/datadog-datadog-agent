@@ -206,28 +206,14 @@ func (c *wasmCheck) Configure(senderManager sender.SenderManager, integrationCon
 		}
 	}
 
-	// wasmInitConfig, err := c.TrackedWasmString(string(initConfig))
-	// if err != nil {
-	// 	log.Errorf("unable to allocate memory for initConfig for check %s: %s", string(c.id), err)
-	// 	return err
-	// }
-	// wasmData, err := c.TrackedWasmString(string(data))
-	// if err != nil {
-	// 	log.Errorf("unable to allocate memory for data for check %s: %s", string(c.id), err)
-	// 	return err
-	// }
-	// wasmId, err := c.TrackedWasmString(string(c.id))
-	// if err != nil {
-	// 	log.Errorf("unable to allocate memory for id for check %s: %s", string(c.id), err)
-	// 	return err
-	// }
-
+	// Get the JSON params from the instance
 	instanceConfig := instanceConfig{}
 	if err := yaml.Unmarshal(data, &instanceConfig); err != nil {
 		log.Errorf("invalid instanceConfig section for check %s: %s", string(c.id), err)
 		return err
 	}
 
+	// Allocate memory to pass instance config as JSON string
 	wasmJSON, err := c.TrackedWasmString(instanceConfig.JSONData)
 	if err != nil {
 		log.Errorf("unable to allocate memory for id for check %s: %s", string(c.id), err)
@@ -235,7 +221,6 @@ func (c *wasmCheck) Configure(senderManager sender.SenderManager, integrationCon
 	}
 
 	c.wasmInstanceConfig = wasmJSON
-	// TODO implement here interface between wasm and checks (return and parameters)
 
 	return nil
 }
@@ -270,6 +255,7 @@ type wasmString struct {
 	size uint64
 }
 
+// This function use the WASM Guest exported functions to allocate memory and write the given memory in it.
 func (c *wasmCheck) TrackedWasmString(str string) (wasmString, error) {
 	var wasmStr wasmString
 
@@ -284,7 +270,7 @@ func (c *wasmCheck) TrackedWasmString(str string) (wasmString, error) {
 	// So, we have to free it when finished
 	// defer c.funcs.free.Call(c.ctx, wasmStr.ptr)
 
-	// TODO free memoery allocation
+	// TODO free memory allocation
 
 	// The pointer is a linear memory offset, which is where we write the name.
 	if !c.wasmModule.Memory().Write(uint32(wasmStr.ptr), []byte(str)) {

@@ -103,10 +103,7 @@ func (l WasmCheckLoader) Name() string {
 	return "wasm"
 }
 
-// Load returns a Go check
-func (l *WasmCheckLoader) Load(senderManger sender.SenderManager, config integration.Config, instance integration.Data) (check.Check, error) {
-	var c check.Check
-
+func (l *WasmCheckLoader) Load(senderManager sender.SenderManager, config integration.Config, instance integration.Data) (check.Check, error) {
 	initConfig := initConfig{}
 
 	err := yaml.Unmarshal(config.InitConfig, &initConfig)
@@ -119,7 +116,7 @@ func (l *WasmCheckLoader) Load(senderManger sender.SenderManager, config integra
 	}
 
 	if initConfig.WasmPath == "" {
-		return nil, fmt.Errorf("Check %s is missing init_config.path paramater", config.Name)
+		return nil, fmt.Errorf("Check %s is missing init_config.path parameter", config.Name)
 	}
 
 	pathRoot := config.Source
@@ -133,25 +130,24 @@ func (l *WasmCheckLoader) Load(senderManger sender.SenderManager, config integra
 		return nil, fmt.Errorf("Failed to read wasm file: %v", err)
 	}
 
-	// Compile the Wasm binary once so that we can skip the entire compilation time during instantiation.
 	compiledWasm, err := l.wasmRuntime.CompileModule(l.ctx, wasmBinary)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile Wasm binary: %v", err)
+		return nil, fmt.Errorf("Failed to compile Wasm binary: %v", err)
 	}
 
 	id := checkid.BuildID(config.Name, config.FastDigest(), instance, config.InitConfig)
 
-	// Instantiate a new Wasm module from the already compiled `compiledWasm`.
 	wasmModule, err := l.wasmRuntime.InstantiateModule(l.ctx, compiledWasm, wazero.NewModuleConfig().WithName(string(id)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to instantiate wasm Module: %v", err)
+		return nil, fmt.Errorf("Failed to instantiate wasm Module: %v", err)
 	}
 
-	c, err = newWasmCheck(l.ctx, id, config.Name, wasmModule, initConfig)
+	c, err := newWasmCheck(l.ctx, id, config.Name, wasmModule, initConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create WASM Check: %v", err)
+		return nil, fmt.Errorf("Failed to create WASM Check: %v", err)
 	}
-	err = c.Configure(senderManger, config.FastDigest(), instance, config.InitConfig, config.Source)
+
+	err = c.Configure(senderManager, config.FastDigest(), instance, config.InitConfig, config.Source)
 	if err != nil {
 		return c, err
 	}
