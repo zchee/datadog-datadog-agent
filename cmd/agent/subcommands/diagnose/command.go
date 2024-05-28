@@ -65,6 +65,9 @@ type cliParams struct {
 
 	// diagnose suites not to run as a list of regular expressions
 	exclude []string
+
+	// json will output the diagnosis results in JSON format, value of the --json flag
+	json bool
 }
 
 // payloadName is the name of the payload to display
@@ -115,6 +118,9 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 	// Normally a successful diagnosis is printed as a single dot character. If verbose option is specified
 	// successful diagnosis is printed fully. With verbose option diagnosis description is also printed.
 	diagnoseCommand.PersistentFlags().BoolVarP(&cliParams.verbose, "verbose", "v", false, "verbose output, includes passed diagnoses, and diagnoses description")
+
+	// Output format can be changed to JSON. In this case diagnosis results will be printed in JSON format.
+	diagnoseCommand.PersistentFlags().BoolVarP(&cliParams.json, "json", "j", false, "output diagnosis results in JSON format")
 
 	// List names of all registered diagnose suites. Output also will be filtered if include and or exclude
 	// options are specified
@@ -241,6 +247,7 @@ func cmdDiagnose(cliParams *cliParams,
 	ac autodiscovery.Component,
 	secretResolver secrets.Component) error {
 	diagCfg := diagnosis.Config{
+		JSON:     cliParams.json,
 		Verbose:  cliParams.verbose,
 		RunLocal: cliParams.runLocal,
 		Include:  cliParams.include,
