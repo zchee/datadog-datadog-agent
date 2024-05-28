@@ -208,6 +208,8 @@ func (l *LockContentionCollector) Collect(metrics chan<- prometheus.Metric) {
 		return
 	}
 
+	log.Info("Lock contention collector triggered")
+
 	var cursor ebpf.MapBatchCursor
 	lockRanges := make([]LockRange, l.ranges)
 	contention := make([]ContentionData, l.ranges)
@@ -237,6 +239,8 @@ func (l *LockContentionCollector) Collect(metrics chan<- prometheus.Metric) {
 			// TODO: should we consider overflows. u64 overflow seems very unlikely?
 			l.totalContention.WithLabelValues(mp.name, lockType).Add(float64(data.Total_time - mp.totalTime))
 			mp.totalTime = data.Total_time
+
+			log.Infof("Map %s is contended on lock type %s", mp.name, lockType)
 		}
 	}
 
@@ -315,6 +319,7 @@ func (l *LockContentionCollector) Initialize(trackAllResources bool) error {
 		collectionSpec.Maps[mapAddrFdBpfMap].MaxEntries = ranges
 		collectionSpec.Maps[lockStatBpfMap].MaxEntries = ranges
 		collectionSpec.Maps[rangesBpfMap].MaxEntries = ranges
+		log.Infof("Number of estimated ranges %d", ranges)
 
 		// Ideally we would want this to be the max number of proccesses allowed
 		// by the kernel, however verifier constraints force us to choose a smaller
