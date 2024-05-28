@@ -210,9 +210,6 @@ static __always_inline void http_process(http_event_t *event, skb_info_t *skb_in
         // Check a second time to minimize the chance of accidentally deleting a
         // map entry if there is a race with a late response.
         // Please refer to comments in `http_seen_before` for more context.
-        if (http->tcp_seq == HTTP_TERMINATING) {
-            bpf_map_delete_elem(&http_in_flight, tuple);
-        }
     }
 }
 
