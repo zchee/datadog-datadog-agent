@@ -14,11 +14,11 @@ import (
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/trivy/trivy/trivyimpl/util/trivy"
 	"github.com/DataDog/datadog-agent/pkg/sbom"
 	"github.com/DataDog/datadog-agent/pkg/sbom/collectors"
 	"github.com/DataDog/datadog-agent/pkg/util/docker"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
-	"github.com/DataDog/datadog-agent/pkg/util/trivy"
 
 	"github.com/docker/docker/client"
 )
@@ -143,7 +143,7 @@ func (c *Collector) Shutdown() {
 	c.closed = true
 }
 
-func init() {
+func RegisterDocker() {
 	collectors.RegisterCollector(collectors.DockerCollector, &Collector{
 		resChan: make(chan sbom.ScanResult, resultChanSize),
 	})

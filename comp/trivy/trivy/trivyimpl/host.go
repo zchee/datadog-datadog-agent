@@ -5,7 +5,7 @@
 
 //go:build trivy
 
-package host
+package trivyimpl
 
 import (
 	"context"
@@ -14,12 +14,12 @@ import (
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/trivy/trivy/trivyimpl/util/trivy"
 	"github.com/DataDog/datadog-agent/pkg/sbom"
 	"github.com/DataDog/datadog-agent/pkg/sbom/collectors"
 	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
-	"github.com/DataDog/datadog-agent/pkg/util/trivy"
 )
 
 // channelSize defines the result channel size
@@ -118,10 +118,4 @@ func (c *Collector) Shutdown() {
 		close(c.resChan)
 	}
 	c.closed = true
-}
-
-func init() {
-	collectors.RegisterCollector(collectors.HostCollector, &Collector{
-		resChan: make(chan sbom.ScanResult, channelSize),
-	})
 }

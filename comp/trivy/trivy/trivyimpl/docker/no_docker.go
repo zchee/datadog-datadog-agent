@@ -3,14 +3,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-//go:build docker && !trivy
+//go:build !docker && trivy
 
 package docker
 
-import (
-	"context"
-)
-
-func (c *collector) startSBOMCollection(context.Context) error {
-	return nil
-}
+func RegisterDocker() {}

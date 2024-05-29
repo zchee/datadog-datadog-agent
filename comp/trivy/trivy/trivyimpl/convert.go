@@ -5,7 +5,7 @@
 
 //go:build trivy
 
-package sbom
+package trivyimpl
 
 import (
 	"time"

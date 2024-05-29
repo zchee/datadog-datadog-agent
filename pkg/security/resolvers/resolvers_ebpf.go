@@ -18,11 +18,13 @@ import (
 	manager "github.com/DataDog/ebpf-manager"
 
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/trivy/trivy"
 	"github.com/DataDog/datadog-agent/pkg/process/procutil"
 	"github.com/DataDog/datadog-agent/pkg/security/config"
 	"github.com/DataDog/datadog-agent/pkg/security/probe/erpc"
 	"github.com/DataDog/datadog-agent/pkg/security/probe/managerhelper"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/cgroup"
+	cgroupModel "github.com/DataDog/datadog-agent/pkg/security/resolvers/cgroup/model"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/container"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/dentry"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/hash"
@@ -30,7 +32,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/netns"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/path"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/process"
-	"github.com/DataDog/datadog-agent/pkg/security/resolvers/sbom"
+
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/selinux"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/tags"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/tc"
@@ -56,7 +58,7 @@ type EBPFResolvers struct {
 	CGroupResolver    *cgroup.Resolver
 	TCResolver        *tc.Resolver
 	PathResolver      path.ResolverInterface
-	SBOMResolver      *sbom.Resolver
+	SBOMResolver      trivy.Resolver
 	HashResolver      *hash.Resolver
 	UserSessions      *usersessions.Resolver
 }
@@ -80,10 +82,10 @@ func NewEBPFResolvers(config *config.Config, manager *manager.Manager, statsdCli
 		return nil, err
 	}
 
-	var sbomResolver *sbom.Resolver
+	var sbomResolver trivy.Resolver
 
 	if config.RuntimeSecurity.SBOMResolverEnabled {
-		sbomResolver, err = sbom.NewSBOMResolver(config.RuntimeSecurity, statsdClient, wmeta)
+		sbomResolver, err = trivy.GetTrivyComponent().NewSBOMResolver(config.RuntimeSecurity, statsdClient, wmeta)
 		if err != nil {
 			return nil, err
 		}
@@ -106,10 +108,10 @@ func NewEBPFResolvers(config *config.Config, manager *manager.Manager, statsdCli
 	}
 
 	if config.RuntimeSecurity.SBOMResolverEnabled {
-		if err := cgroupsResolver.RegisterListener(cgroup.CGroupDeleted, sbomResolver.OnCGroupDeletedEvent); err != nil {
+		if err := cgroupsResolver.RegisterListener(cgroup.CGroupDeleted, func(workload *cgroupModel.CacheEntry) { sbomResolver.OnCGroupDeletedEvent(workload) }); err != nil {
 			return nil, err
 		}
-		if err := cgroupsResolver.RegisterListener(cgroup.WorkloadSelectorResolved, sbomResolver.OnWorkloadSelectorResolvedEvent); err != nil {
+		if err := cgroupsResolver.RegisterListener(cgroup.WorkloadSelectorResolved, func(workload *cgroupModel.CacheEntry) { sbomResolver.OnWorkloadSelectorResolvedEvent(workload) }); err != nil {
 			return nil, err
 		}
 	}

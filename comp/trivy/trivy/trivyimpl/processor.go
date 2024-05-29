@@ -5,7 +5,7 @@
 
 //go:build trivy
 
-package sbom
+package trivyimpl
 
 import (
 	"context"
@@ -18,11 +18,11 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/tagger/collectors"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
 	"github.com/DataDog/datadog-agent/comp/forwarder/eventplatform"
+
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 
 	ddConfig "github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/sbom"
-	"github.com/DataDog/datadog-agent/pkg/sbom/collectors/host"
 	sbomscanner "github.com/DataDog/datadog-agent/pkg/sbom/scanner"
 	queue "github.com/DataDog/datadog-agent/pkg/util/aggregatingqueue"
 	"github.com/DataDog/datadog-agent/pkg/util/hostname"
@@ -39,7 +39,7 @@ var /* const */ (
 	sourceAgent = "agent"
 )
 
-type processor struct {
+type Processor struct {
 	queue                 chan *model.SBOMEntity
 	workloadmetaStore     workloadmeta.Component
 	imageRepoDigests      map[string]string              // Map where keys are image repo digest and values are image ID
@@ -52,7 +52,7 @@ type processor struct {
 	hostHeartbeatValidity time.Duration
 }
 
-func newProcessor(workloadmetaStore workloadmeta.Component, sender sender.Sender, maxNbItem int, maxRetentionTime time.Duration, hostSBOM bool, hostHeartbeatValidity time.Duration) (*processor, error) {
+func NewProcessor(workloadmetaStore workloadmeta.Component, sender sender.Sender, maxNbItem int, maxRetentionTime time.Duration, hostSBOM bool, hostHeartbeatValidity time.Duration) (*Processor, error) {
 	sbomScanner := sbomscanner.GetGlobalScanner()
 	if sbomScanner == nil {
 		return nil, errors.New("failed to get global SBOM scanner")
@@ -62,7 +62,7 @@ func newProcessor(workloadmetaStore workloadmeta.Component, sender sender.Sender
 		log.Warnf("Error getting hostname: %v", err)
 	}
 
-	return &processor{
+	return &Processor{
 		queue: queue.NewQueue(maxNbItem, maxRetentionTime, func(entities []*model.SBOMEntity) {
 			encoded, err := proto.Marshal(&model.SBOMPayload{
 				Version:  1,
@@ -88,7 +88,7 @@ func newProcessor(workloadmetaStore workloadmeta.Component, sender sender.Sender
 	}, nil
 }
 
-func (p *processor) processContainerImagesEvents(evBundle workloadmeta.EventBundle) {
+func (p *Processor) ProcessContainerImagesEvents(evBundle workloadmeta.EventBundle) {
 	evBundle.Acknowledge()
 
 	log.Tracef("Processing %d events", len(evBundle.Events))
@@ -98,16 +98,16 @@ func (p *processor) processContainerImagesEvents(evBundle workloadmeta.EventBund
 		case workloadmeta.KindContainerImageMetadata:
 			switch event.Type {
 			case workloadmeta.EventTypeSet:
-				p.registerImage(event.Entity.(*workloadmeta.ContainerImageMetadata))
-				p.processImageSBOM(event.Entity.(*workloadmeta.ContainerImageMetadata))
+				p.RegisterImage(event.Entity.(*workloadmeta.ContainerImageMetadata))
+				p.ProcessImageSBOM(event.Entity.(*workloadmeta.ContainerImageMetadata))
 			case workloadmeta.EventTypeUnset:
-				p.unregisterImage(event.Entity.(*workloadmeta.ContainerImageMetadata))
+				p.UnregisterImage(event.Entity.(*workloadmeta.ContainerImageMetadata))
 				// Let the SBOM expire on back-end side
 			}
 		case workloadmeta.KindContainer:
 			switch event.Type {
 			case workloadmeta.EventTypeSet:
-				p.registerContainer(event.Entity.(*workloadmeta.Container))
+				p.RegisterContainer(event.Entity.(*workloadmeta.Container))
 			case workloadmeta.EventTypeUnset:
 				p.unregisterContainer(event.Entity.(*workloadmeta.Container))
 			}
@@ -115,13 +115,13 @@ func (p *processor) processContainerImagesEvents(evBundle workloadmeta.EventBund
 	}
 }
 
-func (p *processor) registerImage(img *workloadmeta.ContainerImageMetadata) {
+func (p *Processor) RegisterImage(img *workloadmeta.ContainerImageMetadata) {
 	for _, repoDigest := range img.RepoDigests {
 		p.imageRepoDigests[repoDigest] = img.ID
 	}
 }
 
-func (p *processor) unregisterImage(img *workloadmeta.ContainerImageMetadata) {
+func (p *Processor) UnregisterImage(img *workloadmeta.ContainerImageMetadata) {
 	for _, repoDigest := range img.RepoDigests {
 		delete(p.imageUsers, repoDigest)
 		if p.imageRepoDigests[repoDigest] == img.ID {
@@ -130,7 +130,7 @@ func (p *processor) unregisterImage(img *workloadmeta.ContainerImageMetadata) {
 	}
 }
 
-func (p *processor) registerContainer(ctr *workloadmeta.Container) {
+func (p *Processor) RegisterContainer(ctr *workloadmeta.Container) {
 	imgID := ctr.Image.ID
 	ctrID := ctr.ID
 
@@ -152,12 +152,12 @@ func (p *processor) registerContainer(ctr *workloadmeta.Container) {
 		if img, err := p.workloadmetaStore.GetImage(imgID); err != nil {
 			log.Infof("Couldn’t find image %s in workloadmeta whereas it’s used by container %s: %v", imgID, ctrID, err)
 		} else {
-			p.processImageSBOM(img)
+			p.ProcessImageSBOM(img)
 		}
 	}
 }
 
-func (p *processor) unregisterContainer(ctr *workloadmeta.Container) {
+func (p *Processor) unregisterContainer(ctr *workloadmeta.Container) {
 	imgID := ctr.Image.ID
 	ctrID := ctr.ID
 
@@ -167,14 +167,14 @@ func (p *processor) unregisterContainer(ctr *workloadmeta.Container) {
 	}
 }
 
-func (p *processor) processContainerImagesRefresh(allImages []*workloadmeta.ContainerImageMetadata) {
+func (p *Processor) ProcessContainerImagesRefresh(allImages []*workloadmeta.ContainerImageMetadata) {
 	// So far, the check is refreshing all the images every 5 minutes all together.
 	for _, img := range allImages {
-		p.processImageSBOM(img)
+		p.ProcessImageSBOM(img)
 	}
 }
 
-func (p *processor) processHostScanResult(result sbom.ScanResult) {
+func (p *Processor) ProcessHostScanResult(result sbom.ScanResult) {
 	log.Debugf("processing host scanresult: %v", result)
 	sbom := &model.SBOMEntity{
 		Status:             model.SBOMStatus_SUCCESS,
@@ -219,15 +219,15 @@ func (p *processor) processHostScanResult(result sbom.ScanResult) {
 	p.queue <- sbom
 }
 
-func (p *processor) triggerHostScan() {
+func (p *Processor) TriggerHostScan() {
 	if !p.hostSBOM {
 		return
 	}
 	log.Debugf("Triggering host SBOM refresh")
 
-	scanRequest := host.NewScanRequest("/")
+	scanRequest := NewScanRequest("/")
 	if hostRoot := os.Getenv("HOST_ROOT"); ddConfig.IsContainerized() && hostRoot != "" {
-		scanRequest = host.NewScanRequest(hostRoot)
+		scanRequest = NewScanRequest(hostRoot)
 	}
 
 	if err := p.sbomScanner.Scan(scanRequest); err != nil {
@@ -236,7 +236,7 @@ func (p *processor) triggerHostScan() {
 	}
 }
 
-func (p *processor) processImageSBOM(img *workloadmeta.ContainerImageMetadata) {
+func (p *Processor) ProcessImageSBOM(img *workloadmeta.ContainerImageMetadata) {
 	if img.SBOM == nil {
 		return
 	}
@@ -346,6 +346,6 @@ func (p *processor) processImageSBOM(img *workloadmeta.ContainerImageMetadata) {
 	}
 }
 
-func (p *processor) stop() {
+func (p *Processor) Stop() {
 	close(p.queue)
 }

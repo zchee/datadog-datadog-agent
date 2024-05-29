@@ -1,0 +1,3 @@
+package trivyimpl
+
+func empty() {}

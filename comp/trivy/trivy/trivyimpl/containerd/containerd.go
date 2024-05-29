@@ -15,12 +15,12 @@ import (
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/trivy/trivy/trivyimpl/util/trivy"
 	"github.com/DataDog/datadog-agent/pkg/sbom"
 	"github.com/DataDog/datadog-agent/pkg/sbom/collectors"
 	cutil "github.com/DataDog/datadog-agent/pkg/util/containerd"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
-	"github.com/DataDog/datadog-agent/pkg/util/trivy"
 )
 
 // resultChanSize defines the result channel size
@@ -166,7 +166,8 @@ func (c *Collector) Shutdown() {
 	c.closed = true
 }
 
-func init() {
+func RegisterContainerd() {
+
 	collectors.RegisterCollector(collectors.ContainerdCollector, &Collector{
 		resChan: make(chan sbom.ScanResult, resultChanSize),
 	})

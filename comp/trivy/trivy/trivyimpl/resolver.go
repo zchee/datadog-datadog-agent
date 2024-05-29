@@ -6,7 +6,7 @@
 //go:build linux && trivy
 
 // Package sbom holds sbom related files
-package sbom
+package trivyimpl
 
 import (
 	"context"
@@ -25,10 +25,11 @@ import (
 	"go.uber.org/atomic"
 
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/trivy/trivy"
+	pkgtrivy "github.com/DataDog/datadog-agent/comp/trivy/trivy/trivyimpl/util/trivy"
 	coreconfig "github.com/DataDog/datadog-agent/pkg/config"
 	configUtils "github.com/DataDog/datadog-agent/pkg/config/utils"
 	"github.com/DataDog/datadog-agent/pkg/sbom/collectors"
-	"github.com/DataDog/datadog-agent/pkg/sbom/collectors/host"
 	sbomscanner "github.com/DataDog/datadog-agent/pkg/sbom/scanner"
 	"github.com/DataDog/datadog-agent/pkg/security/config"
 	"github.com/DataDog/datadog-agent/pkg/security/metrics"
@@ -37,7 +38,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/security/seclog"
 	"github.com/DataDog/datadog-agent/pkg/security/utils"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
-	"github.com/DataDog/datadog-agent/pkg/util/trivy"
 )
 
 // SBOMSource defines is the default log source for the SBOM events
@@ -49,8 +49,8 @@ const maxSBOMGenerationRetries = 3
 type SBOM struct {
 	sync.RWMutex
 
-	report *trivy.Report
-	files  map[uint64]*Package
+	report *pkgtrivy.Report
+	files  map[uint64]*trivy.Package
 
 	Host        string
 	Source      string
@@ -86,7 +86,7 @@ func (s *SBOM) reset() {
 // NewSBOM returns a new empty instance of SBOM
 func NewSBOM(host string, source string, id string, cgroup *cgroupModel.CacheEntry, workloadKey string) (*SBOM, error) {
 	return &SBOM{
-		files:          make(map[uint64]*Package),
+		files:          make(map[uint64]*trivy.Package),
 		Host:           host,
 		Source:         source,
 		ContainerID:    id,
@@ -120,7 +120,7 @@ type Resolver struct {
 }
 
 // NewSBOMResolver returns a new instance of Resolver
-func NewSBOMResolver(c *config.RuntimeSecurityConfig, statsdClient statsd.ClientInterface, wmeta optional.Option[workloadmeta.Component]) (*Resolver, error) {
+func NewSBOMResolver(c *config.RuntimeSecurityConfig, statsdClient statsd.ClientInterface, wmeta optional.Option[workloadmeta.Component]) (trivy.Resolver, error) {
 	sbomScanner, err := sbomscanner.CreateGlobalScanner(coreconfig.SystemProbe, wmeta)
 	if err != nil {
 		return nil, err
@@ -218,7 +218,7 @@ func (r *Resolver) generateSBOM(root string, sbom *SBOM) error {
 	seclog.Infof("Generating SBOM for %s", root)
 	r.sbomGenerations.Inc()
 
-	scanRequest := host.NewScanRequest(root)
+	scanRequest := NewScanRequest(root)
 	ch := collectors.GetHostScanner().Channel()
 	if ch == nil {
 		return fmt.Errorf("couldn't retrieve global host scanner result channel")
@@ -240,7 +240,7 @@ func (r *Resolver) generateSBOM(root string, sbom *SBOM) error {
 
 	seclog.Infof("SBOM successfully generated from %s", root)
 
-	trivyReport, ok := result.Report.(*trivy.Report)
+	trivyReport, ok := result.Report.(*pkgtrivy.Report)
 	if !ok {
 		return fmt.Errorf("failed to convert report for %s", root)
 	}
@@ -314,12 +314,12 @@ func (r *Resolver) analyzeWorkload(sbom *SBOM) error {
 	}
 
 	// cleanup file cache
-	sbom.files = make(map[uint64]*Package)
+	sbom.files = make(map[uint64]*trivy.Package)
 
 	// build file cache
 	for _, result := range sbom.report.Results {
 		for _, resultPkg := range result.Packages {
-			pkg := &Package{
+			pkg := &trivy.Package{
 				Name:       resultPkg.Name,
 				Version:    resultPkg.Version,
 				SrcVersion: resultPkg.SrcVersion,
@@ -348,7 +348,7 @@ func (r *Resolver) analyzeWorkload(sbom *SBOM) error {
 
 // ResolvePackage returns the Package that owns the provided file. Make sure the internal fields of "file" are properly
 // resolved.
-func (r *Resolver) ResolvePackage(containerID string, file *model.FileEvent) *Package {
+func (r *Resolver) ResolvePackage(containerID string, file *model.FileEvent) *trivy.Package {
 	r.sbomsLock.RLock()
 	defer r.sbomsLock.RUnlock()
 	sbom, ok := r.sboms[containerID]
@@ -411,7 +411,8 @@ func (r *Resolver) queueWorkload(sbom *SBOM) {
 }
 
 // OnWorkloadSelectorResolvedEvent is used to handle the creation of a new cgroup with its resolved tags
-func (r *Resolver) OnWorkloadSelectorResolvedEvent(cgroup *cgroupModel.CacheEntry) {
+func (r *Resolver) OnWorkloadSelectorResolvedEvent(value interface{}) {
+	cgroup := value.(*cgroupModel.CacheEntry)
 	r.sbomsLock.Lock()
 	defer r.sbomsLock.Unlock()
 
@@ -445,8 +446,9 @@ func (r *Resolver) GetWorkload(id string) *SBOM {
 }
 
 // OnCGroupDeletedEvent is used to handle a CGroupDeleted event
-func (r *Resolver) OnCGroupDeletedEvent(cgroup *cgroupModel.CacheEntry) {
-	r.Delete(cgroup.ID)
+func (r *Resolver) OnCGroupDeletedEvent(cgroup interface{}) {
+	value := cgroup.(*cgroupModel.CacheEntry)
+	r.Delete(value.ID)
 }
 
 // Delete removes the SBOM of the provided cgroup id

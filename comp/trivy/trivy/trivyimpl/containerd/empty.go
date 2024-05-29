@@ -1,0 +1,3 @@
+package containerd
+
+func empty() {}

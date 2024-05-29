@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-//go:build containerd && trivy
+//go:build containerd
 
 package containerd
 
@@ -14,10 +14,10 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/trivy/trivy"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/sbom"
 	"github.com/DataDog/datadog-agent/pkg/sbom/collectors"
-	"github.com/DataDog/datadog-agent/pkg/sbom/collectors/containerd"
 	"github.com/DataDog/datadog-agent/pkg/sbom/scanner"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
@@ -27,6 +27,9 @@ func sbomCollectionIsEnabled() bool {
 }
 
 func (c *collector) startSBOMCollection(ctx context.Context) error {
+	if !trivy.GetTrivyComponent().IsSBOMCollectionIsEnabled() {
+		return nil
+	}
 	if !sbomCollectionIsEnabled() {
 		return nil
 	}
@@ -96,7 +99,7 @@ func (c *collector) handleEventBundle(ctx context.Context, eventBundle workloadm
 
 // extractSBOMWithTrivy emits a scan request to the SBOM scanner. The scan result will be sent to the resultChan.
 func (c *collector) extractSBOMWithTrivy(_ context.Context, imageID string) error {
-	if err := c.sbomScanner.Scan(containerd.NewScanRequest(imageID)); err != nil {
+	if err := c.sbomScanner.Scan(trivy.GetTrivyComponent().NewScanRequest(imageID)); err != nil {
 		log.Errorf("Failed to trigger SBOM generation for containerd: %s", err)
 		return err
 	}

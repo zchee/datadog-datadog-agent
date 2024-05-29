@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-//go:build docker && trivy
+//go:build docker
 
 package docker
 
@@ -15,9 +15,9 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/trivy/trivy"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/sbom/collectors"
-	"github.com/DataDog/datadog-agent/pkg/sbom/collectors/docker"
 	"github.com/DataDog/datadog-agent/pkg/sbom/scanner"
 	dutil "github.com/DataDog/datadog-agent/pkg/util/docker"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -32,6 +32,9 @@ func sbomCollectionIsEnabled() bool {
 }
 
 func (c *collector) startSBOMCollection(ctx context.Context) error {
+	if !trivy.GetTrivyComponent().IsSBOMCollectionIsEnabled() {
+		return nil
+	}
 	if !sbomCollectionIsEnabled() {
 		return nil
 	}
@@ -147,7 +150,7 @@ func (c *collector) startSBOMCollection(ctx context.Context) error {
 }
 
 func (c *collector) extractSBOMWithTrivy(_ context.Context, imageID string) error {
-	scanRequest := docker.NewScanRequest(imageID)
+	scanRequest := trivy.GetTrivyComponent().NewScanRequest(imageID)
 
 	if err := c.sbomScanner.Scan(scanRequest); err != nil {
 		log.Errorf("Failed to trigger SBOM generation for docker: %s", err)

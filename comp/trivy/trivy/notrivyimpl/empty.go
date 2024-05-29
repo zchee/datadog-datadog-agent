@@ -1,0 +1,3 @@
+package notrivyimpl
+
+func foo() {}

@@ -6,7 +6,7 @@
 //go:build linux && !trivy
 
 // Package sbom holds sbom related files
-package sbom
+package notrivyimpl
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"github.com/DataDog/datadog-go/v5/statsd"
 
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/trivy/trivy"
 	"github.com/DataDog/datadog-agent/pkg/security/config"
-	cgroupModel "github.com/DataDog/datadog-agent/pkg/security/resolvers/cgroup/model"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
 )
@@ -25,20 +25,20 @@ type Resolver struct {
 }
 
 // NewSBOMResolver returns a new instance of Resolver
-func NewSBOMResolver(_ *config.RuntimeSecurityConfig, _ statsd.ClientInterface, _ optional.Option[workloadmeta.Component]) (*Resolver, error) {
+func NewSBOMResolver(_ *config.RuntimeSecurityConfig, _ statsd.ClientInterface, _ optional.Option[workloadmeta.Component]) (trivy.Resolver, error) {
 	return &Resolver{}, nil
 }
 
 // OnCGroupDeletedEvent is used to handle a CGroupDeleted event
-func (r *Resolver) OnCGroupDeletedEvent(_ *cgroupModel.CacheEntry) {
+func (r *Resolver) OnCGroupDeletedEvent(_ interface{}) {
 }
 
 // OnWorkloadSelectorResolvedEvent is used to handle the creation of a new cgroup with its resolved tags
-func (r *Resolver) OnWorkloadSelectorResolvedEvent(_ *cgroupModel.CacheEntry) {
+func (r *Resolver) OnWorkloadSelectorResolvedEvent(_ interface{}) {
 }
 
 // ResolvePackage returns the Package that owns the provided file
-func (r *Resolver) ResolvePackage(_ string, _ *model.FileEvent) *Package {
+func (r *Resolver) ResolvePackage(_ string, _ *model.FileEvent) *trivy.Package {
 	return nil
 }
 
