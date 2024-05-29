@@ -8,7 +8,6 @@ package amqp
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -45,6 +44,8 @@ var (
 func RunServer(t testing.TB, serverAddr, serverPort string, withTLS bool) error {
 	t.Helper()
 
+	protocolsUtils.EnsureCertsDockerVolume(t)
+
 	env := getServerEnv(t, serverAddr, serverPort, withTLS)
 	startupRegexp := startupRegexpGenerators[withTLS](t, serverPort)
 
@@ -56,25 +57,18 @@ func RunServer(t testing.TB, serverAddr, serverPort string, withTLS bool) error 
 func getServerEnv(t testing.TB, serverAddr, serverPort string, withTLS bool) []string {
 	t.Helper()
 
-	cert, _, err := httpUtils.GetCertsPaths()
-	require.NoError(t, err)
-	certsDir := filepath.Dir(cert)
-
 	// The certificates are bind-mounted in the container. They
 	// inherit permissions from the host, so we ensure the permissions
 	// allow RabbitMQ to read the certificate/key pair.
 	curDir, _ := httpUtils.CurDir()
 	require.NoError(t, os.Chmod(curDir+"/testdata/tls.conf", 0644))
 	require.NoError(t, os.Chmod(curDir+"/testdata/plaintext.conf", 0644))
-	require.NoError(t, os.Chmod(certsDir+"/server.key", 0644))
-	require.NoError(t, os.Chmod(certsDir+"/cert.pem.0", 0644))
 
 	return []string{
 		"AMQP_ADDR=" + serverAddr,
 		"AMQP_PORT=" + serverPort,
 		"USER=" + User,
 		"PASS=" + Pass,
-		"CERTS_PATH=" + certsDir,
 		"ENCRYPTION_POLICY=" + encryptionPolicies[withTLS],
 	}
 }

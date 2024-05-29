@@ -3,6 +3,7 @@ name: amqp
 services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
+    command: bash -c "mkdir -p /etc/rabbitmq/certs && cp -v /certs/* /etc/rabbitmq/certs && chown -Rv rabbitmq:rabbitmq /etc/rabbitmq/certs && rabbitmq-server"
     ports:
       - ${AMQP_ADDR:-127.0.0.1}:${AMQP_PORT:-5672}:${AMQP_PORT:-5672}
       - ${AMQP_ADDR:-127.0.0.1}:15672:15672
@@ -11,9 +12,10 @@ services:
       - "RABBITMQ_DEFAULT_PASS=${PASS:-guest}"
       - "RABBITMQ_DEFAULT_USER=${USER:-guest}"
     volumes:
-      - type: bind
-        source: ${CERTS_PATH}
-        target: /certs
+      - test_tls_certs:/certs
       - type: bind
         source: ./${ENCRYPTION_POLICY}.conf
         target: /etc/rabbitmq/rabbitmq.conf
+volumes:
+  test_tls_certs:
+    external: true
