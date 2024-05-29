@@ -457,6 +457,7 @@ int tracepoint__contention_begin(u64 *ctx)
     if (!can_record(ctx, &range))
     	return 0;
 
+    log_info("Can record for %llx\n", ctx[0]);
     pelem = get_tstamp_elem(ctx[1]);
     if (pelem == NULL)
     	return 0;
