@@ -23,9 +23,9 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/process/metadata/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/process/net"
 	"github.com/DataDog/datadog-agent/pkg/process/procutil"
-	"github.com/DataDog/datadog-agent/pkg/process/statsd"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	proccontainers "github.com/DataDog/datadog-agent/pkg/process/util/containers"
+	"github.com/DataDog/datadog-agent/pkg/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/util/cloudproviders"
 	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -58,7 +58,11 @@ func NewProcessCheck(config ddconfig.Reader, sysprobeYamlConfig ddconfig.Reader,
 	return check
 }
 
-var errEmptyCPUTime = errors.New("empty CPU time information returned")
+var (
+	errEmptyCPUTime = errors.New("empty CPU time information returned")
+	processCount    = telemetry.NewGauge("containers", "host_count", []string{}, "Gauge for process count")
+	containerCount  = telemetry.NewGauge("processes", "host_count", []string{}, "Gauge for container count")
+)
 
 const (
 	//nolint:revive // TODO(PROC) Fix revive linter
@@ -340,8 +344,9 @@ func (p *ProcessCheck) run(groupID int32, collectRealTime bool) (RunResult, erro
 		p.realtimeLastRun = p.lastRun
 	}
 
-	statsd.Client.Gauge("datadog.process.containers.host_count", float64(totalContainers), []string{}, 1) //nolint:errcheck
-	statsd.Client.Gauge("datadog.process.processes.host_count", float64(totalProcs), []string{}, 1)       //nolint:errcheck
+	containerCount.Set(float64(totalContainers))
+	processCount.Set(float64(totalProcs))
+
 	log.Debugf("collected processes in %s", time.Since(start))
 
 	return result, nil
