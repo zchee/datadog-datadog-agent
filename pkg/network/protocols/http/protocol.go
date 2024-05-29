@@ -124,7 +124,7 @@ func (p *protocol) Name() string {
 // We also configure the http event stream with the manager and its options.
 func (p *protocol) ConfigureOptions(mgr *manager.Manager, opts *manager.Options) {
 	opts.MapSpecEditors[inFlightMap] = manager.MapSpecEditor{
-		MaxEntries: p.cfg.MaxUSMConcurrentRequests,
+		MaxEntries: 100,
 		EditorFlag: manager.EditMaxEntries,
 	}
 	utils.EnableOption(opts, "http_monitoring_enabled")
@@ -189,7 +189,22 @@ func (p *protocol) processHTTP(events []EbpfEvent) {
 }
 
 func (p *protocol) setupMapCleaner(mgr *manager.Manager) {
-	return
+	httpMap, _, err := mgr.GetMap(inFlightMap)
+	if err != nil {
+		log.Errorf("error getting http_in_flight map: %s", err)
+		return
+	}
+	mapCleaner, err := ddebpf.NewMapCleaner[netebpf.ConnTuple, EbpfTx](httpMap, 1024)
+	if err != nil {
+		log.Errorf("error creating map cleaner: %s", err)
+		return
+	}
+
+	mapCleaner.Clean(p.cfg.HTTPMapCleanerInterval, nil, nil, func(now int64, key netebpf.ConnTuple, val EbpfTx) bool {
+		return false
+	})
+
+	p.mapCleaner = mapCleaner
 }
 
 // GetStats returns a map of HTTP stats stored in the following format:
