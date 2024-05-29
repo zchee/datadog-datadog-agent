@@ -8,6 +8,7 @@
 package kubernetesapiserver
 
 import (
+	"bytes"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
@@ -49,6 +50,9 @@ func (c *unbundledTransformer) Transform(events []*v1.Event) ([]event.Event, []e
 		errors     []error
 	)
 
+	var eventsBuf bytes.Buffer
+	var ddEventsBuf bytes.Buffer
+
 	for _, ev := range events {
 		kubeEvents.Inc(
 			ev.InvolvedObject.Kind,
@@ -56,6 +60,8 @@ func (c *unbundledTransformer) Transform(events []*v1.Event) ([]event.Event, []e
 			ev.Type,
 			ev.Reason,
 		)
+
+		eventsBuf.WriteString(fmt.Sprintf("%#v ", ev))
 
 		if !c.shouldCollect(ev) {
 			continue
@@ -79,7 +85,7 @@ func (c *unbundledTransformer) Transform(events []*v1.Event) ([]event.Event, []e
 
 		emittedEvents.Inc(involvedObject.Kind, ev.Type)
 
-		datadogEvs = append(datadogEvs, event.Event{
+		ddEv := event.Event{
 			Title:          fmt.Sprintf("%s: %s", readableKey, ev.Reason),
 			Priority:       event.PriorityNormal,
 			Host:           hostInfo.hostname,
@@ -90,8 +96,15 @@ func (c *unbundledTransformer) Transform(events []*v1.Event) ([]event.Event, []e
 			AggregationKey: fmt.Sprintf("kubernetes_apiserver:%s", involvedObject.UID),
 			AlertType:      getDDAlertType(ev.Type),
 			Text:           ev.Message,
-		})
+		}
+
+		ddEventsBuf.WriteString(fmt.Sprintf("%#v ", ddEv))
+
+		datadogEvs = append(datadogEvs, ddEv)
 	}
+
+	log.Debugf("Incoming events: %s", eventsBuf.String())
+	log.Debugf("Outgoing events: %s", ddEventsBuf.String())
 
 	return datadogEvs, errors
 }
