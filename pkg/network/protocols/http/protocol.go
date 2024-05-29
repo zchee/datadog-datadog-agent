@@ -189,28 +189,7 @@ func (p *protocol) processHTTP(events []EbpfEvent) {
 }
 
 func (p *protocol) setupMapCleaner(mgr *manager.Manager) {
-	httpMap, _, err := mgr.GetMap(inFlightMap)
-	if err != nil {
-		log.Errorf("error getting http_in_flight map: %s", err)
-		return
-	}
-	mapCleaner, err := ddebpf.NewMapCleaner[netebpf.ConnTuple, EbpfTx](httpMap, 1024)
-	if err != nil {
-		log.Errorf("error creating map cleaner: %s", err)
-		return
-	}
-
-	ttl := p.cfg.HTTPIdleConnectionTTL.Nanoseconds()
-	mapCleaner.Clean(p.cfg.HTTPMapCleanerInterval, nil, nil, func(now int64, key netebpf.ConnTuple, val EbpfTx) bool {
-		if updated := int64(val.Response_last_seen); updated > 0 {
-			return (now - updated) > ttl
-		}
-
-		started := int64(val.Request_started)
-		return started > 0 && (now-started) > ttl
-	})
-
-	p.mapCleaner = mapCleaner
+	return
 }
 
 // GetStats returns a map of HTTP stats stored in the following format:
