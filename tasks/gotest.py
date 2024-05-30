@@ -889,6 +889,11 @@ def format_packages(ctx: Context, impacted_packages: set[str], build_tags: list[
                 hide=True,
                 warn=True,
             )
+            print(
+                "Running: ",
+                f"go list -tags '{' '.join(build_tags)}' {' '.join([normpath(os.path.join('github.com/DataDog/datadog-agent', module, target)) for target in modules_to_test[module].targets])}",
+            )
+
             print(res)
             if res is not None and res.stderr is not None:
                 for package in res.stderr.splitlines():
