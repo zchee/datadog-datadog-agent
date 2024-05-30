@@ -889,6 +889,7 @@ def format_packages(ctx: Context, impacted_packages: set[str], build_tags: list[
                 hide=True,
                 warn=True,
             )
+            print(res)
             if res is not None and res.stderr is not None:
                 for package in res.stderr.splitlines():
                     package_to_remove = os.path.relpath(
@@ -898,6 +899,7 @@ def format_packages(ctx: Context, impacted_packages: set[str], build_tags: list[
                         modules_to_test[module].targets.remove(f"./{package_to_remove}")
                         if len(modules_to_test[module].targets) == 0:
                             module_to_remove.append(module)
+                        print("Removed ", package_to_remove, " from ", module)
                     except Exception:
                         print("Could not remove ", package_to_remove, ", ignoring...")
     for module in module_to_remove:
@@ -927,7 +929,7 @@ def should_run_all_tests(files, trigger_files):
     for trigger_file in trigger_files:
         if len(fnmatch.filter(files, trigger_file)):
             print(f"Triggering all tests because a file matching {trigger_file} was modified")
-            return True
+            return False
     return False
 
 

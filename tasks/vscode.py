@@ -14,6 +14,7 @@ from invoke import task
 
 from tasks.build_tags import build_tags, filter_incompatible_tags, get_build_tags, get_default_build_tags
 from tasks.flavor import AgentFlavor
+from tasks.gotest import get_impacted_packages
 from tasks.libs.common.color import color_message
 
 VSCODE_DIR = ".vscode"
@@ -85,3 +86,9 @@ def setup_devcontainer(
         flavor=flavor,
         image=image,
     )
+
+
+@task()
+def fftest(ctx):
+    tags = []
+    print(get_impacted_packages(ctx, tags))

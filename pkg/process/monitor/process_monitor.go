@@ -35,7 +35,7 @@ const (
 
 var (
 	processMonitor = &ProcessMonitor{
-		// Must initialize the sets, as we can register callbacks prior to calling Initialize.
+		// Must initialize the sets, as we ca n register callbacks prior to calling Initialize.
 		processExecCallbacks: make(map[*ProcessCallback]struct{}, 0),
 		processExitCallbacks: make(map[*ProcessCallback]struct{}, 0),
 		oversizedLogLimit:    log.NewLogLimit(10, 10*time.Minute),
