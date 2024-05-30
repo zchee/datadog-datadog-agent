@@ -124,7 +124,7 @@ func (p *protocol) Name() string {
 // We also configure the http event stream with the manager and its options.
 func (p *protocol) ConfigureOptions(mgr *manager.Manager, opts *manager.Options) {
 	opts.MapSpecEditors[inFlightMap] = manager.MapSpecEditor{
-		MaxEntries: 1,
+		MaxEntries: 50,
 		EditorFlag: manager.EditMaxEntries,
 	}
 	utils.EnableOption(opts, "http_monitoring_enabled")
