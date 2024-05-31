@@ -13,6 +13,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sync"
 	"syscall"
@@ -106,7 +107,6 @@ type LockContentionCollector struct {
 	maxContention    *prometheus.GaugeVec
 	avgContention    *prometheus.GaugeVec
 	totalContention  *prometheus.CounterVec
-	totalPackets     *prometheus.CounterVec
 	packetsPerSecond *prometheus.GaugeVec
 
 	trackedLockMemRanges map[LockRange]*mapStats
@@ -115,7 +115,7 @@ type LockContentionCollector struct {
 	cpus                 uint32
 	ranges               uint32
 	lastPacketsRead      time.Time
-	packetsDelta         map[int]uint32
+	packetsLast          float64
 
 	initialized bool
 }
@@ -158,7 +158,6 @@ func NewLockContentionCollector() *LockContentionCollector {
 		return nil
 	}
 
-	delta := make(map[int]uint32)
 	ContentionCollector = &LockContentionCollector{
 		maxContention: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -184,23 +183,14 @@ func NewLockContentionCollector() *LockContentionCollector {
 			},
 			[]string{"name", "lock_type"},
 		),
-		totalPackets: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Subsystem: "ebpf__packets",
-				Name:      "_total",
-				Help:      "counter tracking total packets received on each cpu",
-			},
-			[]string{"cpu"},
-		),
 		packetsPerSecond: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Subsystem: "ebpf__packets",
 				Name:      "_pps",
 				Help:      "gauge tracking packets per second recieved on each cpu",
 			},
-			[]string{"cpu"},
+			[]string{"cpus"},
 		),
-		packetsDelta: delta,
 	}
 
 	return ContentionCollector
@@ -216,7 +206,6 @@ func (l *LockContentionCollector) Describe(descs chan<- *prometheus.Desc) {
 	l.maxContention.Describe(descs)
 	l.avgContention.Describe(descs)
 	l.totalContention.Describe(descs)
-	l.totalPackets.Describe(descs)
 	l.packetsPerSecond.Describe(descs)
 }
 
@@ -293,24 +282,18 @@ func (l *LockContentionCollector) Collect(metrics chan<- prometheus.Metric) {
 	}
 
 	now := time.Now()
-	for i, s := range stats {
-		cpu := fmt.Sprintf("%d", i)
-		last := l.packetsDelta[i]
-		l.packetsDelta[i] = s.Processed
-
-		diff := float64(s.Processed - last)
-		if last < s.Processed {
-			l.totalPackets.WithLabelValues(cpu).Add(diff)
-		}
-
-		elapsed := now.Sub(l.lastPacketsRead).Seconds()
-
-		l.packetsPerSecond.WithLabelValues(cpu).Set(diff / elapsed)
+	var total float64
+	for _, s := range stats {
+		total += float64(s.Processed)
 	}
 
+	elapsed := now.Sub(l.lastPacketsRead).Seconds()
+	if l.packetsLast < total {
+		l.packetsPerSecond.WithLabelValues(fmt.Sprintf("%d", runtime.NumCPU())).Set((total - l.packetsLast) / elapsed)
+	}
+	l.packetsLast = total
 	l.lastPacketsRead = now
 
-	l.totalPackets.Collect(metrics)
 	l.packetsPerSecond.Collect(metrics)
 
 }
