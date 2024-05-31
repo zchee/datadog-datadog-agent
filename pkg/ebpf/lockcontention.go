@@ -16,6 +16,7 @@ import (
 	"slices"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/DataDog/datadog-agent/pkg/ebpf/bytecode"
@@ -27,6 +28,7 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/procfs"
 )
 
 const (
@@ -100,16 +102,20 @@ var kernelAddresses = []string{
 // LockContentionCollector implements the prometheus Collector interface
 // for exposing metrics
 type LockContentionCollector struct {
-	mtx             sync.Mutex
-	maxContention   *prometheus.GaugeVec
-	avgContention   *prometheus.GaugeVec
-	totalContention *prometheus.CounterVec
+	mtx              sync.Mutex
+	maxContention    *prometheus.GaugeVec
+	avgContention    *prometheus.GaugeVec
+	totalContention  *prometheus.CounterVec
+	totalPackets     *prometheus.CounterVec
+	packetsPerSecond *prometheus.GaugeVec
 
 	trackedLockMemRanges map[LockRange]*mapStats
 	links                []link.Link
 	objects              *bpfObjects
 	cpus                 uint32
 	ranges               uint32
+	lastPacketsRead      time.Time
+	packetsDelta         map[int]uint32
 
 	initialized bool
 }
@@ -152,6 +158,7 @@ func NewLockContentionCollector() *LockContentionCollector {
 		return nil
 	}
 
+	delta := make(map[int]uint32)
 	ContentionCollector = &LockContentionCollector{
 		maxContention: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -177,6 +184,23 @@ func NewLockContentionCollector() *LockContentionCollector {
 			},
 			[]string{"name", "lock_type"},
 		),
+		totalPackets: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Subsystem: "ebpf__packets",
+				Name:      "_total",
+				Help:      "counter tracking total packets received on each cpu",
+			},
+			[]string{"cpu"},
+		),
+		packetsPerSecond: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Subsystem: "ebpf__packets",
+				Name:      "_pps",
+				Help:      "gauge tracking packets per second recieved on each cpu",
+			},
+			[]string{"cpu"},
+		),
+		packetsDelta: delta,
 	}
 
 	return ContentionCollector
@@ -192,6 +216,8 @@ func (l *LockContentionCollector) Describe(descs chan<- *prometheus.Desc) {
 	l.maxContention.Describe(descs)
 	l.avgContention.Describe(descs)
 	l.totalContention.Describe(descs)
+	l.totalPackets.Describe(descs)
+	l.packetsPerSecond.Describe(descs)
 }
 
 // Collect implements prometheus.Collector.Collect
@@ -242,6 +268,51 @@ func (l *LockContentionCollector) Collect(metrics chan<- prometheus.Metric) {
 
 	l.maxContention.Collect(metrics)
 	l.avgContention.Collect(metrics)
+	l.totalContention.Collect(metrics)
+
+	var fs procfs.FS
+	var err error
+	if _, statErr := os.Stat("/host"); os.IsNotExist(statErr) {
+		fs, err = procfs.NewDefaultFS()
+		if err != nil {
+			log.Infof("unable to open procfs: %v", err)
+			return
+		}
+	} else {
+		fs, err = procfs.NewFS("/host")
+		if err != nil {
+			log.Infof("unable to open procfs mounted at /host: %v", err)
+			return
+		}
+	}
+
+	stats, err := fs.NetSoftnetStat()
+	if err != nil {
+		log.Infof("unable to read softnet stats: %v", err)
+		return
+	}
+
+	now := time.Now()
+	for i, s := range stats {
+		cpu := fmt.Sprintf("%d", i)
+		last := l.packetsDelta[i]
+		l.packetsDelta[i] = s.Processed
+
+		diff := float64(s.Processed - last)
+		if last < s.Processed {
+			l.totalPackets.WithLabelValues(cpu).Add(diff)
+		}
+
+		elapsed := now.Sub(l.lastPacketsRead).Seconds()
+
+		l.packetsPerSecond.WithLabelValues(cpu).Set(diff / elapsed)
+	}
+
+	l.lastPacketsRead = now
+
+	l.totalPackets.Collect(metrics)
+	l.packetsPerSecond.Collect(metrics)
+
 }
 
 // Initialize will collect all the memory ranges we wish to monitor in our lock stats eBPF programs
