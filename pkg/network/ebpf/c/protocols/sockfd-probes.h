@@ -66,13 +66,13 @@ int kprobe__sockfd_lookup_light(struct pt_regs *ctx) {
     return 0;
 }
 
-static __always_inline const struct proto_ops * socket_proto_ops(struct socket *sock) {
+static __always_inline const struct proto_ops *socket_proto_ops(struct socket *sock) {
     const struct proto_ops *proto_ops = NULL;
 #ifdef COMPILE_PREBUILT
     // (struct socket).ops is always directly after (struct socket).sk,
     // which is a pointer.
     u64 ops_offset = offset_socket_sk() + sizeof(void *);
-    bpf_probe_read_kernel_with_telemetry(&proto_ops, sizeof(proto_ops), (char*)sock + ops_offset);
+    bpf_probe_read_kernel_with_telemetry(&proto_ops, sizeof(proto_ops), (char *)sock + ops_offset);
 #elif defined(COMPILE_RUNTIME) || defined(COMPILE_CORE)
     BPF_CORE_READ_INTO(&proto_ops, sock, ops);
 #endif

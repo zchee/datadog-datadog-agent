@@ -9,8 +9,7 @@
 
 // Metadata bit masks
 // 0 << x is only for readability
-typedef enum
-{
+typedef enum {
     // Connection type
     CONN_TYPE_UDP = 0,
     CONN_TYPE_TCP = 1,

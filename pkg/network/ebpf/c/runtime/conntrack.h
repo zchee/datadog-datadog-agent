@@ -45,15 +45,15 @@ static __always_inline u32 get_netns(const struct nf_conn *ct) {
         nt = pnet.net;
     } else {
         // will not exist if CONFIG_NET_NS undefined
-        if (!bpf_core_field_exists(((struct nf_conn___old*)ct)->ct_net)) {
+        if (!bpf_core_field_exists(((struct nf_conn___old *)ct)->ct_net)) {
             return 0;
         }
-        BPF_CORE_READ_INTO(&nt, (struct nf_conn___old*)ct, ct_net);
+        BPF_CORE_READ_INTO(&nt, (struct nf_conn___old *)ct, ct_net);
     }
 
-    if (bpf_core_field_exists(((struct net___old*)nt)->proc_inum)) {
+    if (bpf_core_field_exists(((struct net___old *)nt)->proc_inum)) {
         // struct net * -> unsigned int proc_inum
-        BPF_CORE_READ_INTO(&net_ns_inum, (struct net___old*)nt, proc_inum);
+        BPF_CORE_READ_INTO(&net_ns_inum, (struct net___old *)nt, proc_inum);
     } else if (bpf_core_field_exists(nt->ns)) {
         // struct net * -> ns_common ns . unsigned int inum
         BPF_CORE_READ_INTO(&net_ns_inum, nt, ns.inum);
@@ -63,7 +63,7 @@ static __always_inline u32 get_netns(const struct nf_conn *ct) {
     return net_ns_inum;
 }
 
-static __always_inline int nf_conn_to_conntrack_tuples(struct nf_conn* ct, conntrack_tuple_t* orig, conntrack_tuple_t* reply) {
+static __always_inline int nf_conn_to_conntrack_tuples(struct nf_conn *ct, conntrack_tuple_t *orig, conntrack_tuple_t *reply) {
     struct nf_conntrack_tuple_hash tuplehash[IP_CT_DIR_MAX];
     bpf_memset(tuplehash, 0, sizeof(tuplehash));
 

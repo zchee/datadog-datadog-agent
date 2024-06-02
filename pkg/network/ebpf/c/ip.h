@@ -31,23 +31,23 @@
 
 // from uapi/linux/tcp.h
 struct __tcphdr {
-	__be16	source;
-	__be16	dest;
-	__be32	seq;
-	__be32	ack_seq;
-	__u16	res1:4,
-		doff:4,
-		fin:1,
-		syn:1,
-		rst:1,
-		psh:1,
-		ack:1,
-		urg:1,
-		ece:1,
-		cwr:1;
-	__be16	window;
-	__sum16	check;
-	__be16	urg_ptr;
+    __be16 source;
+    __be16 dest;
+    __be32 seq;
+    __be32 ack_seq;
+    __u16 res1 : 4,
+        doff : 4,
+        fin : 1,
+        syn : 1,
+        rst : 1,
+        psh : 1,
+        ack : 1,
+        urg : 1,
+        ece : 1,
+        cwr : 1;
+    __be16 window;
+    __sum16 check;
+    __be16 urg_ptr;
 };
 
 // from uapi/linux/in.h
@@ -135,8 +135,7 @@ __maybe_unused static __always_inline __u64 read_conn_tuple_skb(struct __sk_buff
     info->data_end = ETH_HLEN;
     __u8 l4_proto = 0;
     switch (l3_proto) {
-    case ETH_P_IP:
-    {
+    case ETH_P_IP: {
         __u8 ipv4_hdr_len = (__load_byte(skb, info->data_off) & 0x0f) << 2;
         info->data_end += __load_half(skb, info->data_off + offsetof(struct iphdr, tot_len));
         if (ipv4_hdr_len < sizeof(struct iphdr)) {

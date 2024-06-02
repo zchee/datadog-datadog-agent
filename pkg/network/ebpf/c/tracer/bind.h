@@ -68,7 +68,7 @@ static __always_inline int sys_exit_bind(__s64 ret) {
         return 0;
     }
 
-    struct sock * sk = args->sk;
+    struct sock *sk = args->sk;
     struct sockaddr *addr = args->addr;
     bpf_map_delete_elem(&pending_bind, &tid);
 
@@ -95,6 +95,5 @@ static __always_inline int sys_exit_bind(__s64 ret) {
 
     return 0;
 }
-
 
 #endif // __TRACER_BIND_H

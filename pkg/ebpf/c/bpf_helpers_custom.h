@@ -3,7 +3,7 @@
 
 #include "bpf_cross_compile.h"
 
-extern void __format_check(const char *fmt, ...) __attribute__ ((format(printf, 1, 2)));
+extern void __format_check(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 /*
  * Macro to output debug logs to /sys/kernel/debug/tracing/trace_pipe

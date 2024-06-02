@@ -9,9 +9,9 @@
 // get_protocol_layer(PROTOCOL_HTTP) => LAYER_APPLICATION
 // get_protocol_layer(PROTOCOL_TLS)  => LAYER_ENCRYPTION
 static __always_inline protocol_layer_t get_protocol_layer(protocol_t proto) {
-    u16 layer_bit = proto&(LAYER_API_BIT|LAYER_APPLICATION_BIT|LAYER_ENCRYPTION_BIT);
+    u16 layer_bit = proto & (LAYER_API_BIT | LAYER_APPLICATION_BIT | LAYER_ENCRYPTION_BIT);
 
-    switch(layer_bit) {
+    switch (layer_bit) {
     case LAYER_API_BIT:
         return LAYER_API;
     case LAYER_APPLICATION_BIT:
@@ -36,7 +36,7 @@ static __always_inline void set_protocol(protocol_stack_t *stack, protocol_t pro
 
     // this is the the number of the protocol without the layer bit set
     __u8 proto_num = (__u8)proto;
-    switch(layer) {
+    switch (layer) {
     case LAYER_API:
         stack->layer_api = proto_num;
         return;
@@ -58,10 +58,10 @@ static __always_inline bool is_fully_classified(protocol_stack_t *stack) {
         return false;
     }
 
-    return stack->flags&FLAG_FULLY_CLASSIFIED ||
-        (stack->layer_api > 0 &&
-         stack->layer_application > 0 &&
-         stack->layer_encryption > 0);
+    return stack->flags & FLAG_FULLY_CLASSIFIED ||
+           (stack->layer_api > 0 &&
+               stack->layer_application > 0 &&
+               stack->layer_encryption > 0);
 }
 
 // mark_as_fully_classified is intended to be used as an "optimization" helper
@@ -80,7 +80,6 @@ static __always_inline void mark_as_fully_classified(protocol_stack_t *stack) {
     stack->flags |= FLAG_FULLY_CLASSIFIED;
 }
 
-
 // get_protocol_from_stack returns the `protocol_t` value that belongs to the given `layer`
 // Example: If we had a `protocol_stack_t` with HTTP, calling `get_protocol_from_stack(stack, LAYER_APPLICATION)
 // would return PROTOCOL_HTTP;
@@ -91,7 +90,7 @@ __maybe_unused static __always_inline protocol_t get_protocol_from_stack(protoco
 
     __u16 proto_num = 0;
     __u16 layer_bit = 0;
-    switch(layer) {
+    switch (layer) {
     case LAYER_API:
         proto_num = stack->layer_api;
         layer_bit = LAYER_API_BIT;

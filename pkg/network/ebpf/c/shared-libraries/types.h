@@ -20,7 +20,7 @@ typedef struct {
     long __syscall_nr;
 
     int dfd;
-    const char* filename;
+    const char *filename;
     int flags;
     int mode;
 } enter_sys_openat_ctx;
@@ -33,7 +33,7 @@ typedef struct {
     long __syscall_nr;
 
     int dfd;
-    const char* filename;
+    const char *filename;
     void *how;
     size_t usize;
 } enter_sys_openat2_ctx;

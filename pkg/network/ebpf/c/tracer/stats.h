@@ -228,11 +228,11 @@ static __always_inline int handle_retransmit(struct sock *sk, int count) {
     return 0;
 }
 
-static __always_inline void handle_tcp_stats(conn_tuple_t* t, struct sock* sk, u8 state) {
+static __always_inline void handle_tcp_stats(conn_tuple_t *t, struct sock *sk, u8 state) {
     u32 rtt = 0, rtt_var = 0;
 #ifdef COMPILE_PREBUILT
-    bpf_probe_read_kernel(&rtt, sizeof(rtt), (char*)sk + offset_rtt());
-    bpf_probe_read_kernel(&rtt_var, sizeof(rtt_var), (char*)sk + offset_rtt_var());
+    bpf_probe_read_kernel(&rtt, sizeof(rtt), (char *)sk + offset_rtt());
+    bpf_probe_read_kernel(&rtt_var, sizeof(rtt_var), (char *)sk + offset_rtt_var());
 #else
     BPF_CORE_READ_INTO(&rtt, tcp_sk(sk), srtt_us);
     BPF_CORE_READ_INTO(&rtt_var, tcp_sk(sk), mdev_us);

@@ -3,8 +3,7 @@
 #ifndef _LINUX_TCP_STATES_H
 #define _LINUX_TCP_STATES_H
 
-enum
-{
+enum {
     TCP_ESTABLISHED = 1,
     TCP_SYN_SENT,
     TCP_SYN_RECV,

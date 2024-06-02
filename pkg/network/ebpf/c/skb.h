@@ -34,10 +34,10 @@ static __always_inline __u64 offset_sk_buff_transport_header() {
 }
 #endif
 
-static __always_inline unsigned char* sk_buff_head(struct sk_buff *skb) {
+static __always_inline unsigned char *sk_buff_head(struct sk_buff *skb) {
     unsigned char *h = NULL;
 #ifdef COMPILE_PREBUILT
-    int ret = bpf_probe_read_kernel_with_telemetry(&h, sizeof(h), ((char*)skb) + offset_sk_buff_head());
+    int ret = bpf_probe_read_kernel_with_telemetry(&h, sizeof(h), ((char *)skb) + offset_sk_buff_head());
     if (ret < 0) {
         return NULL;
     }
@@ -51,7 +51,7 @@ static __always_inline unsigned char* sk_buff_head(struct sk_buff *skb) {
 static __always_inline u16 sk_buff_network_header(struct sk_buff *skb) {
     u16 net_head = 0;
 #ifdef COMPILE_PREBUILT
-    int ret = bpf_probe_read_kernel_with_telemetry(&net_head, sizeof(net_head), ((char*)skb) + offset_sk_buff_transport_header() + 2);
+    int ret = bpf_probe_read_kernel_with_telemetry(&net_head, sizeof(net_head), ((char *)skb) + offset_sk_buff_transport_header() + 2);
     if (ret < 0) {
         log_debug("ERR reading network_header");
         return 0;
@@ -66,7 +66,7 @@ static __always_inline u16 sk_buff_network_header(struct sk_buff *skb) {
 static __always_inline u16 sk_buff_transport_header(struct sk_buff *skb) {
     u16 trans_head = 0;
 #ifdef COMPILE_PREBUILT
-    int ret = bpf_probe_read_kernel_with_telemetry(&trans_head, sizeof(trans_head), ((char*)skb) + offset_sk_buff_transport_header());
+    int ret = bpf_probe_read_kernel_with_telemetry(&trans_head, sizeof(trans_head), ((char *)skb) + offset_sk_buff_transport_header());
     if (ret) {
         log_debug("ERR reading trans_head");
         return 0;
@@ -104,15 +104,15 @@ static __always_inline int sk_buff_to_tuple(struct sk_buff *skb, conn_tuple_t *t
     if (iph.version == 4) {
         tup->metadata |= CONN_V4;
         switch (iph.protocol) {
-            case IPPROTO_UDP:
-                tup->metadata |= CONN_TYPE_UDP;
-                break;
-            case IPPROTO_TCP:
-                tup->metadata |= CONN_TYPE_TCP;
-                break;
-            default:
-                log_debug("unknown protocol: %d", iph.protocol);
-                return 0;
+        case IPPROTO_UDP:
+            tup->metadata |= CONN_TYPE_UDP;
+            break;
+        case IPPROTO_TCP:
+            tup->metadata |= CONN_TYPE_TCP;
+            break;
+        default:
+            log_debug("unknown protocol: %d", iph.protocol);
+            return 0;
         }
         trans_len = iph.tot_len - (iph.ihl * 4);
         bpf_probe_read_kernel_with_telemetry(&tup->saddr_l, sizeof(__be32), &iph.saddr);
@@ -129,15 +129,15 @@ static __always_inline int sk_buff_to_tuple(struct sk_buff *skb, conn_tuple_t *t
         }
         tup->metadata |= CONN_V6;
         switch (ip6h.nexthdr) {
-            case IPPROTO_UDP:
-                tup->metadata |= CONN_TYPE_UDP;
-                break;
-            case IPPROTO_TCP:
-                tup->metadata |= CONN_TYPE_TCP;
-                break;
-            default:
-                log_debug("unknown protocol: %d", ip6h.nexthdr);
-                return 0;
+        case IPPROTO_UDP:
+            tup->metadata |= CONN_TYPE_UDP;
+            break;
+        case IPPROTO_TCP:
+            tup->metadata |= CONN_TYPE_TCP;
+            break;
+        default:
+            log_debug("unknown protocol: %d", ip6h.nexthdr);
+            return 0;
         }
 
         trans_len = bpf_ntohs(ip6h.payload_len) - sizeof(struct ipv6hdr);

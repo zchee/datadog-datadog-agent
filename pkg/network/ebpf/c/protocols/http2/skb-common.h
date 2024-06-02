@@ -82,7 +82,7 @@ static __always_inline bool process_and_skip_literal_headers(struct __sk_buff *s
 }
 
 // handle_dynamic_table_update handles the dynamic table size update.
-static __always_inline void handle_dynamic_table_update(struct __sk_buff *skb, skb_info_t *restrict skb_info){
+static __always_inline void handle_dynamic_table_update(struct __sk_buff *skb, skb_info_t *restrict skb_info) {
     // To determine the size of the dynamic table update, we read an integer representation byte by byte.
     // We continue reading bytes until we encounter a byte without the Most Significant Bit (MSB) set,
     // indicating that we've consumed the complete integer. While in the context of the dynamic table
@@ -93,7 +93,7 @@ static __always_inline void handle_dynamic_table_update(struct __sk_buff *skb, s
     // If the top 3 bits are 001, then we have a dynamic table size update.
     if ((current_ch & 224) == 32) {
         skb_info->data_off++;
-    #pragma unroll(HTTP2_MAX_DYNAMIC_TABLE_UPDATE_ITERATIONS)
+#pragma unroll(HTTP2_MAX_DYNAMIC_TABLE_UPDATE_ITERATIONS)
         for (__u8 iter = 0; iter < HTTP2_MAX_DYNAMIC_TABLE_UPDATE_ITERATIONS; ++iter) {
             bpf_skb_load_bytes(skb, skb_info->data_off, &current_ch, sizeof(current_ch));
             skb_info->data_off++;

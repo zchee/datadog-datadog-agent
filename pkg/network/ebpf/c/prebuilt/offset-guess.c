@@ -27,14 +27,14 @@ static __always_inline u64 aligned_offset(void *p, u64 offset, uintptr_t size) {
     // we want to advance to the next _p that is
     // mod size
     _p = _p + size - 1 - (_p + size - 1) % size;
-    return (char*)_p - (char*)p;
+    return (char *)_p - (char *)p;
 }
 
 /* These maps are used to match the kprobe & kretprobe of connect for IPv6 */
 /* This is a key/value store with the keys being a pid
  * and the values being a struct sock *.
  */
-BPF_HASH_MAP(connectsock_ipv6, __u64, void*, 1024)
+BPF_HASH_MAP(connectsock_ipv6, __u64, void *, 1024)
 
 BPF_HASH_MAP(tracer_status, __u64, tracer_status_t, 1)
 BPF_HASH_MAP(conntrack_status, __u64, conntrack_status_t, 1)
@@ -52,13 +52,13 @@ static __always_inline bool proc_t_comm_equals(proc_t a, proc_t b) {
     return true;
 }
 
-static __always_inline bool check_family(struct sock* sk, tracer_status_t* status, u16 expected_family) {
+static __always_inline bool check_family(struct sock *sk, tracer_status_t *status, u16 expected_family) {
     u16 family = 0;
-    bpf_probe_read_kernel(&family, sizeof(u16), ((char*)sk) + status->offset_family);
+    bpf_probe_read_kernel(&family, sizeof(u16), ((char *)sk) + status->offset_family);
     return family == expected_family;
 }
 
-static __always_inline int guess_offsets(tracer_status_t* status, char* subject) {
+static __always_inline int guess_offsets(tracer_status_t *status, char *subject) {
     u64 zero = 0;
 
     if (status->state != STATE_CHECKING) {
@@ -82,7 +82,7 @@ static __always_inline int guess_offsets(tracer_status_t* status, char* subject)
     new_status.err = 0;
     bpf_probe_read_kernel(&new_status.proc.comm, sizeof(proc.comm), proc.comm);
 
-    possible_net_t* possible_skc_net = NULL;
+    possible_net_t *possible_skc_net = NULL;
     u32 possible_netns = 0;
     long ret;
 
@@ -141,7 +141,7 @@ static __always_inline int guess_offsets(tracer_status_t* status, char* subject)
         break;
     case GUESS_NETNS:
         new_status.offset_netns = aligned_offset(subject, status->offset_netns, SIZEOF_NETNS);
-        bpf_probe_read_kernel(&possible_skc_net, sizeof(possible_net_t*), subject + new_status.offset_netns);
+        bpf_probe_read_kernel(&possible_skc_net, sizeof(possible_net_t *), subject + new_status.offset_netns);
         if (!possible_skc_net) {
             new_status.err = 1;
             break;
@@ -150,7 +150,7 @@ static __always_inline int guess_offsets(tracer_status_t* status, char* subject)
         // is an invalid pointer, signal an error so we can go
         // to the next offset_netns
         new_status.offset_ino = aligned_offset(subject, status->offset_ino, SIZEOF_NETNS_INO);
-        ret = bpf_probe_read_kernel(&possible_netns, sizeof(possible_netns), (char*)possible_skc_net + new_status.offset_ino);
+        ret = bpf_probe_read_kernel(&possible_netns, sizeof(possible_netns), (char *)possible_skc_net + new_status.offset_ino);
         if (ret == -EFAULT) {
             new_status.err = 1;
             break;
@@ -165,7 +165,7 @@ static __always_inline int guess_offsets(tracer_status_t* status, char* subject)
         bpf_probe_read_kernel(&new_status.rtt_var, sizeof(new_status.rtt_var), subject + new_status.offset_rtt_var);
         break;
     case GUESS_DADDR_IPV6:
-        if (!check_family((struct sock*)subject, status, AF_INET6)) {
+        if (!check_family((struct sock *)subject, status, AF_INET6)) {
             break;
         }
 
@@ -194,7 +194,7 @@ static __always_inline int guess_offsets(tracer_status_t* status, char* subject)
         new_status.offset_sk_buff_transport_header = aligned_offset(subject, status->offset_sk_buff_transport_header, SIZEOF_SK_BUFF_TRANSPORT_HEADER);
         bpf_probe_read_kernel(&new_status.transport_header, sizeof(new_status.transport_header), subject + new_status.offset_sk_buff_transport_header);
         bpf_probe_read_kernel(&new_status.network_header, sizeof(new_status.network_header), subject + new_status.offset_sk_buff_transport_header + sizeof(__u16));
-        bpf_probe_read_kernel(&new_status.mac_header, sizeof(new_status.mac_header), subject + new_status.offset_sk_buff_transport_header + 2*sizeof(__u16));
+        bpf_probe_read_kernel(&new_status.mac_header, sizeof(new_status.mac_header), subject + new_status.offset_sk_buff_transport_header + 2 * sizeof(__u16));
         break;
     case GUESS_SK_BUFF_HEAD:
         // Loading the head field into `subject`.
@@ -221,46 +221,46 @@ static __always_inline bool is_sk_buff_event(__u64 what) {
 }
 
 SEC("kprobe/ip_make_skb")
-int kprobe__ip_make_skb(struct pt_regs* ctx) {
+int kprobe__ip_make_skb(struct pt_regs *ctx) {
     u64 zero = 0;
-    tracer_status_t* status = bpf_map_lookup_elem(&tracer_status, &zero);
+    tracer_status_t *status = bpf_map_lookup_elem(&tracer_status, &zero);
 
     if (status == NULL || is_sk_buff_event(status->what)) {
         return 0;
     }
 
-    struct flowi4* fl4 = (struct flowi4*)PT_REGS_PARM2(ctx);
-    guess_offsets(status, (char*)fl4);
+    struct flowi4 *fl4 = (struct flowi4 *)PT_REGS_PARM2(ctx);
+    guess_offsets(status, (char *)fl4);
     return 0;
 }
 
 SEC("kprobe/ip6_make_skb")
-int kprobe__ip6_make_skb(struct pt_regs* ctx) {
+int kprobe__ip6_make_skb(struct pt_regs *ctx) {
     u64 zero = 0;
-    tracer_status_t* status = bpf_map_lookup_elem(&tracer_status, &zero);
+    tracer_status_t *status = bpf_map_lookup_elem(&tracer_status, &zero);
     if (status == NULL || is_sk_buff_event(status->what)) {
         return 0;
     }
-    struct flowi6* fl6 = (struct flowi6*)PT_REGS_PARM7(ctx);
-    guess_offsets(status, (char*)fl6);
+    struct flowi6 *fl6 = (struct flowi6 *)PT_REGS_PARM7(ctx);
+    guess_offsets(status, (char *)fl6);
     return 0;
 }
 
 SEC("kprobe/ip6_make_skb")
-int kprobe__ip6_make_skb__pre_4_7_0(struct pt_regs* ctx) {
+int kprobe__ip6_make_skb__pre_4_7_0(struct pt_regs *ctx) {
     u64 zero = 0;
-    tracer_status_t* status = bpf_map_lookup_elem(&tracer_status, &zero);
+    tracer_status_t *status = bpf_map_lookup_elem(&tracer_status, &zero);
     if (status == NULL || is_sk_buff_event(status->what)) {
         return 0;
     }
-    struct flowi6* fl6 = (struct flowi6*)PT_REGS_PARM9(ctx);
-    guess_offsets(status, (char*)fl6);
+    struct flowi6 *fl6 = (struct flowi6 *)PT_REGS_PARM9(ctx);
+    guess_offsets(status, (char *)fl6);
     return 0;
 }
 
 /* Used exclusively for offset guessing */
 SEC("kprobe/tcp_getsockopt")
-int kprobe__tcp_getsockopt(struct pt_regs* ctx) {
+int kprobe__tcp_getsockopt(struct pt_regs *ctx) {
     int level = (int)PT_REGS_PARM2(ctx);
     int optname = (int)PT_REGS_PARM3(ctx);
     if (level != SOL_TCP || optname != TCP_INFO) {
@@ -268,38 +268,38 @@ int kprobe__tcp_getsockopt(struct pt_regs* ctx) {
     }
 
     u64 zero = 0;
-    tracer_status_t* status = bpf_map_lookup_elem(&tracer_status, &zero);
+    tracer_status_t *status = bpf_map_lookup_elem(&tracer_status, &zero);
     if (status == NULL || status->what == GUESS_SOCKET_SK || is_sk_buff_event(status->what)) {
         return 0;
     }
-    struct sock* sk = (struct sock*)PT_REGS_PARM1(ctx);
+    struct sock *sk = (struct sock *)PT_REGS_PARM1(ctx);
     status->tcp_info_kprobe_status = 1;
-    guess_offsets(status, (char*)sk);
+    guess_offsets(status, (char *)sk);
 
     return 0;
 }
 
 /* Used for offset guessing the struct socket->sk field */
 SEC("kprobe/sock_common_getsockopt")
-int kprobe__sock_common_getsockopt(struct pt_regs* ctx) {
+int kprobe__sock_common_getsockopt(struct pt_regs *ctx) {
     u64 zero = 0;
-    tracer_status_t* status = bpf_map_lookup_elem(&tracer_status, &zero);
+    tracer_status_t *status = bpf_map_lookup_elem(&tracer_status, &zero);
     if (status == NULL || status->what != GUESS_SOCKET_SK) {
         return 0;
     }
 
-    struct socket* socket = (struct socket*)PT_REGS_PARM1(ctx);
-    guess_offsets(status, (char*)socket);
+    struct socket *socket = (struct socket *)PT_REGS_PARM1(ctx);
+    guess_offsets(status, (char *)socket);
     return 0;
 }
 
 // Used for offset guessing (see: pkg/ebpf/offsetguess.go)
 SEC("kprobe/tcp_v6_connect")
-int kprobe__tcp_v6_connect(struct pt_regs* ctx) {
-    struct sock* sk;
+int kprobe__tcp_v6_connect(struct pt_regs *ctx) {
+    struct sock *sk;
     u64 pid = bpf_get_current_pid_tgid();
 
-    sk = (struct sock*)PT_REGS_PARM1(ctx);
+    sk = (struct sock *)PT_REGS_PARM1(ctx);
 
     bpf_map_update_elem(&connectsock_ipv6, &pid, &sk, BPF_ANY);
 
@@ -308,17 +308,17 @@ int kprobe__tcp_v6_connect(struct pt_regs* ctx) {
 
 // Used for offset guessing (see: pkg/ebpf/offsetguess.go)
 SEC("kretprobe/tcp_v6_connect")
-int kretprobe__tcp_v6_connect(struct pt_regs* __attribute__((unused)) ctx) {
+int kretprobe__tcp_v6_connect(struct pt_regs *__attribute__((unused)) ctx) {
     u64 pid = bpf_get_current_pid_tgid();
     u64 zero = 0;
-    struct sock** skpp;
-    tracer_status_t* status;
+    struct sock **skpp;
+    tracer_status_t *status;
     skpp = bpf_map_lookup_elem(&connectsock_ipv6, &pid);
     if (skpp == 0) {
         return 0; // missed entry
     }
 
-    struct sock* skp = *skpp;
+    struct sock *skp = *skpp;
     bpf_map_delete_elem(&connectsock_ipv6, &pid);
 
     status = bpf_map_lookup_elem(&tracer_status, &zero);
@@ -326,20 +326,20 @@ int kretprobe__tcp_v6_connect(struct pt_regs* __attribute__((unused)) ctx) {
         return 0;
     }
     // We should figure out offsets if they're not already figured out
-    guess_offsets(status, (char*)skp);
+    guess_offsets(status, (char *)skp);
 
     return 0;
 }
 
 struct net_dev_queue_ctx {
     u64 unused;
-    void* skb;
+    void *skb;
 };
 
 SEC("tracepoint/net/net_dev_queue")
-int tracepoint__net__net_dev_queue(struct net_dev_queue_ctx* ctx) {
+int tracepoint__net__net_dev_queue(struct net_dev_queue_ctx *ctx) {
     u64 zero = 0;
-    tracer_status_t* status = bpf_map_lookup_elem(&tracer_status, &zero);
+    tracer_status_t *status = bpf_map_lookup_elem(&tracer_status, &zero);
     // If we've triggered the hook and we are not under the context of guess offsets for GUESS_SK_BUFF_SOCK,
     // GUESS_SK_BUFF_TRANSPORT_HEADER, or GUESS_SK_BUFF_HEAD then we should do nothing in the hook.
     if (status == NULL || !is_sk_buff_event(status->what)) {
@@ -350,7 +350,7 @@ int tracepoint__net__net_dev_queue(struct net_dev_queue_ctx* ctx) {
     return 0;
 }
 
-static __always_inline int guess_conntrack_offsets(conntrack_status_t* status, char* subject) {
+static __always_inline int guess_conntrack_offsets(conntrack_status_t *status, char *subject) {
     u64 zero = 0;
 
     if (status->state != STATE_CHECKING) {
@@ -375,7 +375,7 @@ static __always_inline int guess_conntrack_offsets(conntrack_status_t* status, c
     bpf_probe_read_kernel(&new_status.proc.comm, sizeof(proc.comm), proc.comm);
     long ret;
 
-    possible_net_t* possible_ct_net = NULL;
+    possible_net_t *possible_ct_net = NULL;
     u32 possible_netns = 0;
     switch (status->what) {
     case GUESS_CT_TUPLE_ORIGIN:
@@ -388,7 +388,7 @@ static __always_inline int guess_conntrack_offsets(conntrack_status_t* status, c
         break;
     case GUESS_CT_NET:
         new_status.offset_netns = aligned_offset(subject, status->offset_netns, SIZEOF_CT_NET);
-        bpf_probe_read_kernel(&possible_ct_net, sizeof(possible_net_t*), subject + new_status.offset_netns);
+        bpf_probe_read_kernel(&possible_ct_net, sizeof(possible_net_t *), subject + new_status.offset_netns);
         if (!possible_ct_net) {
             new_status.err = 1;
             break;
@@ -397,7 +397,7 @@ static __always_inline int guess_conntrack_offsets(conntrack_status_t* status, c
         // is an invalid pointer, signal an error so we can go
         // to the next offset_netns
         new_status.offset_ino = aligned_offset(subject, status->offset_ino, SIZEOF_CT_NETNS_INO);
-        ret = bpf_probe_read_kernel(&possible_netns, sizeof(possible_netns), ((char*)possible_ct_net) + new_status.offset_ino);
+        ret = bpf_probe_read_kernel(&possible_netns, sizeof(possible_netns), ((char *)possible_ct_net) + new_status.offset_ino);
         if (ret == -EFAULT) {
             new_status.err = 1;
             break;
@@ -427,17 +427,16 @@ static __always_inline bool is_ct_event(u64 what) {
 }
 
 SEC("kprobe/__nf_conntrack_hash_insert")
-int kprobe___nf_conntrack_hash_insert(struct pt_regs* ctx) {
+int kprobe___nf_conntrack_hash_insert(struct pt_regs *ctx) {
     u64 zero = 0;
-    conntrack_status_t* status = bpf_map_lookup_elem(&conntrack_status, &zero);
+    conntrack_status_t *status = bpf_map_lookup_elem(&conntrack_status, &zero);
     if (status == NULL || !is_ct_event(status->what)) {
         return 0;
     }
 
-    void *ct = (void*)PT_REGS_PARM1(ctx);
-    guess_conntrack_offsets(status, (char*)ct);
+    void *ct = (void *)PT_REGS_PARM1(ctx);
+    guess_conntrack_offsets(status, (char *)ct);
     return 0;
 }
-
 
 char _license[] SEC("license") = "GPL";

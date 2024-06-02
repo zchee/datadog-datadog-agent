@@ -10,15 +10,13 @@
 #define true 1
 #define false 0
 
-typedef enum
-{
+typedef enum {
     CONN_DIRECTION_UNKNOWN = 0b00,
     CONN_DIRECTION_INCOMING = 0b01,
     CONN_DIRECTION_OUTGOING = 0b10,
 } conn_direction_t;
 
-typedef enum
-{
+typedef enum {
     PACKET_COUNT_NONE = 0,
     PACKET_COUNT_ABSOLUTE = 1,
     PACKET_COUNT_INCREMENT = 2,
@@ -54,8 +52,7 @@ typedef struct {
 } conn_stats_ts_t;
 
 // Connection flags
-typedef enum
-{
+typedef enum {
     CONN_L_INIT = 1 << 0, // initial/first message sent
     CONN_R_INIT = 1 << 1, // reply received for initial message from remote
     CONN_ASSURED = 1 << 2 // "3-way handshake" complete, i.e. response to initial reply sent

@@ -3,7 +3,7 @@
 
 #include "ktypes.h"
 
-#define BATCH_BUFFER_SIZE (4*1024)
+#define BATCH_BUFFER_SIZE (4 * 1024)
 #define BATCH_PAGES_PER_CPU 8
 
 typedef struct {

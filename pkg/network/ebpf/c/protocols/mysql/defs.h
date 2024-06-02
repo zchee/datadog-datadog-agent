@@ -24,7 +24,7 @@
 // MySQL header format. Starts with 24 bits (3 bytes) of the length of the payload, a one byte of sequence id,
 // a one byte to represent the message type.
 typedef struct {
-    __u32 payload_length:24;
+    __u32 payload_length : 24;
     __u8 seq_id;
     __u8 command_type;
 } __attribute__((packed)) mysql_hdr;

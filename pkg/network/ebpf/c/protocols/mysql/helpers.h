@@ -16,22 +16,22 @@ static __always_inline __u32 is_version_component_helper(const char *buf, __u32 
         if (offset + i >= buf_size) {
             break;
         }
-        current_char = buf[offset+i];
+        current_char = buf[offset + i];
         if ('0' <= current_char && current_char <= '9') {
             continue;
         }
         if (current_char == delimiter && i > 0) {
-            return i+1;
+            return i + 1;
         }
         // Any other character is not supported.
         break;
-   }
-   return 0;
+    }
+    return 0;
 }
 
 // Checks if the given buffer is a null terminated string that represents a version of the format <major>.<minor>.<bugfix>
 // where the major, minor and bugfix are numbers of max 2 digits each.
-static __always_inline bool is_version(const char* buf, __u32 buf_size) {
+static __always_inline bool is_version(const char *buf, __u32 buf_size) {
     if (buf_size < MIN_VERSION_SIZE) {
         return false;
     }
@@ -51,7 +51,7 @@ static __always_inline bool is_version(const char* buf, __u32 buf_size) {
     return is_version_component_helper(buf, read_size, buf_size, '\0') > 0;
 }
 
-static __always_inline bool is_mysql(conn_tuple_t *tup, const char* buf, __u32 buf_size) {
+static __always_inline bool is_mysql(conn_tuple_t *tup, const char *buf, __u32 buf_size) {
     CHECK_PRELIMINARY_BUFFER_CONDITIONS(buf, buf_size, MYSQL_MIN_LENGTH);
 
     mysql_hdr header = *((mysql_hdr *)buf);
@@ -62,10 +62,10 @@ static __always_inline bool is_mysql(conn_tuple_t *tup, const char* buf, __u32 b
     switch (header.command_type) {
     case MYSQL_COMMAND_QUERY:
     case MYSQL_PREPARE_QUERY:
-        return is_sql_command((char*)(buf+sizeof(mysql_hdr)), buf_size-sizeof(mysql_hdr));
+        return is_sql_command((char *)(buf + sizeof(mysql_hdr)), buf_size - sizeof(mysql_hdr));
     case MYSQL_SERVER_GREETING_V10:
     case MYSQL_SERVER_GREETING_V9:
-        return is_version((char*)(buf+sizeof(mysql_hdr)), buf_size-sizeof(mysql_hdr));
+        return is_version((char *)(buf + sizeof(mysql_hdr)), buf_size - sizeof(mysql_hdr));
     default:
         return false;
     }

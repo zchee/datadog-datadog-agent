@@ -18,7 +18,7 @@ typedef struct {
 typedef struct {
     struct __sk_buff *owner;
     conn_tuple_t tuple;
-    skb_info_t  skb_info;
+    skb_info_t skb_info;
     classification_buffer_t buffer;
     // bit mask with layers that should be skiped
     u16 routing_skip_layers;
@@ -47,20 +47,20 @@ BPF_PERCPU_ARRAY_MAP(classification_buf, usm_context_t, 2)
 BPF_ARRAY_MAP(classification_buf, __u8, 1)
 #endif
 
-static __always_inline usm_context_t* __get_usm_context(struct __sk_buff *skb) {
+static __always_inline usm_context_t *__get_usm_context(struct __sk_buff *skb) {
     // we use the packet direction as the key to the CPU map
     const u32 key = skb->pkt_type == PACKET_OUTGOING;
     return bpf_map_lookup_elem(&classification_buf, &key);
 }
 
-static __always_inline void __init_buffer(struct __sk_buff *skb, skb_info_t *skb_info, classification_buffer_t* buffer) {
+static __always_inline void __init_buffer(struct __sk_buff *skb, skb_info_t *skb_info, classification_buffer_t *buffer) {
     bpf_memset(buffer->data, 0, sizeof(buffer->data));
     read_into_buffer_for_classification((char *)buffer->data, skb, skb_info->data_off);
     const size_t payload_length = skb->len - skb_info->data_off;
     buffer->size = payload_length < CLASSIFICATION_MAX_BUFFER ? payload_length : CLASSIFICATION_MAX_BUFFER;
 }
 
-static __always_inline usm_context_t* usm_context_init(struct __sk_buff *skb, conn_tuple_t *tuple, skb_info_t *skb_info) {
+static __always_inline usm_context_t *usm_context_init(struct __sk_buff *skb, conn_tuple_t *tuple, skb_info_t *skb_info) {
     if (!skb || !skb_info) {
         return NULL;
     }
@@ -77,7 +77,7 @@ static __always_inline usm_context_t* usm_context_init(struct __sk_buff *skb, co
     return usm_context;
 }
 
-static __always_inline usm_context_t* usm_context(struct __sk_buff *skb) {
+static __always_inline usm_context_t *usm_context(struct __sk_buff *skb) {
     usm_context_t *usm_context = __get_usm_context(skb);
     if (!usm_context) {
         return NULL;

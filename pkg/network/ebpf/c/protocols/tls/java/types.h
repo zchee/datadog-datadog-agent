@@ -15,15 +15,14 @@ enum erpc_message_type {
     MAX_MESSAGE_TYPE,
 };
 
-typedef struct{
+typedef struct {
     __u16 port;
     char domain[MAX_DOMAIN_NAME_LENGTH];
 } peer_t;
 
-typedef struct{
+typedef struct {
     __u32 pid;
     peer_t peer;
 } connection_by_peer_key_t;
-
 
 #endif //__JAVA_TLS_TYPES_H

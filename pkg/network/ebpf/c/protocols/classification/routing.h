@@ -27,7 +27,7 @@ static __always_inline classification_prog_t __get_next_program(usm_context_t *u
 
     if (has_available_program(current_program) && !current_layer_known) {
         // advance to the next program belonging to this protocol layer
-        return current_program+1;
+        return current_program + 1;
     }
 
     // there are not other programs belonging to the same layer to be executed,

@@ -99,6 +99,4 @@ static __always_inline void increment_telemetry_registers_count() {
     __sync_fetch_and_add(&val->registers, 1);
 }
 
-
-
 #endif /* __CONNTRACK_HELPERS_H */

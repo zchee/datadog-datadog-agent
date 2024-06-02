@@ -16,20 +16,19 @@ static __always_inline void update_topic_name_size_telemetry(kafka_telemetry_t *
 // A template for verifying a given buffer is composed of the characters [a-z], [A-Z], [0-9], ".", "_", or "-".
 // The iterations reads up to MIN(max_buffer_size, real_size).
 // Has to be a template and not a function, as we have pragma unroll.
-#define CHECK_STRING_COMPOSED_OF_ASCII_FOR_PARSING(max_buffer_size, real_size, buffer)                                                      \
-    char ch = 0;                                                                                                                            \
-_Pragma( STRINGIFY(unroll(max_buffer_size)) )                                                                                               \
-    for (int j = 0; j < max_buffer_size; j++) {                                                                                             \
-        /* Verifies we are not exceeding the real client_id_size, and if we do, we finish the iteration as we reached */                    \
-        /* to the end of the buffer and all checks have been successful. */                                                                 \
-        if (j + 1 <= real_size) {                                                                                                           \
-            ch = buffer[j];                                                                                                                 \
-            if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ('0' <= ch && ch <= '9') || ch == '.' || ch == '_' || ch == '-') {  \
-                continue;                                                                                                                   \
-            }                                                                                                                               \
-            return false;                                                                                                                   \
-        }                                                                                                                                   \
-    }                                                                                                                                       \
+#define CHECK_STRING_COMPOSED_OF_ASCII_FOR_PARSING(max_buffer_size, real_size, buffer)                                                     \
+    char ch = 0;                                                                                                                           \
+    _Pragma(STRINGIFY(unroll(max_buffer_size))) for (int j = 0; j < max_buffer_size; j++) {                                                \
+        /* Verifies we are not exceeding the real client_id_size, and if we do, we finish the iteration as we reached */                   \
+        /* to the end of the buffer and all checks have been successful. */                                                                \
+        if (j + 1 <= real_size) {                                                                                                          \
+            ch = buffer[j];                                                                                                                \
+            if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ('0' <= ch && ch <= '9') || ch == '.' || ch == '_' || ch == '-') { \
+                continue;                                                                                                                  \
+            }                                                                                                                              \
+            return false;                                                                                                                  \
+        }                                                                                                                                  \
+    }
 
 #ifdef EXTRA_DEBUG
 #define extra_debug(fmt, ...) log_debug("kafka: " fmt, ##__VA_ARGS__)
@@ -37,8 +36,7 @@ _Pragma( STRINGIFY(unroll(max_buffer_size)) )                                   
 #define extra_debug(fmt, ...)
 #endif
 
-static void __always_inline kafka_tcp_termination(conn_tuple_t *tup)
-{
+static void __always_inline kafka_tcp_termination(conn_tuple_t *tup) {
     bpf_map_delete_elem(&kafka_response, tup);
     // Delete the opposite direction also like HTTP/2 does since the termination
     // for the other direction may not be reached in some cases (localhost).
@@ -47,7 +45,7 @@ static void __always_inline kafka_tcp_termination(conn_tuple_t *tup)
 }
 
 SEC("socket/kafka_filter")
-int socket__kafka_filter(struct __sk_buff* skb) {
+int socket__kafka_filter(struct __sk_buff *skb) {
     const u32 zero = 0;
     skb_info_t skb_info;
     kafka_info_t *kafka = bpf_map_lookup_elem(&kafka_heap, &zero);
@@ -108,7 +106,7 @@ int uprobe__kafka_tls_filter(struct pt_regs *ctx) {
     kafka_telemetry_t *kafka_tel = bpf_map_lookup_elem(&kafka_telemetry, &zero);
     if (kafka_tel == NULL) {
         return 0;
-    }    
+    }
 
     // On stack for 4.14
     conn_tuple_t tup = args->tup;
@@ -172,9 +170,8 @@ struct read_with_remainder_config {
 };
 
 static __always_inline enum parse_result __read_with_remainder(struct read_with_remainder_config config,
-                                                               kafka_response_context_t *response, pktbuf_t pkt,
-                                                               u32 *offset, u32 data_end, void *val, bool first)
-{
+    kafka_response_context_t *response, pktbuf_t pkt,
+    u32 *offset, u32 data_end, void *val, bool first) {
     if (*offset >= data_end) {
         // The offset we want to read is completely outside of the current
         // packet. No remainder to save, we just need to save the offset
@@ -231,7 +228,7 @@ static __always_inline enum parse_result __read_with_remainder(struct read_with_
     // bytes of the value from the current packet and reconstruct
     // the value to be read.
     u8 *reconstruct = response->remainder_buf;
-    u8 tail[4] = {0};
+    u8 tail[4] = { 0 };
 
     pktbuf_load_bytes(pkt, *offset, &tail, want);
 
@@ -262,8 +259,7 @@ static __always_inline enum parse_result __read_with_remainder(struct read_with_
     return RET_DONE;
 }
 
-static __always_inline void convert_u16(void *dest, void *src)
-{
+static __always_inline void convert_u16(void *dest, void *src) {
     u16 *dest16 = dest;
     u16 *src16 = src;
 
@@ -277,8 +273,7 @@ static __always_inline void convert_u16(void *dest, void *src)
 }
 
 static __always_inline enum parse_result read_with_remainder_s16(kafka_response_context_t *response, pktbuf_t pkt,
-                                                             u32 *offset, u32 data_end, s16 *val, bool first)
-{
+    u32 *offset, u32 data_end, s16 *val, bool first) {
     struct read_with_remainder_config config = {
         .want_bytes = sizeof(u16),
         .convert = convert_u16,
@@ -287,8 +282,7 @@ static __always_inline enum parse_result read_with_remainder_s16(kafka_response_
     return __read_with_remainder(config, response, pkt, offset, data_end, val, first);
 }
 
-static __always_inline void convert_u32(void *dest, void *src)
-{
+static __always_inline void convert_u32(void *dest, void *src) {
     u32 *dest32 = dest;
     u32 *src32 = src;
 
@@ -302,8 +296,7 @@ static __always_inline void convert_u32(void *dest, void *src)
 }
 
 static __always_inline enum parse_result read_with_remainder(kafka_response_context_t *response, pktbuf_t pkt,
-                                                             u32 *offset, u32 data_end, s32 *val, bool first)
-{
+    u32 *offset, u32 data_end, s32 *val, bool first) {
     struct read_with_remainder_config config = {
         .want_bytes = sizeof(u32),
         .convert = convert_u32,
@@ -320,11 +313,10 @@ static __always_inline enum parse_result read_with_remainder(kafka_response_cont
 // The varints can actually up to 10 bytes long but we only support up to
 // max_bytes length due to code size limitations.
 static __always_inline enum parse_result read_varint(kafka_response_context_t *response,
-                                                    pktbuf_t pkt, u64 *out, u32 *offset,
-                                                    u32 data_end,
-                                                    bool first,
-                                                    u32 max_bytes)
-{
+    pktbuf_t pkt, u64 *out, u32 *offset,
+    u32 data_end,
+    bool first,
+    u32 max_bytes) {
     uint32_t shift_amount = 0;
     uint64_t value = 0;
     uint32_t i = 0;
@@ -343,7 +335,7 @@ static __always_inline enum parse_result read_varint(kafka_response_context_t *r
 
     u8 current_byte = 0;
 
-    #pragma unroll
+#pragma unroll
     for (; i < max_bytes; i++) {
         // This check works better than setting i = startpos initially which leads
         // to complaints from the verifier about too much complexity.
@@ -386,15 +378,14 @@ static __always_inline enum parse_result read_varint(kafka_response_context_t *r
 }
 
 static __always_inline enum parse_result read_varint_or_s16(
-                                                            bool flexible,
-                                                            kafka_response_context_t *response,
-                                                            pktbuf_t pkt,
-                                                            u32 *offset,
-                                                            u32 data_end,
-                                                            s64 *val,
-                                                            bool first,
-                                                            u32 max_varint_bytes)
-{
+    bool flexible,
+    kafka_response_context_t *response,
+    pktbuf_t pkt,
+    u32 *offset,
+    u32 data_end,
+    s64 *val,
+    bool first,
+    u32 max_varint_bytes) {
     enum parse_result ret;
 
     if (flexible) {
@@ -411,15 +402,14 @@ static __always_inline enum parse_result read_varint_or_s16(
 }
 
 static __always_inline enum parse_result read_varint_or_s32(
-                                                            bool flexible,
-                                                            kafka_response_context_t *response,
-                                                            pktbuf_t pkt,
-                                                            u32 *offset,
-                                                            u32 data_end,
-                                                            s64 *val,
-                                                            bool first,
-                                                            u32 max_varint_bytes)
-{
+    bool flexible,
+    kafka_response_context_t *response,
+    pktbuf_t pkt,
+    u32 *offset,
+    u32 data_end,
+    s64 *val,
+    bool first,
+    u32 max_varint_bytes) {
     enum parse_result ret;
 
     if (flexible) {
@@ -436,11 +426,10 @@ static __always_inline enum parse_result read_varint_or_s32(
 }
 
 static __always_inline enum parse_result skip_tagged_fields(kafka_response_context_t *response,
-                                                            pktbuf_t pkt,
-                                                            u32 *offset,
-                                                            u32 data_end,
-                                                            bool verify)
-{
+    pktbuf_t pkt,
+    u32 *offset,
+    u32 data_end,
+    bool verify) {
     if (*offset >= data_end) {
         response->carry_over_offset = *offset - data_end;
         return RET_EOP;
@@ -468,8 +457,7 @@ enum parser_level {
     PARSER_LEVEL_RECORD_BATCH,
 };
 
-static enum parser_level parser_state_to_level(kafka_response_state state)
-{
+static enum parser_level parser_state_to_level(kafka_response_state state) {
     switch (state) {
     case KAFKA_FETCH_RESPONSE_START:
     case KAFKA_FETCH_RESPONSE_NUM_TOPICS:
@@ -493,12 +481,11 @@ static enum parser_level parser_state_to_level(kafka_response_state state)
 }
 
 static __always_inline enum parse_result kafka_continue_parse_response_partition_loop(kafka_info_t *kafka,
-                                                                            conn_tuple_t *tup,
-                                                                            kafka_response_context_t *response,
-                                                                            pktbuf_t pkt, u32 offset,
-                                                                            u32 data_end,
-                                                                            u32 api_version)
-{
+    conn_tuple_t *tup,
+    kafka_response_context_t *response,
+    pktbuf_t pkt, u32 offset,
+    u32 data_end,
+    u32 api_version) {
     u32 orig_offset = offset;
     bool flexible = api_version >= 12;
     enum parse_result ret;
@@ -531,60 +518,56 @@ static __always_inline enum parse_result kafka_continue_parse_response_partition
         response->state = KAFKA_FETCH_RESPONSE_NUM_TOPICS;
         // fallthrough
 
-    case KAFKA_FETCH_RESPONSE_NUM_TOPICS:
-        {
-            s64 num_topics = 0;
-            ret = read_varint_or_s32(flexible, response, pkt, &offset, data_end, &num_topics, true,
-                                     VARINT_BYTES_NUM_TOPICS);
-            extra_debug("num_topics: %lld", num_topics);
-            if (ret != RET_DONE) {
-                return ret;
-            }
-            if (num_topics <= 0) {
-                return RET_ERR;
-            }
+    case KAFKA_FETCH_RESPONSE_NUM_TOPICS: {
+        s64 num_topics = 0;
+        ret = read_varint_or_s32(flexible, response, pkt, &offset, data_end, &num_topics, true,
+            VARINT_BYTES_NUM_TOPICS);
+        extra_debug("num_topics: %lld", num_topics);
+        if (ret != RET_DONE) {
+            return ret;
         }
+        if (num_topics <= 0) {
+            return RET_ERR;
+        }
+    }
         response->state = KAFKA_FETCH_RESPONSE_TOPIC_NAME_SIZE;
         // fallthrough
 
-    case KAFKA_FETCH_RESPONSE_TOPIC_NAME_SIZE:
-        {
-            s64 topic_name_size = 0;
-            ret = read_varint_or_s16(flexible, response, pkt, &offset, data_end, &topic_name_size, true,
-                                     VARINT_BYTES_TOPIC_NAME_SIZE);
-            extra_debug("topic_name_size: %lld", topic_name_size);
-            if (ret != RET_DONE) {
-                return ret;
-            }
-            if (topic_name_size <= 0 || topic_name_size > TOPIC_NAME_MAX_ALLOWED_SIZE) {
-                return RET_ERR;
-            }
-
-            // Should we check that topic name matches the topic we expect?
-            offset += topic_name_size;
+    case KAFKA_FETCH_RESPONSE_TOPIC_NAME_SIZE: {
+        s64 topic_name_size = 0;
+        ret = read_varint_or_s16(flexible, response, pkt, &offset, data_end, &topic_name_size, true,
+            VARINT_BYTES_TOPIC_NAME_SIZE);
+        extra_debug("topic_name_size: %lld", topic_name_size);
+        if (ret != RET_DONE) {
+            return ret;
         }
+        if (topic_name_size <= 0 || topic_name_size > TOPIC_NAME_MAX_ALLOWED_SIZE) {
+            return RET_ERR;
+        }
+
+        // Should we check that topic name matches the topic we expect?
+        offset += topic_name_size;
+    }
         response->state = KAFKA_FETCH_RESPONSE_NUM_PARTITIONS;
         // fallthrough
 
-    case KAFKA_FETCH_RESPONSE_NUM_PARTITIONS:
-        {
-            s64 number_of_partitions = 0;
-            ret = read_varint_or_s32(flexible, response, pkt, &offset, data_end, &number_of_partitions, true,
-                                     VARINT_BYTES_NUM_PARTITIONS);
-            extra_debug("number_of_partitions: %lld", number_of_partitions);
-            if (ret != RET_DONE) {
-                return ret;
-            }
-            if (number_of_partitions <= 0) {
-                return RET_ERR;
-            }
-
-            response->partitions_count = number_of_partitions;
-            response->state = KAFKA_FETCH_RESPONSE_PARTITION_START;
-            response->record_batches_num_bytes = 0;
-            response->record_batch_length = 0;
+    case KAFKA_FETCH_RESPONSE_NUM_PARTITIONS: {
+        s64 number_of_partitions = 0;
+        ret = read_varint_or_s32(flexible, response, pkt, &offset, data_end, &number_of_partitions, true,
+            VARINT_BYTES_NUM_PARTITIONS);
+        extra_debug("number_of_partitions: %lld", number_of_partitions);
+        if (ret != RET_DONE) {
+            return ret;
         }
-        break;
+        if (number_of_partitions <= 0) {
+            return RET_ERR;
+        }
+
+        response->partitions_count = number_of_partitions;
+        response->state = KAFKA_FETCH_RESPONSE_PARTITION_START;
+        response->record_batches_num_bytes = 0;
+        response->record_batch_length = 0;
+    } break;
     case KAFKA_FETCH_RESPONSE_PARTITION_START:
     case KAFKA_FETCH_RESPONSE_PARTITION_ABORTED_TRANSACTIONS:
     case KAFKA_FETCH_RESPONSE_RECORD_BATCHES_ARRAY_START:
@@ -631,7 +614,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_partition
             if (api_version >= 4) {
                 s64 aborted_transactions = 0;
                 ret = read_varint_or_s32(flexible, response, pkt, &offset, data_end, &aborted_transactions, first,
-                                         VARINT_BYTES_NUM_ABORTED_TRANSACTIONS);
+                    VARINT_BYTES_NUM_ABORTED_TRANSACTIONS);
                 if (ret != RET_DONE) {
                     return ret;
                 }
@@ -679,7 +662,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_partition
 
             s64 tmp = 0;
             ret = read_varint_or_s32(flexible, response, pkt, &offset, data_end, &tmp, first,
-                                     VARINT_BYTES_RECORD_BATCHES_NUM_BYTES);
+                VARINT_BYTES_RECORD_BATCHES_NUM_BYTES);
             if (ret != RET_DONE) {
                 return ret;
             }
@@ -753,12 +736,11 @@ exit:
 }
 
 static __always_inline enum parse_result kafka_continue_parse_response_record_batches_loop(kafka_info_t *kafka,
-                                                                            conn_tuple_t *tup,
-                                                                            kafka_response_context_t *response,
-                                                                            pktbuf_t pkt, u32 offset,
-                                                                            u32 data_end,
-                                                                            u32 api_version)
-{
+    conn_tuple_t *tup,
+    kafka_response_context_t *response,
+    pktbuf_t pkt, u32 offset,
+    u32 data_end,
+    u32 api_version) {
     u32 orig_offset = offset;
     // u32 carry_over_offset = response->carry_over_offset;
     enum parse_result ret;
@@ -800,14 +782,14 @@ static __always_inline enum parse_result kafka_continue_parse_response_record_ba
             // so those need to be be added separately.
             if (response->record_batch_length + sizeof(s32) + sizeof(u64) > response->record_batches_num_bytes) {
                 extra_debug("batchLength too large %d (record_batches_num_bytes: %d)", response->record_batch_length,
-                            response->record_batches_num_bytes);
+                    response->record_batches_num_bytes);
 
                 // Kafka fetch responses can have some partial, unparseable records in the record
                 // batch block which are truncated due to the maximum response size specified in
                 // the request.  If there are no more partitions left, assume we've reached such
                 // a block and report what we have.
                 if (response->transaction.records_count > 0 && response->partitions_count <= 1 &&
-                        response->record_batches_arrays_count - response->record_batches_arrays_idx == 1) {
+                    response->record_batches_arrays_count - response->record_batches_arrays_idx == 1) {
                     extra_debug("assuming truncated data due to maxsize");
                     response->record_batch_length = 0;
                     response->record_batches_num_bytes = 0;
@@ -846,43 +828,41 @@ static __always_inline enum parse_result kafka_continue_parse_response_record_ba
             response->state = KAFKA_FETCH_RESPONSE_RECORD_BATCH_RECORDS_COUNT;
             // fallthrough
 
-        case KAFKA_FETCH_RESPONSE_RECORD_BATCH_RECORDS_COUNT:
-            {
-                s32 records_count = 0;
-                ret = read_with_remainder(response, pkt, &offset, data_end, &records_count, first);
-                if (ret != RET_DONE) {
-                    return ret;
-                }
-
-                extra_debug("records_count: %d", records_count);
-                if (records_count <= 0) {
-                    extra_debug("Invalid records count: %d", records_count);
-                    return RET_ERR;
-                }
-
-                // All the records have to fit inside the record batch, so guard against
-                // unreasonable values in corrupt packets.
-                if (records_count >= response->record_batch_length) {
-                    extra_debug("Bogus records count %d (batch_length %d)",
-                                records_count, response->record_batch_length);
-                    return RET_ERR;
-                }
-
-                response->transaction.records_count += records_count;
+        case KAFKA_FETCH_RESPONSE_RECORD_BATCH_RECORDS_COUNT: {
+            s32 records_count = 0;
+            ret = read_with_remainder(response, pkt, &offset, data_end, &records_count, first);
+            if (ret != RET_DONE) {
+                return ret;
             }
 
-            offset += response->record_batch_length
-            - sizeof(s32) // Skip partitionLeaderEpoch
-            - sizeof(s8) // Skipping magic
-            - sizeof(u32) // Skipping crc
-            - sizeof(s16) // Skipping attributes
-            - sizeof(s32) // Skipping last offset delta
-            - sizeof(s64) // Skipping base timestamp
-            - sizeof(s64) // Skipping max timestamp
-            - sizeof(s64) // Skipping producer id
-            - sizeof(s16) // Skipping producer epoch
-            - sizeof(s32) // Skipping base sequence
-            - sizeof(s32); // Skipping records count
+            extra_debug("records_count: %d", records_count);
+            if (records_count <= 0) {
+                extra_debug("Invalid records count: %d", records_count);
+                return RET_ERR;
+            }
+
+            // All the records have to fit inside the record batch, so guard against
+            // unreasonable values in corrupt packets.
+            if (records_count >= response->record_batch_length) {
+                extra_debug("Bogus records count %d (batch_length %d)",
+                    records_count, response->record_batch_length);
+                return RET_ERR;
+            }
+
+            response->transaction.records_count += records_count;
+        }
+
+            offset += response->record_batch_length - sizeof(s32) // Skip partitionLeaderEpoch
+                      - sizeof(s8) // Skipping magic
+                      - sizeof(u32) // Skipping crc
+                      - sizeof(s16) // Skipping attributes
+                      - sizeof(s32) // Skipping last offset delta
+                      - sizeof(s64) // Skipping base timestamp
+                      - sizeof(s64) // Skipping max timestamp
+                      - sizeof(s64) // Skipping producer id
+                      - sizeof(s16) // Skipping producer epoch
+                      - sizeof(s32) // Skipping base sequence
+                      - sizeof(s32); // Skipping records count
             response->state = KAFKA_FETCH_RESPONSE_RECORD_BATCH_END;
             // fallthrough
 
@@ -902,8 +882,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_record_ba
                 break;
             }
 
-        case KAFKA_FETCH_RESPONSE_RECORD_BATCHES_ARRAY_END:
-        {
+        case KAFKA_FETCH_RESPONSE_RECORD_BATCHES_ARRAY_END: {
             // The u64 type is used here to avoid some verifier errors if the
             // compiler performs the index bounds check on a different register
             // than the one used for the final access operation.
@@ -923,8 +902,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_record_ba
             response->state = KAFKA_FETCH_RESPONSE_RECORD_BATCH_START;
             response->record_batches_arrays_idx = idx;
             extra_debug("next idx %llu num_bytes %u offset %u", idx, response->record_batches_num_bytes, offset);
-        }
-            break;
+        } break;
 
         case KAFKA_FETCH_RESPONSE_START:
         case KAFKA_FETCH_RESPONSE_NUM_TOPICS:
@@ -949,8 +927,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_record_ba
     return RET_LOOP_END;
 }
 
-static __always_inline void kafka_call_response_parser(void *ctx, conn_tuple_t *tup, pktbuf_t pkt, kafka_response_state state, u32 api_version)
-{
+static __always_inline void kafka_call_response_parser(void *ctx, conn_tuple_t *tup, pktbuf_t pkt, kafka_response_state state, u32 api_version) {
     enum parser_level level = parser_state_to_level(state);
     // Leave uninitialzed to get a compile-time warning if we miss setting it in
     // some code path.
@@ -1006,13 +983,12 @@ static __always_inline void kafka_call_response_parser(void *ctx, conn_tuple_t *
 }
 
 static __always_inline enum parse_result kafka_continue_parse_response(void *ctx, kafka_info_t *kafka,
-                                                                       conn_tuple_t *tup,
-                                                                       kafka_response_context_t *response,
-                                                                       pktbuf_t pkt, u32 offset,
-                                                                       u32 data_end,
-                                                                       enum parser_level level,
-                                                                       u32 api_version)
-{
+    conn_tuple_t *tup,
+    kafka_response_context_t *response,
+    pktbuf_t pkt, u32 offset,
+    u32 data_end,
+    enum parser_level level,
+    u32 api_version) {
     enum parse_result ret;
 
     if (level == PARSER_LEVEL_PARTITION) {
@@ -1040,7 +1016,7 @@ static __always_inline enum parse_result kafka_continue_parse_response(void *ctx
         }
 
         if (ret == RET_DONE) {
-            extra_debug("enqueue, records_count %d",  response->transaction.records_count);
+            extra_debug("enqueue, records_count %d", response->transaction.records_count);
             kafka_batch_enqueue_wrapper(kafka, tup, &response->transaction);
             return ret;
         }
@@ -1056,7 +1032,7 @@ static __always_inline enum parse_result kafka_continue_parse_response(void *ctx
         // parse), or exit.
         if (ret == RET_DONE) {
             if (response->partitions_count == 0) {
-                extra_debug("enqueue, records_count %d",  response->transaction.records_count);
+                extra_debug("enqueue, records_count %d", response->transaction.records_count);
                 kafka_batch_enqueue_wrapper(kafka, tup, &response->transaction);
                 return ret;
             }
@@ -1138,7 +1114,7 @@ static __always_inline enum parse_result kafka_continue_parse_response(void *ctx
 }
 
 static __always_inline void kafka_response_parser(kafka_info_t *kafka, void *ctx, conn_tuple_t *tup, pktbuf_t pkt,
-enum parser_level level, u32 min_api_version, u32 max_api_version) {
+    enum parser_level level, u32 min_api_version, u32 max_api_version) {
     kafka_response_context_t *response = bpf_map_lookup_elem(&kafka_response, tup);
     if (!response) {
         return;
@@ -1156,8 +1132,8 @@ enum parser_level level, u32 min_api_version, u32 max_api_version) {
     u32 data_end = pktbuf_data_end(pkt);
 
     enum parse_result result = kafka_continue_parse_response(ctx, kafka, tup, response, pkt,
-                                                             data_off, data_end, level,
-                                                             api_version);
+        data_off, data_end, level,
+        api_version);
     switch (result) {
     case RET_EOP:
         // This packet parsed successfully but more data needed, nothing
@@ -1376,8 +1352,8 @@ static __always_inline bool kafka_process_response(void *ctx, conn_tuple_t *tup,
         // yield bogus values. Flush what we have and forget about this current
         // response.
         extra_debug("lost response TCP segments, expected %u got %u",
-                    response->expected_tcp_seq,
-                    skb_info->tcp_seq);
+            response->expected_tcp_seq,
+            skb_info->tcp_seq);
 
         if (response->transaction.records_count) {
             extra_debug("enqueue (broken stream), records_count %d", response->transaction.records_count);
@@ -1474,8 +1450,7 @@ static __always_inline bool kafka_process(conn_tuple_t *tup, kafka_info_t *kafka
     log_debug("kafka: topic name is %s", kafka_transaction->topic_name);
 
     switch (kafka_header.api_key) {
-    case KAFKA_PRODUCE:
-    {
+    case KAFKA_PRODUCE: {
         PKTBUF_READ_BIG_ENDIAN_WRAPPER(s32, number_of_partitions, pkt, offset);
         if (number_of_partitions <= 0) {
             return false;
@@ -1523,7 +1498,7 @@ static __always_inline bool kafka_process(conn_tuple_t *tup, kafka_info_t *kafka
         break;
     default:
         return false;
-     }
+    }
 
     if (kafka_header.api_key == KAFKA_FETCH) {
         // Copy to stack required by 4.14 verifier.
@@ -1549,7 +1524,7 @@ static __always_inline bool kafka_process(conn_tuple_t *tup, kafka_info_t *kafka
 static __always_inline bool kafka_allow_packet(skb_info_t *skb_info) {
     // if payload data is empty, we only process it if the packet represents a TCP termination
     if (is_payload_empty(skb_info)) {
-        return skb_info->tcp_flags&(TCPHDR_FIN|TCPHDR_RST);
+        return skb_info->tcp_flags & (TCPHDR_FIN | TCPHDR_RST);
     }
 
     return true;

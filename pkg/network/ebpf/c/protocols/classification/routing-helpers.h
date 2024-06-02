@@ -7,7 +7,7 @@
 // has_available_program returns true when there is another program from within
 // the same protocol layer or false otherwise
 static __always_inline bool has_available_program(classification_prog_t current_program) {
-    classification_prog_t next_program = current_program+1;
+    classification_prog_t next_program = current_program + 1;
     if (next_program == __PROG_APPLICATION ||
         next_program == __PROG_API ||
         next_program == __PROG_ENCRYPTION ||
@@ -61,14 +61,14 @@ static __always_inline u16 get_current_program_layer(classification_prog_t curre
 static __always_inline classification_prog_t next_layer_entrypoint(usm_context_t *usm_ctx) {
     u16 to_skip = usm_ctx->routing_skip_layers;
 
-    if (!(to_skip&LAYER_APPLICATION_BIT)) {
-        return __PROG_APPLICATION+1;
+    if (!(to_skip & LAYER_APPLICATION_BIT)) {
+        return __PROG_APPLICATION + 1;
     }
-    if (!(to_skip&LAYER_API_BIT)) {
-        return __PROG_API+1;
+    if (!(to_skip & LAYER_API_BIT)) {
+        return __PROG_API + 1;
     }
-    if (!(to_skip&LAYER_ENCRYPTION_BIT)) {
-        return __PROG_ENCRYPTION+1;
+    if (!(to_skip & LAYER_ENCRYPTION_BIT)) {
+        return __PROG_ENCRYPTION + 1;
     }
 
     return CLASSIFICATION_PROG_UNKNOWN;

@@ -15,11 +15,11 @@
 
 #ifdef COMPILE_PREBUILT
 #include <net/sock.h>
-static __always_inline __u32 get_netns_from_sock(struct sock* sk) {
-    void* skc_net = NULL;
+static __always_inline __u32 get_netns_from_sock(struct sock *sk) {
+    void *skc_net = NULL;
     __u32 net_ns_inum = 0;
-    bpf_probe_read_kernel_with_telemetry(&skc_net, sizeof(void*), ((char*)sk) + offset_netns());
-    bpf_probe_read_kernel_with_telemetry(&net_ns_inum, sizeof(net_ns_inum), ((char*)skc_net) + offset_ino());
+    bpf_probe_read_kernel_with_telemetry(&skc_net, sizeof(void *), ((char *)sk) + offset_netns());
+    bpf_probe_read_kernel_with_telemetry(&net_ns_inum, sizeof(net_ns_inum), ((char *)skc_net) + offset_ino());
     return net_ns_inum;
 }
 
@@ -43,16 +43,16 @@ struct sock___old {
     struct sock_common___old __sk_common;
 };
 
-static __always_inline __u32 get_netns_from_sock(struct sock* sk) {
+static __always_inline __u32 get_netns_from_sock(struct sock *sk) {
     u32 net_ns_inum = 0;
     struct net *ns = NULL;
     if (bpf_core_field_exists(sk->sk_net.net) ||
-        bpf_core_field_exists(((struct sock___old*)sk)->sk_net->ns)) {
+        bpf_core_field_exists(((struct sock___old *)sk)->sk_net->ns)) {
         BPF_CORE_READ_INTO(&ns, sk, sk_net);
         BPF_CORE_READ_INTO(&net_ns_inum, ns, ns.inum);
-    } else if (bpf_core_field_exists(((struct net___old*)ns)->proc_inum)) {
-        BPF_CORE_READ_INTO(&ns, (struct sock___old*)sk, sk_net);
-        BPF_CORE_READ_INTO(&net_ns_inum, (struct net___old*)ns, proc_inum);
+    } else if (bpf_core_field_exists(((struct net___old *)ns)->proc_inum)) {
+        BPF_CORE_READ_INTO(&ns, (struct sock___old *)sk, sk_net);
+        BPF_CORE_READ_INTO(&net_ns_inum, (struct net___old *)ns, proc_inum);
     }
     return net_ns_inum;
 }

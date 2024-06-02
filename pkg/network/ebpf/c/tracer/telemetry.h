@@ -14,8 +14,7 @@
 #include "tracer/maps.h"
 #include "compiler.h"
 
-enum telemetry_counter
-{
+enum telemetry_counter {
     tcp_failed_connect,
     unbatched_tcp_close,
     unbatched_udp_close,

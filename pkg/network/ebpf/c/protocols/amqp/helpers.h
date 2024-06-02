@@ -8,17 +8,17 @@
 
 // The method checks if the given buffer includes the protocol header which must be sent in the start of a new connection.
 // Ref: https://www.rabbitmq.com/resources/specs/amqp0-9-1.pdf
-static __always_inline bool is_amqp_protocol_header(const char* buf, __u32 buf_size) {
+static __always_inline bool is_amqp_protocol_header(const char *buf, __u32 buf_size) {
     CHECK_PRELIMINARY_BUFFER_CONDITIONS(buf, buf_size, AMQP_MIN_FRAME_LENGTH);
 
-    bool match = !bpf_memcmp(buf, AMQP_PREFACE, sizeof(AMQP_PREFACE)-1);
+    bool match = !bpf_memcmp(buf, AMQP_PREFACE, sizeof(AMQP_PREFACE) - 1);
 
     return match;
 }
 
 // The method checks if the given buffer is an AMQP message.
 // Ref: https://www.rabbitmq.com/resources/specs/amqp0-9-1.pdf
-static __always_inline bool is_amqp(const char* buf, __u32 buf_size) {
+static __always_inline bool is_amqp(const char *buf, __u32 buf_size) {
     // New connection should start with protocol header of AMQP.
     // Ref https://www.rabbitmq.com/resources/specs/amqp0-9-1.pdf.
     if (is_amqp_protocol_header(buf, buf_size)) {
@@ -27,7 +27,7 @@ static __always_inline bool is_amqp(const char* buf, __u32 buf_size) {
 
     // Validate that we will be able to get from the buffer the class and method ids.
     if (buf_size < AMQP_MIN_PAYLOAD_LENGTH) {
-       return false;
+        return false;
     }
 
     __u8 frame_type = buf[0];
@@ -38,7 +38,7 @@ static __always_inline bool is_amqp(const char* buf, __u32 buf_size) {
 
     // We extract the class id and method id by big endian from the buffer.
     // Ref https://www.rabbitmq.com/resources/specs/amqp0-9-1.pdf.
-    amqp_header *hdr = (amqp_header *)(buf+7);
+    amqp_header *hdr = (amqp_header *)(buf + 7);
     __u16 class_id = bpf_ntohs(hdr->class_id);
     __u16 method_id = bpf_ntohs(hdr->method_id);
 

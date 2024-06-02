@@ -19,7 +19,7 @@
 #include "protocols/postgres/usm-events.h"
 
 __maybe_unused static __always_inline protocol_prog_t protocol_to_program(protocol_t proto) {
-    switch(proto) {
+    switch (proto) {
     case PROTOCOL_HTTP:
         return PROG_HTTP;
     case PROTOCOL_HTTP2:
@@ -94,8 +94,8 @@ static __always_inline void dispatcher_delete_protocol_stack(conn_tuple_t *tuple
 
 // A shared implementation for the runtime & prebuilt socket filter that classifies & dispatches the protocols of the connections.
 static __always_inline void protocol_dispatcher_entrypoint(struct __sk_buff *skb) {
-    skb_info_t skb_info = {0};
-    conn_tuple_t skb_tup = {0};
+    skb_info_t skb_info = { 0 };
+    conn_tuple_t skb_tup = { 0 };
 
     // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
     if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
@@ -173,8 +173,8 @@ static __always_inline void protocol_dispatcher_entrypoint(struct __sk_buff *skb
 }
 
 static __always_inline void dispatch_kafka(struct __sk_buff *skb) {
-    skb_info_t skb_info = {0};
-    conn_tuple_t skb_tup = {0};
+    skb_info_t skb_info = { 0 };
+    conn_tuple_t skb_tup = { 0 };
     // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
     if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
         return;

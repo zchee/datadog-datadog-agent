@@ -155,7 +155,7 @@ end:
 }
 
 // tls_handle_dynamic_table_update handles the dynamic table size update.
-static __always_inline void tls_handle_dynamic_table_update(tls_dispatcher_arguments_t *info){
+static __always_inline void tls_handle_dynamic_table_update(tls_dispatcher_arguments_t *info) {
     // To determine the size of the dynamic table update, we read an integer representation byte by byte.
     // We continue reading bytes until we encounter a byte without the Most Significant Bit (MSB) set,
     // indicating that we've consumed the complete integer. While in the context of the dynamic table
@@ -166,7 +166,7 @@ static __always_inline void tls_handle_dynamic_table_update(tls_dispatcher_argum
     // If the top 3 bits are 001, then we have a dynamic table size update.
     if ((current_ch & 224) == 32) {
         info->data_off++;
-    #pragma unroll(HTTP2_MAX_DYNAMIC_TABLE_UPDATE_ITERATIONS)
+#pragma unroll(HTTP2_MAX_DYNAMIC_TABLE_UPDATE_ITERATIONS)
         for (__u8 iter = 0; iter < HTTP2_MAX_DYNAMIC_TABLE_UPDATE_ITERATIONS; ++iter) {
             bpf_probe_read_user(&current_ch, sizeof(current_ch), info->buffer_ptr + info->data_off);
             info->data_off++;
@@ -640,7 +640,7 @@ int uprobe__http2_tls_handle_first_frame(struct pt_regs *ctx) {
             frame_header_remainder_t new_frame_state = { 0 };
             new_frame_state.remainder = HTTP2_FRAME_HEADER_SIZE - (dispatcher_args_copy.data_end - dispatcher_args_copy.data_off);
             bpf_memset(new_frame_state.buf, 0, HTTP2_FRAME_HEADER_SIZE);
-        #pragma unroll(HTTP2_FRAME_HEADER_SIZE)
+#pragma unroll(HTTP2_FRAME_HEADER_SIZE)
             for (__u32 iteration = 0; iteration < HTTP2_FRAME_HEADER_SIZE && new_frame_state.remainder + iteration < HTTP2_FRAME_HEADER_SIZE; ++iteration) {
                 bpf_probe_read_user(new_frame_state.buf + iteration, 1, dispatcher_args_copy.buffer_ptr + dispatcher_args_copy.data_off + iteration);
             }
@@ -727,7 +727,7 @@ int uprobe__http2_tls_filter(struct pt_regs *ctx) {
         // We have a frame header remainder
         new_frame_state.remainder = HTTP2_FRAME_HEADER_SIZE - (dispatcher_args_copy.data_end - dispatcher_args_copy.data_off);
         bpf_memset(new_frame_state.buf, 0, HTTP2_FRAME_HEADER_SIZE);
-    #pragma unroll(HTTP2_FRAME_HEADER_SIZE)
+#pragma unroll(HTTP2_FRAME_HEADER_SIZE)
         for (__u32 iteration = 0; iteration < HTTP2_FRAME_HEADER_SIZE && new_frame_state.remainder + iteration < HTTP2_FRAME_HEADER_SIZE; ++iteration) {
             bpf_probe_read_user(new_frame_state.buf + iteration, 1, dispatcher_args_copy.buffer_ptr + dispatcher_args_copy.data_off + iteration);
         }
@@ -749,7 +749,6 @@ int uprobe__http2_tls_filter(struct pt_regs *ctx) {
 
     return 0;
 }
-
 
 // The program is responsible for parsing all headers frames. For each headers frame we parse the headers,
 // fill the dynamic table with the new interesting literal headers, and modifying the streams accordingly.
@@ -803,7 +802,7 @@ int uprobe__http2_tls_headers_parser(struct pt_regs *ctx) {
 
     http2_stream_t *current_stream = NULL;
 
-    #pragma unroll(HTTP2_TLS_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL)
+#pragma unroll(HTTP2_TLS_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL)
     for (__u16 index = 0; index < HTTP2_TLS_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL; index++) {
         if (tail_call_state->iteration >= tail_call_state->frames_count) {
             break;
@@ -876,7 +875,7 @@ int uprobe__http2_dynamic_table_cleaner(struct pt_regs *ctx) {
         .tup = dispatcher_args_copy.tup,
     };
 
-    #pragma unroll(HTTP2_DYNAMIC_TABLE_CLEANUP_ITERATIONS)
+#pragma unroll(HTTP2_DYNAMIC_TABLE_CLEANUP_ITERATIONS)
     for (__u16 index = 0; index < HTTP2_DYNAMIC_TABLE_CLEANUP_ITERATIONS; index++) {
         // We should reserve the last HTTP2_DYNAMIC_TABLE_CLEANUP_THRESHOLD entries in the dynamic table.
         // So if we're about to delete an entry that is in the last HTTP2_DYNAMIC_TABLE_CLEANUP_THRESHOLD entries,
@@ -949,7 +948,7 @@ int uprobe__http2_tls_eos_parser(struct pt_regs *ctx) {
     bool is_rst = false, is_end_of_stream = false;
     http2_stream_t *current_stream = NULL;
 
-    #pragma unroll(HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL)
+#pragma unroll(HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL)
     for (__u16 index = 0; index < HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL; index++) {
         if (tail_call_state->iteration >= HTTP2_MAX_FRAMES_ITERATIONS) {
             break;

@@ -135,8 +135,8 @@ static __always_inline protocol_t classify_queue_protocols(struct __sk_buff *skb
 
 // A shared implementation for the runtime & prebuilt socket filter that classifies the protocols of the connections.
 __maybe_unused static __always_inline void protocol_classifier_entrypoint(struct __sk_buff *skb) {
-    skb_info_t skb_info = {0};
-    conn_tuple_t skb_tup = {0};
+    skb_info_t skb_info = { 0 };
+    conn_tuple_t skb_tup = { 0 };
 
     // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
     if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
@@ -181,7 +181,7 @@ __maybe_unused static __always_inline void protocol_classifier_entrypoint(struct
     }
 
     if (app_layer_proto == PROTOCOL_UNKNOWN) {
-        app_layer_proto =  classify_applayer_protocols(buffer, usm_ctx->buffer.size);
+        app_layer_proto = classify_applayer_protocols(buffer, usm_ctx->buffer.size);
     }
 
     if (app_layer_proto != PROTOCOL_UNKNOWN) {
@@ -196,7 +196,7 @@ __maybe_unused static __always_inline void protocol_classifier_entrypoint(struct
         return;
     }
 
- next_program:
+next_program:
     classification_next_program(skb, usm_ctx);
 }
 
@@ -218,7 +218,7 @@ __maybe_unused static __always_inline void protocol_classifier_entrypoint_queues
     update_protocol_information(usm_ctx, protocol_stack, cur_fragment_protocol);
     mark_as_fully_classified(protocol_stack);
 
- next_program:
+next_program:
     classification_next_program(skb, usm_ctx);
 }
 
@@ -241,7 +241,7 @@ __maybe_unused static __always_inline void protocol_classifier_entrypoint_dbs(st
 
     update_protocol_information(usm_ctx, protocol_stack, cur_fragment_protocol);
     mark_as_fully_classified(protocol_stack);
- next_program:
+next_program:
     classification_next_program(skb, usm_ctx);
 }
 

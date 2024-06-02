@@ -6,13 +6,13 @@
 static __always_inline __u16 ephemeral_range_begin() {
     __u64 val = 0;
     LOAD_CONSTANT("ephemeral_range_begin", val);
-    return (__u16) val;
+    return (__u16)val;
 }
 
 static __always_inline __u16 ephemeral_range_end() {
     __u64 val = 0;
     LOAD_CONSTANT("ephemeral_range_end", val);
-    return (__u16) val;
+    return (__u16)val;
 }
 
 static __always_inline int is_ephemeral_port(u16 port) {

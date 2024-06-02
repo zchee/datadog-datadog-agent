@@ -6,7 +6,7 @@
 
 // Checks the buffer represent a standard response (OK) or any of redis commands
 // https://redis.io/commands/
-static __always_inline bool check_supported_ascii_and_crlf(const char* buf, __u32 buf_size, int index_to_start_from) {
+static __always_inline bool check_supported_ascii_and_crlf(const char *buf, __u32 buf_size, int index_to_start_from) {
     bool found_cr = false;
     char current_char;
     int i = index_to_start_from;
@@ -26,27 +26,26 @@ static __always_inline bool check_supported_ascii_and_crlf(const char* buf, __u3
         return false;
     }
 
-    if (!found_cr || i+1 >= buf_size) {
+    if (!found_cr || i + 1 >= buf_size) {
         return false;
     }
-    return buf[i+1] == '\n';
+    return buf[i + 1] == '\n';
 }
 
 // Checks the buffer represents an error according to https://redis.io/docs/reference/protocol-spec/#resp-errors
-static __always_inline bool check_err_prefix(const char* buf, __u32 buf_size) {
+static __always_inline bool check_err_prefix(const char *buf, __u32 buf_size) {
 #define ERR "-ERR "
 #define WRONGTYPE "-WRONGTYPE "
 
     // memcmp returns
     // 0 when s1 == s2,
     // !0 when s1 != s2.
-    bool match = !(bpf_memcmp(buf, ERR, sizeof(ERR)-1)
-        && bpf_memcmp(buf, WRONGTYPE, sizeof(WRONGTYPE)-1));
+    bool match = !(bpf_memcmp(buf, ERR, sizeof(ERR) - 1) && bpf_memcmp(buf, WRONGTYPE, sizeof(WRONGTYPE) - 1));
 
     return match;
 }
 
-static __always_inline bool check_integer_and_crlf(const char* buf, __u32 buf_size, int index_to_start_from) {
+static __always_inline bool check_integer_and_crlf(const char *buf, __u32 buf_size, int index_to_start_from) {
     bool found_cr = false;
     char current_char;
     int i = index_to_start_from;
@@ -63,13 +62,13 @@ static __always_inline bool check_integer_and_crlf(const char* buf, __u32 buf_si
         return false;
     }
 
-    if (!found_cr || i+1 >= buf_size) {
+    if (!found_cr || i + 1 >= buf_size) {
         return false;
     }
-    return buf[i+1] == '\n';
+    return buf[i + 1] == '\n';
 }
 
-static __always_inline bool is_redis(const char* buf, __u32 buf_size) {
+static __always_inline bool is_redis(const char *buf, __u32 buf_size) {
     CHECK_PRELIMINARY_BUFFER_CONDITIONS(buf, buf_size, REDIS_MIN_FRAME_LENGTH);
 
     char first_char = buf[0];

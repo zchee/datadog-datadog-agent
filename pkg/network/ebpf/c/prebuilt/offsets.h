@@ -85,9 +85,9 @@ static __always_inline __u64 offset_saddr_fl4() {
 }
 
 static __always_inline __u64 offset_daddr_fl4() {
-     __u64 val = 0;
-     LOAD_CONSTANT("offset_daddr_fl4", val);
-     return val;
+    __u64 val = 0;
+    LOAD_CONSTANT("offset_daddr_fl4", val);
+    return val;
 }
 
 static __always_inline __u64 offset_sport_fl4() {
@@ -97,9 +97,9 @@ static __always_inline __u64 offset_sport_fl4() {
 }
 
 static __always_inline __u64 offset_dport_fl4() {
-     __u64 val = 0;
-     LOAD_CONSTANT("offset_dport_fl4", val);
-     return val;
+    __u64 val = 0;
+    LOAD_CONSTANT("offset_dport_fl4", val);
+    return val;
 }
 
 static __always_inline bool are_fl6_offsets_known() {
@@ -115,9 +115,9 @@ static __always_inline __u64 offset_saddr_fl6() {
 }
 
 static __always_inline __u64 offset_daddr_fl6() {
-     __u64 val = 0;
-     LOAD_CONSTANT("offset_daddr_fl6", val);
-     return val;
+    __u64 val = 0;
+    LOAD_CONSTANT("offset_daddr_fl6", val);
+    return val;
 }
 
 static __always_inline __u64 offset_sport_fl6() {
@@ -127,15 +127,15 @@ static __always_inline __u64 offset_sport_fl6() {
 }
 
 static __always_inline __u64 offset_dport_fl6() {
-     __u64 val = 0;
-     LOAD_CONSTANT("offset_dport_fl6", val);
-     return val;
+    __u64 val = 0;
+    LOAD_CONSTANT("offset_dport_fl6", val);
+    return val;
 }
 
 static __always_inline __u64 offset_socket_sk() {
-     __u64 val = 0;
-     LOAD_CONSTANT("offset_socket_sk", val);
-     return val;
+    __u64 val = 0;
+    LOAD_CONSTANT("offset_socket_sk", val);
+    return val;
 }
 
 static __always_inline __u64 offset_sk_buff_sock() {

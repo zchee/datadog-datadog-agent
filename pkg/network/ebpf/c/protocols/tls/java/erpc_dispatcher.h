@@ -22,26 +22,26 @@ static int __always_inline is_usm_erpc_request(struct pt_regs *ctx) {
 */
 
 static void __always_inline handle_erpc_request(struct pt_regs *ctx) {
-    #ifdef DEBUG
-        u64 pid_tgid = bpf_get_current_pid_tgid();
-        u64 pid = pid_tgid >> 32;
-    #endif
+#ifdef DEBUG
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    u64 pid = pid_tgid >> 32;
+#endif
 
     void *req = (void *)PT_REGS_PARM4(ctx);
 
     u8 op = 0;
-    if (0 != bpf_probe_read_user(&op, sizeof(op), req)){
+    if (0 != bpf_probe_read_user(&op, sizeof(op), req)) {
         log_debug("[java_tls_handle_erpc_request] failed to parse opcode of java tls erpc request for: pid %llu", pid);
         return;
     }
 
-    //for easier troubleshooting in case we get out of sync between java tracer's side of the erpc and systemprobe's side
-    #ifdef DEBUG
-        log_debug("[java_tls_handle_erpc_request] received %d op", op);
-        if (op >= MAX_MESSAGE_TYPE){
-            log_debug("[java_tls_handle_erpc_request] got unsupported erpc request %x for: pid %llu",op, pid);
-        }
-    #endif
+//for easier troubleshooting in case we get out of sync between java tracer's side of the erpc and systemprobe's side
+#ifdef DEBUG
+    log_debug("[java_tls_handle_erpc_request] received %d op", op);
+    if (op >= MAX_MESSAGE_TYPE) {
+        log_debug("[java_tls_handle_erpc_request] got unsupported erpc request %x for: pid %llu", op, pid);
+    }
+#endif
 
     bpf_tail_call_compat(ctx, &java_tls_erpc_handlers, op);
 }

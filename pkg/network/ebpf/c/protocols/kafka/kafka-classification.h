@@ -13,36 +13,34 @@
 // or, optionally, allowing any printable characters.
 // The iterations reads up to MIN(max_buffer_size, real_size).
 // Has to be a template and not a function, as we have pragma unroll.
-#define CHECK_STRING_COMPOSED_OF_ASCII(max_buffer_size, real_size, buffer, printable_ok)                                                \
-    char ch = 0;                                                                                                                        \
-_Pragma( STRINGIFY(unroll(max_buffer_size)) )                                                                                           \
-    for (unsigned int j = 0; j < max_buffer_size; j++) {                                                                                         \
-        /* Verifies we are not exceeding the real client_id_size, and if we do, we finish the iteration as we reached */                \
-        /* to the end of the buffer and all checks have been successful. */                                                             \
-        if (j + 1 > real_size) {                                                                                                        \
-            break;                                                                                                                      \
-        }                                                                                                                               \
-        ch = buffer[j];                                                                                                                 \
-        if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ('0' <= ch && ch <= '9') || ch == '.' || ch == '_' || ch == '-') {  \
-            continue;                                                                                                                   \
-        }                                                                                                                               \
-        /* The above check is actually redundant for the printable_ok case, but removing it leads */                                    \
-        /* to some compiler optimizations which the verifier doesn't agree with. */                                                     \
-        if (printable_ok && (ch >= ' ' && ch <= '~')) {                                                                                 \
-            continue;                                                                                                                   \
-        }                                                                                                                               \
-        return false;                                                                                                                   \
-    }                                                                                                                                   \
+#define CHECK_STRING_COMPOSED_OF_ASCII(max_buffer_size, real_size, buffer, printable_ok)                                               \
+    char ch = 0;                                                                                                                       \
+    _Pragma(STRINGIFY(unroll(max_buffer_size))) for (unsigned int j = 0; j < max_buffer_size; j++) {                                   \
+        /* Verifies we are not exceeding the real client_id_size, and if we do, we finish the iteration as we reached */               \
+        /* to the end of the buffer and all checks have been successful. */                                                            \
+        if (j + 1 > real_size) {                                                                                                       \
+            break;                                                                                                                     \
+        }                                                                                                                              \
+        ch = buffer[j];                                                                                                                \
+        if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ('0' <= ch && ch <= '9') || ch == '.' || ch == '_' || ch == '-') { \
+            continue;                                                                                                                  \
+        }                                                                                                                              \
+        /* The above check is actually redundant for the printable_ok case, but removing it leads */                                   \
+        /* to some compiler optimizations which the verifier doesn't agree with. */                                                    \
+        if (printable_ok && (ch >= ' ' && ch <= '~')) {                                                                                \
+            continue;                                                                                                                  \
+        }                                                                                                                              \
+        return false;                                                                                                                  \
+    }                                                                                                                                  \
     return true;
 
-#define CHECK_STRING_VALID_TOPIC_NAME(max_buffer_size, real_size, buffer)   \
+#define CHECK_STRING_VALID_TOPIC_NAME(max_buffer_size, real_size, buffer) \
     CHECK_STRING_COMPOSED_OF_ASCII(max_buffer_size, real_size, buffer, false)
 
 // The client ID actually allows any UTF-8 chars but we restrict it to printable ASCII characters
 // for now to avoid false positives.
-#define CHECK_STRING_VALID_CLIENT_ID(max_buffer_size, real_size, buffer)   \
+#define CHECK_STRING_VALID_CLIENT_ID(max_buffer_size, real_size, buffer) \
     CHECK_STRING_COMPOSED_OF_ASCII(max_buffer_size, real_size, buffer, true)
-
 
 // Reads the client id (up to CLIENT_ID_SIZE_TO_VALIDATE bytes from the given offset), and verifies if it is valid,
 // namely, composed only from characters from [a-zA-Z0-9._-].
@@ -70,7 +68,7 @@ static __always_inline bool is_valid_client_id(pktbuf_t pkt, u32 offset, u16 rea
 // 6. Correlation ID is not negative.
 // 7. The client ID size if not negative.
 static __always_inline bool is_valid_kafka_request_header(const kafka_header_t *kafka_header) {
-    if (kafka_header->message_size < sizeof(kafka_header_t) || kafka_header->message_size  < 0) {
+    if (kafka_header->message_size < sizeof(kafka_header_t) || kafka_header->message_size < 0) {
         return false;
     }
 
@@ -116,8 +114,7 @@ static __always_inline bool isMSBSet(uint8_t byte) {
 // Parses a varint of maximum size two bytes. The maximum size is (0x7f << 7) |
 // 0x7f == 16383 bytes. This is more than enough for the topic name size which
 // is a maximum of 255 bytes.
-static __always_inline int parse_varint_u16(u16 *out, u16 in, u32 *bytes)
-{
+static __always_inline int parse_varint_u16(u16 *out, u16 in, u32 *bytes) {
     *bytes = 1;
 
     u8 first = in & 0xff;
@@ -327,7 +324,7 @@ static __always_inline bool is_kafka_request(const kafka_header_t *kafka_header,
 }
 
 // Checks if the packet represents a kafka request.
-static __always_inline bool __is_kafka(pktbuf_t pkt, const char* buf, __u32 buf_size) {
+static __always_inline bool __is_kafka(pktbuf_t pkt, const char *buf, __u32 buf_size) {
     CHECK_PRELIMINARY_BUFFER_CONDITIONS(buf, buf_size, KAFKA_MIN_LENGTH);
 
     const kafka_header_t *header_view = (kafka_header_t *)buf;
@@ -358,13 +355,11 @@ static __always_inline bool __is_kafka(pktbuf_t pkt, const char* buf, __u32 buf_
     return is_kafka_request(&kafka_header, pkt, offset);
 }
 
-static __always_inline bool is_kafka(struct __sk_buff *skb, skb_info_t *skb_info, const char* buf, __u32 buf_size)
-{
+static __always_inline bool is_kafka(struct __sk_buff *skb, skb_info_t *skb_info, const char *buf, __u32 buf_size) {
     return __is_kafka(pktbuf_from_skb(skb, skb_info), buf, buf_size);
 }
 
-static __always_inline __maybe_unused bool tls_is_kafka(tls_dispatcher_arguments_t *tls, const char* buf, __u32 buf_size)
-{
+static __always_inline __maybe_unused bool tls_is_kafka(tls_dispatcher_arguments_t *tls, const char *buf, __u32 buf_size) {
     return __is_kafka(pktbuf_from_tls(tls), buf, buf_size);
 }
 

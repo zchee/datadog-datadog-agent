@@ -46,7 +46,7 @@ static __always_inline grpc_status_t is_content_type_grpc(struct __sk_buff *skb,
     bpf_skb_load_bytes(skb, skb_info->data_off, content_type_buf, GRPC_CONTENT_TYPE_LEN);
     skb_info->data_off += len.length;
 
-    return bpf_memcmp(content_type_buf, GRPC_ENCODED_CONTENT_TYPE, GRPC_CONTENT_TYPE_LEN) == 0? PAYLOAD_GRPC : PAYLOAD_NOT_GRPC;
+    return bpf_memcmp(content_type_buf, GRPC_ENCODED_CONTENT_TYPE, GRPC_CONTENT_TYPE_LEN) == 0 ? PAYLOAD_GRPC : PAYLOAD_NOT_GRPC;
 }
 
 // Scan headers goes through the headers in a frame, and tries to find a
@@ -90,7 +90,7 @@ static __always_inline grpc_status_t scan_headers(struct __sk_buff *skb, skb_inf
             break;
         }
 
-        if (!process_and_skip_literal_headers(skb, skb_info, index)){
+        if (!process_and_skip_literal_headers(skb, skb_info, index)) {
             break;
         }
     }

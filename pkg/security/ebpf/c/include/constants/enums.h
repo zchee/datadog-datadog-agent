@@ -54,11 +54,11 @@ enum event_type {
 #define EVENT_LAST_APPROVER EVENT_SPLICE
 
 enum {
-    EVENT_FLAGS_ASYNC = 1<<0, // async, mostly io_uring
-    EVENT_FLAGS_SAVED_BY_AD = 1<<1, // event send because of activity dump
-    EVENT_FLAGS_ACTIVITY_DUMP_SAMPLE = 1<<2, // event is a AD sample
+    EVENT_FLAGS_ASYNC = 1 << 0, // async, mostly io_uring
+    EVENT_FLAGS_SAVED_BY_AD = 1 << 1, // event send because of activity dump
+    EVENT_FLAGS_ACTIVITY_DUMP_SAMPLE = 1 << 2, // event is a AD sample
     // EventFlagsSecurityProfileInProfile = 1<<3 isn't used in kernel space
-    EVENT_FLAGS_ANOMALY_DETECTION_EVENT = 1<<4, // event is an anomaly detection event
+    EVENT_FLAGS_ANOMALY_DETECTION_EVENT = 1 << 4, // event is an anomaly detection event
 };
 
 enum file_flags {
@@ -72,8 +72,8 @@ enum {
 };
 
 enum {
-    ACTIVITY_DUMP_RUNNING = 1<<0, // defines if an activity dump is running
-    SAVED_BY_ACTIVITY_DUMP = 1<<1, // defines if the dentry should have been discarded, but was saved because of an activity dump
+    ACTIVITY_DUMP_RUNNING = 1 << 0, // defines if an activity dump is running
+    SAVED_BY_ACTIVITY_DUMP = 1 << 1, // defines if the dentry should have been discarded, but was saved because of an activity dump
 };
 
 enum policy_mode {
@@ -90,7 +90,7 @@ enum policy_flags {
 };
 
 enum tls_format {
-   DEFAULT_TLS_FORMAT
+    DEFAULT_TLS_FORMAT
 };
 
 typedef enum discard_check_state {

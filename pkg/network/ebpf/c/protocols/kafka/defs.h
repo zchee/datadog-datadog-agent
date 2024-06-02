@@ -14,13 +14,13 @@
 
 // The number of varint bytes required to support the specified values.
 // 127
-#define VARINT_BYTES_0000007f   1
+#define VARINT_BYTES_0000007f 1
 // 16383
-#define VARINT_BYTES_00003fff   2
+#define VARINT_BYTES_00003fff 2
 // 2097151
-#define VARINT_BYTES_001fffff   3
+#define VARINT_BYTES_001fffff 3
 // 268435455
-#define VARINT_BYTES_0fffffff   4
+#define VARINT_BYTES_0fffffff 4
 
 // Reasonable limit
 #define VARINT_BYTES_NUM_TOPICS VARINT_BYTES_00003fff

@@ -24,9 +24,9 @@ static __always_inline bool is_ping(const char *buf, __u32 buf_size) {
     if (buf_size < sizeof(POSTGRES_PING_BODY)) {
         return false;
     }
-    char tmp[sizeof(POSTGRES_PING_BODY)] = {0};
+    char tmp[sizeof(POSTGRES_PING_BODY)] = { 0 };
     // Cannot use bpf_memcpy here because of verifier error of "misaligned stack access".
-#pragma unroll (sizeof(POSTGRES_PING_BODY))
+#pragma unroll(sizeof(POSTGRES_PING_BODY))
     for (int i = 0; i < sizeof(POSTGRES_PING_BODY); i++) {
         tmp[i] = buf[i];
     }

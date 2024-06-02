@@ -132,7 +132,7 @@ static __always_inline int SSL_read_ret(struct pt_regs *ctx, __u64 tags) {
     bpf_map_delete_elem(&ssl_read_args, &pid_tgid);
     // The read tuple should be flipped (compared to the write tuple).
     // tls_process and the appropriate parsers will flip it back if needed.
-    conn_tuple_t copy = {0};
+    conn_tuple_t copy = { 0 };
     bpf_memcpy(&copy, t, sizeof(conn_tuple_t));
     // We want to guarantee write-TLS hooks generates the same connection tuple, while read-TLS hooks generate
     // the inverse direction, thus we're normalizing the tuples into a client <-> server direction.
@@ -160,8 +160,8 @@ int nodejs_uretprobe__SSL_read(struct pt_regs *ctx) {
 }
 
 SEC("uprobe/SSL_write")
-int uprobe__SSL_write(struct pt_regs* ctx) {
-    ssl_write_args_t args = {0};
+int uprobe__SSL_write(struct pt_regs *ctx) {
+    ssl_write_args_t args = { 0 };
     args.ctx = (void *)PT_REGS_PARM1(ctx);
     args.buf = (void *)PT_REGS_PARM2(ctx);
     u64 pid_tgid = bpf_get_current_pid_tgid();
@@ -170,7 +170,7 @@ int uprobe__SSL_write(struct pt_regs* ctx) {
     return 0;
 }
 
-static __always_inline int SSL_write_ret(struct pt_regs* ctx, __u64 flags) {
+static __always_inline int SSL_write_ret(struct pt_regs *ctx, __u64 flags) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     int write_len = (int)PT_REGS_RC(ctx);
     log_debug("uretprobe/SSL_write: pid_tgid=%llx len=%d", pid_tgid, write_len);
@@ -190,7 +190,7 @@ static __always_inline int SSL_write_ret(struct pt_regs* ctx, __u64 flags) {
 
     char *buffer_ptr = args->buf;
     bpf_map_delete_elem(&ssl_write_args, &pid_tgid);
-    conn_tuple_t copy = {0};
+    conn_tuple_t copy = { 0 };
     bpf_memcpy(&copy, t, sizeof(conn_tuple_t));
     // We want to guarantee write-TLS hooks generates the same connection tuple, while read-TLS hooks generate
     // the inverse direction, thus we're normalizing the tuples into a client <-> server direction, and then flipping it
@@ -205,23 +205,23 @@ cleanup:
 }
 
 SEC("uretprobe/SSL_write")
-int uretprobe__SSL_write(struct pt_regs* ctx) {
+int uretprobe__SSL_write(struct pt_regs *ctx) {
     return SSL_write_ret(ctx, LIBSSL);
 }
 
 SEC("uretprobe/SSL_write")
-int istio_uretprobe__SSL_write(struct pt_regs* ctx) {
+int istio_uretprobe__SSL_write(struct pt_regs *ctx) {
     return SSL_write_ret(ctx, ISTIO);
 }
 
 SEC("uretprobe/SSL_write")
-int nodejs_uretprobe__SSL_write(struct pt_regs* ctx) {
+int nodejs_uretprobe__SSL_write(struct pt_regs *ctx) {
     return SSL_write_ret(ctx, NODEJS);
 }
 
 SEC("uprobe/SSL_read_ex")
-int uprobe__SSL_read_ex(struct pt_regs* ctx) {
-    ssl_read_ex_args_t args = {0};
+int uprobe__SSL_read_ex(struct pt_regs *ctx) {
+    ssl_read_ex_args_t args = { 0 };
     args.ctx = (void *)PT_REGS_PARM1(ctx);
     args.buf = (void *)PT_REGS_PARM2(ctx);
     args.size_out_param = (size_t *)PT_REGS_PARM4(ctx);
@@ -234,7 +234,7 @@ int uprobe__SSL_read_ex(struct pt_regs* ctx) {
     return 0;
 }
 
-static __always_inline int SSL_read_ex_ret(struct pt_regs* ctx, __u64 tags) {
+static __always_inline int SSL_read_ex_ret(struct pt_regs *ctx, __u64 tags) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     const int return_code = (int)PT_REGS_RC(ctx);
     if (return_code != 1) {
@@ -255,7 +255,7 @@ static __always_inline int SSL_read_ex_ret(struct pt_regs* ctx, __u64 tags) {
 
     size_t bytes_count = 0;
     bpf_probe_read_user(&bytes_count, sizeof(bytes_count), args->size_out_param);
-    if ( bytes_count <= 0) {
+    if (bytes_count <= 0) {
         log_debug("uretprobe/SSL_read_ex: read non positive number of bytes (pid_tgid=%llx len=%zu)", pid_tgid, bytes_count);
         goto cleanup;
     }
@@ -271,7 +271,7 @@ static __always_inline int SSL_read_ex_ret(struct pt_regs* ctx, __u64 tags) {
     bpf_map_delete_elem(&ssl_read_ex_args, &pid_tgid);
     // The read tuple should be flipped (compared to the write tuple).
     // tls_process and the appropriate parsers will flip it back if needed.
-    conn_tuple_t copy = {0};
+    conn_tuple_t copy = { 0 };
     bpf_memcpy(&copy, conn_tuple, sizeof(conn_tuple_t));
     // We want to guarantee write-TLS hooks generates the same connection tuple, while read-TLS hooks generate
     // the inverse direction, thus we're normalizing the tuples into a client <-> server direction.
@@ -284,7 +284,7 @@ cleanup:
 }
 
 SEC("uretprobe/SSL_read_ex")
-int uretprobe__SSL_read_ex(struct pt_regs* ctx, __u64 tags) {
+int uretprobe__SSL_read_ex(struct pt_regs *ctx, __u64 tags) {
     return SSL_read_ex_ret(ctx, LIBSSL);
 }
 
@@ -294,8 +294,8 @@ int nodejs_uretprobe__SSL_read_ex(struct pt_regs *ctx) {
 }
 
 SEC("uprobe/SSL_write_ex")
-int uprobe__SSL_write_ex(struct pt_regs* ctx) {
-    ssl_write_ex_args_t args = {0};
+int uprobe__SSL_write_ex(struct pt_regs *ctx) {
+    ssl_write_ex_args_t args = { 0 };
     args.ctx = (void *)PT_REGS_PARM1(ctx);
     args.buf = (void *)PT_REGS_PARM2(ctx);
     args.size_out_param = (size_t *)PT_REGS_PARM4(ctx);
@@ -305,7 +305,7 @@ int uprobe__SSL_write_ex(struct pt_regs* ctx) {
     return 0;
 }
 
-static __always_inline int SSL_write_ex_ret(struct pt_regs* ctx, __u64 tags) {
+static __always_inline int SSL_write_ex_ret(struct pt_regs *ctx, __u64 tags) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     const int return_code = (int)PT_REGS_RC(ctx);
     if (return_code != 1) {
@@ -326,7 +326,7 @@ static __always_inline int SSL_write_ex_ret(struct pt_regs* ctx, __u64 tags) {
 
     size_t bytes_count = 0;
     bpf_probe_read_user(&bytes_count, sizeof(bytes_count), args->size_out_param);
-    if ( bytes_count <= 0) {
+    if (bytes_count <= 0) {
         log_debug("uretprobe/SSL_write_ex: wrote non positive number of bytes (pid_tgid=%llx len=%zu)", pid_tgid, bytes_count);
         goto cleanup;
     }
@@ -339,7 +339,7 @@ static __always_inline int SSL_write_ex_ret(struct pt_regs* ctx, __u64 tags) {
 
     char *buffer_ptr = args->buf;
     bpf_map_delete_elem(&ssl_write_ex_args, &pid_tgid);
-    conn_tuple_t copy = {0};
+    conn_tuple_t copy = { 0 };
     bpf_memcpy(&copy, conn_tuple, sizeof(conn_tuple_t));
     // We want to guarantee write-TLS hooks generates the same connection tuple, while read-TLS hooks generate
     // the inverse direction, thus we're normalizing the tuples into a client <-> server direction, and then flipping it
@@ -354,7 +354,7 @@ cleanup:
 }
 
 SEC("uretprobe/SSL_write_ex")
-int uretprobe__SSL_write_ex(struct pt_regs* ctx) {
+int uretprobe__SSL_write_ex(struct pt_regs *ctx) {
     return SSL_write_ex_ret(ctx, LIBSSL);
 }
 
@@ -381,7 +381,7 @@ int uprobe__SSL_shutdown(struct pt_regs *ctx) {
 }
 
 SEC("uprobe/gnutls_handshake")
-int uprobe__gnutls_handshake(struct pt_regs* ctx) {
+int uprobe__gnutls_handshake(struct pt_regs *ctx) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     void *ssl_ctx = (void *)PT_REGS_PARM1(ctx);
     bpf_map_update_with_telemetry(ssl_ctx_by_pid_tgid, &pid_tgid, &ssl_ctx, BPF_ANY);
@@ -389,7 +389,7 @@ int uprobe__gnutls_handshake(struct pt_regs* ctx) {
 }
 
 SEC("uretprobe/gnutls_handshake")
-int uretprobe__gnutls_handshake(struct pt_regs* ctx) {
+int uretprobe__gnutls_handshake(struct pt_regs *ctx) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     bpf_map_delete_elem(&ssl_ctx_by_pid_tgid, &pid_tgid);
     return 0;
@@ -483,7 +483,7 @@ int uretprobe__gnutls_record_recv(struct pt_regs *ctx) {
     bpf_map_delete_elem(&ssl_read_args, &pid_tgid);
     // The read tuple should be flipped (compared to the write tuple).
     // tls_process and the appropriate parsers will flip it back if needed.
-    conn_tuple_t copy = {0};
+    conn_tuple_t copy = { 0 };
     bpf_memcpy(&copy, t, sizeof(conn_tuple_t));
     // We want to guarantee write-TLS hooks generates the same connection tuple, while read-TLS hooks generate
     // the inverse direction, thus we're normalizing the tuples into a client <-> server direction.
@@ -498,7 +498,7 @@ cleanup:
 // ssize_t gnutls_record_send (gnutls_session_t session, const void * data, size_t data_size)
 SEC("uprobe/gnutls_record_send")
 int uprobe__gnutls_record_send(struct pt_regs *ctx) {
-    ssl_write_args_t args = {0};
+    ssl_write_args_t args = { 0 };
     args.ctx = (void *)PT_REGS_PARM1(ctx);
     args.buf = (void *)PT_REGS_PARM2(ctx);
     u64 pid_tgid = bpf_get_current_pid_tgid();
@@ -528,7 +528,7 @@ int uretprobe__gnutls_record_send(struct pt_regs *ctx) {
 
     char *buffer_ptr = args->buf;
     bpf_map_delete_elem(&ssl_write_args, &pid_tgid);
-    conn_tuple_t copy = {0};
+    conn_tuple_t copy = { 0 };
     bpf_memcpy(&copy, t, sizeof(conn_tuple_t));
     // We want to guarantee write-TLS hooks generates the same connection tuple, while read-TLS hooks generate
     // the inverse direction, thus we're normalizing the tuples into a client <-> server direction, and then flipping it

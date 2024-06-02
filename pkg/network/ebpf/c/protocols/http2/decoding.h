@@ -183,7 +183,7 @@ static __always_inline __u8 filter_relevant_headers(struct __sk_buff *skb, skb_i
         // We're not increasing the counter for literal without indexing or literal never indexed.
         __sync_fetch_and_add(global_dynamic_counter, is_literal);
         // Handle frame headers which are not pseudo headers fields.
-        if (!process_and_skip_literal_headers(skb, skb_info, index)){
+        if (!process_and_skip_literal_headers(skb, skb_info, index)) {
             break;
         }
     }
@@ -193,7 +193,7 @@ static __always_inline __u8 filter_relevant_headers(struct __sk_buff *skb, skb_i
 
 // process_headers processes the headers that were filtered in filter_relevant_headers,
 // looking for requests path, status code, and method.
-static __always_inline void process_headers(struct __sk_buff *skb, dynamic_table_index_t *dynamic_index, http2_stream_t *current_stream, http2_header_t *headers_to_process, __u8 interesting_headers,  http2_telemetry_t *http2_tel) {
+static __always_inline void process_headers(struct __sk_buff *skb, dynamic_table_index_t *dynamic_index, http2_stream_t *current_stream, http2_header_t *headers_to_process, __u8 interesting_headers, http2_telemetry_t *http2_tel) {
     http2_header_t *current_header;
     dynamic_table_entry_t dynamic_value = {};
 
@@ -208,8 +208,8 @@ static __always_inline void process_headers(struct __sk_buff *skb, dynamic_table
         if (current_header->type == kStaticHeader) {
             if (is_method_index(current_header->index)) {
                 // TODO: mark request
-               current_stream->request_method.static_table_entry = current_header->index;
-               current_stream->request_method.finalized = true;
+                current_stream->request_method.static_table_entry = current_header->index;
+                current_stream->request_method.finalized = true;
                 __sync_fetch_and_add(&http2_tel->request_seen, 1);
             } else if (is_status_index(current_header->index)) {
                 current_stream->status_code.static_table_entry = current_header->index;
@@ -237,7 +237,7 @@ static __always_inline void process_headers(struct __sk_buff *skb, dynamic_table
                 bpf_memcpy(current_stream->status_code.raw_buffer, dynamic_value->buffer, HTTP2_STATUS_CODE_MAX_LEN);
                 current_stream->status_code.is_huffman_encoded = dynamic_value->is_huffman_encoded;
                 current_stream->status_code.finalized = true;
-            }  else if (is_method_index(dynamic_value->original_index)) {
+            } else if (is_method_index(dynamic_value->original_index)) {
                 bpf_memcpy(current_stream->request_method.raw_buffer, dynamic_value->buffer, HTTP2_METHOD_MAX_LEN);
                 current_stream->request_method.is_huffman_encoded = dynamic_value->is_huffman_encoded;
                 current_stream->request_method.length = current_header->new_dynamic_value_size;
@@ -363,7 +363,7 @@ static __always_inline bool get_first_frame(struct __sk_buff *skb, skb_info_t *s
         return true;
     }
     if (frame_state->header_length > 0) {
-        fix_header_frame(skb, skb_info, (char*)current_frame, frame_state);
+        fix_header_frame(skb, skb_info, (char *)current_frame, frame_state);
         if (format_http2_frame_header(current_frame)) {
             skb_info->data_off += frame_state->remainder;
             frame_state->remainder = 0;
@@ -423,12 +423,12 @@ static __always_inline bool find_relevant_frames(struct __sk_buff *skb, skb_info
         skb_info->data_off = iteration_value->data_off;
     }
 
-   // If we have found enough interesting frames, we should not process any new frame.
-   // The value of iteration_value->frames_count may potentially be greater than 0.
-   // It's essential to validate that this increase doesn't surpass the maximum number of frames we can process.
-   if (iteration_value->frames_count >= HTTP2_MAX_FRAMES_ITERATIONS) {
-       return false;
-   }
+    // If we have found enough interesting frames, we should not process any new frame.
+    // The value of iteration_value->frames_count may potentially be greater than 0.
+    // It's essential to validate that this increase doesn't surpass the maximum number of frames we can process.
+    if (iteration_value->frames_count >= HTTP2_MAX_FRAMES_ITERATIONS) {
+        return false;
+    }
 
     __u32 iteration = 0;
 #pragma unroll(HTTP2_MAX_FRAMES_TO_FILTER)
@@ -470,7 +470,7 @@ static __always_inline bool find_relevant_frames(struct __sk_buff *skb, skb_info
     // This function returns true if there are more frames to filter, which will be parsed by the next tail call,
     // and if we have not yet reached the maximum number of frames we can process.
     return (((iteration == HTTP2_MAX_FRAMES_TO_FILTER) &&
-            (skb_info->data_off + HTTP2_FRAME_HEADER_SIZE <= skb_info->data_end))&&
+                (skb_info->data_off + HTTP2_FRAME_HEADER_SIZE <= skb_info->data_end)) &&
             iteration_value->frames_count < HTTP2_MAX_FRAMES_ITERATIONS);
 }
 
@@ -544,7 +544,7 @@ int socket__http2_handle_first_frame(struct __sk_buff *skb) {
             frame_header_remainder_t new_frame_state = { 0 };
             new_frame_state.remainder = HTTP2_FRAME_HEADER_SIZE - (dispatcher_args_copy.skb_info.data_end - dispatcher_args_copy.skb_info.data_off);
             bpf_memset(new_frame_state.buf, 0, HTTP2_FRAME_HEADER_SIZE);
-        #pragma unroll(HTTP2_FRAME_HEADER_SIZE)
+#pragma unroll(HTTP2_FRAME_HEADER_SIZE)
             for (__u32 iteration = 0; iteration < HTTP2_FRAME_HEADER_SIZE && new_frame_state.remainder + iteration < HTTP2_FRAME_HEADER_SIZE; ++iteration) {
                 bpf_skb_load_bytes(skb, dispatcher_args_copy.skb_info.data_off + iteration, new_frame_state.buf + iteration, 1);
             }
@@ -643,7 +643,7 @@ int socket__http2_filter(struct __sk_buff *skb) {
         // We have a frame header remainder
         new_frame_state.remainder = HTTP2_FRAME_HEADER_SIZE - (local_skb_info.data_end - local_skb_info.data_off);
         bpf_memset(new_frame_state.buf, 0, HTTP2_FRAME_HEADER_SIZE);
-    #pragma unroll(HTTP2_FRAME_HEADER_SIZE)
+#pragma unroll(HTTP2_FRAME_HEADER_SIZE)
         for (__u32 iteration = 0; iteration < HTTP2_FRAME_HEADER_SIZE && new_frame_state.remainder + iteration < HTTP2_FRAME_HEADER_SIZE; ++iteration) {
             bpf_skb_load_bytes(skb, local_skb_info.data_off + iteration, new_frame_state.buf + iteration, 1);
         }
@@ -715,7 +715,7 @@ int socket__http2_headers_parser(struct __sk_buff *skb) {
 
     http2_stream_t *current_stream = NULL;
 
-    #pragma unroll(HTTP2_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL)
+#pragma unroll(HTTP2_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL)
     for (__u16 index = 0; index < HTTP2_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL; index++) {
         if (tail_call_state->iteration >= tail_call_state->frames_count) {
             break;
@@ -782,7 +782,7 @@ int socket__http2_dynamic_table_cleaner(struct __sk_buff *skb) {
         .tup = dispatcher_args_copy.tup,
     };
 
-    #pragma unroll(HTTP2_DYNAMIC_TABLE_CLEANUP_ITERATIONS)
+#pragma unroll(HTTP2_DYNAMIC_TABLE_CLEANUP_ITERATIONS)
     for (__u16 index = 0; index < HTTP2_DYNAMIC_TABLE_CLEANUP_ITERATIONS; index++) {
         // We should reserve the last HTTP2_DYNAMIC_TABLE_CLEANUP_THRESHOLD entries in the dynamic table.
         // So if we're about to delete an entry that is in the last HTTP2_DYNAMIC_TABLE_CLEANUP_THRESHOLD entries,
@@ -851,7 +851,7 @@ int socket__http2_eos_parser(struct __sk_buff *skb) {
     bool is_rst = false, is_end_of_stream = false;
     http2_stream_t *current_stream = NULL;
 
-    #pragma unroll(HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL)
+#pragma unroll(HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL)
     for (__u16 index = 0; index < HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL; index++) {
         if (tail_call_state->iteration >= HTTP2_MAX_FRAMES_ITERATIONS) {
             break;
@@ -911,4 +911,5 @@ delete_iteration:
 
     return 0;
 }
+
 #endif

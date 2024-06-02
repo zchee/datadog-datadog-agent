@@ -12,8 +12,8 @@
 #include "ipv6.h"
 
 SEC("kprobe/__nf_conntrack_hash_insert")
-int kprobe___nf_conntrack_hash_insert(struct pt_regs* ctx) {
-    struct nf_conn *ct = (struct nf_conn*)PT_REGS_PARM1(ctx);
+int kprobe___nf_conntrack_hash_insert(struct pt_regs *ctx) {
+    struct nf_conn *ct = (struct nf_conn *)PT_REGS_PARM1(ctx);
 
     log_debug("kprobe/__nf_conntrack_hash_insert: netns: %u", get_netns(ct));
 
@@ -31,14 +31,14 @@ int kprobe___nf_conntrack_hash_insert(struct pt_regs* ctx) {
 }
 
 SEC("kprobe/ctnetlink_fill_info")
-int kprobe_ctnetlink_fill_info(struct pt_regs* ctx) {
+int kprobe_ctnetlink_fill_info(struct pt_regs *ctx) {
     u32 pid = bpf_get_current_pid_tgid() >> 32;
     if (pid != systemprobe_pid()) {
         log_debug("skipping kprobe/ctnetlink_fill_info invocation from non-system-probe process");
         return 0;
     }
 
-    struct nf_conn *ct = (struct nf_conn*)PT_REGS_PARM5(ctx);
+    struct nf_conn *ct = (struct nf_conn *)PT_REGS_PARM5(ctx);
 
     log_debug("kprobe/ctnetlink_fill_info: netns: %u", get_netns(ct));
 

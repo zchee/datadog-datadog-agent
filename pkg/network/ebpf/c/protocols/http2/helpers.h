@@ -28,7 +28,7 @@ static __always_inline bool read_http2_frame_header(const char *buf, size_t buf_
 
     // We extract the frame by its shape to fields.
     // See: https://datatracker.ietf.org/doc/html/rfc7540#section-4.1
-    *out = *((http2_frame_t*)buf);
+    *out = *((http2_frame_t *)buf);
     out->length = bpf_ntohl(out->length << 8);
     out->stream_id = bpf_ntohl(out->stream_id << 1);
 
@@ -37,12 +37,12 @@ static __always_inline bool read_http2_frame_header(const char *buf, size_t buf_
 
 // The method checks if the given buffer starts with the HTTP2 marker as defined in https://datatracker.ietf.org/doc/html/rfc7540.
 // We check that the given buffer is not empty and its size is at least 24 bytes.
-static __always_inline bool is_http2_preface(const char* buf, __u32 buf_size) {
+static __always_inline bool is_http2_preface(const char *buf, __u32 buf_size) {
     CHECK_PRELIMINARY_BUFFER_CONDITIONS(buf, buf_size, HTTP2_MARKER_SIZE);
 
 #define HTTP2_PREFACE "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 
-    bool match = !bpf_memcmp(buf, HTTP2_PREFACE, sizeof(HTTP2_PREFACE)-1);
+    bool match = !bpf_memcmp(buf, HTTP2_PREFACE, sizeof(HTTP2_PREFACE) - 1);
 
     return match;
 }
@@ -51,7 +51,7 @@ static __always_inline bool is_http2_preface(const char* buf, __u32 buf_size) {
 // an HTTP2 server must reply with a settings frame to the preface of HTTP2.
 // The settings frame must not be related to the connection (stream_id == 0) and the length should be a multiplication
 // of 6 bytes.
-static __always_inline bool is_http2_server_settings(const char* buf, __u32 buf_size) {
+static __always_inline bool is_http2_server_settings(const char *buf, __u32 buf_size) {
     CHECK_PRELIMINARY_BUFFER_CONDITIONS(buf, buf_size, HTTP2_FRAME_HEADER_SIZE);
 
     http2_frame_t frame_header;
@@ -64,7 +64,7 @@ static __always_inline bool is_http2_server_settings(const char* buf, __u32 buf_
 
 // The method checks if the given buffer starts with the HTTP2 marker as defined in https://datatracker.ietf.org/doc/html/rfc7540.
 // We check that the given buffer is not empty and its size is at least 24 bytes.
-static __always_inline bool is_http2(const char* buf, __u32 buf_size) {
+static __always_inline bool is_http2(const char *buf, __u32 buf_size) {
     return is_http2_preface(buf, buf_size) || is_http2_server_settings(buf, buf_size);
 }
 

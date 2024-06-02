@@ -24,5 +24,4 @@ typedef struct {
     __u64 registers;
 } conntrack_telemetry_t;
 
-
 #endif

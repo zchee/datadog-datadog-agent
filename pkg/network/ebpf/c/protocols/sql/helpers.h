@@ -18,22 +18,16 @@ static __always_inline bool is_sql_command(const char *buf, __u32 buf_size) {
 
     // Convert what would be the query to uppercase to match queries like
     // 'select * from table'
-#pragma unroll (SQL_COMMAND_MAX_SIZE)
+#pragma unroll(SQL_COMMAND_MAX_SIZE)
     for (int i = 0; i < SQL_COMMAND_MAX_SIZE; i++) {
         if ('a' <= buf[i] && buf[i] <= 'z') {
-            tmp[i] = buf[i] - 'a' +'A';
+            tmp[i] = buf[i] - 'a' + 'A';
         } else {
             tmp[i] = buf[i];
         }
     }
 
-    return check_command(tmp, SQL_ALTER, buf_size)
-        || check_command(tmp, SQL_CREATE, buf_size)
-        || check_command(tmp, SQL_DELETE, buf_size)
-        || check_command(tmp, SQL_DROP, buf_size)
-        || check_command(tmp, SQL_INSERT, buf_size)
-        || check_command(tmp, SQL_SELECT, buf_size)
-        || check_command(tmp, SQL_UPDATE, buf_size);
+    return check_command(tmp, SQL_ALTER, buf_size) || check_command(tmp, SQL_CREATE, buf_size) || check_command(tmp, SQL_DELETE, buf_size) || check_command(tmp, SQL_DROP, buf_size) || check_command(tmp, SQL_INSERT, buf_size) || check_command(tmp, SQL_SELECT, buf_size) || check_command(tmp, SQL_UPDATE, buf_size);
 }
 
 #endif // __SQL_HELPERS_H

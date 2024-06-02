@@ -137,7 +137,6 @@ static __always_inline void cleanup_conn(void *ctx, conn_tuple_t *tup, struct so
     }
 }
 
-
 // This function is used to flush the conn_close_batch to the perf or ring buffer.
 static __always_inline void flush_conn_close_if_full(void *ctx) {
     u32 cpu = bpf_get_smp_processor_id();

@@ -49,7 +49,7 @@ static __always_inline u64 get_ino_offset() {
 }
 
 SEC("kprobe/tcp_getsockopt")
-int kprobe__tcp_getsockopt(struct pt_regs* ctx) {
+int kprobe__tcp_getsockopt(struct pt_regs *ctx) {
     u64 offset = 0;
     offset_t o = OFFSET_SADDR;
     offset = offsetof(struct sock, sk_rcv_saddr);

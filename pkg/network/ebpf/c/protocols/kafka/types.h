@@ -6,7 +6,7 @@
 typedef enum {
     KAFKA_PRODUCE = 0,
     KAFKA_FETCH
-} __attribute__ ((packed)) kafka_operation_t;
+} __attribute__((packed)) kafka_operation_t;
 
 typedef struct {
     __s32 message_size;
@@ -14,7 +14,7 @@ typedef struct {
     __s16 api_version;
     __s32 correlation_id;
     __s16 client_id_size;
-} __attribute__ ((packed)) kafka_header_t;
+} __attribute__((packed)) kafka_header_t;
 
 #define KAFKA_MIN_LENGTH (sizeof(kafka_header_t))
 
@@ -56,7 +56,7 @@ typedef enum {
     KAFKA_FETCH_RESPONSE_RECORD_BATCHES_ARRAY_END,
     KAFKA_FETCH_RESPONSE_PARTITION_TAGGED_FIELDS,
     KAFKA_FETCH_RESPONSE_PARTITION_END,
-} __attribute__ ((packed)) kafka_response_state;
+} __attribute__((packed)) kafka_response_state;
 
 typedef struct kafka_fetch_response_record_batches_array_t {
     __u32 num_bytes;

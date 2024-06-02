@@ -30,7 +30,7 @@ static __always_inline void postgres_batch_enqueue_wrapper(conn_tuple_t *tuple, 
 }
 
 // Reads a message header from the given context. Returns true if the header was read successfully, false otherwise.
-static __always_inline bool read_message_header(pktbuf_t pkt, struct pg_message_header* header) {
+static __always_inline bool read_message_header(pktbuf_t pkt, struct pg_message_header *header) {
     u32 data_off = pktbuf_data_offset(pkt);
     u32 data_end = pktbuf_data_end(pkt);
     // Ensuring that the header is in the buffer.
@@ -81,17 +81,17 @@ static int __always_inline skip_string(pktbuf_t pkt, int message_len) {
         data_end = data_off + message_len;
     }
 
-    char temp_buffer[BLK_SIZE] = {0};
+    char temp_buffer[BLK_SIZE] = { 0 };
     __u8 size_to_read = 0;
 
-    #pragma unroll(POSTGRES_SKIP_STRING_ITERATIONS)
+#pragma unroll(POSTGRES_SKIP_STRING_ITERATIONS)
     for (int iter = 0; iter < POSTGRES_SKIP_STRING_ITERATIONS; iter++) {
         // We read the next block of data into the temp buffer. We read the minimum between the size of the temp buffer
         // and the remaining data in the message.
         size_to_read = data_end - data_off > sizeof(temp_buffer) ? sizeof(temp_buffer) : data_end - data_off;
         pktbuf_load_bytes(pkt, data_off, temp_buffer, sizeof(temp_buffer));
 
-        #pragma unroll(BLK_SIZE)
+#pragma unroll(BLK_SIZE)
         for (int i = 0; i < BLK_SIZE; i++) {
             if (i >= size_to_read) {
                 return SKIP_STRING_FAILED;
@@ -199,7 +199,7 @@ static __always_inline void postgres_handle_parse_message(pktbuf_t pkt, conn_tup
 // If the message is a parse message, it tail calls to the dedicated function to handle it as it is too large to be
 // inlined in the main entrypoint. Otherwise, it calls the main processing function.
 SEC("socket/postgres_process")
-int socket__postgres_process(struct __sk_buff* skb) {
+int socket__postgres_process(struct __sk_buff *skb) {
     skb_info_t skb_info = {};
     conn_tuple_t conn_tuple = {};
 
@@ -233,7 +233,7 @@ int socket__postgres_process(struct __sk_buff* skb) {
 // Handles plaintext Postgres Parse messages. Pulls the connection tuple and the packet buffer from the map and calls the
 // dedicated function to handle the message.
 SEC("socket/postgres_process_parse_message")
-int socket__postgres_process_parse_message(struct __sk_buff* skb) {
+int socket__postgres_process_parse_message(struct __sk_buff *skb) {
     skb_info_t skb_info = {};
     conn_tuple_t conn_tuple = {};
 

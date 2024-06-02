@@ -22,16 +22,7 @@ static __always_inline bool is_http(const char *buf, __u32 size) {
     // memcmp returns
     // 0 when s1 == s2,
     // !0 when s1 != s2.
-    bool http = !(bpf_memcmp(buf, HTTP, sizeof(HTTP)-1)
-        && bpf_memcmp(buf, GET, sizeof(GET)-1)
-        && bpf_memcmp(buf, POST, sizeof(POST)-1)
-        && bpf_memcmp(buf, PUT, sizeof(PUT)-1)
-        && bpf_memcmp(buf, DELETE, sizeof(DELETE)-1)
-        && bpf_memcmp(buf, HEAD, sizeof(HEAD)-1)
-        && bpf_memcmp(buf, OPTIONS1, sizeof(OPTIONS1)-1)
-        && bpf_memcmp(buf, OPTIONS2, sizeof(OPTIONS2)-1)
-        && bpf_memcmp(buf, PATCH, sizeof(PATCH)-1)
-        && bpf_memcmp(buf, TRACE, sizeof(TRACE)-1));
+    bool http = !(bpf_memcmp(buf, HTTP, sizeof(HTTP) - 1) && bpf_memcmp(buf, GET, sizeof(GET) - 1) && bpf_memcmp(buf, POST, sizeof(POST) - 1) && bpf_memcmp(buf, PUT, sizeof(PUT) - 1) && bpf_memcmp(buf, DELETE, sizeof(DELETE) - 1) && bpf_memcmp(buf, HEAD, sizeof(HEAD) - 1) && bpf_memcmp(buf, OPTIONS1, sizeof(OPTIONS1) - 1) && bpf_memcmp(buf, OPTIONS2, sizeof(OPTIONS2) - 1) && bpf_memcmp(buf, PATCH, sizeof(PATCH) - 1) && bpf_memcmp(buf, TRACE, sizeof(TRACE) - 1));
 
     return http;
 }

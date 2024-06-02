@@ -35,7 +35,7 @@ static void *(*bpf_telemetry_update_patch)(unsigned long, ...) = (void *)PATCH_T
                 /* Patched instruction for 4.14+: __sync_fetch_and_add(target, 1);
                  * This patch point is placed here because the above instruction
                  * fails on the 4.4 verifier. On 4.4 this instruction is replaced
-                 * with a nop: r1 = r1 */                                          \
+                 * with a nop: r1 = r1 */ \
                 bpf_telemetry_update_patch((unsigned long)target, add);            \
             }                                                                      \
         }                                                                          \
@@ -73,7 +73,7 @@ static void *(*bpf_telemetry_update_patch)(unsigned long, ...) = (void *)PATCH_T
                     /* This is duplicated below because on clang 14.0.6 the compiler
                      * concludes that this if-check will always force errno_slot in range
                      * (0, T_MAX_ERRNO-1], and removes the bounds check, causing the verifier
-                     * to trip. Duplicating this check forces clang not to omit the check */    \
+                     * to trip. Duplicating this check forces clang not to omit the check */            \
                     errno_slot &= (T_MAX_ERRNO - 1);                                            \
                 }                                                                               \
                 errno_slot &= (T_MAX_ERRNO - 1);                                                \
@@ -83,7 +83,7 @@ static void *(*bpf_telemetry_update_patch)(unsigned long, ...) = (void *)PATCH_T
                     /* Patched instruction for 4.14+: __sync_fetch_and_add(target, 1);
                      * This patch point is placed here because the above instruction
                      * fails on the 4.4 verifier. On 4.4 this instruction is replaced
-                     * with a nop: r1 = r1 */                                                   \
+                     * with a nop: r1 = r1 */          \
                     bpf_telemetry_update_patch((unsigned long)target, add);                     \
                 }                                                                               \
             }                                                                                   \
