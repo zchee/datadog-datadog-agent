@@ -103,6 +103,13 @@ repos:
       require_serial: true
       files: (\.yaml|\.yml|\.sh|Dockerfile)$
       pass_filenames: false
+    - id: check-gitlab-access
+      name: check-gitlab-access
+      description: check the access to Gitlab
+      entry: 'inv pre-commit.check-gitlab-access'
+      language: system
+      require_serial: true
+      stages: [pre-push]
     - id: gitlab-configuration
       name: gitlab-configuration
       description: test the gitlab configuration on main

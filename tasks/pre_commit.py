@@ -1,5 +1,6 @@
 import os
 import re
+import socket
 import sys
 
 from invoke import task
@@ -92,3 +93,34 @@ def check_clang_format(ctx):
         res = clang_format.run(files)
         if res != ExitStatus.SUCCESS:
             raise Exit(code=res)
+
+
+@task
+def check_gitlab_access(_, gitlab_url="gitlab.ddbuild.io", gitlab_port=443, max_ip_tries=4, per_ip_timeout=1):
+    """
+    Check if the user has access to Gitlab behind Appgate.
+    AWS is scaling Load Balancers as needed. When trying to connect to Gitlab with a requests.get(), you'll test each ip address with a timeout of 1 second.
+    This means that you'll wait at least n seconds for n addresses to timeout, slowing down the hook by a lot.
+    That's why we're limiting the calls to 4 (max_ip_tries) to avoid having a timeout >4s slowing down the hook.
+    """
+    all_timed_out = True
+    gitlab_ip_addresses = socket.getaddrinfo(gitlab_url, gitlab_port, socket.AF_UNSPEC, socket.SOCK_STREAM)[
+        :max_ip_tries
+    ]
+    for res in gitlab_ip_addresses:
+        af, socktype, proto, _, sa = res
+        try:
+            with socket.socket(af, socktype, proto) as sock:
+                sock.settimeout(per_ip_timeout)
+                sock.connect(sa)
+            return
+        except TimeoutError:
+            print(color_message(f"Connection to {sa[0]}:{sa[1]} timed out.", color="orange"))
+        except Exception as e:
+            all_timed_out = False
+            print(color_message(f"Connection to {sa[0]}:{sa[1]} failed:\n{e}", color="orange"))
+    if all_timed_out:
+        raise Exit(
+            color_message(f"\nConnections to {gitlab_url} all timed out. Are you connected to Appgate?", color="red"),
+            code=1,
+        )
