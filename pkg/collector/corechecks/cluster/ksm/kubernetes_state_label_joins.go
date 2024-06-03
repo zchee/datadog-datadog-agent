@@ -8,6 +8,8 @@
 package ksm
 
 import (
+	"runtime/debug"
+
 	ksmstore "github.com/DataDog/datadog-agent/pkg/kubestatemetrics/store"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
@@ -192,13 +194,20 @@ func (lj *labelJoiner) insertFamily(metricFamily ksmstore.DDMetricsFam) {
 	}
 
 	for _, metric := range metricFamily.ListMetrics {
+		log.Debugf("labelJoiner is inserting metric labels = %#v", metric.Labels)
+		log.Debugf("before insertMetric, metricToJoin.config = %#v, metricToJoin.tree = %#v", metricToJoin.config, metricToJoin.tree)
 		lj.insertMetric(metric, metricToJoin.config, metricToJoin.tree)
+		log.Debugf("after insertMetric, metricToJoin.config = %#v, metricToJoin.tree = %#v", metricToJoin.config, metricToJoin.tree)
 	}
 }
 
 func (lj *labelJoiner) insertFamilies(metrics map[string][]ksmstore.DDMetricsFam) {
+	if lj != nil {
+		log.Debugf("labelJoiner.metricsToJoin: %#v | %s", lj.metricsToJoin, debug.Stack())
+	}
 	for _, metricsList := range metrics {
 		for _, metricFamily := range metricsList {
+			log.Debugf("labelJoiner is inserting metric family %q", metricFamily.Name)
 			lj.insertFamily(metricFamily)
 		}
 	}
