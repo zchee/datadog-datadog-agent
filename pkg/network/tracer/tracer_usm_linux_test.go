@@ -817,12 +817,20 @@ func testKafkaProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 }
 
 func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
-	skipFunc := composeSkips(skipIfUsingNAT)
-	skipFunc(t, testContext{
+	testMySQLProtocolClassificationInner(t, tr, clientHost, targetHost, serverHost, mysql.Plaintext)
+}
+
+func testMySQLProtocolClassificationInner(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, withTLS bool) {
+	skipFuncs := []func(*testing.T, testContext){
+		skipIfUsingNAT,
+	}
+	composeSkips(skipFuncs...)(t, testContext{
 		serverAddress: serverHost,
 		serverPort:    mysqlPort,
 		targetAddress: targetHost,
 	})
+
+	expectedStack := &protocols.Stack{Application: protocols.MySQL}
 
 	defaultDialer := &net.Dialer{
 		LocalAddr: &net.TCPAddr{
@@ -839,7 +847,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 
 	serverAddress := net.JoinHostPort(serverHost, mysqlPort)
 	targetAddress := net.JoinHostPort(targetHost, mysqlPort)
-	require.NoError(t, mysql.RunServer(t, serverHost, mysqlPort, mysql.Plaintext))
+	require.NoError(t, mysql.RunServer(t, serverHost, mysqlPort, withTLS))
 
 	tests := []protocolClassificationAttributes{
 		{
@@ -858,7 +866,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				require.NoError(t, err)
 				ctx.extras["conn"] = c
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -881,7 +889,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				c := ctx.extras["conn"].(*mysql.Client)
 				require.NoError(t, c.CreateDB())
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -905,7 +913,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				c := ctx.extras["conn"].(*mysql.Client)
 				require.NoError(t, c.CreateTable())
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -930,7 +938,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				c := ctx.extras["conn"].(*mysql.Client)
 				require.NoError(t, c.InsertIntoTable("Bratislava", 432000))
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -956,7 +964,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				c := ctx.extras["conn"].(*mysql.Client)
 				require.NoError(t, c.DeleteFromTable("Bratislava"))
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -984,7 +992,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				require.NoError(t, err)
 				require.Equal(t, 432000, population)
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -1010,7 +1018,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				c := ctx.extras["conn"].(*mysql.Client)
 				require.NoError(t, c.UpdateTable("Bratislava", "Bratislava2", 10))
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -1035,7 +1043,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				c := ctx.extras["conn"].(*mysql.Client)
 				require.NoError(t, c.DropTable())
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -1060,7 +1068,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				c := ctx.extras["conn"].(*mysql.Client)
 				require.NoError(t, c.AlterTable())
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -1087,7 +1095,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				c := ctx.extras["conn"].(*mysql.Client)
 				require.NoError(t, c.InsertIntoTable(strings.Repeat("#", 16384), 10))
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 		{
@@ -1118,7 +1126,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 				c := ctx.extras["conn"].(*mysql.Client)
 				require.NoError(t, c.SelectAllFromTable())
 			},
-			validation: validateProtocolConnection(&protocols.Stack{Application: protocols.MySQL}),
+			validation: validateProtocolConnection(expectedStack),
 			teardown:   mysqlTeardown,
 		},
 	}
