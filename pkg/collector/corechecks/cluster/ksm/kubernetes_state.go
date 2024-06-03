@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"maps"
 	"regexp"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -631,7 +630,7 @@ func (k *KSMCheck) hostnameAndTags(labels map[string]string, labelJoiner *labelJ
 		tags = append(tags, owners...)
 	}
 
-	log.Debugf("hostname=%s, tags=%#v | %s", hostname, tags, debug.Stack())
+	log.Debugf("hostname=%s, tags=%#v", hostname, tags)
 	return hostname, tags
 }
 
