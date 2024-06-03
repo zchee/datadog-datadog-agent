@@ -530,7 +530,7 @@ func (k *KSMCheck) Cancel() {
 func (k *KSMCheck) processMetrics(sender sender.Sender, metrics map[string][]ksmstore.DDMetricsFam, labelJoiner *labelJoiner, now time.Time) {
 	for _, metricsList := range metrics {
 		for _, metricFamily := range metricsList {
-			log.Debugf("metric family: %s", metricFamily.Name)
+			log.Debugf("metric family %q has %#v", metricFamily.Name, metricFamily.ListMetrics)
 			// First check for aggregator, because the check use _labels metrics to aggregate values.
 			if aggregator, found := k.metricAggregators[metricFamily.Name]; found {
 				for _, m := range metricFamily.ListMetrics {
@@ -579,9 +579,8 @@ func (k *KSMCheck) processMetrics(sender sender.Sender, metrics map[string][]ksm
 func (k *KSMCheck) hostnameAndTags(labels map[string]string, labelJoiner *labelJoiner, lMapperOverride map[string]string) (string, []string) {
 	hostname := ""
 
-	log.Debugf("Labels: %#v", labels)
 	labelsToAdd := labelJoiner.getLabelsToAdd(labels)
-	log.Debugf("Labels to add: %#v", labelsToAdd)
+	log.Debugf("labelJoiner.metricsToJoin: %#v, LabelsToAdd: %#v, inputLabels: %#v", labelJoiner.metricsToJoin, labelsToAdd, labels)
 
 	// generate a dedicated tags slice
 	tags := make([]string, 0, len(labels)+len(labelsToAdd))
