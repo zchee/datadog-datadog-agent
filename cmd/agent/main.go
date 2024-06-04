@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/DataDog/datadog-agent/cmd/agent/command"
 	"github.com/DataDog/datadog-agent/cmd/agent/subcommands"
@@ -37,6 +39,12 @@ func init() {
 }
 
 func main() {
+	go func() {
+		for {
+			debug.FreeOSMemory()
+			time.Sleep(1 * time.Second)
+		}
+	}()
 	process := strings.TrimSpace(os.Getenv("DD_BUNDLED_AGENT"))
 
 	if process == "" {
