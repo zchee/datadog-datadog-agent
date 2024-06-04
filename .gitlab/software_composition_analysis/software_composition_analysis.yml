@@ -7,9 +7,15 @@ datadog-sca-ci:
   stage: software_composition_analysis
   tags: ["arch:amd64"]
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/datadog-static-analyzer:2024031801
-  when: always
-  # We don't want to disrupt the pipeline so let's fail silently.
-  allow_failure: true
+  rules:
+    # The datadog-ci upload only works the first time it is done for a given commit. Further attempts
+    # fail with a 409 (conflict) error.
+    # To prevent this, only run the datadog-sca-ci on the first pipeline that runs on a commit, the
+    # "push" pipeline.
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: always
+      # We don't want to disrupt the pipeline so let's fail silently.
+      allow_failure: true
   # This specifies the job does not have any dependency, meaning it can start as soon as it can.
   needs: []
   script:
