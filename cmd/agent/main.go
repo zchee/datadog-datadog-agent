@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime/debug"
 	"strings"
 
 	"github.com/DataDog/datadog-agent/cmd/agent/command"
@@ -37,6 +38,7 @@ func init() {
 }
 
 func main() {
+	debug.SetGCPercent(10)
 	process := strings.TrimSpace(os.Getenv("DD_BUNDLED_AGENT"))
 
 	if process == "" {
