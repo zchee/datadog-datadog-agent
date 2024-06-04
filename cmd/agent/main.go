@@ -38,7 +38,7 @@ func init() {
 }
 
 func main() {
-	debug.SetGCPercent(10)
+	debug.SetGCPercent(30)
 	process := strings.TrimSpace(os.Getenv("DD_BUNDLED_AGENT"))
 
 	if process == "" {
