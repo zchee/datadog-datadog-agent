@@ -205,6 +205,9 @@ int kprobe__tcp_close(struct pt_regs *ctx) {
     }
     log_debug("kprobe/tcp_close: netns: %u, sport: %u, dport: %u", t.netns, t.sport, t.dport);
 
+    if (t.sport == 3306 || t.dport == 3306) {
+        log_debug("TLS: MySQL connection closed and batched");
+    }
     cleanup_conn(ctx, &t, sk);
 
     // If protocol classification is disabled, then we don't have kretprobe__tcp_close_clean_protocols hook
@@ -219,7 +222,7 @@ SEC("kretprobe/tcp_close")
 int kretprobe__tcp_close_clean_protocols(struct pt_regs *ctx) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
 
-    conn_tuple_t *tup_ptr = (conn_tuple_t*) bpf_map_lookup_elem(&tcp_close_args, &pid_tgid);
+    conn_tuple_t *tup_ptr = (conn_tuple_t *)bpf_map_lookup_elem(&tcp_close_args, &pid_tgid);
     if (tup_ptr) {
         clean_protocol_classification(tup_ptr);
         bpf_map_delete_elem(&tcp_close_args, &pid_tgid);
@@ -440,7 +443,6 @@ int kretprobe__ip6_make_skb(struct pt_regs *ctx) {
 
 #endif // !COMPILE_RUNTIME || FEATURE_UDPV6_ENABLED
 
-
 static __always_inline u32 fl4_saddr(struct flowi4 *fl4) {
     u32 addr = 0;
 #ifdef COMPILE_PREBUILT
@@ -548,7 +550,7 @@ int kprobe__ip_make_skb(struct pt_regs *ctx) {
     struct flowi4 *fl4 = (struct flowi4 *)PT_REGS_PARM2(ctx);
 #if defined(COMPILE_PREBUILT) || defined(COMPILE_CORE) || (defined(COMPILE_RUNTIME) && LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0))
     unsigned int flags = PT_REGS_PARM10(ctx);
-    if (flags&MSG_SPLICE_PAGES && udp_send_page_enabled()) {
+    if (flags & MSG_SPLICE_PAGES && udp_send_page_enabled()) {
         return 0;
     }
 #endif
@@ -600,18 +602,18 @@ int kretprobe__ip_make_skb(struct pt_regs *ctx) {
     return handle_ip_skb(sk, size, fl4);
 }
 
-#define handle_udp_recvmsg(sk, msg, flags, udp_sock_map)                \
-    do {                                                                \
-        log_debug("kprobe/udp_recvmsg: flags: %x", flags);            \
-        if (flags & MSG_PEEK) {                                         \
-            return 0;                                                   \
-        }                                                               \
-                                                                        \
+#define handle_udp_recvmsg(sk, msg, flags, udp_sock_map)                                                 \
+    do {                                                                                                 \
+        log_debug("kprobe/udp_recvmsg: flags: %x", flags);                                               \
+        if (flags & MSG_PEEK) {                                                                          \
+            return 0;                                                                                    \
+        }                                                                                                \
+                                                                                                         \
         /* keep track of non-peeking calls, since skb_free_datagram_locked doesn't have that argument */ \
-        u64 pid_tgid = bpf_get_current_pid_tgid();                      \
-        udp_recv_sock_t t = { .sk = sk, .msg = msg };                   \
-        bpf_map_update_with_telemetry(udp_sock_map, &pid_tgid, &t, BPF_ANY); \
-        return 0;                                                       \
+        u64 pid_tgid = bpf_get_current_pid_tgid();                                                       \
+        udp_recv_sock_t t = { .sk = sk, .msg = msg };                                                    \
+        bpf_map_update_with_telemetry(udp_sock_map, &pid_tgid, &t, BPF_ANY);                             \
+        return 0;                                                                                        \
     } while (0);
 
 SEC("kprobe/udp_recvmsg")
@@ -807,7 +809,6 @@ int kprobe__skb_consume_udp(struct pt_regs *ctx) {
     return handle_skb_consume_udp(sk, skb, len);
 }
 
-
 #ifdef COMPILE_PREBUILT
 
 SEC("kprobe/tcp_retransmit_skb")
@@ -882,12 +883,12 @@ int kretprobe__tcp_retransmit_skb(struct pt_regs *ctx) {
     if (args == NULL) {
         return 0;
     }
-    struct sock* sk = args->sk;
+    struct sock *sk = args->sk;
     u32 retrans_out_pre = args->retrans_out_pre;
     bpf_map_delete_elem(&pending_tcp_retransmit_skb, &tid);
     u32 retrans_out = 0;
     BPF_CORE_READ_INTO(&retrans_out, tcp_sk(sk), retrans_out);
-    return handle_retransmit(sk, retrans_out-retrans_out_pre);
+    return handle_retransmit(sk, retrans_out - retrans_out_pre);
 }
 
 #endif // COMPILE_CORE || COMPILE_RUNTIME
@@ -979,6 +980,9 @@ static __always_inline int handle_udp_destroy_sock(void *ctx, struct sock *skp) 
 
     __u16 lport = 0;
     if (valid_tuple) {
+        if (tup.sport == 3306 || tup.dport == 3306) {
+            log_debug("TLS: MySQL connection closed and batched");
+        }
         cleanup_conn(ctx, &tup, skp);
         lport = tup.sport;
     } else {
@@ -1054,13 +1058,13 @@ int kretprobe__inet6_bind(struct pt_regs *ctx) {
 // Represents the parameters being passed to the tracepoint net/net_dev_queue
 struct net_dev_queue_ctx {
     u64 unused;
-    struct sk_buff* skb;
+    struct sk_buff *skb;
 };
 
-static __always_inline struct sock* sk_buff_sk(struct sk_buff *skb) {
-    struct sock * sk = NULL;
+static __always_inline struct sock *sk_buff_sk(struct sk_buff *skb) {
+    struct sock *sk = NULL;
 #ifdef COMPILE_PREBUILT
-    bpf_probe_read(&sk, sizeof(struct sock*), (char*)skb + offset_sk_buff_sock());
+    bpf_probe_read(&sk, sizeof(struct sock *), (char *)skb + offset_sk_buff_sock());
 #elif defined(COMPILE_CORE) || defined(COMPILE_RUNTIME)
     BPF_CORE_READ_INTO(&sk, skb, sk);
 #endif
@@ -1069,12 +1073,12 @@ static __always_inline struct sock* sk_buff_sk(struct sk_buff *skb) {
 }
 
 SEC("tracepoint/net/net_dev_queue")
-int tracepoint__net__net_dev_queue(struct net_dev_queue_ctx* ctx) {
-    struct sk_buff* skb = ctx->skb;
+int tracepoint__net__net_dev_queue(struct net_dev_queue_ctx *ctx) {
+    struct sk_buff *skb = ctx->skb;
     if (!skb) {
         return 0;
     }
-    struct sock* sk = sk_buff_sk(skb);
+    struct sock *sk = sk_buff_sk(skb);
     if (!sk) {
         return 0;
     }
@@ -1085,7 +1089,7 @@ int tracepoint__net__net_dev_queue(struct net_dev_queue_ctx* ctx) {
         return 0;
     }
 
-    if (!(skb_tup.metadata&CONN_TYPE_TCP)) {
+    if (!(skb_tup.metadata & CONN_TYPE_TCP)) {
         return 0;
     }
 
