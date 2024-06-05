@@ -489,32 +489,41 @@ func GetRtLoader() *C.rtloader_t {
 
 func trackGILUtilization() {
 	utilization := telemetry.NewSimpleGauge("python", "gil_utilization", "Ratio of time spent with the GIL locked vs unlocked. This is a proxy for python runtime utilization")
-	log.Errorf("Initialized the gil utilization tlm")
 
 	go func() {
-		const sampleInterval = 100 * time.Millisecond // Sample 10 times per second
-		const sampleCount = 100                       // Use 100 samples for averaging
-
-		samples := make([]int, sampleCount)
-		idx := 0
+		const sampleInterval = 100 * time.Millisecond                 // Sample 10 times per second
+		const movingAveragePeriod = 10 * time.Second                  // Moving average period
+		const sampleCount = int(movingAveragePeriod / sampleInterval) // Number of samples in the moving average period
 
 		ticker := time.NewTicker(sampleInterval)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			gilState := int(C.get_gil_state(rtloader))
-			samples[idx] = gilState
-			idx = (idx + 1) % sampleCount
+		samples := make([]float64, 0, sampleCount)
 
-			// Calculate the average GIL utilization
-			sum := 0
-			for _, sample := range samples {
-				sum += sample
+		for range ticker.C {
+			// original idea: poll to check if the gil is locked
+			// new idea: attempt to grab the lock, and then check how long we wait for it.
+			start := time.Now()
+			state := C.ensure_gil(rtloader)
+			elapsed := time.Since(start).Seconds()
+			C.release_gil(rtloader, state)
+
+			currentUtilization := elapsed / sampleInterval.Seconds()
+			// Add the current utilization to the samples and ensure the samples length doesn't exceed sampleCount
+			if len(samples) >= sampleCount {
+				samples = samples[1:]
 			}
-			avgUtilization := float64(sum) / float64(sampleCount)
+			samples = append(samples, currentUtilization)
+
+			// Calculate the moving average utilization
+			sumUtilization := 0.0
+			for _, sample := range samples {
+				sumUtilization += sample
+			}
+			// TODO there's a bug in this implementation where the resulting value is sometimes >1. not sure why
+			avgUtilization := sumUtilization / float64(len(samples))
 
 			// Update the utilization metric
-			log.Errorf("Setting utilization to %f (most recent state was %d)", avgUtilization, gilState)
 			utilization.Set(avgUtilization)
 		}
 	}()
