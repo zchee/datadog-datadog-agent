@@ -459,6 +459,8 @@ func Initialize(paths ...string) error {
 	pyInfo := C.get_py_info(rtloader)
 	glock.unlock()
 
+	trackGILUtilization()
+
 	// store the Python version after killing \n chars within the string
 	if pyInfo != nil {
 		PythonVersion = strings.Replace(C.GoString(pyInfo.version), "\n", "", -1)
@@ -480,6 +482,42 @@ func Initialize(paths ...string) error {
 // tooling, use the rtloader_t struct at your own risk
 func GetRtLoader() *C.rtloader_t {
 	return rtloader
+}
+
+// implement rtloader.get_gil_state
+//     if (PyGILState_Check()) {
+
+func trackGILUtilization() {
+	utilization := telemetry.NewSimpleGauge("python", "gil_utilization", "Ratio of time spent with the GIL locked vs unlocked. This is a proxy for python runtime utilization")
+	log.Errorf("Initialized the gil utilization tlm")
+
+	go func() {
+		const sampleInterval = 100 * time.Millisecond // Sample 10 times per second
+		const sampleCount = 100                       // Use 100 samples for averaging
+
+		samples := make([]int, sampleCount)
+		idx := 0
+
+		ticker := time.NewTicker(sampleInterval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			gilState := int(C.get_gil_state(rtloader))
+			samples[idx] = gilState
+			idx = (idx + 1) % sampleCount
+
+			// Calculate the average GIL utilization
+			sum := 0
+			for _, sample := range samples {
+				sum += sample
+			}
+			avgUtilization := float64(sum) / float64(sampleCount)
+
+			// Update the utilization metric
+			log.Errorf("Setting utilization to %f (most recent state was %d)", avgUtilization, gilState)
+			utilization.Set(avgUtilization)
+		}
+	}()
 }
 
 func initPymemTelemetry() {

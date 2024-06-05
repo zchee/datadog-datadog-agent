@@ -632,3 +632,11 @@ void get_pymem_stats(rtloader_t *rtloader, pymem_stats_t *stats)
     }
     AS_TYPE(RtLoader, rtloader)->getPymemStats(*stats);
 }
+
+/*
+ * gil tracking API
+ */
+int get_gil_state(rtloader_t *rtloader)
+{
+    return AS_TYPE(RtLoader, rtloader)->getGilState();
+}

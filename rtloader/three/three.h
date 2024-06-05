@@ -115,6 +115,7 @@ public:
 
     void initPymemStats();
     void getPymemStats(pymem_stats_t &);
+    int getGilState();
 
     // _util API
     virtual void setSubprocessOutputCb(cb_get_subprocess_output_t);

@@ -990,6 +990,14 @@ void Three::setObfuscateMongoDBStringCb(cb_obfuscate_mongodb_string_t cb)
     _set_obfuscate_mongodb_string_cb(cb);
 }
 
+int Three::getGilState()
+{
+    if (PyGILState_Check()) {
+        return 1;
+    }
+    return 0;
+}
+
 // Python Helpers
 
 // get_integration_list return a list of every datadog's wheels installed.
