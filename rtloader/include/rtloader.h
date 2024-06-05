@@ -469,15 +469,6 @@ public:
     {
     }
 
-    //! getGilState member.
-    /*!
-      Return whether or not the GIL is currently held
-    */
-    virtual int getGilState()
-    {
-        return 0;
-    }
-
     //! setObfuscateMongoDBStringCb member.
     /*!
       \param A cb_obfuscate_mongodb_string_t function pointer to the CGO callback.

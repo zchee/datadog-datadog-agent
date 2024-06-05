@@ -643,12 +643,6 @@ DATADOG_AGENT_RTLOADER_API void init_pymem_stats(rtloader_t *);
 */
 DATADOG_AGENT_RTLOADER_API void get_pymem_stats(rtloader_t *, pymem_stats_t *);
 
-/*! \fn int get_gil_state(rtloader_t *)
-    \brief Returns 0 or 1 based on whether or not the GIL is held at this exact point in time.
-    \param rtloader A pointer to the RtLoader instance.
-*/
-DATADOG_AGENT_RTLOADER_API int get_gil_state(rtloader_t *);
-
 /*! \fn void set_obfuscate_mongodb_string_cb(rtloader_t *, cb_obfuscate_mongodb_string_t)
     \brief Sets a callback to be used by rtloader to allow retrieving a value for a given
     check instance.
