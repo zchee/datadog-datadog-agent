@@ -12,7 +12,7 @@ import re
 import shutil
 import sys
 import tempfile
-from distutils.dir_util import copy_tree
+#from distutils.dir_util import copy_tree
 
 from invoke import task
 from invoke.exceptions import Exit, ParseError
@@ -225,8 +225,8 @@ def refresh_assets(_, build_tags, development=True, flavor=AgentFlavor.base.name
     os.mkdir(dist_folder)
 
     if "python" in build_tags:
-        copy_tree("./cmd/agent/dist/checks/", os.path.join(dist_folder, "checks"))
-        copy_tree("./cmd/agent/dist/utils/", os.path.join(dist_folder, "utils"))
+        shutil.copytree("./cmd/agent/dist/checks/", os.path.join(dist_folder, "checks"))
+        shutil.copytree("./cmd/agent/dist/utils/", os.path.join(dist_folder, "utils"))
         shutil.copy("./cmd/agent/dist/config.py", os.path.join(dist_folder, "config.py"))
     if not flavor.is_iot():
         shutil.copy("./cmd/agent/dist/dd-agent", os.path.join(dist_folder, "dd-agent"))
@@ -241,7 +241,7 @@ def refresh_assets(_, build_tags, development=True, flavor=AgentFlavor.base.name
 
     for check in AGENT_CORECHECKS if not flavor.is_iot() else IOT_AGENT_CORECHECKS:
         check_dir = os.path.join(dist_folder, f"conf.d/{check}.d/")
-        copy_tree(f"./cmd/agent/dist/conf.d/{check}.d/", check_dir)
+        shutil.copytree(f"./cmd/agent/dist/conf.d/{check}.d/", check_dir)
     if "apm" in build_tags:
         shutil.copy("./cmd/agent/dist/conf.d/apm.yaml.default", os.path.join(dist_folder, "conf.d/apm.yaml.default"))
     if "process" in build_tags:
@@ -250,9 +250,9 @@ def refresh_assets(_, build_tags, development=True, flavor=AgentFlavor.base.name
             os.path.join(dist_folder, "conf.d/process_agent.yaml.default"),
         )
 
-    copy_tree("./cmd/agent/gui/views", os.path.join(dist_folder, "views"))
+    shutil.copytree("./cmd/agent/gui/views", os.path.join(dist_folder, "views"))
     if development:
-        copy_tree("./dev/dist/", dist_folder)
+        shutil.copytree("./dev/dist/", dist_folder)
 
 
 @task
