@@ -210,7 +210,9 @@ func (w *Watcher) Start() {
 			// Iterate over the rule, and look for a match.
 			for _, r := range w.rules {
 				if r.Re.MatchString(path) {
-					_ = w.registry.Register(path, uint32(pid), r.RegisterCB, r.UnregisterCB)
+					if err := w.registry.Register(path, uint32(pid), r.RegisterCB, r.UnregisterCB); err != nil && strings.Contains(err.Error(), "denied") {
+						log.Debugf("openssl monitoring denied for pid %d; error %s", pid, err)
+					}
 					break
 				}
 			}
@@ -267,7 +269,9 @@ func (w *Watcher) Start() {
 				for _, r := range w.rules {
 					if r.Re.Match(path) {
 						w.libMatches.Add(1)
-						_ = w.registry.Register(string(path), lib.Pid, r.RegisterCB, r.UnregisterCB)
+						if err := w.registry.Register(string(path), lib.Pid, r.RegisterCB, r.UnregisterCB); err != nil && strings.Contains(err.Error(), "denied") {
+							log.Debugf("openssl monitoring denied for pid %d; error %s", lib.Pid, err)
+						}
 						break
 					}
 				}
