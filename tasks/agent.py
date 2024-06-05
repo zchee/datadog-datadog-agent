@@ -12,7 +12,6 @@ import re
 import shutil
 import sys
 import tempfile
-#from distutils.dir_util import copy_tree
 
 from invoke import task
 from invoke.exceptions import Exit, ParseError
@@ -37,6 +36,10 @@ from .utils import (
     has_both_python,
     load_release_versions,
 )
+
+# from distutils.dir_util import copy_tree
+
+
 
 # constants
 BIN_PATH = os.path.join(".", "bin", "agent")

@@ -6,7 +6,6 @@ Dogstatsd tasks
 import os
 import shutil
 import sys
-#from distutils.dir_util import copy_tree
 
 from invoke import task
 from invoke.exceptions import Exit
@@ -23,6 +22,10 @@ from .utils import (
     get_version_numeric_only,
     load_release_versions,
 )
+
+# from distutils.dir_util import copy_tree
+
+
 
 # constants
 DOGSTATSD_BIN_PATH = os.path.join(".", "bin", "dogstatsd")

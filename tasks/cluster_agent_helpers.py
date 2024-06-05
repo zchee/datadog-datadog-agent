@@ -4,10 +4,12 @@ Common utilities for building Cluster Agent variants
 
 import os
 import shutil
-#from distutils.dir_util import copy_tree
 
 from .build_tags import filter_incompatible_tags, get_build_tags
 from .utils import REPO_PATH, bin_name, get_build_flags, get_version
+
+# from distutils.dir_util import copy_tree
+
 
 
 def build_common(
