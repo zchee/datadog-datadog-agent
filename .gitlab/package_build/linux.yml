@@ -73,6 +73,15 @@
     PYTHON_RUNTIMES: "3"
   before_script:
     - export RELEASE_VERSION=$RELEASE_VERSION_7
+    - export GOCACHE=$CI_PROJECT_DIR/.go-cache
+  cache:
+    - paths:
+      - $CI_PROJECT_DIR/.go-cache
+      key:
+        files:
+          - ./**/go.mod
+        prefix: $CI_JOB_NAME
+
 
 # build Agent 6 binaries for x86_64
 datadog-agent-6-x64:
