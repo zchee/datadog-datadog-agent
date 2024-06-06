@@ -218,11 +218,6 @@ if do_build
   # Datadog agent
   dependency 'datadog-agent'
 
-  # System-probe
-  if linux_target? && !heroku_target?
-    dependency 'system-probe'
-  end
-
   if osx_target?
     dependency 'datadog-agent-mac-app'
   end
