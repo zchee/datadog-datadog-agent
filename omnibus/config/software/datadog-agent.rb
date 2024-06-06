@@ -65,6 +65,11 @@ build do
     env["GOMODCACHE"] = gomodcache.to_path
   end
 
+  unless ENV["OMNIBUS_GOCACHE"].nil? || ENV["OMNIBUS_GOCACHE"].empty?
+    gomodcache = Pathname.new(ENV["OMNIBUS_GOCACHE"])
+    env["GOCACHE"] = gomodcache.to_path
+  end
+
   # include embedded path (mostly for `pkg-config` binary)
   env = with_embedded_path(env)
 

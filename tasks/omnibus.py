@@ -85,6 +85,7 @@ def get_omnibus_env(
     hardened_runtime=False,
     system_probe_bin=None,
     go_mod_cache=None,
+    go_build_cache=None,
     flavor=AgentFlavor.base,
     pip_config_file="pip.conf",
 ):
@@ -96,6 +97,13 @@ def get_omnibus_env(
 
     if go_mod_cache:
         env['OMNIBUS_GOMODCACHE'] = go_mod_cache
+
+    # If the host has a GOCACHE set, try to reuse it
+    if not go_build_cache and os.environ.get('GOCACHE'):
+        go_mod_cache = os.environ.get('GOCACHE')
+
+    if go_mod_cache:
+        env['OMNIBUS_GOCACHE'] = go_mod_cache
 
     if int(major_version) > 6:
         env['OMNIBUS_OPENSSL_SOFTWARE'] = 'openssl3'
