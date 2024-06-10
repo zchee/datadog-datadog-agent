@@ -804,20 +804,6 @@ func hashMapNumberOfEntriesWithBatch(mp *ebpf.Map, buffers *entryCountBuffers, m
 
 			// Keep track the keys of the first batch so we can look them up later to see if we got restarted
 			buffers.firstBatchKeys.load(buffers.keys, int(attr.Count))
-		} else if (errno == 0 || errno == unix.ENOENT) && totalCount > 0 {
-			// We got a batch and it's not the first one. Check against the keys received in the first batch
-			// to see if we got an iteration restart. We have to do this even when we get to the end of the
-			// map (indicated by the return code ENOENT): for example, if we're in between batches and enough
-			// entries are deleted from the map so that the total number of entries is below our batch size,
-			// we would get a restart, and then all of the entries in a single batch: we would need to update
-			// the counts to get to that situation.
-			if buffers.firstBatchKeys.containsAny(buffers.keys, int(attr.Count)) {
-				// We got a restart, reset the counters and start from this batch as if it were the first
-				buffers.firstBatchKeys.load(buffers.keys, int(attr.Count))
-				restarts++
-				totalCount = int64(attr.Count)
-				continue
-			}
 		}
 		totalCount += int64(attr.Count)
 
