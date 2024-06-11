@@ -31,8 +31,11 @@ build do
   if heroku_target?
     bundled_agents = ["process-agent"]
   end
+  # if linux_target?
+  #   bundled_agents = ["process-agent", "security-agent", "system-probe"]
+  # end
   if linux_target?
-    bundled_agents = ["process-agent", "security-agent", "system-probe"]
+    bundled_agents = ["security-agent"]
   end
   
   # set GOPATH on the omnibus source dir for this software
