@@ -4,6 +4,7 @@
 #include "ktypes.h"
 
 #include "ip.h"
+#include "sock.h"
 
 #include "protocols/classification/defs.h"
 #include "protocols/classification/maps.h"
@@ -33,6 +34,24 @@ __maybe_unused static __always_inline protocol_prog_t protocol_to_program(protoc
             log_debug("protocol doesn't have a matching program: %d", proto);
         }
         return PROG_UNKNOWN;
+    }
+}
+
+__maybe_unused static __always_inline kprobe_prog_t kprobe_protocol_to_program(protocol_t proto) {
+    switch(proto) {
+    case PROTOCOL_HTTP:
+        return KPROBE_HTTP_PROCESS;
+    case PROTOCOL_HTTP2:
+        return KPROBE_HTTP2_FIRST_FRAME;
+    case PROTOCOL_KAFKA:
+        return KPROBE_KAFKA;
+    case PROTOCOL_POSTGRES:
+        return KPROBE_POSTGRES;
+    default:
+        if (proto != PROTOCOL_UNKNOWN) {
+            log_debug("protocol doesn't have a matching kprobe program: %d", proto);
+        }
+        return KPROBE_PROG_UNKNOWN;
     }
 }
 
@@ -89,6 +108,103 @@ static __always_inline void dispatcher_delete_protocol_stack(conn_tuple_t *tuple
     delete_protocol_stack(tuple, stack, FLAG_SOCKET_FILTER_DELETION);
     if (flipped) {
         flip_tuple(tuple);
+    }
+}
+
+static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs *ctx, struct sock *sock, const void *buffer, size_t bytes) {
+    conn_tuple_t tup = {0};
+
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+
+    if (!read_conn_tuple(&tup, sock, pid_tgid, CONN_TYPE_TCP)) {
+        log_debug("kprobe_protoco: could not read conn tuple");
+        return;
+    }
+
+    // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
+    // if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
+    //     return;
+    // }
+
+    // bool tcp_termination = is_tcp_termination(&skb_info);
+    // // We don't process non tcp packets, nor empty tcp packets which are not tcp termination packets.
+    // if (!is_tcp(&skb_tup) || (is_payload_empty(&skb_info) && !tcp_termination)) {
+    //     return;
+    // }
+
+    // Making sure we've not processed the same tcp segment, which can happen when a single packet travels different
+    // interfaces.
+    // if (has_sequence_seen_before(&skb_tup, &skb_info)) {
+    //     return;
+    // }
+
+    // if (tcp_termination) {
+    //     bpf_map_delete_elem(&connection_states, &skb_tup);
+    // }
+
+    protocol_stack_t *stack = get_protocol_stack(&tup);
+    if (!stack) {
+        // should never happen, but it is required by the eBPF verifier
+        return;
+    }
+
+    // This is used to signal the tracer program that this protocol stack
+    // is also shared with our USM program for the purposes of deletion.
+    // For more context refer to the comments in `delete_protocol_stack`
+    stack->flags |= FLAG_USM_ENABLED;
+
+    protocol_t cur_fragment_protocol = get_protocol_from_stack(stack, LAYER_APPLICATION);
+    if (0 /* tcp_termination */) {
+        dispatcher_delete_protocol_stack(&tup, stack);
+    } else if (is_protocol_layer_known(stack, LAYER_ENCRYPTION)) {
+        // If we have a TLS connection and we're not in the middle of a TCP termination, we can skip the packet.
+        return;
+    }
+
+    if (cur_fragment_protocol == PROTOCOL_UNKNOWN) {
+        log_debug("[kprobe_protocol_dispatcher_entrypoint]: %p was not classified", sock);
+        char request_fragment[CLASSIFICATION_MAX_BUFFER];
+        bpf_memset(request_fragment, 0, sizeof(request_fragment));
+        read_into_kernel_buffer_for_classification((char *)request_fragment, buffer);
+        const size_t final_fragment_size = bytes < CLASSIFICATION_MAX_BUFFER ? bytes : CLASSIFICATION_MAX_BUFFER;
+        classify_protocol_for_dispatcher(&cur_fragment_protocol, &tup, request_fragment, final_fragment_size);
+        if (is_kafka_monitoring_enabled() && cur_fragment_protocol == PROTOCOL_UNKNOWN) {
+            const __u32 zero = 0;
+            kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
+            if (args == NULL) {
+                return;
+            }
+            *args = (kprobe_dispatcher_arguments_t){
+                .tup = tup,
+                .buffer_ptr = buffer,
+                .data_end = bytes,
+                .data_off = 0,
+            };
+            bpf_tail_call_compat(ctx, &kprobe_dispatcher_classification_progs, KPROBE_DISPATCHER_KAFKA_PROG);
+        }
+        log_debug("[kprobe_protocol_dispatcher_entrypoint]: %p Classifying protocol as: %d", sock, cur_fragment_protocol);
+        // If there has been a change in the classification, save the new protocol.
+        if (cur_fragment_protocol != PROTOCOL_UNKNOWN) {
+            set_protocol(stack, cur_fragment_protocol);
+        }
+    }
+
+    if (cur_fragment_protocol != PROTOCOL_UNKNOWN) {
+        // dispatch if possible
+        const u32 zero = 0;
+        kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
+        if (args == NULL) {
+            log_debug("dispatcher failed to save arguments for tail call");
+            return;
+        }
+
+        bpf_memset(args, 0, sizeof(*args));
+        bpf_memcpy(&args->tup, &tup, sizeof(conn_tuple_t));
+        args->buffer_ptr = buffer;
+        args->data_end = bytes;
+
+        log_debug("kprobe_dispatching to protocol number: %d", cur_fragment_protocol);
+        bpf_tail_call_compat(ctx, &kprobe_protocols_progs, kprobe_protocol_to_program(cur_fragment_protocol));
     }
 }
 
@@ -170,6 +286,45 @@ static __always_inline void protocol_dispatcher_entrypoint(struct __sk_buff *skb
         log_debug("dispatching to protocol number: %d", cur_fragment_protocol);
         bpf_tail_call_compat(skb, &protocols_progs, protocol_to_program(cur_fragment_protocol));
     }
+}
+
+static __always_inline void kprobe_dispatch_kafka(struct pt_regs *ctx)
+{
+    log_debug("kprobe_dispatch_kafka");
+
+    const __u32 zero = 0;
+    kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
+    if (args == NULL) {
+        return;
+    }
+
+    char request_fragment[CLASSIFICATION_MAX_BUFFER];
+    bpf_memset(request_fragment, 0, sizeof(request_fragment));
+
+    // char *request_fragment = bpf_map_lookup_elem(&tls_classification_heap, &zero);
+    // if (request_fragment == NULL) {
+    //     return;
+    // }
+
+    conn_tuple_t normalized_tuple = args->tup;
+    normalize_tuple(&normalized_tuple);
+    normalized_tuple.pid = 0;
+    normalized_tuple.netns = 0;
+
+    read_into_kernel_buffer_for_classification(request_fragment, args->buffer_ptr);
+    bool is_kafka = kprobe_is_kafka(ctx, args, request_fragment, CLASSIFICATION_MAX_BUFFER);
+    log_debug("kprobe_dispatch_kafka: is_kafka %d", is_kafka);
+    if (!is_kafka) {
+        return;
+    }
+
+    protocol_stack_t *stack = get_protocol_stack(&normalized_tuple);
+    if (!stack) {
+        return;
+    }
+
+    set_protocol(stack, PROTOCOL_KAFKA);
+    bpf_tail_call_compat(ctx, &kprobe_protocols_progs, KPROBE_KAFKA);
 }
 
 static __always_inline void dispatch_kafka(struct __sk_buff *skb) {

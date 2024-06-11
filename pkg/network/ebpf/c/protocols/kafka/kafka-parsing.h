@@ -31,6 +31,7 @@ _Pragma( STRINGIFY(unroll(max_buffer_size)) )                                   
         }                                                                                                                                   \
     }                                                                                                                                       \
 
+#define EXTRA_DEBUG
 #ifdef EXTRA_DEBUG
 #define extra_debug(fmt, ...) log_debug("kafka: " fmt, ##__VA_ARGS__)
 #else
@@ -114,6 +115,38 @@ int uprobe__kafka_tls_filter(struct pt_regs *ctx) {
     conn_tuple_t tup = args->tup;
 
     pktbuf_t pkt = pktbuf_from_tls(ctx, args);
+
+    if (kafka_process_response(ctx, &tup, kafka, pkt, NULL)) {
+        return 0;
+    }
+
+    kafka_process(&tup, kafka, pkt, kafka_tel);
+    return 0;
+}
+
+SEC("kprobe/kafka_filter")
+int kprobe__kafka_filter(struct pt_regs *ctx) {
+    const __u32 zero = 0;
+
+    kafka_info_t *kafka = bpf_map_lookup_elem(&kafka_heap, &zero);
+    if (kafka == NULL) {
+        return 0;
+    }
+
+    kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
+    if (args == NULL) {
+        return 0;
+    }
+
+    kafka_telemetry_t *kafka_tel = bpf_map_lookup_elem(&kafka_telemetry, &zero);
+    if (kafka_tel == NULL) {
+        return 0;
+    }
+
+    // On stack for 4.14
+    conn_tuple_t tup = args->tup;
+
+    pktbuf_t pkt = pktbuf_from_kprobe(ctx, args);
 
     if (kafka_process_response(ctx, &tup, kafka, pkt, NULL)) {
         return 0;
@@ -997,6 +1030,26 @@ static __always_inline void kafka_call_response_parser(void *ctx, conn_tuple_t *
         }
         bpf_tail_call_compat(ctx, &tls_process_progs, index);
         break;
+    case PKTBUF_KPROBE:
+        switch (level) {
+        case PARSER_LEVEL_RECORD_BATCH:
+            if (api_version >= 12) {
+                index = KPROBE_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V12;
+            } else {
+                index = KPROBE_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V0;
+            }
+            break;
+        case PARSER_LEVEL_PARTITION:
+        default:
+            if (api_version >= 12) {
+                index = KPROBE_KAFKA_RESPONSE_PARTITION_PARSER_V12;
+            } else {
+                index = KPROBE_KAFKA_RESPONSE_PARTITION_PARSER_V0;
+            }
+            break;
+        }
+        bpf_tail_call_compat(ctx, &tls_process_progs, index);
+        break;
     }
 
     // The only reason we would get here if the tail call failed due to too
@@ -1262,6 +1315,45 @@ int uprobe__kafka_tls_response_record_batch_parser_v0(struct pt_regs *ctx) {
 SEC("uprobe/kafka_tls_response_record_batch_parser_v12")
 int uprobe__kafka_tls_response_record_batch_parser_v12(struct pt_regs *ctx) {
     return __uprobe__kafka_tls_response_parser(ctx, PARSER_LEVEL_RECORD_BATCH, 12, 12);
+}
+
+static __always_inline int __kprobe__kafka_response_parser(struct pt_regs *ctx, enum parser_level level, u32 min_api_version, u32 max_api_version) {
+    const __u32 zero = 0;
+    kafka_info_t *kafka = bpf_map_lookup_elem(&kafka_heap, &zero);
+    if (kafka == NULL) {
+        return 0;
+    }
+
+    kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
+    if (args == NULL) {
+        return 0;
+    }
+
+    // Put tuple on stack for 4.14.
+    conn_tuple_t tup = args->tup;
+    kafka_response_parser(kafka, ctx, &tup, pktbuf_from_kprobe(ctx, args), level, min_api_version, max_api_version);
+
+    return 0;
+}
+
+SEC("kprobe/kafka_response_partition_parser_v0")
+int kprobe__kafka_response_partition_parser_v0(struct pt_regs *ctx) {
+    return __kprobe__kafka_response_parser(ctx, PARSER_LEVEL_PARTITION, 0, 11);
+}
+
+SEC("kprobe/kafka_response_partition_parser_v12")
+int kprobe__kafka_response_partition_parser_v12(struct pt_regs *ctx) {
+    return __kprobe__kafka_response_parser(ctx, PARSER_LEVEL_PARTITION, 12, 12);
+}
+
+SEC("kprobe/kafka_tls_response_record_batch_parser_v0")
+int kprobe__kafka_response_record_batch_parser_v0(struct pt_regs *ctx) {
+    return __kprobe__kafka_response_parser(ctx, PARSER_LEVEL_RECORD_BATCH, 0, 11);
+}
+
+SEC("kprobe/kafka_tls_response_record_batch_parser_v12")
+int kprobe__kafka_response_record_batch_parser_v12(struct pt_regs *ctx) {
+    return __kprobe__kafka_response_parser(ctx, PARSER_LEVEL_RECORD_BATCH, 12, 12);
 }
 
 // Gets the next expected TCP sequence in the stream, assuming

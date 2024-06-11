@@ -33,6 +33,11 @@
 // The entrypoint for all packets classification & decoding in universal service monitoring.
 SEC("socket/protocol_dispatcher")
 int socket__protocol_dispatcher(struct __sk_buff *skb) {
+    log_debug("protocl disp skb %p pkt_type %u", skb, skb->pkt_type);
+    if (skb->pkt_type != 4) {
+        return 0;
+    }
+
     protocol_dispatcher_entrypoint(skb);
     return 0;
 }
@@ -53,11 +58,79 @@ int uprobe__tls_protocol_dispatcher_kafka(struct pt_regs *ctx) {
     return 0;
 };
 
+SEC("kprobe/protocol_dispatcher_kafka")
+int kprobe__protocol_dispatcher_kafka(struct pt_regs *ctx) {
+    kprobe_dispatch_kafka(ctx);
+    return 0;
+};
+
 SEC("kprobe/tcp_sendmsg")
 int BPF_KPROBE(kprobe__tcp_sendmsg, struct sock *sk) {
     log_debug("kprobe/tcp_sendmsg: sk=%p", sk);
     // map connection tuple during SSL_do_handshake(ctx)
     map_ssl_ctx_to_sock(sk);
+
+    return 0;
+}
+
+SEC("kprobe/tcp_recvmsg")
+int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t len, int flags) {
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+
+    log_debug("kprobe/tcp_recvmsg: sk=%p msghdr=%p!\n", sk, msg);
+    log_debug("kprobe/tcp_recvmsg: len=%lu\n", len);
+
+    tcp_kprobe_state_t state = {
+        .sock = sk,
+    };
+    bpf_map_update_with_telemetry(tcp_kprobe_state, &pid_tgid, &state, BPF_ANY);
+
+    // map connection tuple during SSL_do_handshake(ctx)
+    map_ssl_ctx_to_sock(sk);
+
+    return 0;
+}
+
+SEC("kretprobe/tcp_recvmsg")
+int BPF_KRETPROBE(kretprobe__tcp_recvmsg) {
+    log_debug("kretprobe/tcp_recvmsg");
+
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    bpf_map_delete_elem(&tcp_kprobe_state, &pid_tgid);
+
+    return 0;
+}
+
+SEC("kprobe/simple_copy_to_iter")
+int BPF_KPROBE(kprobe__simple_copy_to_iter, const void *addr, size_t bytes) {
+    bpf_printk("kprobe/simple_copy_to_iter addr=%p bytes=%lu\n", addr, bytes);
+
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    tcp_kprobe_state_t *state = bpf_map_lookup_elem(&tcp_kprobe_state, &pid_tgid);
+    if (!state) {
+        log_debug("kprobe/simple_copy_to_iter no state");
+        return 0;
+    }
+
+    state->buffer = addr;
+    log_debug("kprobe/simple_copy_to_iter found state");
+
+    return 0;
+}
+
+SEC("kretprobe/simple_copy_to_iter")
+int BPF_KRETPROBE(kretprobe__simple_copy_to_iter, size_t bytes) {
+    log_debug("kretprobe/simple_copy_to_iter");
+
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    tcp_kprobe_state_t *state = bpf_map_lookup_elem(&tcp_kprobe_state, &pid_tgid);
+    if (!state) {
+        log_debug("kretprobe/simple_copy_to_iter no state");
+        return 0;
+    }
+
+    log_debug("kretprobe/simple_copy_to_iter found state");
+    kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, bytes);
 
     return 0;
 }

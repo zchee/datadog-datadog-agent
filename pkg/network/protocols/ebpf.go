@@ -35,6 +35,14 @@ const (
 	TLSDispatcherKafkaProg TLSDispatcherProgramType = C.TLS_DISPATCHER_KAFKA_PROG
 )
 
+// KprobeDispatcherProgramType is a C type to represent the eBPF programs used for TLS tail calls.
+type KprobeDispatcherProgramType C.tls_dispatcher_prog_t
+
+const (
+	// TLSDispatcherKafkaProg is the Golang representation of the C.TLS_DISPATCHER_KAFKA_PROG enum.
+	KprobeDispatcherKafkaProg TLSDispatcherProgramType = C.KPROBE_DISPATCHER_KAFKA_PROG
+)
+
 // ProgramType is a C type to represent the eBPF programs used for tail calls.
 type ProgramType C.protocol_prog_t
 
@@ -61,6 +69,16 @@ const (
 	ProgramKafkaResponseRecordBatchParserV0 ProgramType = C.PROG_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V0
 	// ProgramKafkaResponseRecordBatchParserV12 is the Golang representation of the C.PROG_KAFKA_RESPONSE_RECORD_BATCH_PARSER_v0 enum
 	ProgramKafkaResponseRecordBatchParserV12 ProgramType = C.PROG_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V12
+	// ProgramKafka is the Golang representation of the C.PROG_KAFKA enum
+	ProgramKprobeKafka ProgramType = C.KPROBE_KAFKA
+	// ProgramKafkaResponsePartitionParserV0 is the Golang representation of the C.PROG_KAFKA_RESPONSE_PARTITION_PARSER_v0 enum
+	ProgramKprobeKafkaResponsePartitionParserV0 ProgramType = C.KPROBE_KAFKA_RESPONSE_PARTITION_PARSER_V0
+	// ProgramKafkaResponsePartitionParserV12 is the Golang representation of the C.PROG_KAFKA_RESPONSE_PARTITION_PARSER_v0 enum
+	ProgramKprobeKafkaResponsePartitionParserV12 ProgramType = C.KPROBE_KAFKA_RESPONSE_PARTITION_PARSER_V12
+	// ProgramKafkaResponseRecordBatchParserV0 is the Golang representation of the C.PROG_KAFKA_RESPONSE_RECORD_BATCH_PARSER_v0 enum
+	ProgramKprobeKafkaResponseRecordBatchParserV0 ProgramType = C.KPROBE_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V0
+	// ProgramKafkaResponseRecordBatchParserV12 is the Golang representation of the C.PROG_KAFKA_RESPONSE_RECORD_BATCH_PARSER_v0 enum
+	ProgramKprobeKafkaResponseRecordBatchParserV12 ProgramType = C.KPROBE_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V12
 	// ProgramPostgres is the Golang representation of the C.PROG_POSTGRES enum
 	ProgramPostgres ProgramType = C.PROG_POSTGRES
 	// ProgramPostgresParseMessage is the Golang representation of the C.PROG_POSTGRES_PROCESS_PARSE_MESSAGE enum
