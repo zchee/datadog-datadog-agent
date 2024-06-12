@@ -119,6 +119,7 @@ func applyAdditionalField(flow *common.Flow, destination string, fieldValue any)
 		setInt(&flow.SrcMac, fieldValue)
 	case "source.mask":
 		setInt(&flow.SrcMask, fieldValue)
+	// JMW case "source.rdns.domain":   NO - cuz it's not an additional field, its an enrichment
 	case "destination.ip":
 		setBytes(&flow.DstAddr, fieldValue)
 	case "destination.port":
@@ -129,6 +130,7 @@ func applyAdditionalField(flow *common.Flow, destination string, fieldValue any)
 		setInt(&flow.DstMac, fieldValue)
 	case "destination.mask":
 		setInt(&flow.DstMask, fieldValue)
+	// JMW case "destination.rdns.domain":  NO - cuz it's not an additional field, its an enrichment
 	case "ingress.interface":
 		setInt(&flow.InputInterface, fieldValue)
 	case "egress.interface":

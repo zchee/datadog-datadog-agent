@@ -24,7 +24,7 @@ type Endpoint struct {
 	Port               string `json:"port"` // Port number can be zero/positive or `*` (ephemeral port)
 	Mac                string `json:"mac"`
 	Mask               string `json:"mask"`
-	ReverseDNSHostname string `json:"reverse_dns_hostname,omitempty"`
+	ReverseDNSHostname string `json:"reverse_dns_hostname,omitempty"` // JMWRDNS
 }
 
 // NextHop contains next hop details

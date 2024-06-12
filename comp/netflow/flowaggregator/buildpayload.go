@@ -33,18 +33,20 @@ func buildPayload(aggFlow *common.Flow, hostname string, flushTime time.Time) pa
 		EtherType:  format.EtherType(aggFlow.EtherType),
 		IPProtocol: format.IPProtocol(aggFlow.IPProtocol),
 		Source: payload.Endpoint{
-			IP:                 format.IPAddr(aggFlow.SrcAddr),
-			Port:               format.Port(aggFlow.SrcPort),
-			Mac:                format.MacAddress(aggFlow.SrcMac),
-			Mask:               format.CIDR(aggFlow.SrcAddr, aggFlow.SrcMask),
-			ReverseDNSHostname: aggFlow.SrcReverseDNSHostname,
+			IP:   format.IPAddr(aggFlow.SrcAddr),
+			Port: format.Port(aggFlow.SrcPort),
+			Mac:  format.MacAddress(aggFlow.SrcMac),
+			Mask: format.CIDR(aggFlow.SrcAddr, aggFlow.SrcMask),
+			// JMWJMW instead of adding to common.Flow, only add rDNS enrichment to payload.FlowPayload here?
+			ReverseDNSHostname: aggFlow.SrcReverseDNSHostname, // JMWRDNS
 		},
 		Destination: payload.Endpoint{
-			IP:                 format.IPAddr(aggFlow.DstAddr),
-			Port:               format.Port(aggFlow.DstPort),
-			Mac:                format.MacAddress(aggFlow.DstMac),
-			Mask:               format.CIDR(aggFlow.DstAddr, aggFlow.DstMask),
-			ReverseDNSHostname: aggFlow.DstReverseDNSHostname,
+			IP:   format.IPAddr(aggFlow.DstAddr),
+			Port: format.Port(aggFlow.DstPort),
+			Mac:  format.MacAddress(aggFlow.DstMac),
+			Mask: format.CIDR(aggFlow.DstAddr, aggFlow.DstMask),
+			// JMWJMW instead of adding to common.Flow, only add rDNS enrichment to payload.FlowPayload here?
+			ReverseDNSHostname: aggFlow.DstReverseDNSHostname, // JMWRDNS
 		},
 		Ingress: payload.ObservationPoint{
 			Interface: payload.Interface{

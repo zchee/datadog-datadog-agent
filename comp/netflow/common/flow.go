@@ -63,7 +63,7 @@ type Flow struct {
 	SrcMask uint32
 	DstMask uint32
 
-	// Reverse DNS enrichment added during Flow aggregation processing
+	// Reverse DNS enrichment added during Flow aggregation processing // JMWRDNS
 	SrcReverseDNSHostname string
 	DstReverseDNSHostname string
 
