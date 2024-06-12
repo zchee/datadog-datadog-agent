@@ -30,7 +30,7 @@ type dependencies struct {
 	Demultiplexer demultiplexer.Component
 	Forwarder     forwarder.Component
 	Hostname      hostname.Component
-	// JMWFRI can I add a rdnsCachedQuerier component?
+	// JMWCOMPONENT can I add a rdnsCachedQuerier component?
 }
 
 type provides struct {
@@ -72,9 +72,11 @@ func newServer(lc fx.Lifecycle, deps dependencies) (provides, error) { // JMWINI
 		return provides{}, err
 	}
 
+	// JMWCOMPONENT hack for now - create RDNSQuerier here and pass it along
+
 	// JMWCACHE create reverse DNS lookup cache here, pass it to flowaggregator, and have it pass it to flowaccumulator
 	// JMWOR create it outside of the netflow component so it can be shared by SNMP metadata and other components
-	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger) // JMWINIT1
+	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger, NewRDNSQuerier()) // JMWINIT1
 
 	server := &Server{
 		config:  conf,

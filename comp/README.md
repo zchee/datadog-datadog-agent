@@ -315,6 +315,8 @@ Package def is the metadata provider for security-agent process
 
 ### [comp/metadata/systemprobe](https://pkg.go.dev/github.com/DataDog/datadog-agent/comp/metadata/systemprobe)
 
+## JMWCOMPONENT 
+
 Package def is the metadata provider for system-probe process
 
 ## [comp/ndmtmp](https://pkg.go.dev/github.com/DataDog/datadog-agent/comp/ndmtmp) (Component Bundle)

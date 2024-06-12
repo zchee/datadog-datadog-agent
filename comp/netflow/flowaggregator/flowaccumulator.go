@@ -13,6 +13,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/netflow/common"
 	"github.com/DataDog/datadog-agent/comp/netflow/portrollup"
+	"github.com/DataDog/datadog-agent/comp/netflow/rdnsquerier" //JMWHACK for now
 	"go.uber.org/atomic"
 )
 
@@ -156,47 +157,11 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) { // JMW1
 		// JMWJMW but aren't defers done in reverse order?  so the lock would still be held when this is called?  Instead, can I defer a function that uses variables that aren't set until here?  OR pass callback func that can be called after the lock is released, and it will acquire the lock again?  OR if IP is in cache already then set the hostname here while we have the lock
 		// JMWFRI defer rdnscache.PreFetch(flowToAdd.SrcAddr, flowToAdd.DstAddr)
 
-		// JMWRDNS1 for the first prototype simply get the hostname synchronously here - add code timing?
-		// JMWRDNS1 rdnsCache.Get(flowToAdd.SrcAddr, callbackFuncToSetTheHostname)
 		// JMWJMW how long can the flow exist?  does it last after a flush (and get resused??)  if so do we need to always go thru the cache to see if the hostname was updated? - see JMWRDNS2, below
-		// JMWDUP
-		/* JMWMONJUNE10 take out and see if TestNetFlow_IntegrationTest_SFlow5 passes
-		if len(flowToAdd.SrcAddr) > 0  && net.IP(flowToAdd.SrcAddr).IsPrivate() {
-			srcAddr := net.IP(flowToAdd.SrcAddr).String()
-			hostnames, err := net.LookupAddr(srcAddr)
-			if (err != nil) {
-				f.logger.Warnf("JMW Failed to lookup hostname for IP address `%s`: %s", srcAddr, err)
-				// JMWTELEMETRY increment metric for failed lookups
-			} else {
-				// JMWTELEMETRY increment metric for successful lookups
-				if (len(hostnames) > 0) {
-					flowToAdd.SrcReverseDNSHostname = hostnames[0]
-				}
-				if (len(hostnames) > 1) {
-					// JMWTELEMETRY increment metric for multiple hostnames
-					// JMW trace debug too?
-				}
-			}
-		}
-		// JMWDUP
-		if len(flowToAdd.DstAddr) > 0  && net.IP(flowToAdd.DstAddr).IsPrivate() {
-			dstAddr := net.IP(flowToAdd.DstAddr).String()
-			hostnames, err := net.LookupAddr(dstAddr)
-			if (err != nil) {
-				f.logger.Warnf("JMW Failed to lookup hostname for IP address `%s`: %s", dstAddr, err)
-				// JMWTELEMETRY increment metric for failed lookups
-			} else {
-				// JMWTELEMETRY increment metric for successful lookups
-				if (len(hostnames) > 0) {
-					flowToAdd.DstReverseDNSHostname = hostnames[0]
-				}
-				if (len(hostnames) > 1) {
-					// JMWTELEMETRY increment metric for multiple hostnames
-					// JMW trace debug too?
-				}
-			}
-		}
-		*/
+		// JMWRDNS1 for the first prototype simply get the hostname synchronously here - add code timing?
+		flowToAdd.SrcReverseDNSHostname = rdnsquerier.GetHostname(flowToAdd.SrcAddr)
+		flowToAdd.DstReverseDNSHostname = rdnsquerier.GetHostname(flowToAdd.DstAddr)
+		// JMWRDNS1 rdnsCache.Get(flowToAdd.SrcAddr, callbackFuncToSetTheHostname)
 
 		// JMWTEST how to fix TestAggregator failure
 		return
@@ -205,6 +170,8 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) { // JMW1
 		// JMWRDNS2 this path is for when a flow has been flushed and a new flow comes in for the same hash - we need to do the rdns enrichment here too
 		aggFlow.flow = flowToAdd
 		// JMWRDNS2 for the first prototype simply get the hostname synchronously here - add code timing?
+		flowToAdd.SrcReverseDNSHostname = rdnsquerier.GetHostname(flowToAdd.SrcAddr)
+		flowToAdd.DstReverseDNSHostname = rdnsquerier.GetHostname(flowToAdd.DstAddr)
 		// JMWRDNS2 rdnsCache.Get(flowToAdd.SrcAddr, callbackFuncToSetTheHostname)
 	} else {
 		// use go routine for hash collision detection to avoid blocking critical path
