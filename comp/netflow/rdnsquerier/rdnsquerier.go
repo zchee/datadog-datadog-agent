@@ -38,6 +38,7 @@ func GetHostname(ipAddr []byte) string {
 	}
 	netIP := net.IP(ipAddr)
 	if !netIP.IsPrivate() {
+		fmt.Printf("JMW GetHostname() IP address `%s` is not private\n", netIP.String())
 		return ""
 	}
 
@@ -46,11 +47,12 @@ func GetHostname(ipAddr []byte) string {
 	hostnames, err := net.LookupAddr(addr)
 	if err != nil {
 		//JMWADDLOGGER f.logger.Warnf("JMW Failed to lookup hostname for IP address `%s`: %s", addr, err)
-		fmt.Printf("JMW Failed to lookup hostname for IP address `%s`: %s", addr, err)
+		fmt.Printf("JMW GetHostname() error looking up hostname for IP address `%s`: %s\n", addr, err)
 		// JMWTELEMETRY increment metric for failed lookups
 		return ""
 	} else {
-		if len(hostnames) == 0 {
+		if len(hostnames) == 0 { // JMW is this even possible?
+			fmt.Printf("JMW IP address `%s` has no match - returning empty hostname", addr)
 			// JMWTELEMETRY increment metric for no match
 			return ""
 		}
@@ -59,6 +61,7 @@ func GetHostname(ipAddr []byte) string {
 		// JMWTELEMETRY increment metric for multiple hostnames
 		// JMW trace debug too?
 		//}
+		fmt.Printf("JMW GetHostname() IP address `%s` matched - returning hostname `%s`\n", addr, hostnames[0])
 		return hostnames[0]
 	}
 }

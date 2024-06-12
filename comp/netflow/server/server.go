@@ -76,7 +76,7 @@ func newServer(lc fx.Lifecycle, deps dependencies) (provides, error) { // JMWINI
 
 	// JMWCACHE create reverse DNS lookup cache here, pass it to flowaggregator, and have it pass it to flowaccumulator
 	// JMWOR create it outside of the netflow component so it can be shared by SNMP metadata and other components
-	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger, NewRDNSQuerier()) // JMWINIT1
+	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger /*JMWNewRDNSQuerier()*/) //JMWINIT1
 
 	server := &Server{
 		config:  conf,
