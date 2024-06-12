@@ -17,8 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DataDog/opentelemetry-mapping-go/pkg/otlp/attributes"
 	"go.opentelemetry.io/collector/component/componenttest"
+
+	"github.com/DataDog/opentelemetry-mapping-go/pkg/otlp/attributes"
 
 	corecompcfg "github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/tagger"
@@ -147,6 +148,9 @@ func applyDatadogConfig(c *config.AgentConfig, core corecompcfg.Component) error
 	}
 	if core.IsSet("api_key") {
 		c.Endpoints[0].APIKey = utils.SanitizeAPIKey(coreconfig.Datadog().GetString("api_key"))
+		c.FetchAPIKey = func() string {
+			return utils.SanitizeAPIKey(coreconfig.Datadog().GetString("api_key"))
+		}
 	}
 	if core.IsSet("hostname") {
 		c.Hostname = core.GetString("hostname")

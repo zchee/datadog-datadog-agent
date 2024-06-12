@@ -263,6 +263,9 @@ type SymDBProxyConfig struct {
 // It is exposed with expvar, so make sure to exclude any sensible field
 // from JSON encoding. Use New() to create an instance.
 type AgentConfig struct {
+	// Fetch a dynamically changing API key (overrides endpoint[0])
+	FetchAPIKey func() string `json:"-"`
+
 	Features map[string]struct{}
 
 	Enabled      bool

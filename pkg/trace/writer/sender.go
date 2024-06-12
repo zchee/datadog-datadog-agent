@@ -51,10 +51,14 @@ func newSenders(cfg *config.AgentConfig, r eventRecorder, path string, climit, q
 			maxQueued:  qsize,
 			maxRetries: cfg.MaxSenderRetries,
 			url:        url,
-			apiKey:     endpoint.APIKey,
+			apiKey:     func() string { return endpoint.APIKey },
 			recorder:   r,
 			userAgent:  fmt.Sprintf("Datadog Trace Agent/%s/%s", cfg.AgentVersion, cfg.GitCommit),
 		}, statsd)
+		// We only support dynamically updating the first endpoint (per RFC)
+		if i == 0 {
+			senders[0].cfg.apiKey = cfg.FetchAPIKey
+		}
 	}
 	return senders
 }
@@ -121,7 +125,7 @@ type senderConfig struct {
 	// url specifies the URL to send requests too.
 	url *url.URL
 	// apiKey specifies the Datadog API key to use.
-	apiKey string
+	apiKey func() string
 	// maxConns specifies the maximum number of allowed concurrent ougoing
 	// connections.
 	maxConns int
@@ -346,7 +350,7 @@ const (
 )
 
 func (s *sender) do(req *http.Request) error {
-	req.Header.Set(headerAPIKey, s.cfg.apiKey)
+	req.Header.Set(headerAPIKey, s.cfg.apiKey())
 	req.Header.Set(headerUserAgent, s.cfg.userAgent)
 	resp, err := s.cfg.client.Do(req)
 	if err != nil {
