@@ -15,6 +15,8 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 )
 
+// JMWCOMPONENT
+
 // team: network-device-monitoring
 
 // Component is the component type. It has no exposed methods.

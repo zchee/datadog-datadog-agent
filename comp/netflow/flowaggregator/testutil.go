@@ -25,6 +25,7 @@ func WaitForFlowsToBeFlushed(aggregator *FlowAggregator, timeoutDuration time.Du
 		// Got a tick, we should check on doSomething()
 		case <-ticker.C:
 			events := aggregator.flushedFlowCount.Load()
+			fmt.Printf("JMW WaitForFlowsToBeFlushed: aggregator.flushedFlowCount = %d, minEvents = %d\n", events, minEvents)
 			if events >= minEvents {
 				return events, nil
 			}

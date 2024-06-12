@@ -41,11 +41,11 @@ func (d *AggregatorFormatDriver) Init(context.Context) error {
 }
 
 // Format desc
-func (d *AggregatorFormatDriver) Format(data interface{}) ([]byte, []byte, error) {
+func (d *AggregatorFormatDriver) Format(data interface{}) ([]byte, []byte, error) { // JMWJMW who calls this?
 	switch flow := data.(type) {
 	case *flowpb.FlowMessage:
 		d.listenerFlowCount.Add(1)
-		d.flowAggIn <- ConvertFlow(flow, d.namespace)
+		d.flowAggIn <- ConvertFlow(flow, d.namespace) // JMWN ConvertFlow
 	case *common.FlowMessageWithAdditionalFields:
 		d.listenerFlowCount.Add(1)
 		d.flowAggIn <- ConvertFlowWithAdditionalFields(flow, d.namespace)

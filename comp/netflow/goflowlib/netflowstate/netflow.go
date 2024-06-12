@@ -30,7 +30,7 @@ import (
 type StateNetFlow struct {
 	stopper
 
-	Format    format.FormatInterface
+	Format    format.FormatInterface // JMWN
 	Transport transport.TransportInterface
 	Logger    utils.Logger
 
@@ -47,7 +47,7 @@ type StateNetFlow struct {
 	mappedFieldsConfig map[uint16]config.Mapping
 }
 
-// NewStateNetFlow initializes a new Netflow/IPFIX producer, with the goflow default producer and the additional fields producer
+// NewStateNetFlow initializes a new Netflow/IPFIX producer, with the goflow default producer and the additional fields producer // JMWN
 func NewStateNetFlow(mappingConfs []config.Mapping) *StateNetFlow {
 	return &StateNetFlow{
 		ctx:                context.Background(),

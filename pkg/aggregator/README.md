@@ -1,4 +1,4 @@
-## package `aggregator`
+## package `aggregator` #JMW
 
 The Aggregator is the first thing a metric hits during its journey towards the
 intake. This package is responsible for metrics reception and aggregation

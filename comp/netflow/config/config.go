@@ -57,6 +57,7 @@ type Mapping struct {
 func ReadConfig(conf config.Component, logger log.Component) (*NetflowConfig, error) {
 	var mainConfig NetflowConfig
 
+	// JMWJMW if I put the rdns cache config above the netflow config, how do I pass it in to the netflow config?
 	err := conf.UnmarshalKey("network_devices.netflow", &mainConfig)
 	if err != nil {
 		return nil, err
@@ -70,8 +71,10 @@ func ReadConfig(conf config.Component, logger log.Component) (*NetflowConfig, er
 // SetDefaults sets default values wherever possible, returning an error if
 // any values are malformed.
 func (mainConfig *NetflowConfig) SetDefaults(namespace string, logger log.Component) error {
+	logger.Debugf("JMW SetDefaults(): mainConfig: %v", mainConfig)
 	for i := range mainConfig.Listeners {
 		listenerConfig := &mainConfig.Listeners[i]
+		logger.Infof("JMW SetDefaults(): mainConfig.Listeners[%d]: %v", i, listenerConfig)
 
 		flowType, err := common.GetFlowTypeByName(listenerConfig.FlowType)
 		if err != nil {
@@ -101,6 +104,7 @@ func (mainConfig *NetflowConfig) SetDefaults(namespace string, logger log.Compon
 
 		for i := range listenerConfig.Mapping {
 			mapping := &listenerConfig.Mapping[i]
+			logger.Debugf("JMW SetDefaults(): mapping %d: %v", i, mapping)
 			fieldType, ok := common.DefaultFieldTypes[mapping.Destination]
 
 			if ok && mapping.Type != fieldType {

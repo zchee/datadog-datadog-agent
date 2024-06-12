@@ -9,8 +9,8 @@ const (
 	// DefaultStopTimeout is the default stop timeout in seconds
 	DefaultStopTimeout = 5
 
-	// DefaultAggregatorFlushInterval is the default flush interval in seconds
-	DefaultAggregatorFlushInterval = 300 // 5min
+	// DefaultAggregatorFlushInterval is the default flush interval in seconds // JMWJMW
+	DefaultAggregatorFlushInterval = 300 // 5min // JMWJMW
 
 	// DefaultAggregatorBufferSize is the default aggregator buffer size interval
 	DefaultAggregatorBufferSize = 10000

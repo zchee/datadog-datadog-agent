@@ -15,7 +15,7 @@ import (
 
 // Flow contains flow info used for aggregation
 // json annotations are used in AsJSONString() for debugging purpose
-type Flow struct {
+type Flow struct { // JMWFLOW
 	Namespace    string
 	FlowType     FlowType
 	SequenceNum  uint32
@@ -81,8 +81,8 @@ type AdditionalFields = map[string]any
 
 // FlowMessageWithAdditionalFields contains a goflow flowmessage and additional fields
 type FlowMessageWithAdditionalFields struct {
-	*flowmessage.FlowMessage
-	AdditionalFields AdditionalFields
+	*flowmessage.FlowMessage // JMWJMW is flowmessage.FlowMessage identical to common.Flow? - NO - see goflowlib ConvertFlow()
+	AdditionalFields         AdditionalFields
 }
 
 // EndianType is used to configure additional fields endianness
