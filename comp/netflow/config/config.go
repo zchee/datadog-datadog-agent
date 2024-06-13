@@ -58,6 +58,8 @@ func ReadConfig(conf config.Component, logger log.Component) (*NetflowConfig, er
 	var mainConfig NetflowConfig
 
 	// JMWJMW if I put the rdns cache config above the netflow config, how do I pass it in to the netflow config?
+	// A: The rdns cache config is separate from the netflow config, and the rdns cache itself is passed when calling newServer/NewFlowAggregator/newFlowAccumulator
+	// AND when calling similar functions for SNMP metadata
 	err := conf.UnmarshalKey("network_devices.netflow", &mainConfig)
 	if err != nil {
 		return nil, err

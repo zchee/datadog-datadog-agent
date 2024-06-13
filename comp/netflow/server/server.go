@@ -30,7 +30,7 @@ type dependencies struct {
 	Demultiplexer demultiplexer.Component
 	Forwarder     forwarder.Component
 	Hostname      hostname.Component
-	// JMWCOMPONENT can I add a rdnsCachedQuerier component?
+	// JMWCOMPONENT can I add a rdnsCachedQuerier component and add it as a dependency?
 }
 
 type provides struct {
