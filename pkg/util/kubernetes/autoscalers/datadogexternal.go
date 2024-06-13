@@ -53,6 +53,8 @@ var (
 	rateLimitsLimit = telemetry.NewGaugeWithOpts("", "rate_limit_queries_limit",
 		[]string{"endpoint", le.JoinLeaderLabel}, "maximum number of queries allowed in the period",
 		telemetry.Options{NoDoubleUnderscoreSep: true})
+	chaosCounter, queryCounter int
+	chaosModifier              int = 20
 )
 
 // Point represents a metric data point
@@ -105,6 +107,19 @@ func (p *Processor) queryDatadogExternal(ddQueries []string, timeWindow time.Dur
 	currentTime := time.Now()
 	currentTimeUnix := time.Now().Unix()
 	seriesSlice, err := p.datadogClient.QueryMetrics(currentTime.Add(-timeWindow).Unix(), currentTimeUnix, query)
+	// Hacky code that should simulate sustained query timeouts against the Datadog API
+	// This should result in sustained periods of 20 failed requests in a row, and combined
+	// with the time.Sleep call, should result in around 10 min windows where metrics shouldn't be updated.
+	if queryCounter%chaosModifier == 0 {
+		log.Infof("CHAOS, failing query: %s", query)
+		err = log.Error("CHAOS, simulating timeout")
+		chaosCounter++
+		time.Sleep(60 * time.Second)
+	}
+	if chaosCounter%chaosModifier == 0 {
+		chaosCounter = 0
+		queryCounter++
+	}
 	if err != nil {
 		if isRateLimitError(err) {
 			ddRequests.Inc("rate_limit_error", le.JoinLeaderValue)
