@@ -122,7 +122,7 @@ func enrichWithReverseDNS(flow *common.Flow) {
 //}
 
 func (f *flowAccumulator) add(flowToAdd *common.Flow) { // JMW1
-	f.logger.Debugf("JMW Add new flow: %+v", flowToAdd)
+	//f.logger.Debugf("JMW Add new flow: %+v", flowToAdd)
 	f.logger.Tracef("Add new flow: %+v", flowToAdd)
 
 	if !f.portRollupDisabled {
