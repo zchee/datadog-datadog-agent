@@ -38,7 +38,7 @@ int socket__protocol_dispatcher(struct __sk_buff *skb) {
         return 0;
     }
 
-    protocol_dispatcher_entrypoint(skb);
+    // protocol_dispatcher_entrypoint(skb);
     return 0;
 }
 
@@ -58,11 +58,103 @@ int uprobe__tls_protocol_dispatcher_kafka(struct pt_regs *ctx) {
     return 0;
 };
 
+SEC("sk_msg/protocol_dispatcher")
+int sk_msg__protocol_dispatcher(struct sk_msg_md *msg) {
+    log_debug("sk_msg__protocol_dispatcher: msg %p msg->sk %p size %u", msg, msg->sk, msg->size);
+    protocol_dispatcher_entrypoint_sk_msg(msg);
+    return SK_PASS;
+}
+
+SEC("sk_msg/protocol_dispatcher_kafka")
+int sk_msg__protocol_dispatcher_kafka(struct sk_msg_md *msg) {
+    sk_msg_dispatch_kafka(msg);
+    return SK_PASS;
+}
+
 SEC("kprobe/protocol_dispatcher_kafka")
 int kprobe__protocol_dispatcher_kafka(struct pt_regs *ctx) {
     kprobe_dispatch_kafka(ctx);
     return 0;
 };
+
+SEC("sockops/sockops")
+int sockops__sockops(struct bpf_sock_ops *skops) {
+    int op = (int) skops->op;
+
+    // return 0;
+
+    if (op == BPF_SOCK_OPS_STATE_CB) {
+        u32 new = skops->args[1];
+        log_debug("sockops state cb old %d new %d", skops->args[0], skops->args[1]);
+        log_debug("sockops ip %x local_port %u", skops->local_ip4, skops->local_port);
+        log_debug("sockops ip %x remote_port %u", skops->remote_ip4, bpf_ntohl(skops->remote_port));
+
+        if (new == BPF_TCP_CLOSE || new == BPF_TCP_LAST_ACK) {
+            conn_tuple_t tup = {};
+
+            bpf_memset(&tup, 0, sizeof(tup));
+
+            tup.metadata = CONN_V4 | CONN_TYPE_TCP;
+            tup.saddr_l = skops->local_ip4;
+            tup.daddr_l = skops->remote_ip4;
+            tup.sport = skops->local_port;
+            tup.dport = bpf_ntohl(skops->remote_port);
+
+            u64 cookie = bpf_get_socket_cookie(skops);
+            tup.pid = cookie >> 32;
+            tup.netns = cookie;
+
+            sockops_http_termination(&tup);
+            sockops_kafka_termination(&tup);
+            sockops_http2_termination(&tup);
+
+                struct sockhash_key key = {
+        .remote_ip4 = skops->remote_ip4,
+        .local_ip4 = skops->local_ip4,
+        .remote_port = skops->remote_port,
+        .local_port = skops->local_port,
+    };
+
+            bpf_map_delete_elem(&socket_cookie_hash, &key);
+
+            return 0;
+        }
+    }
+
+    if (op != BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB && op != BPF_SOCK_OPS_ACTIVE_ESTABLISHED_CB) {
+        return 0;
+    }
+
+    struct sockhash_key key = {
+        .remote_ip4 = skops->remote_ip4,
+        .local_ip4 = skops->local_ip4,
+        .remote_port = skops->remote_port,
+        .local_port = skops->local_port,
+    };
+
+    log_debug("sockops! op %u", skops->op);
+    log_debug("sockops local_port %u", skops->local_port);
+    log_debug("sockops remote_port %u", bpf_ntohl(skops->remote_port));
+    log_debug("sockops! cookie %llu", bpf_get_socket_cookie(skops));
+
+    long ret = bpf_sock_hash_update(skops, &sockhash, &key, BPF_NOEXIST);
+    if (ret != 1000) {
+        log_debug("sockops ret %ld", ret);
+    }
+
+    u64 cookie = bpf_get_socket_cookie(skops);
+    bpf_map_update_elem(&socket_cookie_hash, &key, &cookie, BPF_NOEXIST);
+
+    // bpf_sock_ops_cb_flags_set(skops, BPF_SOCK_OPS_STATE_CB_FLAG);
+
+    // case (op) {
+    // case BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB:
+
+    // }
+
+     return 0;
+ }
+ 
 
 SEC("kprobe/tcp_sendmsg")
 int BPF_KPROBE(kprobe__tcp_sendmsg, struct sock *sk) {

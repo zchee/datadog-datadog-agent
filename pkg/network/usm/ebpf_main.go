@@ -66,6 +66,10 @@ const (
 	tupleByPidFDMap                        = "tuple_by_pid_fd"
 	pidFDByTupleMap                        = "pid_fd_by_tuple"
 
+	sockopsFunction         = "sockops__sockops"
+	sockhash                = "sockhash"
+	skMsgProtocolDispatcher = "sk_msg__protocol_dispatcher"
+
 	sockFDLookup    = "kprobe__sockfd_lookup_light"
 	sockFDLookupRet = "kretprobe__sockfd_lookup_light"
 
@@ -106,6 +110,7 @@ func newEBPFProgram(c *config.Config, connectionProtocolMap *ebpf.Map) (*ebpfPro
 			{Name: sockFDLookupArgsMap},
 			{Name: tupleByPidFDMap},
 			{Name: pidFDByTupleMap},
+			{Name: sockhash},
 		},
 		Probes: []*manager.Probe{
 			{
@@ -153,6 +158,18 @@ func newEBPFProgram(c *config.Config, connectionProtocolMap *ebpf.Map) (*ebpfPro
 			{
 				ProbeIdentificationPair: manager.ProbeIdentificationPair{
 					EBPFFuncName: protocolDispatcherSocketFilterFunction,
+					UID:          probeUID,
+				},
+			},
+			{
+				ProbeIdentificationPair: manager.ProbeIdentificationPair{
+					EBPFFuncName: skMsgProtocolDispatcher,
+					UID:          probeUID,
+				},
+			},
+			{
+				ProbeIdentificationPair: manager.ProbeIdentificationPair{
+					EBPFFuncName: sockopsFunction,
 					UID:          probeUID,
 				},
 			},

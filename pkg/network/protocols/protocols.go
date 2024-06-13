@@ -22,6 +22,7 @@ const (
 	ProtocolDispatcherProgramsMap                  = "protocols_progs"
 	TLSDispatcherProgramsMap                       = "tls_process_progs"
 	KprobeDispatcherProgramsMap                    = "kprobe_protocols_progs"
+	SkMsgProtocolDispatcherProgramsMap             = "skmsg_protocols_progs"
 	ProtocolDispatcherClassificationPrograms       = "dispatcher_classification_progs"
 	TLSProtocolDispatcherClassificationPrograms    = "tls_dispatcher_classification_progs"
 	KprobeProtocolDispatcherClassificationPrograms = "kprobe_dispatcher_classification_progs"

@@ -288,4 +288,16 @@ int uprobe__http_termination(struct pt_regs *ctx) {
     return 0;
 }
 
+static __always_inline  int sockops_http_termination(conn_tuple_t *tup) {
+    http_event_t event;
+    bpf_memset(&event, 0, sizeof(http_event_t));
+    bpf_memcpy(&event.tuple, tup, sizeof(conn_tuple_t));
+    skb_info_t skb_info = {0};
+    skb_info.tcp_flags |= TCPHDR_FIN;
+    normalize_tuple(&event.tuple);
+    http_process(&event, &skb_info, NO_TAGS);
+
+    return 0;
+}
+
 #endif
