@@ -1098,7 +1098,7 @@ static __always_inline void kafka_call_response_parser(void *ctx, conn_tuple_t *
             }
             break;
         }
-        bpf_tail_call_compat(ctx, &tls_process_progs, index);
+        bpf_tail_call_compat(ctx, &kprobe_protocols_progs, index);
         break;
     case PKTBUF_SK_MSG:
         switch (level) {

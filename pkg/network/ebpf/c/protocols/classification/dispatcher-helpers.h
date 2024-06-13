@@ -136,8 +136,15 @@ static __always_inline void protocol_dispatcher_entrypoint_sk_msg(struct sk_msg_
         return;
     }
 
-    skb_tup.pid = *cookie >> 32;
-    skb_tup.netns = *cookie;
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    skb_tup.pid = pid_tgid >> 32;
+
+    // skb_tup.pid = *cookie >> 32;
+    //skb_tup.netns = *cookie;
+
+    log_debug("sk_msg tup: saddr: %08llx %08llx (%u)", skb_tup.saddr_h, skb_tup.saddr_l, skb_tup.sport);
+    log_debug("sk_msg tup: daddr: %08llx %08llx (%u)", skb_tup.daddr_h, skb_tup.daddr_l, skb_tup.dport);
+    log_debug("sk_msg tup: netns: %08x pid: %u", skb_tup.netns, skb_tup.pid);
  
     bool tcp_termination = is_tcp_termination(&skb_info);
     // We don't process non tcp packets, nor empty tcp packets which are not tcp termination packets.
@@ -236,9 +243,29 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
         return;
     }
 
-    log_debug("tup: saddr: %08llx %08llx (%u)", tup.saddr_h, tup.saddr_l, tup.sport);
-    log_debug("tup: daddr: %08llx %08llx (%u)", tup.daddr_h, tup.daddr_l, tup.dport);
-    log_debug("tup: netns: %08x pid: %u", tup.netns, tup.pid);
+    __u64 tmp_h;
+    __u64 tmp_l;
+
+    // The tup data is read from the socker so source is always local but here
+    // we are receveing data on the socket so flip things around.  Maybe this
+    // could/should even come from the skb.
+    tmp_h = tup.daddr_h;
+    tmp_l = tup.daddr_l;
+    tup.daddr_h = tup.saddr_h;
+    tup.daddr_l = tup.saddr_l;
+    tup.saddr_h = tmp_h;
+    tup.saddr_l = tmp_l;
+
+    __u16 tmp_port;
+    tmp_port = tup.dport;
+    tup.dport = tup.sport;
+    tup.sport = tmp_port;
+
+    tup.netns = 0;
+
+    log_debug("kprobe tup: saddr: %08llx %08llx (%u)", tup.saddr_h, tup.saddr_l, tup.sport);
+    log_debug("kprobe tup: daddr: %08llx %08llx (%u)", tup.daddr_h, tup.daddr_l, tup.dport);
+    log_debug("kprobe tup: netns: %08x pid: %u", tup.netns, tup.pid);
 
     // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
     // if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
@@ -430,6 +457,14 @@ static __always_inline void sk_msg_dispatch_kafka(struct sk_msg_md *msg) {
 
     log_debug("sk_msg_dispatch_kafka: cookie %llu", *cookie);
 
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    skb_tup.netns = 0;
+    skb_tup.pid = pid_tgid >> 32;
+
+    log_debug("kafka sk_msg tup: saddr: %08llx %08llx (%u)", skb_tup.saddr_h, skb_tup.saddr_l, skb_tup.sport);
+    log_debug("kafka sk_msg tup: daddr: %08llx %08llx (%u)", skb_tup.daddr_h, skb_tup.daddr_l, skb_tup.dport);
+    log_debug("kafka sk_msg tup: netns: %08x pid: %u", skb_tup.netns, skb_tup.pid);
+
     // skb_tup.pid = *cookie >> 32;
     // skb_tup.netns = *cookie;
 
@@ -498,8 +533,8 @@ static __always_inline void kprobe_dispatch_kafka(struct pt_regs *ctx)
 
     conn_tuple_t normalized_tuple = args->tup;
     normalize_tuple(&normalized_tuple);
-    normalized_tuple.pid = 0;
-    normalized_tuple.netns = 0;
+    // normalized_tuple.pid = 0;
+    // normalized_tuple.netns = 0;
 
     read_into_kernel_buffer_for_classification(request_fragment, args->buffer_ptr);
     bool is_kafka = kprobe_is_kafka(ctx, args, request_fragment, CLASSIFICATION_MAX_BUFFER);
