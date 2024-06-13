@@ -162,7 +162,7 @@ DEFAULT_MODULES = {
         "comp/otelcol/logsagentpipeline/logsagentpipelineimpl", independent=True, used_by_otel=True
     ),
     "comp/otelcol/otlp/components/exporter/datadogexporter": GoModule(
-        "comp/otelcol/otlp/components/exporter/datadogexporter", independent=True
+        "comp/otelcol/otlp/components/exporter/datadogexporter", independent=True, used_by_otel=True
     ),
     "comp/otelcol/otlp/components/exporter/logsagentexporter": GoModule(
         "comp/otelcol/otlp/components/exporter/logsagentexporter", independent=True, used_by_otel=True
