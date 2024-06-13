@@ -235,13 +235,13 @@ func (agg *FlowAggregator) flushLoop() { // JMWINIT6
 			now := time.Now()
 			if !lastFlushTime.IsZero() {
 				flushInterval := now.Sub(lastFlushTime)
-				agg.sender.Gauge("datadog.netflow.aggregator.flush_interval", flushInterval.Seconds(), "", nil) // JMW flush_interval telemetry
+				agg.sender.Gauge("datadog.netflow.aggregator.flush_interval", flushInterval.Seconds(), "", nil) // JMWTELEMETRY flush_interval
 			}
 			lastFlushTime = now
 
 			flushStartTime := time.Now()
 			agg.flush()
-			agg.sender.Gauge("datadog.netflow.aggregator.flush_duration", time.Since(flushStartTime).Seconds(), "", nil) // JMW flush_duration telemetry
+			agg.sender.Gauge("datadog.netflow.aggregator.flush_duration", time.Since(flushStartTime).Seconds(), "", nil) // JMWTELEMETRY flush_duration
 			agg.sender.Commit()
 		// refresh rollup trackers
 		case <-rollupTrackersRefresh:
