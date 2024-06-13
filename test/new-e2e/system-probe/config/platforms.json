@@ -7,7 +7,7 @@
       "kernel": "6.0.7-301.fc37",
       "os_version": "37",
       "image": "Fedora-Cloud-Base-37.x86_64.qcow2.xz",
-      "image_version": "20240529_dd00b86a"
+      "image_version": "usama.saqib/fedora40"
     },
     "fedora_38": {
       "os_name": "Fedora Linux",
@@ -15,7 +15,15 @@
       "kernel": "6.2.9-300.fc38",
       "os_version": "38",
       "image": "Fedora-Cloud-Base-38.x86_64.qcow2.xz",
-      "image_version": "20240529_dd00b86a"
+      "image_version": "usama.saqib/fedora40"
+    },
+    "fedora_40": {
+      "os_name": "Fedora Linux",
+      "os_id": "fedora",
+      "kernel": "6.2.9-300.fc38",
+      "os_version": "40",
+      "image": "Fedora-Cloud-Base-40.x86_64.qcow2.xz",
+      "image_version": "usama.saqib/fedora40"
     },
     "amazon_4.14": {
       "os_name": "Amazon Linux",
@@ -247,7 +255,7 @@
       "kernel": "6.0.7-301.fc37",
       "os_version": "37",
       "image": "Fedora-Cloud-Base-37.arm64.qcow2.xz",
-      "image_version": "20240529_dd00b86a"
+      "image_version": "usama.saqib/fedora40"
     },
     "fedora_38": {
       "os_name": "Fedora Linux",
@@ -255,7 +263,15 @@
       "kernel": "6.2.9-300.fc38",
       "os_version": "38",
       "image": "Fedora-Cloud-Base-38.arm64.qcow2.xz",
-      "image_version": "20240529_dd00b86a"
+      "image_version": "usama.saqib/fedora40"
+    },
+    "fedora_40": {
+      "os_name": "Fedora Linux",
+      "os_id": "fedora",
+      "kernel": "6.2.9-300.fc38",
+      "os_version": "40",
+      "image": "Fedora-Cloud-Base-40.arm64.qcow2.xz",
+      "image_version": "usama.saqib/fedora40"
     },
     "amazon_4.14": {
       "os_name": "Amazon Linux",
