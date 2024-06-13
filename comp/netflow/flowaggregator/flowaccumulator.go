@@ -13,7 +13,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/netflow/common"
 	"github.com/DataDog/datadog-agent/comp/netflow/portrollup"
-	"github.com/DataDog/datadog-agent/comp/netflow/rdnsquerier" //JMWHACK until I make it a component or otherwise move it elsewhere
+	"github.com/DataDog/datadog-agent/comp/netflow/rdnsquerier" //JMWHACK JMWMOVE until I make it a component or otherwise move it elsewhere
 	"go.uber.org/atomic"
 )
 
@@ -43,6 +43,8 @@ type flowAccumulator struct {
 	hashCollisionFlowCount *atomic.Uint64 // JMW when and why would hashCollisionFlowCount be incremented?
 
 	logger log.Component
+
+	rdnsQuerier *rdnsquerier.RDNSQuerier
 }
 
 func newFlowContext(flow *common.Flow) flowContext {
@@ -53,7 +55,7 @@ func newFlowContext(flow *common.Flow) flowContext {
 	}
 }
 
-func newFlowAccumulator(aggregatorFlushInterval time.Duration, aggregatorFlowContextTTL time.Duration, portRollupThreshold int, portRollupDisabled bool, logger log.Component) *flowAccumulator { // JMWINIT2
+func newFlowAccumulator(aggregatorFlushInterval time.Duration, aggregatorFlowContextTTL time.Duration, portRollupThreshold int, portRollupDisabled bool, logger log.Component, rdnsQuerier *rdnsquerier.RDNSQuerier) *flowAccumulator { // JMWINIT2
 	return &flowAccumulator{
 		flows:                  make(map[uint64]flowContext),
 		flowFlushInterval:      aggregatorFlushInterval,
@@ -63,6 +65,7 @@ func newFlowAccumulator(aggregatorFlushInterval time.Duration, aggregatorFlowCon
 		portRollupDisabled:     portRollupDisabled,
 		hashCollisionFlowCount: atomic.NewUint64(0),
 		logger:                 logger,
+		rdnsQuerier:            rdnsQuerier,
 	}
 }
 
@@ -159,8 +162,8 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) { // JMW1
 
 		// JMWJMW how long can the flow exist?  does it last after a flush (and get resused??)  if so do we need to always go thru the cache to see if the hostname was updated? - see JMWRDNS2, below
 		// JMWRDNS1 for the first prototype simply get the hostname synchronously here - add code timing?
-		flowToAdd.SrcReverseDNSHostname = rdnsquerier.GetHostname(flowToAdd.SrcAddr)
-		flowToAdd.DstReverseDNSHostname = rdnsquerier.GetHostname(flowToAdd.DstAddr)
+		flowToAdd.SrcReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.SrcAddr)
+		flowToAdd.DstReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.DstAddr)
 		// JMWRDNS1 rdnsCache.Get(flowToAdd.SrcAddr, callbackFuncToSetTheHostname)
 
 		// JMWTEST how to fix TestAggregator failure
@@ -170,8 +173,8 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) { // JMW1
 		// JMWRDNS2 this path is for when a flow has been flushed and a new flow comes in for the same hash - we need to do the rdns enrichment here too
 		aggFlow.flow = flowToAdd
 		// JMWRDNS2 for the first prototype simply get the hostname synchronously here - add code timing?
-		flowToAdd.SrcReverseDNSHostname = rdnsquerier.GetHostname(flowToAdd.SrcAddr)
-		flowToAdd.DstReverseDNSHostname = rdnsquerier.GetHostname(flowToAdd.DstAddr)
+		flowToAdd.SrcReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.SrcAddr)
+		flowToAdd.DstReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.DstAddr)
 		// JMWRDNS2 rdnsCache.Get(flowToAdd.SrcAddr, callbackFuncToSetTheHostname)
 	} else {
 		// use go routine for hash collision detection to avoid blocking critical path

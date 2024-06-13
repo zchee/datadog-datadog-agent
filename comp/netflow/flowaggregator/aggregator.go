@@ -19,6 +19,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/forwarder/eventplatform"
 	"github.com/DataDog/datadog-agent/comp/netflow/format"
+	"github.com/DataDog/datadog-agent/comp/netflow/rdnsquerier" //JMWHACK JMWMOVE until I make it a component or otherwise move it elsewhere
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
 	"github.com/DataDog/datadog-agent/pkg/metrics"
@@ -78,13 +79,13 @@ var maxNegativeSequenceDiffToReset = map[common.FlowType]int{
 }
 
 // NewFlowAggregator returns a new FlowAggregator
-func NewFlowAggregator(sender sender.Sender, epForwarder eventplatform.Forwarder, config *config.NetflowConfig, hostname string, logger log.Component) *FlowAggregator { // JMWINIT1 // JMWCONFIG1
+func NewFlowAggregator(sender sender.Sender, epForwarder eventplatform.Forwarder, config *config.NetflowConfig, hostname string, logger log.Component, rdnsQuerier *rdnsquerier.RDNSQuerier) *FlowAggregator { // JMWINIT1 // JMWCONFIG1
 	flushInterval := time.Duration(config.AggregatorFlushInterval) * time.Second
 	flowContextTTL := time.Duration(config.AggregatorFlowContextTTL) * time.Second
 	rollupTrackerRefreshInterval := time.Duration(config.AggregatorRollupTrackerRefreshInterval) * time.Second
 	return &FlowAggregator{
 		flowIn:                       make(chan *common.Flow, config.AggregatorBufferSize),
-		flowAcc:                      newFlowAccumulator(flushInterval, flowContextTTL, config.AggregatorPortRollupThreshold, config.AggregatorPortRollupDisabled, logger), // JMWFRI pass cachedquerier here? // JMWINIT2
+		flowAcc:                      newFlowAccumulator(flushInterval, flowContextTTL, config.AggregatorPortRollupThreshold, config.AggregatorPortRollupDisabled, logger, rdnsQuerier), // JMWFRI pass cachedquerier here? // JMWINIT2
 		FlushFlowsToSendInterval:     flushFlowsToSendInterval,
 		rollupTrackerRefreshInterval: rollupTrackerRefreshInterval,
 		sender:                       sender,

@@ -12,23 +12,27 @@ import (
 	//JMWNOTUSED nfconfig "github.com/DataDog/datadog-agent/comp/netflow/config"
 )
 
-/*
 type rdnsCacheEntry struct {
-	hostname string
+	//JMWhostname String
 	expirationTime int64
 	// map of hashes to callback to set hostname
-	callbacks map[string]func(string)
+	//JMWcallbacks map[string]func(string)
 }
 
 // RDNSQuerier provides JMW
 type RDNSQuerier struct {
 	// mutex for JMW
-	mutex sync.RWMutex
+	//JMWmutex sync.RWMutex
 
 	// map of ip to hostname and expiration time
- 	cache map[string]rdnsCacheEntry
+	cache map[string]rdnsCacheEntry
 }
-*/
+
+func NewRDNSQuerier() *RDNSQuerier {
+	return &RDNSQuerier{
+		cache: make(map[string]rdnsCacheEntry),
+	}
+}
 
 func timer(name string) func() {
 	start := time.Now()
@@ -39,7 +43,7 @@ func timer(name string) func() {
 
 // JMWfunc (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
 // JMW GetHostname returns the hostname for the given IP address
-func GetHostname(ipAddr []byte) string {
+func (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
 	defer timer("timer JMW GetHostname() all")()
 
 	ip := net.IP(ipAddr)
