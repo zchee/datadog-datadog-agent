@@ -4,7 +4,7 @@
 // Copyright 2024-present Datadog, Inc.
 
 // Package rdnsquerierimpl provides JMW
-package rdnsquerierimpl
+package rdnsquerier
 
 import (
 	"fmt"
@@ -14,39 +14,42 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/DataDog/datadog-agent/comp/core/log"
-	//JMWNOTUSED nfconfig "github.com/DataDog/datadog-agent/comp/netflow/config"
+	"github.com/DataDog/datadog-agent/comp/rdnsquerier"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
+	//JMW"github.com/DataDog/datadog-agent/comp/core/config"
+	//JMWNOTUSED nfconfig "github.com/DataDog/datadog-agent/comp/netflow/config"
 )
 
 type dependencies struct {
 	fx.In
-
+	Lc     fx.Lifecycle
 	Logger log.Component
 	// JMWTELEMETRY dependency?
 }
 
 type provides struct {
 	fx.Out
-
 	Comp rdnsquerier.Component
 }
 
 // Module defines the fx options for this component.
 func Module() fxutil.Module {
 	return fxutil.Component(
-		fx.Provide(newRdnsquerier),
+		fx.Provide(newRDNSQuerier),
 	)
 }
-
-func newRdnsquerier(deps dependencies) provides {
+func newRDNSQuerier(deps dependencies) provides {
 	// Component initialization
+	rdnsQuerier := &RDNSQuerier{
+		cache: make(map[string]rdnsCacheEntry),
+	}
 	return provides{
-		Comp: rdnsquerier,
+		Comp: rdnsQuerier,
 	}
 }
 
 type rdnsCacheEntry struct {
-	//JMWhostname String
+	//JMWhostname string
 	//JMWUNUSED expirationTime int64
 	// map of hashes to callback to set hostname
 	//JMWcallbacks map[string]func(string)
@@ -61,6 +64,7 @@ type RDNSQuerier struct {
 	cache map[string]rdnsCacheEntry
 }
 
+/*JMWRM no longer needed now that it's a component, but still used in aggregator_test.go*/
 // NewRDNSQuerier creates a new RDNSQuerier JMW component.
 func NewRDNSQuerier() *RDNSQuerier {
 	return &RDNSQuerier{

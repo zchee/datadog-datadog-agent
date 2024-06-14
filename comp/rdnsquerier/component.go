@@ -3,13 +3,12 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2024-present Datadog, Inc.
 
-// Package rdnsquerier ... /* TODO: detailed doc comment for the component */
+// Package rdnsquerier provides JMW
 package rdnsquerier
 
 // team: network-device-monitoring
 
 // Component is the component type.
 type Component interface {
-	/* JMWTODO: define Component interface */
 	GetHostname([]byte) string
 }

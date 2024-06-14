@@ -21,7 +21,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/ndmtmp/forwarder"
 	nfconfig "github.com/DataDog/datadog-agent/comp/netflow/config"
 	"github.com/DataDog/datadog-agent/comp/netflow/flowaggregator"
-	"github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerierimpl"
+	"github.com/DataDog/datadog-agent/comp/rdnsquerier"
 )
 
 type dependencies struct {
@@ -31,7 +31,7 @@ type dependencies struct {
 	Demultiplexer demultiplexer.Component
 	Forwarder     forwarder.Component
 	Hostname      hostname.Component
-	// JMWCOMPONENT add rdnsquerier.Component?
+	RDNSQuerier   rdnsquerier.Component
 }
 
 type provides struct {
@@ -54,7 +54,7 @@ func newServer(lc fx.Lifecycle, deps dependencies) (provides, error) { // JMWINI
 
 	// JMWCACHE create reverse DNS lookup cache here, pass it to flowaggregator, and have it pass it to flowaccumulator
 	// JMWOR create it outside of the netflow component so it can be shared by SNMP metadata and other components
-	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger, rdnsquerier.NewRDNSQuerier() /*JMW --> deps.NewRDNSQuerier()*/) //JMWINIT1
+	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger /*JMW rdnsquerier.NewRDNSQuerier()*/, deps.RDNSQuerier) //JMWINIT1
 
 	server := &Server{
 		config:  conf,

@@ -13,7 +13,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/netflow/common"
 	"github.com/DataDog/datadog-agent/comp/netflow/portrollup"
-	"github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerierimpl"
+	"github.com/DataDog/datadog-agent/comp/rdnsquerier"
 	"go.uber.org/atomic"
 )
 
@@ -44,7 +44,7 @@ type flowAccumulator struct {
 
 	logger log.Component
 
-	rdnsQuerier *rdnsquerier.RDNSQuerier
+	rdnsQuerier rdnsquerier.Component
 }
 
 func newFlowContext(flow *common.Flow) flowContext {
@@ -55,7 +55,7 @@ func newFlowContext(flow *common.Flow) flowContext {
 	}
 }
 
-func newFlowAccumulator(aggregatorFlushInterval time.Duration, aggregatorFlowContextTTL time.Duration, portRollupThreshold int, portRollupDisabled bool, logger log.Component, rdnsQuerier *rdnsquerier.RDNSQuerier) *flowAccumulator { // JMWINIT2
+func newFlowAccumulator(aggregatorFlushInterval time.Duration, aggregatorFlowContextTTL time.Duration, portRollupThreshold int, portRollupDisabled bool, logger log.Component, rdnsQuerier rdnsquerier.Component) *flowAccumulator { // JMWINIT2
 	return &flowAccumulator{
 		flows:                  make(map[uint64]flowContext),
 		flowFlushInterval:      aggregatorFlushInterval,

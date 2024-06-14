@@ -5,7 +5,7 @@
 
 //go:build test
 
-package rdnsquerierimpl
+package rdnsquerier
 
 import (
 	"go.uber.org/fx"
