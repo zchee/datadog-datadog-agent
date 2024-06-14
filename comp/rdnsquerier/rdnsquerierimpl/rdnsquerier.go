@@ -3,6 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2022-present Datadog, Inc.
 
+// Packagerdnsquerierimpl provides JMW
 package rdnsquerier
 
 import (
@@ -14,7 +15,7 @@ import (
 
 type rdnsCacheEntry struct {
 	//JMWhostname String
-	expirationTime int64
+	//JMWUNUSED expirationTime int64
 	// map of hashes to callback to set hostname
 	//JMWcallbacks map[string]func(string)
 }
@@ -28,6 +29,7 @@ type RDNSQuerier struct {
 	cache map[string]rdnsCacheEntry
 }
 
+/** NewRDNSQuerier creates a new RDNSQuerier JMW component.
 func NewRDNSQuerier() *RDNSQuerier {
 	return &RDNSQuerier{
 		cache: make(map[string]rdnsCacheEntry),
@@ -41,8 +43,7 @@ func timer(name string) func() {
 	}
 }
 
-// JMWfunc (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
-// JMW GetHostname returns the hostname for the given IP address
+// GetHostname returns the hostname for the given IP address JMW
 func (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
 	defer timer("timer JMW GetHostname() all")()
 
@@ -58,7 +59,7 @@ func (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
 	// JMW LookupAddr can return both a non-zero length slice of hostnames and an error.
 	// BUT When using the host C library resolver, at most one result will be returned.
 	// So for now, when specifying DNS resolvers is not supported, if we get an error we know that there is no valid hostname returned.
-	// If/when we add support for specifying DNS resolvers, there may be multiple hostnames returned, and there may be one or more hostname returned AT TEH SAME TIME an error is returned.  To keep it simple, if there is no error, we will just return the first hostname, and if there is an error, we will return an empty string and add telemetry about the error.
+	// If/when we add support for specifying DNS resolvers, there may be multiple hostnames returned, and there may be one or more hostname returned AT THE SAME TIME an error is returned.  To keep it simple, if there is no error, we will just return the first hostname, and if there is an error, we will return an empty string and add telemetry about the error.
 	defer timer("timer JMW GetHostname() LookupAddr")()
 	hostnames, err := net.LookupAddr(addr)
 	if err != nil {
