@@ -311,7 +311,8 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
         log_debug("[kprobe_protocol_dispatcher_entrypoint]: %p was not classified", sock);
         char request_fragment[CLASSIFICATION_MAX_BUFFER];
         bpf_memset(request_fragment, 0, sizeof(request_fragment));
-        read_into_kernel_buffer_for_classification((char *)request_fragment, buffer);
+        // read_into_kernel_buffer_for_classification((char *)request_fragment, buffer);
+        read_into_user_buffer_for_classification((char *)request_fragment, buffer);
         const size_t final_fragment_size = bytes < CLASSIFICATION_MAX_BUFFER ? bytes : CLASSIFICATION_MAX_BUFFER;
         classify_protocol_for_dispatcher(&cur_fragment_protocol, &tup, request_fragment, final_fragment_size);
         if (is_kafka_monitoring_enabled() && cur_fragment_protocol == PROTOCOL_UNKNOWN) {
@@ -536,7 +537,8 @@ static __always_inline void kprobe_dispatch_kafka(struct pt_regs *ctx)
     // normalized_tuple.pid = 0;
     // normalized_tuple.netns = 0;
 
-    read_into_kernel_buffer_for_classification(request_fragment, args->buffer_ptr);
+    // read_into_kernel_buffer_for_classification(request_fragment, args->buffer_ptr);
+    read_into_user_buffer_for_classification(request_fragment, args->buffer_ptr);
     bool is_kafka = kprobe_is_kafka(ctx, args, request_fragment, CLASSIFICATION_MAX_BUFFER);
     log_debug("kprobe_dispatch_kafka: is_kafka %d", is_kafka);
     if (!is_kafka) {

@@ -67,5 +67,6 @@ typedef struct {
 } tcp_kprobe_state_t;
 
 BPF_HASH_MAP(tcp_kprobe_state, __u64, tcp_kprobe_state_t, 2048)
+BPF_HASH_MAP(tcp_splicing, __u64, __u32, 2048)
 
 #endif

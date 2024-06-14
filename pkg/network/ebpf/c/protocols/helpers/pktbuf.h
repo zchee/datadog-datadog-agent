@@ -119,7 +119,8 @@ static __always_inline long pktbuf_load_bytes_with_telemetry(pktbuf_t pkt, u32 o
     case PKTBUF_TLS:
         return bpf_probe_read_user_with_telemetry(to, len, pkt.tls->buffer_ptr + offset);
     case PKTBUF_KPROBE:
-        return bpf_probe_read_kernel_with_telemetry(to, len, pkt.kprobe->buffer_ptr + offset);
+        return bpf_probe_read_user_with_telemetry(to, len, pkt.kprobe->buffer_ptr + offset);
+        // return bpf_probe_read_kernel_with_telemetry(to, len, pkt.kprobe->buffer_ptr + offset);
     case PKTBUF_SK_MSG:
         return bpf_sk_msg_load_bytes(pkt.sk_msg.md, offset, to, len);
     }
@@ -141,7 +142,8 @@ static __always_inline __maybe_unused long pktbuf_load_bytes(pktbuf_t pkt, u32 o
     case PKTBUF_TLS:
         return bpf_probe_read_user(to, len, pkt.tls->buffer_ptr + offset);
     case PKTBUF_KPROBE:
-        return bpf_probe_read_kernel(to, len, pkt.kprobe->buffer_ptr + offset);
+        // return bpf_probe_read_kernel(to, len, pkt.kprobe->buffer_ptr + offset);
+        return bpf_probe_read_user(to, len, pkt.kprobe->buffer_ptr + offset);
     case PKTBUF_SK_MSG:
         return bpf_sk_msg_load_bytes(pkt.sk_msg.md, offset, to, len);
     }
@@ -241,6 +243,8 @@ static __always_inline __maybe_unused pktbuf_t pktbuf_from_kprobe(struct pt_regs
     };
 }
 
+            // return read_big_endian_kernel_##type_(pkt.kprobe->buffer_ptr, pkt.kprobe->data_end, offset, out);                 
+
 #define PKTBUF_READ_BIG_ENDIAN(type_)                                                                                 \
     static __always_inline __maybe_unused bool pktbuf_read_big_endian_##type_(pktbuf_t pkt, u32 offset, type_ *out) { \
         switch (pkt.type) {                                                                                           \
@@ -249,7 +253,7 @@ static __always_inline __maybe_unused pktbuf_t pktbuf_from_kprobe(struct pt_regs
         case PKTBUF_TLS:                                                                                              \
             return read_big_endian_user_##type_(pkt.tls->buffer_ptr, pkt.tls->data_end, offset, out);                 \
         case PKTBUF_KPROBE:                                                                                              \
-            return read_big_endian_kernel_##type_(pkt.kprobe->buffer_ptr, pkt.kprobe->data_end, offset, out);                 \
+            return read_big_endian_user_##type_(pkt.kprobe->buffer_ptr, pkt.kprobe->data_end, offset, out);                 \
         case PKTBUF_SK_MSG:                                                                                           \
             return read_big_endian_sk_msg_##type_(pkt.sk_msg.md, offset, out);                                        \
         }                                                                                                             \
@@ -260,6 +264,8 @@ static __always_inline __maybe_unused pktbuf_t pktbuf_from_kprobe(struct pt_regs
 PKTBUF_READ_BIG_ENDIAN(s32)
 PKTBUF_READ_BIG_ENDIAN(s16)
 PKTBUF_READ_BIG_ENDIAN(s8)
+
+//            read_into_kernel_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                     
 
 #define PKTBUF_READ_INTO_BUFFER(name, total_size, blk_size)                                              \
     READ_INTO_USER_BUFFER(name, total_size)                                                              \
@@ -275,7 +281,7 @@ PKTBUF_READ_BIG_ENDIAN(s8)
             read_into_user_buffer_##name(buffer, pkt.tls->buffer_ptr + offset);                          \
             return;                                                                                      \
         case PKTBUF_KPROBE:                                                                              \
-            read_into_kernel_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                     \
+            read_into_user_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                     \
             return;                                                                                      \
         case PKTBUF_SK_MSG:                                                                              \
             read_into_buffer_sk_msg_##name(buffer, pkt.sk_msg.md, offset);                               \

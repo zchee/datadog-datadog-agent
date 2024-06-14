@@ -181,6 +181,8 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	// packets are seen twice. This is not needed in the TLS case since there
 	// the data comes from uprobes on the binary.
 	fixCount := func(count int) int {
+		return count
+
 		if tls {
 			return count
 		}
@@ -940,6 +942,16 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 	skipTestIfKernelNotSupported(t)
 	defaultTopic := "test-topic"
 
+	fixCount := func(count int) int {
+		if tls {
+			return count
+		}
+
+		// Double since both sides of the connection are seen separately in
+		// sk_msg/sk_skb.
+		return count * 2
+	}
+
 	tests := []struct {
 		name              string
 		topic             string
@@ -1182,7 +1194,7 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 			can.runClient(msgs)
 
 			getAndValidateKafkaStats(t, monitor, 1, tt.topic, kafkaParsingValidation{
-				expectedNumberOfFetchRequests: tt.numFetchedRecords,
+				expectedNumberOfFetchRequests: fixCount(tt.numFetchedRecords),
 				expectedAPIVersionFetch:       int(apiVersion),
 			})
 		})
@@ -1234,7 +1246,7 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 			}
 			can.runClient(msgs)
 			getAndValidateKafkaStats(t, monitor, 1, tt.topic, kafkaParsingValidation{
-				expectedNumberOfFetchRequests: tt.numFetchedRecords * splitIdx,
+				expectedNumberOfFetchRequests: fixCount(tt.numFetchedRecords * splitIdx),
 				expectedAPIVersionFetch:       apiVersion,
 			})
 		})
@@ -1333,6 +1345,7 @@ func getAndValidateKafkaStats(t *testing.T, monitor *Monitor, expectedStatsCount
 				}
 			}
 		}
+		fmt.Println(kafkaStats)
 		assert.Equal(collect, expectedStatsCount, len(kafkaStats), "Did not find expected number of stats")
 		if expectedStatsCount != 0 {
 			validateProduceFetchCount(collect, kafkaStats, topicName, validation)

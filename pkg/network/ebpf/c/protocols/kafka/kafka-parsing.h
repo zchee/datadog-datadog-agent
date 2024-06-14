@@ -1497,7 +1497,7 @@ static __always_inline bool kafka_process_new_response(void *ctx, conn_tuple_t *
     // There could be some false positives due to this, if the message size happens to match
     // a valid in-flight correlation ID.
 
-    if (pkt.type != PKTBUF_TLS || pktlen >= 8) {
+    if (pktlen >= 8) {
         offset += sizeof(__s32); // Skip message size
     }
 
@@ -1510,7 +1510,7 @@ static __always_inline bool kafka_process_new_response(void *ctx, conn_tuple_t *
     bpf_memcpy(&key.tuple, tup, sizeof(key.tuple));
     kafka_transaction_t *request = bpf_map_lookup_elem(&kafka_in_flight, &key);
     if (!request) {
-        if (pkt.type == PKTBUF_TLS && pktlen >= 8) {
+        if (pktlen >= 8) {
             // Try reading the first value, in case it's case (a) or (c)
             offset = orig_offset;
             PKTBUF_READ_BIG_ENDIAN_WRAPPER(s32, correlation_id2, pkt, offset);
@@ -1715,6 +1715,7 @@ static __always_inline bool kafka_process(conn_tuple_t *tup, kafka_info_t *kafka
             return false;
         }
         kafka_transaction->records_count = records_count;
+        extra_debug("produce enqueue, records_count %u", records_count);
         break;
     }
     case KAFKA_FETCH:
