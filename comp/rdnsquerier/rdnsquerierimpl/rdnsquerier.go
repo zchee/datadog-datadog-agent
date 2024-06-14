@@ -1,20 +1,53 @@
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
-// Copyright 2022-present Datadog, Inc.
+// Copyright 2024-present Datadog, Inc.
 
-package rdnsquerier
+// Package rdnsquerierimpl provides JMW
+package rdnsquerierimpl
 
 import (
 	"fmt"
 	"net"
 	"time"
+
+	"go.uber.org/fx"
+
+	"github.com/DataDog/datadog-agent/comp/core/log"
 	//JMWNOTUSED nfconfig "github.com/DataDog/datadog-agent/comp/netflow/config"
+	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 )
+
+type dependencies struct {
+	fx.In
+
+	Logger log.Component
+	// JMWTELEMETRY dependency?
+}
+
+type provides struct {
+	fx.Out
+
+	Comp rdnsquerier.Component
+}
+
+// Module defines the fx options for this component.
+func Module() fxutil.Module {
+	return fxutil.Component(
+		fx.Provide(newRdnsquerier),
+	)
+}
+
+func newRdnsquerier(deps dependencies) provides {
+	// Component initialization
+	return provides{
+		Comp: rdnsquerier,
+	}
+}
 
 type rdnsCacheEntry struct {
 	//JMWhostname String
-	expirationTime int64
+	//JMWUNUSED expirationTime int64
 	// map of hashes to callback to set hostname
 	//JMWcallbacks map[string]func(string)
 }
@@ -28,6 +61,7 @@ type RDNSQuerier struct {
 	cache map[string]rdnsCacheEntry
 }
 
+// NewRDNSQuerier creates a new RDNSQuerier JMW component.
 func NewRDNSQuerier() *RDNSQuerier {
 	return &RDNSQuerier{
 		cache: make(map[string]rdnsCacheEntry),
@@ -41,13 +75,12 @@ func timer(name string) func() {
 	}
 }
 
-// JMWfunc (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
-// JMW GetHostname returns the hostname for the given IP address
+// GetHostname returns the hostname for the given IP address JMW
 func (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
 	defer timer("timer JMW GetHostname() all")()
 
 	ip := net.IP(ipAddr)
-	if !ip.IsPrivate() {
+	if !ip.IsPrivate() { // JMW IsPrivate() also returns false for invalid IP addresses JMWCHECK
 		fmt.Printf("JMW GetHostname() IP address `%s` is not private\n", ip.String())
 		// JMWTELEMETRY increment NOT private IP address counter
 		return ""
@@ -58,7 +91,7 @@ func (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
 	// JMW LookupAddr can return both a non-zero length slice of hostnames and an error.
 	// BUT When using the host C library resolver, at most one result will be returned.
 	// So for now, when specifying DNS resolvers is not supported, if we get an error we know that there is no valid hostname returned.
-	// If/when we add support for specifying DNS resolvers, there may be multiple hostnames returned, and there may be one or more hostname returned AT TEH SAME TIME an error is returned.  To keep it simple, if there is no error, we will just return the first hostname, and if there is an error, we will return an empty string and add telemetry about the error.
+	// If/when we add support for specifying DNS resolvers, there may be multiple hostnames returned, and there may be one or more hostname returned AT THE SAME TIME an error is returned.  To keep it simple, if there is no error, we will just return the first hostname, and if there is an error, we will return an empty string and add telemetry about the error.
 	defer timer("timer JMW GetHostname() LookupAddr")()
 	hostnames, err := net.LookupAddr(addr)
 	if err != nil {
@@ -108,5 +141,28 @@ func (q *RDNSQuerier) GetAsync(ip string, func inlineCallback(string), func asyn
 		return
 	}
 	asyncCallback(entry.hostname)
+}
+*/
+
+/*
+type reverseDNSCache struct {
+	// JMW IP address to hostname
+	cache map[string]string
+
+	// JMW mutex for cache
+	mutex sync.RWMutex
+}
+
+func NewReverseDNSCache func() *reverseDNSCache {
+	return &reverseDNSCache{
+		cache: make(map[string]string),
+	}
+}
+
+func (r *reverseDNSCache) PreFetch(ip string) string {
+}
+func (r *reverseDNSCache) Expire() string {
+}
+func (r *reverseDNSCache) TryGet(ip string) (string, bool) {
 }
 */

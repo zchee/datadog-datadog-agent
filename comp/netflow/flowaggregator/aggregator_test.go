@@ -43,8 +43,8 @@ import (
 	"github.com/DataDog/datadog-agent/comp/netflow/common"
 	"github.com/DataDog/datadog-agent/comp/netflow/config"
 	"github.com/DataDog/datadog-agent/comp/netflow/goflowlib"
-	"github.com/DataDog/datadog-agent/comp/netflow/rdnsquerier" //JMWHACK JMWMOVE until I make it a component or otherwise move it elsewhere
 	"github.com/DataDog/datadog-agent/comp/netflow/testutil"
+	"github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerierimpl"
 )
 
 func TestAggregator(t *testing.T) {
