@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2024-present Datadog, Inc.
 
-// Package rdnsquerier provides JMW
+// Package rdnsquerierimpl provides JMW impl or not?
 package rdnsquerierimpl
 
 import (
@@ -38,10 +38,13 @@ func Module() fxutil.Module {
 		fx.Provide(newRDNSQuerier),
 	)
 }
+
 func newRDNSQuerier(deps dependencies) provides {
 	// Component initialization
 	rdnsQuerier := &RDNSQuerier{
-		cache: make(map[string]rdnsCacheEntry),
+		lc:     deps.Lc,
+		logger: deps.Logger,
+		cache:  make(map[string]rdnsCacheEntry),
 	}
 	return provides{
 		Comp: rdnsQuerier,
@@ -57,6 +60,9 @@ type rdnsCacheEntry struct {
 
 // RDNSQuerier provides JMW
 type RDNSQuerier struct {
+	lc     fx.Lifecycle
+	logger log.Component
+
 	// mutex for JMW
 	//JMWmutex sync.RWMutex
 

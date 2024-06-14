@@ -22,7 +22,7 @@ func MockModule() fxutil.Module {
 
 type rdnsQuerierMock struct{}
 
-func (q *rdnsQuerierMock) GetHostname(ipAddr []byte) string {
+func (q *rdnsQuerierMock) GetHostname(_ []byte) string {
 	return ""
 }
 
