@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2024-present Datadog, Inc.
 
-// Package rdnsquerierimpl provides JMW
+// Package rdnsquerier provides JMW
 package rdnsquerier
 
 import (
@@ -64,13 +64,14 @@ type RDNSQuerier struct {
 	cache map[string]rdnsCacheEntry
 }
 
-/*JMWRM no longer needed now that it's a component, but still used in aggregator_test.go*/
+/*JMWRM no longer needed now that it's a component, but still used in aggregator_test.go
 // NewRDNSQuerier creates a new RDNSQuerier JMW component.
 func NewRDNSQuerier() *RDNSQuerier {
 	return &RDNSQuerier{
 		cache: make(map[string]rdnsCacheEntry),
 	}
 }
+*/
 
 func timer(name string) func() {
 	start := time.Now()

@@ -20,7 +20,15 @@ func MockModule() fxutil.Module {
 	)
 }
 
-func newMock(deps dependencies) provides {
+type rdnsQuerierMock struct{}
+
+func (q *rdnsQuerierMock) GetHostname(ipAddr []byte) string {
+	return ""
+}
+
+func newMock() provides {
 	// Mock initialization
-	return provides{}
+	return provides{
+		Comp: &rdnsQuerierMock{},
+	}
 }

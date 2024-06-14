@@ -13,7 +13,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log/logimpl"
 	"github.com/DataDog/datadog-agent/comp/netflow/common"
 	"github.com/DataDog/datadog-agent/comp/netflow/portrollup"
-	"github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerierimpl"
+	"github.com/DataDog/datadog-agent/comp/rdnsquerier"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 
 	"github.com/stretchr/testify/assert"
@@ -35,7 +35,7 @@ func setMockTimeNow(newTime time.Time) {
 
 func Test_flowAccumulator_add(t *testing.T) {
 	logger := fxutil.Test[log.Component](t, logimpl.MockModule())
-	rdnsQuerier := rdnsquerier.NewRDNSQuerier()
+	rdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerier.MockModule())
 	synFlag := uint32(2)
 	ackFlag := uint32(16)
 	synAckFlag := synFlag | ackFlag
@@ -117,7 +117,7 @@ func Test_flowAccumulator_add(t *testing.T) {
 
 func Test_flowAccumulator_portRollUp(t *testing.T) {
 	logger := fxutil.Test[log.Component](t, logimpl.MockModule())
-	rdnsQuerier := rdnsquerier.NewRDNSQuerier()
+	rdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerier.MockModule())
 	synFlag := uint32(2)
 	ackFlag := uint32(16)
 	synAckFlag := synFlag | ackFlag
@@ -221,7 +221,7 @@ func Test_flowAccumulator_portRollUp(t *testing.T) {
 
 func Test_flowAccumulator_flush(t *testing.T) {
 	logger := fxutil.Test[log.Component](t, logimpl.MockModule())
-	rdnsQuerier := rdnsquerier.NewRDNSQuerier()
+	rdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerier.MockModule())
 	timeNow = MockTimeNow
 	zeroTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 	flushInterval := 60 * time.Second
