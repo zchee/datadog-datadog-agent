@@ -13,7 +13,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/netflow/common"
 	"github.com/DataDog/datadog-agent/comp/netflow/portrollup"
-	"github.com/DataDog/datadog-agent/comp/netflow/rdnsquerier" //JMWHACK JMWMOVE until I make it a component or otherwise move it elsewhere
+	"github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerier"
 	"go.uber.org/atomic"
 )
 

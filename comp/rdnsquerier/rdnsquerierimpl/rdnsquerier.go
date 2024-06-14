@@ -110,3 +110,26 @@ func (q *RDNSQuerier) GetAsync(ip string, func inlineCallback(string), func asyn
 	asyncCallback(entry.hostname)
 }
 */
+
+/*
+type reverseDNSCache struct {
+	// JMW IP address to hostname
+	cache map[string]string
+
+	// JMW mutex for cache
+	mutex sync.RWMutex
+}
+
+func NewReverseDNSCache func() *reverseDNSCache {
+	return &reverseDNSCache{
+		cache: make(map[string]string),
+	}
+}
+
+func (r *reverseDNSCache) PreFetch(ip string) string {
+}
+func (r *reverseDNSCache) Expire() string {
+}
+func (r *reverseDNSCache) TryGet(ip string) (string, bool) {
+}
+*/
