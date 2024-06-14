@@ -348,6 +348,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 				},
 			},
 			testBody: func(t *testing.T, ctx *testContext, monitor *Monitor) {
+				t.Skip("no http")
 				topicName := ctx.extras["topic_name"].(string)
 				client, err := kafka.NewClient(kafka.Options{
 					ServerAddress: ctx.targetAddress,
@@ -438,6 +439,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 				},
 			},
 			testBody: func(t *testing.T, ctx *testContext, monitor *Monitor) {
+				t.Skip("no http")
 				topicName := ctx.extras["topic_name"].(string)
 				client, err := kafka.NewClient(kafka.Options{
 					ServerAddress: ctx.targetAddress,

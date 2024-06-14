@@ -62,12 +62,12 @@ SEC("sk_msg/protocol_dispatcher")
 int sk_msg__protocol_dispatcher(struct sk_msg_md *msg) {
     log_debug("sk_msg__protocol_dispatcher: msg %p msg->sk %p size %u", msg, msg->sk, msg->size);
 
-    // u64 pid_tgid = bpf_get_current_pid_tgid();
-    // u32 *splicing = bpf_map_lookup_elem(&tcp_splicing, &pid_tgid);
-    // if (splicing) {
-    //     log_debug("sk_msg__protocol_dispatcher: skipping due to splice");
-    //     return SK_PASS;
-    // }
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    u32 *splicing = bpf_map_lookup_elem(&tcp_splicing, &pid_tgid);
+    if (splicing) {
+        log_debug("sk_msg__protocol_dispatcher: skipping due to splice");
+        return SK_PASS;
+    }
 
     protocol_dispatcher_entrypoint_sk_msg(msg);
     return SK_PASS;
@@ -211,7 +211,7 @@ int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t 
     }
 #endif
 
-    log_debug("kprobe/tcp_recvmsg: ubuf=%p", ubuf);
+    log_debug("kprobe/tcp_recvmsg: ubuf=%lx", (unsigned long)ubuf);
 
     tcp_kprobe_state_t state = {
         .sock = sk,

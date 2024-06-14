@@ -1497,6 +1497,9 @@ static __always_inline bool kafka_process_new_response(void *ctx, conn_tuple_t *
     // There could be some false positives due to this, if the message size happens to match
     // a valid in-flight correlation ID.
 
+    PKTBUF_READ_BIG_ENDIAN_WRAPPER(s32, first_word, pkt, offset);
+    offset -= sizeof(__s32);
+
     if (pktlen >= 8) {
         offset += sizeof(__s32); // Skip message size
     }
@@ -1509,6 +1512,12 @@ static __always_inline bool kafka_process_new_response(void *ctx, conn_tuple_t *
     key.correlation_id = correlation_id;
     bpf_memcpy(&key.tuple, tup, sizeof(key.tuple));
     kafka_transaction_t *request = bpf_map_lookup_elem(&kafka_in_flight, &key);
+    if (request) {
+        extra_debug("first_word %u correlation_id: %d", first_word, correlation_id);
+        if (first_word == correlation_id && correlation_id == 0) {
+            offset -= sizeof(__s32);
+        }
+    }
     if (!request) {
         if (pktlen >= 8) {
             // Try reading the first value, in case it's case (a) or (c)
