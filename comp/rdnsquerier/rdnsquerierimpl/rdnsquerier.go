@@ -4,7 +4,7 @@
 // Copyright 2024-present Datadog, Inc.
 
 // Package rdnsquerier provides JMW
-package rdnsquerier
+package rdnsquerierimpl
 
 import (
 	"fmt"
