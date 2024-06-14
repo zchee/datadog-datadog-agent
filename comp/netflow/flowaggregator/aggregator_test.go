@@ -44,7 +44,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/netflow/config"
 	"github.com/DataDog/datadog-agent/comp/netflow/goflowlib"
 	"github.com/DataDog/datadog-agent/comp/netflow/testutil"
-	"github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerier"
+	"github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerierimpl"
 )
 
 func TestAggregator(t *testing.T) {
