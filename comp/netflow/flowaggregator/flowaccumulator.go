@@ -13,7 +13,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/netflow/common"
 	"github.com/DataDog/datadog-agent/comp/netflow/portrollup"
-	"github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerier"
+	"github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerierimpl"
 	"go.uber.org/atomic"
 )
 
