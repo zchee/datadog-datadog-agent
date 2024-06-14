@@ -29,7 +29,7 @@ type RDNSQuerier struct {
 	cache map[string]rdnsCacheEntry
 }
 
-/** NewRDNSQuerier creates a new RDNSQuerier JMW component.
+// NewRDNSQuerier creates a new RDNSQuerier JMW component.
 func NewRDNSQuerier() *RDNSQuerier {
 	return &RDNSQuerier{
 		cache: make(map[string]rdnsCacheEntry),
