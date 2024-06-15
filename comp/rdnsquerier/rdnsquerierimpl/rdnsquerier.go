@@ -41,7 +41,7 @@ func Module() fxutil.Module {
 
 func newRDNSQuerier(deps dependencies) provides {
 	// Component initialization
-	rdnsQuerier := &RDNSQuerier{
+	rdnsQuerier := &rdnsQuerier{
 		lc:     deps.Lc,
 		logger: deps.Logger,
 		cache:  make(map[string]rdnsCacheEntry),
@@ -59,7 +59,7 @@ type rdnsCacheEntry struct {
 }
 
 // RDNSQuerier provides JMW
-type RDNSQuerier struct {
+type rdnsQuerier struct {
 	lc     fx.Lifecycle
 	logger log.Component
 
@@ -87,7 +87,7 @@ func timer(name string) func() {
 }
 
 // GetHostname returns the hostname for the given IP address JMW
-func (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
+func (q *rdnsQuerier) GetHostname(ipAddr []byte) string {
 	defer timer("timer JMW GetHostname() all")()
 
 	ip := net.IP(ipAddr)
@@ -128,7 +128,7 @@ func (q *RDNSQuerier) GetHostname(ipAddr []byte) string {
 
 /*
 // JMW Get returns the hostname for the given IP address
-func (q *RDNSQuerier) Get(ip string) string {
+func (q *rdnsQuerier) Get(ip string) string {
 	entry, ok := q.cache[ip]
 	if ok && entry.expirationTime < time.Now().Unix() {
 		return entry.hostname
@@ -139,7 +139,7 @@ func (q *RDNSQuerier) Get(ip string) string {
 */
 
 /* JMWASYNC
-func (q *RDNSQuerier) GetAsync(ip string, func inlineCallback(string), func asyncCallback(string)) {
+func (q *rdnsQuerier) GetAsync(ip string, func inlineCallback(string), func asyncCallback(string)) {
 	entry, ok := q.cache[ip]
 	if ok {
 		if entry.expirationTime < time.Now().Unix() {
