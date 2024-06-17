@@ -13,7 +13,7 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/DataDog/datadog-agent/comp/core/log"
+	//JMWNOTUSED "github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/rdnsquerier"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	//JMW"github.com/DataDog/datadog-agent/comp/core/config"
