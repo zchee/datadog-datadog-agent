@@ -1,4 +1,4 @@
-# Package code owners
+h# Package code owners
 
 # The listed owners will be automatically added as reviewers for PRs,
 # to ensure code quality and consistency of the package, and identify
@@ -431,7 +431,7 @@
 /pkg/process/metadata/parser/           @DataDog/universal-service-monitoring @DataDog/processes @DataDog/Networks
 /pkg/process/metadata/parser/*windows*  @DataDog/universal-service-monitoring @DataDog/processes @DataDog/Networks @DataDog/windows-kernel-integrations
 /pkg/process/monitor/                   @DataDog/universal-service-monitoring
-/pkg/process/net/                       @DataDog/processes @DataDog/Networks
+/pkg/process/net/                       @DataDog/Networks
 /pkg/proto/datadog/remoteconfig/        @DataDog/remote-config
 /pkg/proto/pbgo/                        # do not notify anyone
 /pkg/proto/pbgo/trace                   @DataDog/agent-apm
