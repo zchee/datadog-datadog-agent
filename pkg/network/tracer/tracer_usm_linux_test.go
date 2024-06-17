@@ -539,13 +539,11 @@ func testHTTPSClassification(t *testing.T, tr *Tracer, clientHost, targetHost, s
 					},
 				}
 
-				requestURL := fmt.Sprintf("https://%s/200/request", ctx.targetAddress)
-
-				// The server might not be ready to accept connection just yet, so we
-				// try until it starts accepting them.
-				require.EventuallyWithT(t, func(c *assert.CollectT) {
-					makeRequest(c, client, requestURL)
-				}, 5*time.Second, 100*time.Millisecond)
+				resp, err := client.Get(fmt.Sprintf("https://%s/200/request-1", ctx.targetAddress))
+				require.NoError(t, err)
+				_, _ = io.Copy(io.Discard, resp.Body)
+				_ = resp.Body.Close()
+				client.CloseIdleConnections()
 			},
 			validation: func(t *testing.T, ctx testContext, tr *Tracer) {
 				waitForConnectionsWithProtocol(t, tr, ctx.targetAddress, ctx.serverAddress, &protocols.Stack{Encryption: protocols.TLS, Application: protocols.HTTP})
