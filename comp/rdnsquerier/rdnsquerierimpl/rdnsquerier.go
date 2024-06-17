@@ -63,8 +63,8 @@ type rdnsCacheEntry struct {
 
 // RDNSQuerier provides JMW
 type rdnsQuerier struct {
-	lc     fx.Lifecycle
-	logger log.Component
+	lc fx.Lifecycle
+	//JMWUNUSED logger log.Component
 
 	// mutex for JMW
 	//JMWmutex sync.RWMutex
