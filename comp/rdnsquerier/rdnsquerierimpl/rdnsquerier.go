@@ -22,8 +22,11 @@ import (
 
 type dependencies struct {
 	fx.In
-	Lc     fx.Lifecycle
-	Logger log.Component
+	Lc fx.Lifecycle
+	//JMWBROKENLogger log.Component
+	/*
+	  app.go:46: fx.New failed: could not build arguments for function "reflect".makeFuncStub (/opt/homebrew/Cellar/go/1.22.4/libexec/src/reflect/asm_arm64.s:29): failed to build rdnsquerier.Component: missing dependencies for function "github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerierimpl".newRDNSQuerier (/Users/jim.wilson/go/src/github.com/DataDog/datadog-agent/comp/rdnsquerier/rdnsquerierimpl/rdnsquerier.go:43): missing type: log.Component
+	*/
 	// JMWTELEMETRY dependency?
 }
 
@@ -42,9 +45,9 @@ func Module() fxutil.Module {
 func newRDNSQuerier(deps dependencies) provides {
 	// Component initialization
 	rdnsQuerier := &rdnsQuerier{
-		lc:     deps.Lc,
-		logger: deps.Logger,
-		cache:  make(map[string]rdnsCacheEntry),
+		lc: deps.Lc,
+		//JMWADDlogger: deps.Logger,
+		cache: make(map[string]rdnsCacheEntry),
 	}
 	return provides{
 		Comp: rdnsQuerier,

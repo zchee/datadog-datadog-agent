@@ -36,6 +36,7 @@ func setMockTimeNow(newTime time.Time) {
 
 func Test_flowAccumulator_add(t *testing.T) {
 	logger := fxutil.Test[log.Component](t, logimpl.MockModule())
+	//JMWTESTrdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerierimpl.Module())
 	rdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerierimpl.MockModule())
 	synFlag := uint32(2)
 	ackFlag := uint32(16)
@@ -118,6 +119,7 @@ func Test_flowAccumulator_add(t *testing.T) {
 
 func Test_flowAccumulator_portRollUp(t *testing.T) {
 	logger := fxutil.Test[log.Component](t, logimpl.MockModule())
+	//JMWTESTrdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerierimpl.Module())
 	rdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerierimpl.MockModule())
 	synFlag := uint32(2)
 	ackFlag := uint32(16)
@@ -222,6 +224,7 @@ func Test_flowAccumulator_portRollUp(t *testing.T) {
 
 func Test_flowAccumulator_flush(t *testing.T) {
 	logger := fxutil.Test[log.Component](t, logimpl.MockModule())
+	//JMWTESTrdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerierimpl.Module())
 	rdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerierimpl.MockModule())
 	timeNow = MockTimeNow
 	zeroTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)

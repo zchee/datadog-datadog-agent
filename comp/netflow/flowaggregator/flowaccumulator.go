@@ -6,7 +6,6 @@
 package flowaggregator
 
 import (
-	// JMW "net"
 	"sync"
 	"time"
 
@@ -40,7 +39,7 @@ type flowAccumulator struct {
 	portRollupThreshold int
 	portRollupDisabled  bool
 
-	hashCollisionFlowCount *atomic.Uint64 // JMW when and why would hashCollisionFlowCount be incremented?
+	hashCollisionFlowCount *atomic.Uint64
 
 	logger log.Component
 
@@ -198,7 +197,6 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) { // JMW1
 			for field, value := range flowToAdd.AdditionalFields {
 				if _, ok := aggFlow.flow.AdditionalFields[field]; !ok {
 					aggFlow.flow.AdditionalFields[field] = value
-					f.logger.Debugf("JMW Added additional field `%s` = value `%v` to flow", field, value)
 				}
 			}
 		}
