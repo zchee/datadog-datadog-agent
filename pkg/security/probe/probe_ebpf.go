@@ -670,6 +670,10 @@ func (p *EBPFProbe) handleEvent(CPU int, data []byte) {
 			return
 		}
 
+		if event.ProcessCacheEntry.ArgsID == event.ProcessCacheEntry.EnvsID {
+			fmt.Printf(">>> args/envs IDs are the same for comm %s (%d)\n", event.ProcessCacheEntry.Comm, event.ProcessCacheEntry.ArgsID)
+		}
+
 		if err = p.Resolvers.ProcessResolver.ResolveNewProcessCacheEntry(event.ProcessCacheEntry, event.ContainerContext); err != nil {
 			seclog.Debugf("failed to resolve new process cache entry context for pid %d: %s", event.PIDContext.Pid, err)
 
