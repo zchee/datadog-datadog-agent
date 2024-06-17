@@ -12,12 +12,29 @@ int __attribute__((always_inline)) trace__sys_execveat(ctx_t *ctx, const char *p
         .type = EVENT_EXEC,
         .exec = {
             .args = {
-                .id = id64(),
+                .id = 0,
             },
             .envs = {
-                .id = id64(),
+                .id = 0,
             } }
     };
+
+    u64 core = (u64)bpf_get_smp_processor_id();
+    u64 ts = bpf_ktime_get_ns() & 0xFFFFFFFFFFFFFF;
+    syscall.exec.args.id = core << 56;
+    syscall.exec.args.id |= ts;
+
+    core = (u64)bpf_get_smp_processor_id();
+    ts = bpf_ktime_get_ns() & 0xFFFFFFFFFFFFFF;
+    syscall.exec.envs.id = core << 56;
+    syscall.exec.envs.id |= ts;
+
+    if (syscall.exec.args.id == syscall.exec.envs.id) {
+        char comm[16];
+        bpf_get_current_comm(&comm, sizeof(comm));
+        bpf_printk(">> same IDS for comm %s: %lu\n", comm, syscall.exec.args.id);
+    }
+
     collect_syscall_ctx(&syscall, SYSCALL_CTX_ARG_STR(0), (void *)path, NULL, NULL);
     cache_syscall(&syscall);
 
