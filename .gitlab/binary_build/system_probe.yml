@@ -17,9 +17,9 @@
     - objdump -p $CI_PROJECT_DIR/$SYSTEM_PROBE_BINARIES_DIR/system-probe | egrep 'GLIBC_2\.(1[8-9]|[2-9][0-9])' && exit 1
     - inv -e system-probe.save-build-outputs $CI_PROJECT_DIR/sysprobe-build-outputs.tar.xz
   variables:
-    KUBERNETES_MEMORY_REQUEST: "6Gi"
-    KUBERNETES_MEMORY_LIMIT: "12Gi"
-    KUBERNETES_CPU_REQUEST: 6
+    KUBERNETES_MEMORY_REQUEST: "32Gi"
+    KUBERNETES_MEMORY_LIMIT: "32Gi"
+    KUBERNETES_CPU_REQUEST: 16
   artifacts:
     expire_in: 2 weeks
     paths:
