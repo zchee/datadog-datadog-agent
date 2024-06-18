@@ -106,6 +106,12 @@ var Spec = &protocols.ProtocolSpec{
 			Name: tlsHTTP2IterationsTable,
 		},
 		{
+			Name: kprobeHTTP2IterationsTable,
+		},
+		{
+			Name: skMsgHTTP2IterationsTable,
+		},
+		{
 			Name: remainderTable,
 		},
 		{
