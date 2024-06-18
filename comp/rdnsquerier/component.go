@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2024-present Datadog, Inc.
 
-// Package rdnsquerier provides JMW
+// Package rdnsquerier provides ...
 package rdnsquerier
 
 // team: network-device-monitoring

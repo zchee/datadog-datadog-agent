@@ -22,20 +22,9 @@ func MockModule() fxutil.Module {
 
 type rdnsQuerierMock struct{}
 
-// JMWTESTSPASS
 func (q *rdnsQuerierMock) GetHostname(_ []byte) string {
 	return ""
 }
-
-/* JMWBREAKSTESTS need to figure out how to regenerate the pcap files
-func (q *rdnsQuerierMock) GetHostname(ipAddr []byte) string {
-	ip := net.IP(ipAddr)
-	if !ip.IsPrivate() { // JMW IsPrivate() also returns false for invalid IP addresses JMWCHECK
-		return "hostname-" + ip.String()
-	}
-	return ""
-}
-*/
 
 func newMock() provides {
 	// Mock initialization
