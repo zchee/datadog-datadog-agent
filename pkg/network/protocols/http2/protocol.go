@@ -53,6 +53,7 @@ const (
 	http2IterationsTable       = "http2_iterations"
 	tlsHTTP2IterationsTable    = "tls_http2_iterations"
 	kprobeHTTP2IterationsTable = "kprobe_http2_iterations"
+	skMsgHTTP2IterationsTable  = "sk_msg_http2_iterations"
 	firstFrameHandlerTailCall  = "socket__http2_handle_first_frame"
 	filterTailCall             = "socket__http2_filter"
 	headersParserTailCall      = "socket__http2_headers_parser"
@@ -309,6 +310,10 @@ func (p *Protocol) ConfigureOptions(mgr *manager.Manager, opts *manager.Options)
 		EditorFlag: manager.EditMaxEntries,
 	}
 	opts.MapSpecEditors[kprobeHTTP2IterationsTable] = manager.MapSpecEditor{
+		MaxEntries: mapSizeValue,
+		EditorFlag: manager.EditMaxEntries,
+	}
+	opts.MapSpecEditors[skMsgHTTP2IterationsTable] = manager.MapSpecEditor{
 		MaxEntries: mapSizeValue,
 		EditorFlag: manager.EditMaxEntries,
 	}

@@ -7,18 +7,18 @@
 
 static __always_inline long bpf_sk_msg_load_bytes(struct sk_msg_md *msg, u32 offset, void *to, u32 len)
 {
-    long err = bpf_msg_pull_data(msg, offset, offset + len, 0);
-    if (err < 0) {
-        return err;
-    }
+    // long err = bpf_msg_pull_data(msg, offset, offset + len, 0);
+    // if (err < 0) {
+    //     return err;
+    // }
 
-    void *data = msg->data;
-    void *data_end = msg->data_end;
-    if (data + len > data_end) {
-        return -1;
-    }
+    // void *data = msg->data;
+    // void *data_end = msg->data_end;
+    // if (data + len > data_end) {
+    //     return -1;
+    // }
 
-    return bpf_probe_read_kernel(to, len, data);
+    return bpf_probe_read_kernel(to, len, msg->data + offset);
 }
 
 // Template for read_big_endian_{s16, s32} methods. The function gets skb, offset and an out parameter of the relevant

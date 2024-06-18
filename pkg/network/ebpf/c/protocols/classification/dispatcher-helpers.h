@@ -490,7 +490,7 @@ static __always_inline void sk_msg_dispatch_kafka(struct sk_msg_md *msg) {
     const size_t payload_length = skb_info.data_end - skb_info.data_off;
     const size_t final_fragment_size = payload_length < CLASSIFICATION_MAX_BUFFER ? payload_length : CLASSIFICATION_MAX_BUFFER;
     protocol_t cur_fragment_protocol = PROTOCOL_UNKNOWN;
-    if (skskb_is_kafka(msg, request_fragment, final_fragment_size)) {
+    if (skskb_is_kafka(msg, &skb_info, request_fragment, final_fragment_size)) {
         cur_fragment_protocol = PROTOCOL_KAFKA;
         update_protocol_stack(&skb_tup, cur_fragment_protocol);
     }

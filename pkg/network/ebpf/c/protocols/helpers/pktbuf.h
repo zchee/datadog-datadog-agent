@@ -28,6 +28,7 @@ struct pktbuf {
         };
         struct {
             struct sk_msg_md *md;
+            skb_info_t *info;
         } sk_msg;
     };
 };
@@ -50,7 +51,7 @@ static __always_inline __maybe_unused void pktbuf_set_offset(pktbuf_t pkt, u32 o
         pkt.kprobe->data_off = offset;
         return;
     case PKTBUF_SK_MSG:
-        pktbuf_invalid_operation();
+        pkt.sk_msg.info->data_off = offset;
         return;
     }
 
@@ -70,14 +71,14 @@ static __always_inline __maybe_unused void pktbuf_advance(pktbuf_t pkt, u32 offs
         pkt.kprobe->data_off += offset;
         return;
     case PKTBUF_SK_MSG:
-        pktbuf_invalid_operation();
+        pkt.sk_msg.info->data_off += offset;
         return;
     }
 
     pktbuf_invalid_operation();
 }
 
-static __always_inline __maybe_unused u32 pktbuf_data_offset(pktbuf_t pkt)
+static __always_inline __maybe_unused u64 pktbuf_data_offset(pktbuf_t pkt)
 {
     switch (pkt.type) {
     case PKTBUF_SKB:
@@ -87,7 +88,7 @@ static __always_inline __maybe_unused u32 pktbuf_data_offset(pktbuf_t pkt)
     case PKTBUF_KPROBE:
         return pkt.kprobe->data_off;
     case PKTBUF_SK_MSG:
-        return 0;
+        return pkt.sk_msg.info->data_off;
     }
 
     pktbuf_invalid_operation();
@@ -208,11 +209,12 @@ static __always_inline __maybe_unused long pktbuf_map_delete(pktbuf_t pkt, pktbu
     return bpf_map_delete_elem(options[pkt.type].map, options[pkt.type].key);
 }
 
-static __always_inline __maybe_unused pktbuf_t pktbuf_from_sk_msg_md(struct sk_msg_md *msg)
+static __always_inline __maybe_unused pktbuf_t pktbuf_from_sk_msg_md(struct sk_msg_md *msg, skb_info_t *skb_info)
 {
     return (pktbuf_t) {
         .type = PKTBUF_SK_MSG,
         .sk_msg.md = msg,
+        .sk_msg.info = skb_info,
     };
 }
 
@@ -271,7 +273,7 @@ PKTBUF_READ_BIG_ENDIAN(s8)
     READ_INTO_USER_BUFFER(name, total_size)                                                              \
     READ_INTO_KERNEL_BUFFER(name, total_size)                                                            \
     READ_INTO_BUFFER(name, total_size, blk_size)                                                         \
-    READ_INTO_BUFFER_SK_MSG(name, total_size, blk_size)                                                  \
+    READ_INTO_SK_MSG_BUFFER(name, total_size)                                                            \
     static __always_inline void pktbuf_read_into_buffer_##name(char *buffer, pktbuf_t pkt, u32 offset) { \
         switch (pkt.type) {                                                                              \
         case PKTBUF_SKB:                                                                                 \
@@ -284,7 +286,7 @@ PKTBUF_READ_BIG_ENDIAN(s8)
             read_into_user_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                     \
             return;                                                                                      \
         case PKTBUF_SK_MSG:                                                                              \
-            read_into_buffer_sk_msg_##name(buffer, pkt.sk_msg.md, offset);                               \
+            read_into_sk_msg_buffer_##name(buffer, pkt.sk_msg.md->data + offset);                               \
             return;                                                                                      \
         }                                                                                                \
         pktbuf_invalid_operation();                                                                      \

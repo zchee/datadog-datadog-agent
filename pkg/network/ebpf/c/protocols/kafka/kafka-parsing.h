@@ -190,7 +190,7 @@ int sk_msg__kafka_filter(struct sk_msg_md *msg) {
         return SK_PASS;
     }
 
-    pktbuf_t pkt = pktbuf_from_sk_msg_md(msg);
+    pktbuf_t pkt = pktbuf_from_sk_msg_md(msg, &skb_info);
 
     // Don't pass in skb_info to avoid TCP sequence number checks
     if (kafka_process_response(msg, &tup, kafka, pkt, NULL)) {
@@ -1439,7 +1439,7 @@ static __always_inline int __sk_msg_kafka_response_parser(struct sk_msg_md *msg,
         return SK_PASS;
     }
 
-    kafka_response_parser(kafka, msg, &tup, pktbuf_from_sk_msg_md(msg), level, min_api_version, max_api_version);
+    kafka_response_parser(kafka, msg, &tup, pktbuf_from_sk_msg_md(msg, &skb_info), level, min_api_version, max_api_version);
 
     return SK_PASS;
 }
