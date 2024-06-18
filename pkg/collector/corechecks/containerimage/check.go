@@ -95,12 +95,12 @@ type Check struct {
 // Factory returns a new check factory
 func Factory(store workloadmeta.Component) optional.Option[func() check.Check] {
 	return optional.NewOption(func() check.Check {
-		return core.NewLongRunningCheckWrapper(&Check{
+		return &Check{
 			CheckBase:         core.NewCheckBase(CheckName),
 			workloadmetaStore: store,
 			instance:          &Config{},
 			stopCh:            make(chan struct{}),
-		})
+		}
 	})
 }
 
