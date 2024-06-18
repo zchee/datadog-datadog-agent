@@ -286,7 +286,7 @@ PKTBUF_READ_BIG_ENDIAN(s8)
             read_into_user_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                     \
             return;                                                                                      \
         case PKTBUF_SK_MSG:                                                                              \
-            read_into_sk_msg_buffer_##name(buffer, pkt.sk_msg.md->data + offset);                               \
+            read_into_sk_msg_buffer_##name(pkt.sk_msg.md, offset, buffer);                               \
             return;                                                                                      \
         }                                                                                                \
         pktbuf_invalid_operation();                                                                      \

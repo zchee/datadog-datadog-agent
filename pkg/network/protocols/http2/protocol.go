@@ -78,6 +78,12 @@ const (
 	kprobeHeadersParserTailCall = "kprobe__http2_headers_parser"
 	kprobeDynamicTableCleaner   = "kprobe__http2_dynamic_table_cleaner"
 	kprobeEOSParserTailCall     = "kprobe__http2_eos_parser"
+
+	skMsgFirstFrameTailCall    = "sk_msg__http2_handle_first_frame"
+	skMsgFilterTailCall        = "sk_msg__http2_frame_filter"
+	skMsgHeadersParserTailCall = "sk_msg__http2_headers_parser"
+	skMsgDynamicTableCleaner   = "sk_msg__http2_dynamic_table_cleaner"
+	skMsgEOSParserTailCall     = "sk_msg__http2_eos_parser"
 )
 
 // Spec is the protocol spec for HTTP/2.
@@ -244,6 +250,41 @@ var Spec = &protocols.ProtocolSpec{
 			Key:           uint32(protocols.ProgramKprobeHTTP2EOSParser),
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFFuncName: kprobeEOSParserTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2HandleFirstFrame),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: skMsgFirstFrameTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2FrameFilter),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: skMsgFilterTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2HeadersParser),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: skMsgHeadersParserTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2DynamicTableCleaner),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: skMsgDynamicTableCleaner,
+			},
+		},
+		{
+			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2EOSParser),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: skMsgEOSParserTailCall,
 			},
 		},
 	},

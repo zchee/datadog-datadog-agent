@@ -21,14 +21,14 @@ int sk_msg__http2_handle_first_frame(struct sk_msg_md *msg) {
     dispatcher_arguments_t dispatcher_args_copy;
     bpf_memset(&dispatcher_args_copy, 0, sizeof(dispatcher_arguments_t));
     if (!fetch_dispatching_arguments(&dispatcher_args_copy.tup, &dispatcher_args_copy.skb_info)) {
-        return 0;
+        return SK_PASS;
     }
 
     pktbuf_t pkt = pktbuf_from_sk_msg_md(msg, &dispatcher_args_copy.skb_info);
 
     __u32 data_off = 0;
     handle_first_frame(pkt, (__u32*)&data_off, &dispatcher_args_copy.tup);
-    return 0;
+    return SK_PASS;
 }
 
 // http2_tls_filter finds and filters the HTTP2 frames from the buffer got from
@@ -39,13 +39,13 @@ int sk_msg__http2_frame_filter(struct sk_msg_md *msg) {
     dispatcher_arguments_t dispatcher_args_copy;
     bpf_memset(&dispatcher_args_copy, 0, sizeof(dispatcher_arguments_t));
     if (!fetch_dispatching_arguments(&dispatcher_args_copy.tup, &dispatcher_args_copy.skb_info)) {
-        return 0;
+        return SK_PASS;
     }
 
     pktbuf_t pkt = pktbuf_from_sk_msg_md(msg, &dispatcher_args_copy.skb_info);
 
     filter_frame(pkt, &dispatcher_args_copy, &dispatcher_args_copy.tup);
-    return 0;
+    return SK_PASS;
 }
 
 
@@ -60,14 +60,14 @@ int sk_msg__http2_headers_parser(struct sk_msg_md *msg) {
     dispatcher_arguments_t dispatcher_args_copy;
     bpf_memset(&dispatcher_args_copy, 0, sizeof(dispatcher_arguments_t));
     if (!fetch_dispatching_arguments(&dispatcher_args_copy.tup, &dispatcher_args_copy.skb_info)) {
-        return 0;
+        return SK_PASS;
     }
 
     pktbuf_t pkt = pktbuf_from_sk_msg_md(msg, &dispatcher_args_copy.skb_info);
 
     headers_parser(pkt, &dispatcher_args_copy, &dispatcher_args_copy.tup, 0);
 
-    return 0;
+    return SK_PASS;
 }
 
 // The program is responsible for cleaning the dynamic table.
@@ -77,13 +77,13 @@ int sk_msg__http2_dynamic_table_cleaner(struct sk_msg_md *msg) {
     dispatcher_arguments_t dispatcher_args_copy;
     bpf_memset(&dispatcher_args_copy, 0, sizeof(dispatcher_arguments_t));
     if (!fetch_dispatching_arguments(&dispatcher_args_copy.tup, &dispatcher_args_copy.skb_info)) {
-        return 0;
+        return SK_PASS;
     }
 
     pktbuf_t pkt = pktbuf_from_sk_msg_md(msg, &dispatcher_args_copy.skb_info);
     dynamic_table_cleaner(pkt, &dispatcher_args_copy.tup);
 
-    return 0;
+    return SK_PASS;
 }
 
 // The program is responsible for parsing all frames that mark the end of a stream.
@@ -99,14 +99,14 @@ int sk_msg__http2_eos_parser(struct sk_msg_md *msg) {
     dispatcher_arguments_t dispatcher_args_copy;
     bpf_memset(&dispatcher_args_copy, 0, sizeof(dispatcher_arguments_t));
     if (!fetch_dispatching_arguments(&dispatcher_args_copy.tup, &dispatcher_args_copy.skb_info)) {
-        return 0;
+        return SK_PASS;
     }
 
     pktbuf_t pkt = pktbuf_from_sk_msg_md(msg, &dispatcher_args_copy.skb_info);
 
     eos_parser(pkt, &dispatcher_args_copy, &dispatcher_args_copy.tup);
 
-    return 0;
+    return SK_PASS;
 }
 
 // http2_tls_termination is responsible for cleaning up the state of the HTTP2

@@ -103,10 +103,10 @@
 #define READ_INTO_KERNEL_BUFFER_INTERNAL(name, total_size, fn)                                                            \
     __READ_INTO_BUFFER_INTERNAL(kernel, name, total_size, fn)
 
-#define READ_INTO_SK_MSG_BUFFER_INTERNAL(name, total_size, fn)                                                            \
-    static __always_inline void read_into_sk_msg_buffer_##name(char *dst, const char *src) {                         \
+#define READ_INTO_SK_MSG_BUFFER_INTERNAL(name, total_size)                                                          \
+    static __always_inline void read_into_sk_msg_buffer_##name(struct sk_msg_md *msg, u32 offset, void *dst) {          \
         bpf_memset(dst, 0, total_size);                                                                                 \
-        fn(dst, total_size, src);                                                                                       \
+        bpf_sk_msg_load_bytes(msg, offset, dst, total_size);                                                            \
         return;                                                                                                         \
     }
 
@@ -116,7 +116,6 @@
 #define READ_INTO_KERNEL_BUFFER(name, total_size) READ_INTO_KERNEL_BUFFER_INTERNAL(name, total_size, bpf_probe_read_kernel_with_telemetry)
 #define READ_INTO_KERNEL_BUFFER_WITHOUT_TELEMETRY(name, total_size) READ_INTO_KERNEL_BUFFER_INTERNAL(name, total_size, bpf_probe_read_kernel)
 
-#define READ_INTO_SK_MSG_BUFFER(name, total_size) READ_INTO_SK_MSG_BUFFER_INTERNAL(name, total_size, bpf_probe_read_kernel)
-#define READ_INTO_SK_MSG_BUFFER_WITHOUT_TELEMETRY(name, total_size) READ_INTO_SK_MSG_BUFFER_INTERNAL(name, total_size, bpf_probe_read_kernel)
+#define READ_INTO_SK_MSG_BUFFER(name, total_size) READ_INTO_SK_MSG_BUFFER_INTERNAL(name, total_size)
 
 #endif

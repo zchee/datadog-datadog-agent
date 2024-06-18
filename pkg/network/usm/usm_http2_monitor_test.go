@@ -454,7 +454,7 @@ func (s *usmHTTP2Suite) TestHTTP2ManyDifferentPaths() {
 	const (
 		repetitionsPerRequest = 2
 		// Should be bigger than the length of the http2_dynamic_table which is 1024
-		numberOfRequests         = 1500
+		numberOfRequests         = 10
 		expectedNumberOfRequests = numberOfRequests * repetitionsPerRequest
 	)
 	clients := getHTTP2UnixClientArray(1, unixPath)

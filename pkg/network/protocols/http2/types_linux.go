@@ -11,7 +11,7 @@ const (
 
 	http2RawStatusCodeMaxLength = 0x3
 
-	Http2MaxHeadersCountPerFiltering = 0x2
+	Http2MaxHeadersCountPerFiltering = 0xc
 )
 
 type ConnTuple = struct {
