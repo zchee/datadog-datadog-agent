@@ -700,10 +700,6 @@ func makeRecordWithVal(val []byte) kmsg.Record {
 	return record
 }
 
-func makeRecord() kmsg.Record {
-	return makeRecordWithVal([]byte("Hello Kafka!"))
-}
-
 func makeRecordBatch(records ...kmsg.Record) kmsg.RecordBatch {
 	recordBatch := kmsg.NewRecordBatch()
 	recordBatch.Magic = 2
@@ -779,17 +775,6 @@ func appendResponse(dst []byte, response kmsg.FetchResponse, correlationID uint3
 type Message struct {
 	request  []byte
 	response []byte
-}
-
-func appendMessages(messages []Message, correlationID int, req kmsg.FetchRequest, resp kmsg.FetchResponse) []Message {
-	formatter := kmsg.NewRequestFormatter(kmsg.FormatterClientID("kgo"))
-	data := formatter.AppendRequest(make([]byte, 0), &req, int32(correlationID))
-	respData := appendResponse(make([]byte, 0), resp, uint32(correlationID))
-
-	return append(messages,
-		Message{request: data},
-		Message{response: respData},
-	)
 }
 
 // CannedClientServer allows running a TCP server/client pair, optionally
