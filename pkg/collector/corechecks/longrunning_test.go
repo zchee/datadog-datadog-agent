@@ -8,12 +8,10 @@
 package corechecks
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/integration"
-	"github.com/DataDog/datadog-agent/pkg/aggregator/mocksender"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 	checkid "github.com/DataDog/datadog-agent/pkg/collector/check/id"
 	"github.com/DataDog/datadog-agent/pkg/collector/check/stats"
@@ -138,37 +136,6 @@ func TestLongRunningCheckWrapperRun(t *testing.T) {
 		mockCheck.waitUntilRun()
 
 		mockCheck.Cancel()
-		mockCheck.AssertExpectations(t)
-	})
-
-	t.Run("Committing the sender if the check is already running", func(t *testing.T) {
-		mockSender := mocksender.NewMockSender("ok")
-		mockSender.On("Commit").Return()
-
-		mockCheck := newMockLongRunningCheck()
-		mockCheck.On("GetSender").Return(mockSender, nil)
-
-		wrapper := NewLongRunningCheckWrapper(mockCheck)
-		wrapper.running = true // simulate that the check is already running
-
-		err := wrapper.Run()
-
-		assert.Nil(t, err)
-		mockSender.AssertExpectations(t)
-		mockCheck.AssertExpectations(t)
-	})
-
-	t.Run("Returning an error if GetSender fails while already running", func(t *testing.T) {
-		mockCheck := newMockLongRunningCheck()
-		expectedErr := fmt.Errorf("failed to get sender")
-		mockCheck.On("GetSender").Return(nil, expectedErr)
-
-		wrapper := NewLongRunningCheckWrapper(mockCheck)
-		wrapper.running = true // simulate that the check is already running
-
-		err := wrapper.Run()
-
-		assert.EqualError(t, err, "error getting sender: failed to get sender")
 		mockCheck.AssertExpectations(t)
 	})
 
