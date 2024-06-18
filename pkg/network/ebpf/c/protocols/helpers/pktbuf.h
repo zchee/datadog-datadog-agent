@@ -273,7 +273,7 @@ PKTBUF_READ_BIG_ENDIAN(s8)
     READ_INTO_USER_BUFFER(name, total_size)                                                              \
     READ_INTO_KERNEL_BUFFER(name, total_size)                                                            \
     READ_INTO_BUFFER(name, total_size, blk_size)                                                         \
-    READ_INTO_SK_MSG_BUFFER(name, total_size)                                                            \
+    READ_INTO_BUFFER_SK_MSG(name, total_size, blk_size)           \
     static __always_inline void pktbuf_read_into_buffer_##name(char *buffer, pktbuf_t pkt, u32 offset) { \
         switch (pkt.type) {                                                                              \
         case PKTBUF_SKB:                                                                                 \
@@ -286,7 +286,7 @@ PKTBUF_READ_BIG_ENDIAN(s8)
             read_into_user_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                     \
             return;                                                                                      \
         case PKTBUF_SK_MSG:                                                                              \
-            read_into_sk_msg_buffer_##name(pkt.sk_msg.md, offset, buffer);                               \
+            read_into_buffer_sk_msg_##name(buffer, pkt.sk_msg.md, offset);                               \
             return;                                                                                      \
         }                                                                                                \
         pktbuf_invalid_operation();                                                                      \
