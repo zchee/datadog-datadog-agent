@@ -13,7 +13,6 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 	"github.com/DataDog/datadog-agent/pkg/collector/check"
-	"github.com/DataDog/datadog-agent/pkg/collector/check/stats"
 )
 
 // LongRunningCheck is a wrapper that converts a long running check
@@ -78,20 +77,6 @@ func (cw *LongRunningCheckWrapper) Run() error {
 // Run() will be called only once and the metrics won't be collected.
 func (cw *LongRunningCheckWrapper) Interval() time.Duration {
 	return 15 * time.Second
-}
-
-// GetSenderStats returns the stats from the last run of the check and sets the field
-// LongRunningCheck to true. It is necessary for formatting the stats in the status page.
-func (cw *LongRunningCheckWrapper) GetSenderStats() (stats.SenderStats, error) {
-	if cw.LongRunningCheck == nil {
-		return stats.SenderStats{}, fmt.Errorf("no check defined")
-	}
-	s, err := cw.LongRunningCheck.GetSenderStats()
-	if err != nil {
-		return stats.SenderStats{}, fmt.Errorf("error getting sender stats: %w", err)
-	}
-	s.LongRunningCheck = true
-	return s, nil
 }
 
 // Cancel calls the cancel method of the check.

@@ -205,19 +205,3 @@ func TestLongRunningCheckWrapperRun(t *testing.T) {
 		mockCheck.AssertNumberOfCalls(t, "Run", 1)
 	})
 }
-
-// TestLongRunningCheckWrapperGetSenderStats tests the GetSenderStats function.
-func TestLongRunningCheckWrapperGetSenderStats(t *testing.T) {
-	mockCheck := newMockLongRunningCheck()
-	expectedStats := stats.SenderStats{MetricSamples: 10, Events: 2}
-	mockCheck.On("GetSenderStats").Return(expectedStats, nil)
-
-	wrapper := NewLongRunningCheckWrapper(mockCheck)
-	senderStats, err := wrapper.GetSenderStats()
-
-	assert.Nil(t, err)
-	assert.True(t, senderStats.LongRunningCheck)
-	assert.Equal(t, expectedStats.MetricSamples, senderStats.MetricSamples)
-	assert.Equal(t, expectedStats.Events, senderStats.Events)
-	mockCheck.AssertExpectations(t)
-}
