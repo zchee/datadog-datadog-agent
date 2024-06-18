@@ -41,20 +41,15 @@ type provides struct {
 	StatusProvider status.InformationProvider
 }
 
-// JMWCOMPONENT read up on components - can I pass rdnsCachedQuerier w/ dependencies?
 // newServer configures a netflow server.
-func newServer(lc fx.Lifecycle, deps dependencies) (provides, error) { // JMWINIT0
+func newServer(lc fx.Lifecycle, deps dependencies) (provides, error) {
 	conf := deps.Config.Get()
 	sender, err := deps.Demultiplexer.GetDefaultSender()
 	if err != nil {
 		return provides{}, err
 	}
 
-	// JMWCOMPONENT hack for now - create RDNSQuerier here and pass it along
-
-	// JMWCACHE create reverse DNS lookup cache here, pass it to flowaggregator, and have it pass it to flowaccumulator
-	// JMWOR create it outside of the netflow component so it can be shared by SNMP metadata and other components
-	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger /*JMW rdnsquerier.NewRDNSQuerier()*/, deps.RDNSQuerier) //JMWINIT1
+	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger)
 
 	server := &Server{
 		config:  conf,
