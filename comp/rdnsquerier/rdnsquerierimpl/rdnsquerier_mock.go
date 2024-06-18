@@ -8,6 +8,8 @@
 package rdnsquerierimpl
 
 import (
+	"fmt"
+
 	"go.uber.org/fx"
 
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
@@ -15,6 +17,7 @@ import (
 
 // MockModule defines the fx options for the mock component.
 func MockModule() fxutil.Module {
+	fmt.Printf("JMW in rdnsquerierimpl.MockModule()\n")
 	return fxutil.Component(
 		fx.Provide(newMock),
 	)
@@ -23,10 +26,12 @@ func MockModule() fxutil.Module {
 type rdnsQuerierMock struct{}
 
 func (q *rdnsQuerierMock) GetHostname(_ []byte) string {
+	fmt.Printf("JMW in rdnsQuerierMock.GetHostname()\n")
 	return ""
 }
 
 func newMock() provides {
+	fmt.Printf("JMW in rdnsquerierimpl.newMock()\n")
 	// Mock initialization
 	return provides{
 		Comp: &rdnsQuerierMock{},

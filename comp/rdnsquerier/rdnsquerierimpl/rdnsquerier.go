@@ -28,6 +28,7 @@ type provides struct {
 
 // Module defines the fx options for this component.
 func Module() fxutil.Module {
+	fmt.Printf("JMW in rdnsquerierimpl.Module()\n")
 	return fxutil.Component(
 		fx.Provide(newRDNSQuerier),
 	)
@@ -39,7 +40,7 @@ type rdnsQuerierImpl struct {
 }
 
 func newRDNSQuerier(deps dependencies) provides {
-	fmt.Printf("JMW in rdnsquerier.newRDNSQuerier()")
+	fmt.Printf("JMW in rdnsquerierimpl.newRDNSQuerier()\n")
 	// Component initialization
 	querier := &rdnsQuerierImpl{
 		lc: deps.Lc,
@@ -51,5 +52,6 @@ func newRDNSQuerier(deps dependencies) provides {
 
 // GetHostname returns the hostname for the given IP address
 func (q *rdnsQuerierImpl) GetHostname(ipAddr []byte) string {
+	fmt.Printf("JMW in rdnsQuerierImpl.GetHostname()\n")
 	return ""
 }

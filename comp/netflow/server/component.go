@@ -10,6 +10,8 @@
 package server
 
 import (
+	"fmt"
+
 	"go.uber.org/fx"
 
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
@@ -22,6 +24,7 @@ type Component interface{}
 
 // Module defines the fx options for this component.
 func Module() fxutil.Module {
+	fmt.Printf("JMW in server.Module()\n")
 	return fxutil.Component(
 		fx.Provide(newServer))
 }

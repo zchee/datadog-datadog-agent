@@ -8,6 +8,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -43,11 +44,16 @@ type provides struct {
 
 // newServer configures a netflow server.
 func newServer(lc fx.Lifecycle, deps dependencies) (provides, error) {
+	fmt.Printf("JMW in server.newServer()\n")
 	conf := deps.Config.Get()
 	sender, err := deps.Demultiplexer.GetDefaultSender()
 	if err != nil {
 		return provides{}, err
 	}
+	//JMW
+	rdnsquerier := deps.RDNSQuerier
+	fmt.Printf("JMW in server.newServer() - calling rdnsquerier.GetHostname() to test if the component is working\n")
+	rdnsquerier.GetHostname([]byte{})
 
 	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger)
 

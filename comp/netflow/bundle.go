@@ -8,6 +8,8 @@
 package netflow
 
 import (
+	"fmt"
+
 	"github.com/DataDog/datadog-agent/comp/netflow/config"
 	"github.com/DataDog/datadog-agent/comp/netflow/server"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
@@ -17,7 +19,8 @@ import (
 
 // Bundle defines the fx options for this bundle.
 func Bundle() fxutil.BundleOptions {
+	fmt.Printf("JMW in netflow.Bundle()\n")
 	return fxutil.Bundle(
-		server.Module(),
+		server.Module(), //JMWNETFLOWINIT
 		config.Module())
 }

@@ -68,7 +68,9 @@ var testOptions = fx.Options(
 	demultiplexerimpl.MockModule(),
 	defaultforwarder.MockModule(),
 	core.MockBundle(),
-	rdnsquerierimpl.MockModule(),
+	//JMWWORKSrdnsquerierimpl.MockModule(),
+	//JMWTHISWORKSTOO
+	rdnsquerierimpl.Module(),
 	fx.Invoke(func(lc fx.Lifecycle, c Component) {
 		// Set the internal flush frequency to a small number so tests don't take forever
 		c.(*Server).FlowAgg.FlushFlowsToSendInterval = 100 * time.Millisecond
