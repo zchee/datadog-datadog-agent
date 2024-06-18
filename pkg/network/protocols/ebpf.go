@@ -83,6 +83,16 @@ const (
 	ProgramPostgres ProgramType = C.PROG_POSTGRES
 	// ProgramPostgresParseMessage is the Golang representation of the C.PROG_POSTGRES_PROCESS_PARSE_MESSAGE enum
 	ProgramPostgresParseMessage ProgramType = C.PROG_POSTGRES_PROCESS_PARSE_MESSAGE
+	//
+	ProgramKprobeHTTP2HandleFirstFrame ProgramType = C.KPROBE_HTTP2_HANDLE_FIRST_FRAME
+	// ProgramHTTP2FrameFilter is the Golang representation of the C.PROG_HTTP2_HANDLE_FRAME enum
+	ProgramKprobeHTTP2FrameFilter ProgramType = C.KPROBE_HTTP2_FRAME_FILTER
+	// ProgramHTTP2HeadersParser is the Golang representation of the C.PROG_HTTP2_HEADERS_PARSER enum
+	ProgramKprobeHTTP2HeadersParser ProgramType = C.KPROBE_HTTP2_HEADERS_PARSER
+	// ProgramHTTP2DynamicTableCleaner is the Golang representation of the C.PROG_HTTP2_DYNAMIC_TABLE_CLEANER enum
+	ProgramKprobeHTTP2DynamicTableCleaner ProgramType = C.KPROBE_HTTP2_DYNAMIC_TABLE_CLEANER
+	// ProgramHTTP2EOSParser is the Golang representation of the C.PROG_HTTP2_EOS_PARSER enum
+	ProgramKprobeHTTP2EOSParser ProgramType = C.KPROBE_HTTP2_EOS_PARSER
 )
 
 // Application layer of the protocol stack.

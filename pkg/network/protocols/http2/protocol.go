@@ -46,18 +46,19 @@ type Protocol struct {
 
 const (
 	// InFlightMap is the name of the map used to store in-flight HTTP/2 streams
-	InFlightMap               = "http2_in_flight"
-	remainderTable            = "http2_remainder"
-	dynamicTable              = "http2_dynamic_table"
-	dynamicTableCounter       = "http2_dynamic_counter_table"
-	http2IterationsTable      = "http2_iterations"
-	tlsHTTP2IterationsTable   = "tls_http2_iterations"
-	firstFrameHandlerTailCall = "socket__http2_handle_first_frame"
-	filterTailCall            = "socket__http2_filter"
-	headersParserTailCall     = "socket__http2_headers_parser"
-	dynamicTableCleaner       = "socket__http2_dynamic_table_cleaner"
-	eosParserTailCall         = "socket__http2_eos_parser"
-	eventStream               = "http2"
+	InFlightMap                = "http2_in_flight"
+	remainderTable             = "http2_remainder"
+	dynamicTable               = "http2_dynamic_table"
+	dynamicTableCounter        = "http2_dynamic_counter_table"
+	http2IterationsTable       = "http2_iterations"
+	tlsHTTP2IterationsTable    = "tls_http2_iterations"
+	kprobeHTTP2IterationsTable = "kprobe_http2_iterations"
+	firstFrameHandlerTailCall  = "socket__http2_handle_first_frame"
+	filterTailCall             = "socket__http2_filter"
+	headersParserTailCall      = "socket__http2_headers_parser"
+	dynamicTableCleaner        = "socket__http2_dynamic_table_cleaner"
+	eosParserTailCall          = "socket__http2_eos_parser"
+	eventStream                = "http2"
 
 	// TelemetryMap is the name of the map used to retrieve plaintext metrics from the kernel
 	TelemetryMap = "http2_telemetry"
@@ -70,6 +71,12 @@ const (
 	tlsDynamicTableCleaner   = "uprobe__http2_dynamic_table_cleaner"
 	tlsEOSParserTailCall     = "uprobe__http2_tls_eos_parser"
 	tlsTerminationTailCall   = "uprobe__http2_tls_termination"
+
+	kprobeFirstFrameTailCall    = "kprobe__http2_handle_first_frame"
+	kprobeFilterTailCall        = "kprobe__http2_frame_filter"
+	kprobeHeadersParserTailCall = "kprobe__http2_headers_parser"
+	kprobeDynamicTableCleaner   = "kprobe__http2_dynamic_table_cleaner"
+	kprobeEOSParserTailCall     = "kprobe__http2_eos_parser"
 )
 
 // Spec is the protocol spec for HTTP/2.
@@ -203,6 +210,41 @@ var Spec = &protocols.ProtocolSpec{
 				EBPFFuncName: tlsTerminationTailCall,
 			},
 		},
+		{
+			ProgArrayName: protocols.KprobeDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramKprobeHTTP2HandleFirstFrame),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: kprobeFirstFrameTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.KprobeDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramKprobeHTTP2FrameFilter),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: kprobeFilterTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.KprobeDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramKprobeHTTP2HeadersParser),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: kprobeHeadersParserTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.KprobeDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramKprobeHTTP2DynamicTableCleaner),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: kprobeDynamicTableCleaner,
+			},
+		},
+		{
+			ProgArrayName: protocols.KprobeDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramKprobeHTTP2EOSParser),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: kprobeEOSParserTailCall,
+			},
+		},
 	},
 }
 
@@ -263,6 +305,10 @@ func (p *Protocol) ConfigureOptions(mgr *manager.Manager, opts *manager.Options)
 		EditorFlag: manager.EditMaxEntries,
 	}
 	opts.MapSpecEditors[tlsHTTP2IterationsTable] = manager.MapSpecEditor{
+		MaxEntries: mapSizeValue,
+		EditorFlag: manager.EditMaxEntries,
+	}
+	opts.MapSpecEditors[kprobeHTTP2IterationsTable] = manager.MapSpecEditor{
 		MaxEntries: mapSizeValue,
 		EditorFlag: manager.EditMaxEntries,
 	}

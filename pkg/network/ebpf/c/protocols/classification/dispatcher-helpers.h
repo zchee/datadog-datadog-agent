@@ -42,7 +42,7 @@ __maybe_unused static __always_inline kprobe_prog_t kprobe_protocol_to_program(p
     case PROTOCOL_HTTP:
         return KPROBE_HTTP_PROCESS;
     case PROTOCOL_HTTP2:
-        return KPROBE_HTTP2_FIRST_FRAME;
+        return KPROBE_HTTP2_HANDLE_FIRST_FRAME;
     case PROTOCOL_KAFKA:
         return KPROBE_KAFKA;
     case PROTOCOL_POSTGRES:
