@@ -53,11 +53,6 @@ func (cw *LongRunningCheckWrapper) Run() error {
 	}
 
 	if cw.running {
-		s, err := cw.LongRunningCheck.GetSender()
-		if err != nil {
-			return fmt.Errorf("error getting sender: %w", err)
-		}
-		s.Commit()
 		return nil
 	}
 
