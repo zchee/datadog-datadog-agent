@@ -250,6 +250,12 @@ int BPF_KRETPROBE(kretprobe__tcp_recvmsg, int ret) {
     }
 
     if (ret > 0) {
+        u64 data0 = 0;
+        u64 data1 = 0;
+        bpf_probe_read_user(&data0, sizeof(data0), state->buffer);
+        bpf_probe_read_user(&data1, sizeof(data1), state->buffer + sizeof(data1));
+        log_debug("recvmsg data=%016llx %016llx", bpf_be64_to_cpu(data0), bpf_be64_to_cpu(data1));
+
         kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, ret);
     }
 

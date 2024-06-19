@@ -26,7 +26,7 @@
 // whose value is computed with following formula:
 // HTTP2_MAX_FRAMES_ITERATIONS = HTTP2_MAX_FRAMES_TO_FILTER * HTTP2_MAX_TAIL_CALLS_FOR_FRAMES_FILTER
 #define HTTP2_MAX_TAIL_CALLS_FOR_FRAMES_FILTER 1
-#define HTTP2_MAX_FRAMES_TO_FILTER 240
+#define HTTP2_MAX_FRAMES_TO_FILTER 10
 
 // Represents the maximum number octets we will process in the dynamic table update size.
 #define HTTP2_MAX_DYNAMIC_TABLE_UPDATE_ITERATIONS 5

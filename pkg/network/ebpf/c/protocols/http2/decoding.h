@@ -445,6 +445,8 @@ static __always_inline void pktbuf_fix_header_frame(pktbuf_t pkt, char *out, fra
 static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_remainder_t *frame_state, http2_frame_t *current_frame, http2_telemetry_t *http2_tel) {
     // Attempting to read the initial frame in the packet, or handling a state where there is no remainder and finishing reading the current frame.
     if (frame_state == NULL) {
+        hextra_debug("pktbuf_get_first_frame: no remainder");
+
         // Checking we have enough bytes in the packet to read a frame header.
         if (pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
             // Not enough bytes, cannot read frame, so we have 0 interesting frames in that packet.
@@ -473,6 +475,8 @@ static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_re
     //  4. We failed reading any frame. Aborting.
 
     // Frame-header-remainder.
+        
+    hextra_debug("pktbuf_get_first_frame: frame_state header_length %u", frame_state->header_length);
 
     if (frame_state->header_length == HTTP2_FRAME_HEADER_SIZE) {
         // A case where we read an interesting valid frame header in the previous call, and now we're trying to read the
@@ -481,6 +485,7 @@ static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_re
         // Copy the cached frame header to the current frame.
         bpf_memcpy((char *)current_frame, frame_state->buf, HTTP2_FRAME_HEADER_SIZE);
         frame_state->remainder = 0;
+        hextra_debug("pktbuf_get_first_frame: reused saved frame");
         return true;
     }
     if (frame_state->header_length > 0) {
@@ -488,12 +493,16 @@ static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_re
         if (format_http2_frame_header(current_frame)) {
             pktbuf_advance(pkt, frame_state->remainder);
             frame_state->remainder = 0;
+            hextra_debug("pktbuf_get_first_frame: read frame using remainder");
             return true;
         }
         frame_state->remainder = 0;
+        hextra_debug("pktbuf_get_first_frame: couldn't read frame using remainder");
         // We couldn't read frame header using the remainder.
         return false;
     }
+
+    hextra_debug("pktbuf_get_first_frame: frame_state remainder %u", frame_state->remainder);
 
     // We failed to read a frame, if we have a remainder trying to consume it and read the following frame.
     if (frame_state->remainder > 0) {
@@ -568,6 +577,8 @@ static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail
         if (!format_http2_frame_header(&current_frame)) {
             break;
         }
+
+        log_debug("pktbuf_find_relevant_frames: stream id %d", current_frame.stream_id);
 
         // END_STREAM can appear only in Headers and Data frames.
         // Check out https://datatracker.ietf.org/doc/html/rfc7540#section-6.1 for data frame, and
@@ -655,9 +666,12 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
             }
             new_frame_state.header_length = HTTP2_FRAME_HEADER_SIZE - new_frame_state.remainder;
             bpf_map_update_elem(&http2_remainder, tup, &new_frame_state, BPF_ANY);
+            hextra_debug("handle_first_frame: saved remainder");
         }
         return;
     }
+
+    hextra_debug("current_frame stream_id %u length %u", current_frame.stream_id, current_frame.length);
 
     bool is_headers_or_rst_frame = current_frame.type == kHeadersFrame || current_frame.type == kRSTStreamFrame;
     bool is_data_end_of_stream = ((current_frame.flags & HTTP2_END_OF_STREAM) == HTTP2_END_OF_STREAM) && (current_frame.type == kDataFrame);
@@ -683,6 +697,7 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
 
         iteration_value->frames_count = 0;
         bpf_map_update_elem(&http2_remainder, tup, &new_frame_state, BPF_ANY);
+        hextra_debug("handle_first_frame: saved remainder (exceeding packet boundaries)");
         // Not calling the next tail call as we have nothing to process.
         return;
     }
@@ -1005,6 +1020,7 @@ static __always_inline void headers_parser(pktbuf_t pkt, void *map_key, conn_tup
 
         http2_ctx->http2_stream_key.stream_id = current_frame.frame.stream_id;
         current_stream = http2_fetch_stream(&http2_ctx->http2_stream_key);
+        hextra_debug("http2_fetch_stream id %u", current_frame.frame.stream_id);
         if (current_stream == NULL) {
             continue;
         }
@@ -1243,6 +1259,7 @@ static __always_inline void eos_parser(pktbuf_t pkt, void *map_key, conn_tuple_t
         // A new stream must start with a request, so if it does not exist, we should not process it.
         current_stream = bpf_map_lookup_elem(&http2_in_flight, &http2_ctx->http2_stream_key);
         if (current_stream == NULL) {
+            hextra_debug("no stream");
             continue;
         }
 
