@@ -9,9 +9,10 @@ package rules
 import (
 	"fmt"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/DataDog/datadog-agent/pkg/security/secl/compiler/ast"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/compiler/eval"
-	"github.com/hashicorp/go-multierror"
 )
 
 // EvaluationSet defines an evalation set
@@ -42,12 +43,12 @@ func NewEvaluationSet(ruleSetsToInclude []*RuleSet) (*EvaluationSet, error) {
 func (es *EvaluationSet) GetPolicies() []*Policy {
 	var policies []*Policy
 
-	seen := make(map[string]bool)
+	seen := make(map[*Policy]bool)
 
 	for _, rs := range es.RuleSets {
 		for _, policy := range rs.policies {
-			if _, ok := seen[policy.Name]; !ok {
-				seen[policy.Name] = true
+			if _, ok := seen[policy]; !ok {
+				seen[policy] = true
 				policies = append(policies, policy)
 			}
 		}

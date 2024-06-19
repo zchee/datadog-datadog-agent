@@ -55,8 +55,8 @@ type PolicyMonitor struct {
 	perRuleMetricEnabled bool
 }
 
-// SetPolicies sets the policies to monitor
-func (pm *PolicyMonitor) SetPolicies(policies []*PolicyState) {
+// SetPoliciesState sets the policy states to monitor
+func (pm *PolicyMonitor) SetPoliciesState(policies []*PolicyState) {
 	pm.Lock()
 	defer pm.Unlock()
 
@@ -144,15 +144,28 @@ func NewPolicyMonitor(statsdClient statsd.ClientInterface, perRuleMetricEnabled 
 	}
 }
 
-// RuleSetLoadedReport represents the rule and the custom event related to a RuleSetLoaded event, ready to be dispatched
-type RuleSetLoadedReport struct {
-	Rule  *rules.Rule
-	Event *events.CustomEvent
-}
-
 // ReportRuleSetLoaded reports to Datadog that a new ruleset was loaded
-func ReportRuleSetLoaded(sender events.EventSender, statsdClient statsd.ClientInterface, policies []*PolicyState) {
-	rule, event := newRuleSetLoadedEvent(policies)
+func ReportRuleSetLoaded(sender events.EventSender, statsdClient statsd.ClientInterface, states []*PolicyState, policies []*rules.Policy, includeInternalPolicies bool) {
+	sources := make([]*PolicySource, 0, len(policies))
+	for _, policy := range policies {
+		if policy.IsInternal && !includeInternalPolicies {
+			continue
+		}
+		source := &PolicySource{
+			Name:    policy.Name,
+			Version: policy.Version,
+			Source:  policy.Source,
+		}
+		for _, rule := range policy.Rules {
+			source.Rules = append(source.Rules, &Rule{
+				ID:      rule.ID,
+				Version: rule.Version,
+			})
+		}
+		sources = append(sources, source)
+	}
+
+	rule, event := newRuleSetLoadedEvent(states, sources)
 
 	if err := statsdClient.Count(metrics.MetricRuleSetLoaded, 1, []string{}, 1.0); err != nil {
 		log.Error(fmt.Errorf("failed to send ruleset_loaded metric: %w", err))
@@ -214,11 +227,28 @@ type RuleKillAction struct {
 	Scope  string `json:"scope,omitempty"`
 }
 
+// Rule is used to report static information about a rule
+// easyjson:json
+type Rule struct {
+	ID      string `json:"id"`
+	Version string `json:"version,omitempty"`
+}
+
+// PolicySource is used to report static information about a policy
+// easyjson:json
+type PolicySource struct {
+	Name    string  `json:"name"`
+	Version string  `json:"version"`
+	Source  string  `json:"source"`
+	Rules   []*Rule `json:"rules"`
+}
+
 // RulesetLoadedEvent is used to report that a new ruleset was loaded
 // easyjson:json
 type RulesetLoadedEvent struct {
 	events.CustomEventCommonFields
-	Policies []*PolicyState `json:"policies"`
+	Policies []*PolicyState  `json:"policies"`
+	Sources  []*PolicySource `json:"sources,omitempty"`
 }
 
 // ToJSON marshal using json format
@@ -338,9 +368,10 @@ func NewPoliciesState(ruleSets map[string]*rules.RuleSet, err *multierror.Error,
 }
 
 // newRuleSetLoadedEvent returns the rule (e.g. ruleset_loaded) and a populated custom event for a new_rules_loaded event
-func newRuleSetLoadedEvent(policies []*PolicyState) (*rules.Rule, *events.CustomEvent) {
+func newRuleSetLoadedEvent(policies []*PolicyState, sources []*PolicySource) (*rules.Rule, *events.CustomEvent) {
 	evt := RulesetLoadedEvent{
 		Policies: policies,
+		Sources:  sources,
 	}
 	evt.FillCustomEventCommonFields()
 

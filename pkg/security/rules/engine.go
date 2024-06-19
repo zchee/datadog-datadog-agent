@@ -344,12 +344,12 @@ func (e *RuleEngine) LoadPolicies(providers []rules.PolicyProvider, sendLoadedRe
 		e.AutoSuppression.Apply(probeEvaluationRuleSet)
 	}
 
-	policies := monitor.NewPoliciesState(evaluationSet.RuleSets, loadErrs, e.config.PolicyMonitorReportInternalPolicies)
-	e.notifyAPIServer(ruleIDs, policies)
+	policyState := monitor.NewPoliciesState(evaluationSet.RuleSets, loadErrs, e.config.PolicyMonitorReportInternalPolicies)
+	e.notifyAPIServer(ruleIDs, policyState)
 
 	if sendLoadedReport {
-		monitor.ReportRuleSetLoaded(e.eventSender, e.statsdClient, policies)
-		e.policyMonitor.SetPolicies(policies)
+		monitor.ReportRuleSetLoaded(e.eventSender, e.statsdClient, policyState, evaluationSet.GetPolicies(), e.config.PolicyMonitorReportInternalPolicies)
+		e.policyMonitor.SetPoliciesState(policyState)
 	}
 
 	return nil
