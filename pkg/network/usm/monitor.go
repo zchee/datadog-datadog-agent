@@ -175,11 +175,11 @@ func NewMonitor(c *config.Config, connectionProtocolMap *ebpf.Map) (m *Monitor, 
 	sockops.CGroupPath = "/sys/fs/cgroup"
 	for _, cgroup := range cgroupList {
 		if strings.Contains(cgroup, "docker") {
-			fmt.Println("skipping", cgroup)
+			// fmt.Println("skipping", cgroup)
 			continue
 		}
 		if cgroup != "/sys/fs/cgroup/user.slice/user-0.slice/session-1.scope" {
-			fmt.Println("skipping", cgroup)
+			// fmt.Println("skipping", cgroup)
 			continue
 		}
 		uid, _ := utils.NewPathIdentifier(cgroup)

@@ -18,7 +18,6 @@ import (
 	"net"
 	nethttp "net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -175,11 +174,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 
 	dialFn := func(ctx context.Context, network, address string) (net.Conn, error) {
 		var d net.Dialer
-		if tls {
-			return d.DialContext(ctx, "unix", unixPath)
-		}
-
-		return d.DialContext(ctx, network, address)
+		return d.DialContext(ctx, "unix", unixPath)
 	}
 
 	// With non-TLS, we need to double the stats since we use Docker and the
@@ -187,7 +182,6 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	// the data comes from uprobes on the binary.
 	fixCount := func(count int) int {
 		return count
-
 		if tls {
 			return count
 		}
@@ -666,13 +660,9 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 		},
 	}
 
-	var proxyProcess *exec.Cmd
-	if tls {
-		var cancel context.CancelFunc
-		proxyProcess, cancel = proxy.NewExternalUnixTransparentProxyServer(t, unixPath, serverAddress, tls)
-		t.Cleanup(cancel)
-		require.NoError(t, proxy.WaitForConnectionReady(unixPath))
-	}
+	proxyProcess, cancel := proxy.NewExternalUnixTransparentProxyServer(t, unixPath, serverAddress, tls)
+	t.Cleanup(cancel)
+	require.NoError(t, proxy.WaitForConnectionReady(unixPath))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

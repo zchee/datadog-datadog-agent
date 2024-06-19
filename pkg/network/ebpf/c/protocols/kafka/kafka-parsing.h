@@ -1618,15 +1618,32 @@ static __always_inline bool kafka_process(conn_tuple_t *tup, kafka_info_t *kafka
 
     log_debug("kafka: kafka_header.api_key: %d api_version: %d", kafka_header.api_key, kafka_header.api_version);
 
-    if (!is_valid_kafka_request_header(&kafka_header)) {
-        return false;
+    if (is_valid_kafka_request_header(&kafka_header)) {
+        offset += sizeof(kafka_header_t);
+    } else {
+        kafka_partial_header_t kafka_partial_header;
+        bpf_memset(&kafka_partial_header, 0, sizeof(kafka_partial_header));
+        pktbuf_load_bytes(pkt, offset, (char *)&kafka_partial_header, sizeof(kafka_partial_header));
+        // Fake size since some functions check for it
+        kafka_header.message_size = sizeof(kafka_header_t);
+        kafka_header.api_key = bpf_ntohs(kafka_partial_header.api_key);
+        kafka_header.api_version = bpf_ntohs(kafka_partial_header.api_version);
+        kafka_header.correlation_id = bpf_ntohl(kafka_partial_header.correlation_id);
+        kafka_header.client_id_size = bpf_ntohs(kafka_partial_header.client_id_size);
+
+        log_debug("kafka2: kafka_header.api_key: %d api_version: %d", kafka_header.api_key, kafka_header.api_version);
+
+        if (!is_valid_kafka_request_header(&kafka_header)) {
+            return false;
+        }
+
+        offset += sizeof(kafka_partial_header_t);
     }
 
     kafka_transaction->request_started = bpf_ktime_get_ns();
     kafka_transaction->request_api_key = kafka_header.api_key;
     kafka_transaction->request_api_version = kafka_header.api_version;
 
-    offset += sizeof(kafka_header_t);
 
     // Validate client ID
     // Client ID size can be equal to '-1' if the client id is null.

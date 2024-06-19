@@ -18,16 +18,19 @@
 // program.
 SEC("sk_msg/http2_handle_first_frame")
 int sk_msg__http2_handle_first_frame(struct sk_msg_md *msg) {
+    const __u32 zero = 0;
     dispatcher_arguments_t dispatcher_args_copy;
-    bpf_memset(&dispatcher_args_copy, 0, sizeof(dispatcher_arguments_t));
-    if (!fetch_dispatching_arguments(&dispatcher_args_copy.tup, &dispatcher_args_copy.skb_info)) {
+    // We're not calling fetch_dispatching_arguments as, we need to modify the `data_off` field of packet, so
+    // the next prog will start to read from the next valid frame.
+    dispatcher_arguments_t *args = bpf_map_lookup_elem(&dispatcher_arguments, &zero);
+    if (args == NULL) {
         return SK_PASS;
     }
+    dispatcher_args_copy = *args;
 
     pktbuf_t pkt = pktbuf_from_sk_msg_md(msg, &dispatcher_args_copy.skb_info);
 
-    __u32 data_off = 0;
-    handle_first_frame(pkt, (__u32*)&data_off, &dispatcher_args_copy.tup);
+    handle_first_frame(pkt, &args->skb_info.data_off, &dispatcher_args_copy.tup);
     return SK_PASS;
 }
 

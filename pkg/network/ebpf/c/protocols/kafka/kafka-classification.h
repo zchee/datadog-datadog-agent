@@ -338,12 +338,33 @@ static __always_inline bool __is_kafka(pktbuf_t pkt, const char* buf, __u32 buf_
     kafka_header.api_version = bpf_ntohs(header_view->api_version);
     kafka_header.correlation_id = bpf_ntohl(header_view->correlation_id);
     kafka_header.client_id_size = bpf_ntohs(header_view->client_id_size);
+    u32 offset = pktbuf_data_offset(pkt);
 
-    if (!is_valid_kafka_request_header(&kafka_header)) {
-        return false;
+    log_debug("message_size: %x", kafka_header.message_size);
+
+    if (is_valid_kafka_request_header(&kafka_header)) {
+        offset += sizeof(kafka_header_t);
+    } else {
+        const kafka_partial_header_t *header_view = (kafka_partial_header_t *)(buf);
+        // Fake size since some functions check for it
+        kafka_header.message_size = sizeof(kafka_header_t);
+        kafka_header.api_key = bpf_ntohs(header_view->api_key);
+        kafka_header.api_version = bpf_ntohs(header_view->api_version);
+        kafka_header.correlation_id = bpf_ntohl(header_view->correlation_id);
+        kafka_header.client_id_size = bpf_ntohs(header_view->client_id_size);
+        
+        log_debug("api_version: %u", kafka_header.api_version);
+        log_debug("correlation_id: %u", kafka_header.correlation_id);
+        log_debug("client_id_size: %u", kafka_header.client_id_size);
+
+        if (!is_valid_kafka_request_header(&kafka_header)) {
+            return false;
+        }
+
+        offset += sizeof(kafka_partial_header_t);
     }
 
-    u32 offset = pktbuf_data_offset(pkt) + sizeof(kafka_header_t);
+
     // Validate client ID
     // Client ID size can be equal to '-1' if the client id is null.
     if (kafka_header.client_id_size > 0) {

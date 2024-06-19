@@ -16,6 +16,13 @@ typedef struct {
     __s16 client_id_size;
 } __attribute__ ((packed)) kafka_header_t;
 
+typedef struct {
+    __s16 api_key;
+    __s16 api_version;
+    __s32 correlation_id;
+    __s16 client_id_size;
+} __attribute__ ((packed)) kafka_partial_header_t;
+
 #define KAFKA_MIN_LENGTH (sizeof(kafka_header_t))
 
 typedef struct kafka_transaction_t {

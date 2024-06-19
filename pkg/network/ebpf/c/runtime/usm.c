@@ -62,14 +62,25 @@ int uprobe__tls_protocol_dispatcher_kafka(struct pt_regs *ctx) {
 
 SEC("sk_msg/protocol_dispatcher")
 int sk_msg__protocol_dispatcher(struct sk_msg_md *msg) {
-    log_debug("sk_msg__protocol_dispatcher: msg %p msg->sk %p size %u", msg, msg->sk, msg->size);
+    log_debug("sk_msg__protocol_dispatcher: msg %p msg->sk %lx size %u", msg, (unsigned long)msg->sk, msg->size);
 
     u64 pid_tgid = bpf_get_current_pid_tgid();
     u32 *splicing = bpf_map_lookup_elem(&tcp_splicing, &pid_tgid);
     if (splicing) {
-        log_debug("sk_msg__protocol_dispatcher: skipping due to splice");
-        return SK_PASS;
+        u64 key = (u64)msg->sk;
+        u32 *seen_non_splice = bpf_map_lookup_elem(&tcp_seen_non_splice, &key);
+        if (seen_non_splice) {
+            log_debug("sk_msg__protocol_dispatcher: in splice and seen non-splice");
+        } else {
+            log_debug("sk_msg__protocol_dispatcher: skipping due to splice and never seen non-splice");
+            return SK_PASS;
+        }
+    } else {
+        u64 key = (u64)msg->sk;
+        __u32 seen = 1;
+        bpf_map_update_elem(&tcp_seen_non_splice, &key, &seen, BPF_ANY);
     }
+
 
     protocol_dispatcher_entrypoint_sk_msg(msg);
     return SK_PASS;
@@ -168,7 +179,7 @@ int sockops__sockops(struct bpf_sock_ops *skops) {
 
 SEC("kprobe/tcp_sendmsg")
 int BPF_KPROBE(kprobe__tcp_sendmsg, struct sock *sk) {
-    log_debug("kprobe/tcp_sendmsg: sk=%p", sk);
+    log_debug("kprobe/tcp_sendmsg: sk=%lx", (unsigned long)sk);
     // map connection tuple during SSL_do_handshake(ctx)
     map_ssl_ctx_to_sock(sk);
 
@@ -229,7 +240,7 @@ int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t 
 
 SEC("kretprobe/tcp_recvmsg")
 int BPF_KRETPROBE(kretprobe__tcp_recvmsg, int ret) {
-    log_debug("kretprobe/tcp_recvmsg");
+    log_debug("kretprobe/tcp_recvmsg ret=%d", ret);
 
     u64 pid_tgid = bpf_get_current_pid_tgid();
     tcp_kprobe_state_t *state = bpf_map_lookup_elem(&tcp_kprobe_state, &pid_tgid);
@@ -243,6 +254,13 @@ int BPF_KRETPROBE(kretprobe__tcp_recvmsg, int ret) {
     }
 
     bpf_map_delete_elem(&tcp_kprobe_state, &pid_tgid);
+
+    return 0;
+}
+
+SEC("kprobe/tcp_splice_read")
+int BPF_KPROBE(kprobe__tcp_splice_read, struct socket *sock) {
+    bpf_printk("kprobe/tcp_splice_read sock=%llx\n", (unsigned long)sock);
 
     return 0;
 }
