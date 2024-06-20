@@ -83,15 +83,7 @@ func (cw *LongRunningCheckWrapper) Interval() time.Duration {
 // GetSenderStats returns the stats from the last run of the check and sets the field
 // LongRunningCheck to true. It is necessary for formatting the stats in the status page.
 func (cw *LongRunningCheckWrapper) GetSenderStats() (stats.SenderStats, error) {
-	if cw.LongRunningCheck == nil {
-		return stats.SenderStats{}, fmt.Errorf("no check defined")
-	}
-	s, err := cw.LongRunningCheck.GetSenderStats()
-	if err != nil {
-		return stats.SenderStats{}, fmt.Errorf("error getting sender stats: %w", err)
-	}
-	s.LongRunningCheck = true
-	return s, nil
+	return stats.SenderStats{}, nil
 }
 
 // Cancel calls the cancel method of the check.
