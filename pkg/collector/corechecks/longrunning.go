@@ -77,7 +77,7 @@ func (cw *LongRunningCheckWrapper) Run() error {
 // It can't be 0 otherwise the check will be considered as a long running check,
 // Run() will be called only once and the metrics won't be collected.
 func (cw *LongRunningCheckWrapper) Interval() time.Duration {
-	return 15 * time.Second
+	return 30 * time.Second
 }
 
 // GetSenderStats returns the stats from the last run of the check and sets the field
