@@ -36,7 +36,7 @@ static __always_inline conn_stats_ts_t *get_conn_stats(conn_tuple_t *t, struct s
 
     // We skip EEXIST because of the use of BPF_NOEXIST flag. Emitting telemetry for EEXIST here spams metrics
     // and do not provide any useful signal since the key is expected to be present sometimes.
-    bpf_map_update_with_telemetry(conn_stats, t, &empty, BPF_NOEXIST, -EEXIST);
+    bpf_map_update_with_telemetry(conn_stats, t, &empty, BPF_NOEXIST);
     return bpf_map_lookup_elem(&conn_stats, t);
 }
 
@@ -188,7 +188,7 @@ static __always_inline void update_tcp_stats(conn_tuple_t *t, tcp_stats_t stats)
 
     // We skip EEXIST because of the use of BPF_NOEXIST flag. Emitting telemetry for EEXIST here spams metrics
     // and do not provide any useful signal since the key is expected to be present sometimes.
-    bpf_map_update_with_telemetry(tcp_stats, t, &empty, BPF_NOEXIST, -EEXIST);
+    bpf_map_update_with_telemetry(tcp_stats, t, &empty, BPF_NOEXIST);
 
     tcp_stats_t *val = bpf_map_lookup_elem(&tcp_stats, t);
     if (val == NULL) {
@@ -226,7 +226,7 @@ static __always_inline int handle_retransmit(struct sock *sk, int count) {
 
     // We skip EEXIST because of the use of BPF_NOEXIST flag. Emitting telemetry for EEXIST here spams metrics
     // and do not provide any useful signal since the key is expected to be present sometimes.
-    bpf_map_update_with_telemetry(tcp_retransmits, &t, &u32_zero, BPF_NOEXIST, -EEXIST);
+    bpf_map_update_with_telemetry(tcp_retransmits, &t, &u32_zero, BPF_NOEXIST);
     u32 *val = bpf_map_lookup_elem(&tcp_retransmits, &t);
     if (val == NULL) {
         return 0;
