@@ -41,7 +41,7 @@ func (cl *CheckLogger) CheckStarted() {
 		return
 	}
 
-	log.Debugc("Running check...", "check", cl.Check)
+	log.Infoc("Running check...", "check", cl.Check)
 }
 
 // CheckFinished is used to log that the check has completed
@@ -58,7 +58,7 @@ func (cl *CheckLogger) CheckFinished() {
 
 		log.Infoc(message, "check", cl.Check)
 	} else {
-		log.Debugc(message, "check", cl.Check)
+		log.Infoc(message, "check", cl.Check)
 	}
 
 	if cl.Check.Interval() == 0 {
