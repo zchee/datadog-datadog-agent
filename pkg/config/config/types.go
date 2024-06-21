@@ -14,7 +14,8 @@ type EnvTransformer func(string) interface{}
 
 type config struct {
 	// data is the current configuration fully loaded as a tree
-	data     map[string]interface{}
+	data map[string]interface{}
+	// keyDelim is a string that used to split path in the configuration. By defaults it's ".".
 	keyDelim string
 
 	// knownKeys list all the known keys in the configuration, include intermediate path.

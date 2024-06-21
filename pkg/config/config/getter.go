@@ -117,31 +117,35 @@ func (c *config) AllSettings() map[string]interface{} {
 
 // AllSettingsWithoutDefault returns a copy of the current configuration without default
 func (c *config) AllSettingsWithoutDefault() map[string]interface{} {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	settings := map[string]interface{}{}
-
-	// Files next
-	for key, value := range c.fileData {
-		c.setLowerCase(settings, key, value)
-	}
-
-	// Env vars
-	for key, value := range c.envVarData {
-		c.setLowerCase(settings, key, value)
-	}
-
-	// Runtime
-	for key, value := range c.runtimeData {
-		c.setLowerCase(settings, key, value)
-	}
-
-	// TODO: implement actual deepcopy or directly return a YAML
-	settingsCopy := map[string]interface{}{}
-	str, _ := json.Marshal(settings)
-	_ = json.Unmarshal(str, &settingsCopy)
-	return settingsCopy
+	return nil
+	// c.m.RLock()
+	// defer c.m.RUnlock()
+	//
+	// settings := map[string]interface{}{}
+	//
+	// // Files next
+	//
+	//	for key, value := range c.fileData {
+	//		c.setLowerCase(settings, key, value)
+	//	}
+	//
+	// // Env vars
+	//
+	//	for key, value := range c.envVarData {
+	//		c.setLowerCase(settings, key, value)
+	//	}
+	//
+	// // Runtime
+	//
+	//	for key, value := range c.runtimeData {
+	//		c.setLowerCase(settings, key, value)
+	//	}
+	//
+	// // TODO: implement actual deepcopy or directly return a YAML
+	// settingsCopy := map[string]interface{}{}
+	// str, _ := json.Marshal(settings)
+	// _ = json.Unmarshal(str, &settingsCopy)
+	// return settingsCopy
 }
 
 // AllKeysLowercased returns all known keys from the configuration

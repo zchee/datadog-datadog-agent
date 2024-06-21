@@ -699,6 +699,7 @@ require (
 	github.com/prometheus-community/pro-bing v0.3.0
 	github.com/rickar/props v1.0.0
 	github.com/sijms/go-ora/v2 v2.8.19
+	github.com/spf13/viper v1.19.0
 	github.com/swaggest/jsonschema-go v0.3.70
 	github.com/valyala/fastjson v1.6.4
 	github.com/vibrantbyte/go-antpath v1.1.1
@@ -1222,7 +1223,6 @@ require (
 	github.com/soheilhy/cmux v0.1.5 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/spf13/viper v1.19.0 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/stormcat24/protodep v0.1.8 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect

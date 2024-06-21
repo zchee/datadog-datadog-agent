@@ -6,6 +6,8 @@
 package config
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -26,7 +28,12 @@ type Option struct {
 	// keyDelim is a string that used to split path in the configuration. By defaults it's ".".
 	keyDelim string
 
-	defaults  map[string]interface{}
+	defaults map[string]interface{}
+
+	// knownKeys list all the known keys in the configuration, NOT including intermediate path.
+	//
+	// Note: The behavior for knownKeys in 'Option' is different that from 'Config'. Here we don't list intermediate
+	// path.
 	knownKeys map[string]struct{}
 
 	envAliases        map[string]string
@@ -107,7 +114,7 @@ func (o *Option) AddEnvAlias(key string, env string) {
 	defer o.m.Unlock()
 
 	key = strings.ToLower(key)
-	o.envAliases[o.envPrefix+env] = key
+	o.envAliases[env] = key
 	o.setKnownLowercase(key)
 }
 
@@ -122,4 +129,27 @@ func (o *Option) SetEnvKeyTransformer(key string, fn EnvTransformer) {
 	key = strings.ToLower(key)
 	o.envKeyTransformer[key] = fn
 	o.setKnownLowercase(key)
+}
+
+// validateKeys check that no key overlap each other and no key ends with keyDelim.
+//
+// For Example: 'a.b: 1' and 'a.b.c: 2' are incompatible settings
+func (o *Option) validateKeys() error {
+	keys := []string{}
+	for k, _ := range o.knownKeys {
+		if strings.HasSuffix(k, o.keyDelim) {
+			return fmt.Errorf("invalid key '%s' ends with key delimiter '%s'", k, o.keyDelim)
+		}
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	// Since keys are sorted and we stop at the first error we can simply check if key N is a prefix for key N+1
+	for idx := range keys[:len(keys)-1] {
+		if strings.HasPrefix(keys[idx+1], keys[idx]+o.keyDelim) {
+			return fmt.Errorf("error invalid options, settings '%s' and '%s' overlap", keys[idx], keys[idx+1])
+		}
+	}
+	return nil
 }

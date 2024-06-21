@@ -1,0 +1,13 @@
+a: 1
+B:
+  C: 2
+  d: [1,2,3]
+  e:
+    F: "test"
+    G: "TEST"
+h: null
+i: "test"
+user:
+  info2:
+    - { "age": 1, "name": "test" }
+    - { "age": 2, "name": "test2" }

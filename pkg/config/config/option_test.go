@@ -35,8 +35,8 @@ func TestSetKeyDelim(t *testing.T) {
 
 func TestSetKnown(t *testing.T) {
 	opts := NewOption()
-	opts.SetDefault("test.a", 21)
-	opts.SetDefault("TEST.B", "value")
+	opts.SetKnown("test.a")
+	opts.SetKnown("TEST.B")
 
 	assertKnown(t, opts, "test.a")
 	assertKnown(t, opts, "test.b")
@@ -67,10 +67,10 @@ func TestAddEnvAlias(t *testing.T) {
 	opts.AddEnvAlias("test.a", "TEST_A")
 	opts.AddEnvAlias("TEST.B", "TEST_B")
 
-	require.Contains(t, opts.envAliases, "DD_TEST_A")
-	require.Contains(t, opts.envAliases, "DD_TEST_B")
-	assert.Equal(t, "test.a", opts.envAliases["DD_TEST_A"])
-	assert.Equal(t, "test.b", opts.envAliases["DD_TEST_B"])
+	require.Contains(t, opts.envAliases, "TEST_A")
+	require.Contains(t, opts.envAliases, "TEST_B")
+	assert.Equal(t, "test.a", opts.envAliases["TEST_A"])
+	assert.Equal(t, "test.b", opts.envAliases["TEST_B"])
 
 	assertKnown(t, opts, "test.a")
 	assertKnown(t, opts, "test.b")
@@ -98,4 +98,27 @@ func TestAppendYamlFile(t *testing.T) {
 	opts.AppendYamlFile("file3.yaml")
 
 	assert.Equal(t, []string{"file1.yaml", "file2.yaml", "file3.yaml"}, opts.yamlFiles)
+}
+
+func TestNoDelimiterSuffix(t *testing.T) {
+	opts := NewOption()
+
+	opts.SetKnown("a.b")
+	assert.NoError(t, opts.validateKeys())
+
+	opts.SetKnown("a.c.")
+	assert.Error(t, opts.validateKeys())
+}
+
+func TestValidateOverlap(t *testing.T) {
+	opts := NewOption()
+
+	opts.SetKnown("a.b")
+	opts.SetKnown("a.bb")
+	opts.SetKnown("a.c")
+
+	assert.NoError(t, opts.validateKeys())
+
+	opts.SetKnown("a.b.c")
+	assert.Error(t, opts.validateKeys())
 }

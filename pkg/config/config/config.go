@@ -30,20 +30,25 @@ func Load(opts *Option) (Config, []string, error) {
 	opts.m.Lock()
 	defer opts.m.Unlock()
 
+	if err := opts.validateKeys(); err != nil {
+		return nil, nil, err
+	}
+
 	c := newConfig(opts)
 
 	c.loadDefaults(opts)
 	c.loadEnvVars(opts)
 	warnings, err := c.loadYaml(opts)
+	if err != nil {
+		return nil, warnings, err
+	}
 
-	// All data are loaded, we now merge them into a single map
+	// All data are loaded succesfully, we now merge them into a single map
 	c.generate()
 
 	// we copy the knownKeys list so editing Option won't impact the config
 	for k := range opts.knownKeys {
 		// for each key we register every part of the key as known.
-		//
-		// for example, with a "a.b.c" key, "a", "a.b" and "a.b.c" will be known
 
 		curKey := ""
 		for _, part := range strings.Split(k, c.keyDelim) {
@@ -59,24 +64,27 @@ func Load(opts *Option) (Config, []string, error) {
 	return c, warnings, err
 }
 
-// loadDefaults loads all the default for all known keys
+// loadDefaults loads all the default values
 func (c *config) loadDefaults(opts *Option) {
 	for key, value := range opts.defaults {
-		c.defaultData[key] = value
+		setInMap(key, opts.keyDelim, c.defaultData, value)
 	}
 }
 
 func (c *config) applyTransformer(key string, envName string, opts *Option) {
-	value, found := os.LookupEnv(envName)
+	envVal, found := os.LookupEnv(envName)
 	if !found {
 		return
 	}
 
+	var value interface{}
 	if fn, found := opts.envKeyTransformer[key]; found {
-		c.envVarData[key] = fn(value)
+		value = fn(envVal)
 	} else {
-		c.envVarData[key] = value
+		value = envVal
 	}
+
+	setInMap(key, opts.keyDelim, c.envVarData, value)
 }
 
 // loadEnvVars looks up all known keys from the env vars and loading them.
@@ -97,149 +105,70 @@ func (c *config) loadEnvVars(opts *Option) {
 	}
 }
 
-// loadYaml loads all the yaml files looking for known key inside.
+// loadYaml loads all the yaml files looking for known keys inside.
+//
+// We load the data from all files in sequential order looking for known keys inside. Any keys left after this will
+// create warnings about unknown keys.
 func (c *config) loadYaml(opts *Option) ([]string, error) {
 	warnings := []string{}
 
 	for _, file := range opts.yamlFiles {
-		config := map[string]interface{}{}
 		content, err := os.ReadFile(file)
 		if err != nil {
 			warnings = append(warnings, fmt.Sprintf("error reading configuration file '%s': %s", file, err))
+			continue
 		}
 
-		// Try UnmarshalStrict first, so we can warn about duplicated keys
-		if strictErr := yaml.UnmarshalStrict(content, &config); strictErr != nil {
-			config = map[string]interface{}{}
-			warnings = append(warnings, fmt.Sprintf("warning reading config file: %v\n", strictErr))
-			if err := yaml.Unmarshal(content, &config); err != nil {
+		// Try UnmarshalStrict first, so we can warn about duplicated keys.
+		//
+		// The yaml lib will load any map as map[interface{}]interface{}. We use this type for loading but will
+		// enforce map[string]interface{} when ingesting the data in c.fileData (through setInMap)
+		conf := map[interface{}]interface{}{}
+		if strictErr := yaml.UnmarshalStrict(content, &conf); strictErr != nil {
+			warnings = append(warnings, fmt.Sprintf("warning reading config file '%s': %v\n", file, strictErr))
+
+			// reset the config
+			conf = map[interface{}]interface{}{}
+			if err := yaml.Unmarshal(content, &conf); err != nil {
 				return warnings, err
 			}
 		}
 
+		// Convert the loaded YAML to lowercase. Since we're looking to known keys into the loaded YAML we need
+		// it to be lowercase.
+		mapToLowerCase(conf)
+
 		// For search each known key in the loaded data
 		for key := range opts.knownKeys {
 			keyParts := strings.Split(key, opts.keyDelim)
-			value, err := getAndDeletePathFromMap(keyParts, config)
+			value, err := getAndDeletePathFromMap(keyParts, conf)
 			if err == nil {
-				c.fileData[key] = value
+				// setInMap will lowercase the key
+				setInMap(key, opts.keyDelim, c.fileData, value)
 			}
 		}
-		if len(config) != 0 {
-			// warn about unknown key
+		// If any data is left in the config from the YAML file we warn about them being unknown.
+		if len(conf) != 0 {
+			for _, unknownKey := range getStringsKeys(conf, "", opts.keyDelim) {
+				warnings = append(warnings,
+					fmt.Sprintf("unknown configuration setting '%s'", unknownKey),
+				)
+			}
 		}
 	}
 
 	return warnings, nil
 }
 
-// setLowerCase sets a path into the current configuration, creating node as needed.
-// 'key' is a lowercase string like using keyDelim to separate config name (ie: 'logs_config.enabled').
-func (c *config) setLowerCase(conf map[string]interface{}, key string, value interface{}) error {
-	keyParts := strings.Split(key, c.keyDelim)
-
-	for i := 0; i < len(keyParts)-1; i++ {
-		currentPart := keyParts[i]
-
-		if entry, exists := conf[currentPart]; !exists {
-			newEntry := map[string]interface{}{}
-			conf[currentPart] = newEntry
-			conf = newEntry
-		} else {
-			if newConf, ok := entry.(map[string]interface{}); ok {
-				conf = newConf
-				continue
-			}
-			// this should never happen since we're working on known key that don't overlap
-			return fmt.Errorf("unexpected error")
-		}
-	}
-	conf[keyParts[len(keyParts)-1]] = value
-	return nil
-}
-
 // generate takes all the loaded sources for settings and merge them together.
 // All sources are merged in order of least important: default < file < env vars.
-//
-// The sources are map of key:value like:
-//
-//	"logs_config.enabled": true
-//	"logs_config.proxy": {"http_proxy": "URL", "https_proxy": "URL"}
-//
-// The result is a map of settings like:
-//
-//	logs_config:
-//		enabled: true
-//		proxy:
-//			http_proxy: URL
-//			https_proxy: URL
 func (c *config) generate() {
 	// Default first
-	for key, value := range c.defaultData {
-		c.setLowerCase(c.data, key, value)
-	}
+	mergeMap(c.defaultData, c.data)
 
 	// Files next
-	for key, value := range c.fileData {
-		c.setLowerCase(c.data, key, value)
-	}
+	mergeMap(c.fileData, c.data)
 
 	// Env vars
-	for key, value := range c.envVarData {
-		c.setLowerCase(c.data, key, value)
-	}
-}
-
-//
-// helpers
-//
-
-// getAndDeletePathFromMap return a value the data map at the give path and deletes it. The deletion prune known settings from
-// the configuration allowing us to warning about unknown settings.
-func getAndDeletePathFromMap(path []string, data map[string]interface{}) (interface{}, error) {
-	if len(path) == 0 {
-		return nil, fmt.Errorf("invalid path")
-	}
-
-	entryName := path[0]
-	if value, found := data[entryName]; found {
-		// if we're at the last element we found our value
-		if len(path) == 1 {
-			delete(data, entryName)
-			return value, nil
-		}
-
-		if mapValue, ok := value.(map[string]interface{}); ok {
-			res, err := getAndDeletePathFromMap(path[1:], mapValue)
-			if len(mapValue) == 0 {
-				delete(data, entryName)
-			}
-			return res, err
-		}
-		return nil, fmt.Errorf("invalid path or value")
-	}
-	return nil, fmt.Errorf("unknown path")
-}
-
-// getPathFromMap return a value the data map at the give path and deletes it.
-// TODO: fix duplication logic between getAndDeletePathFromMap and getPathFromMap
-func getPathFromMap(path []string, data map[string]interface{}) (interface{}, error) {
-	if len(path) == 0 {
-		return nil, fmt.Errorf("invalid path")
-	}
-
-	entryName := path[0]
-	if value, found := data[entryName]; found {
-		// if we're at the last element we found our value
-		if len(path) == 1 {
-			return value, nil
-		}
-
-		if mapValue, ok := value.(map[string]interface{}); ok {
-			res, err := getAndDeletePathFromMap(path[1:], mapValue)
-			return res, err
-		}
-		return nil, fmt.Errorf("invalid path or value")
-	}
-	return nil, fmt.Errorf("unknown path")
+	mergeMap(c.envVarData, c.data)
 }
