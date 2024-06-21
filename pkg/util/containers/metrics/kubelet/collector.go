@@ -96,6 +96,7 @@ func newKubeletCollector(_ *provider.Cache, wmeta workloadmeta.Component) (provi
 // ContainerIDForPodUIDAndContName returns a container ID for the given pod uid
 // and container name. Returns ("", nil) if the containerd ID was not found.
 func (kc *kubeletCollector) ContainerIDForPodUIDAndContName(podUID, contName string, initCont bool, _ time.Duration) (string, error) {
+	log.Infof("Something is using the kubelet collector")
 	pod, err := kc.metadataStore.GetKubernetesPod(podUID)
 	if err != nil {
 		if pkgerrors.IsNotFound(err) {
@@ -117,6 +118,7 @@ func (kc *kubeletCollector) ContainerIDForPodUIDAndContName(podUID, contName str
 
 // GetContainerStats returns stats by container ID.
 func (kc *kubeletCollector) GetContainerStats(containerNS, containerID string, cacheValidity time.Duration) (*provider.ContainerStats, error) { //nolint:revive // TODO fix revive unused-parameter
+	log.Infof("Something is using the kubelet collector")
 	currentTime := time.Now()
 
 	containerStats, found, err := kc.statsCache.Get(currentTime, contStatsCachePrefix+containerID, cacheValidity)
@@ -145,6 +147,7 @@ func (kc *kubeletCollector) GetContainerStats(containerNS, containerID string, c
 
 // GetContainerNetworkStats returns network stats by container ID.
 func (kc *kubeletCollector) GetContainerNetworkStats(containerNS, containerID string, cacheValidity time.Duration) (*provider.ContainerNetworkStats, error) { //nolint:revive // TODO fix revive unused-parameter
+	log.Infof("Something is using the kubelet collector")
 	currentTime := time.Now()
 
 	containerNetworkStats, found, err := kc.statsCache.Get(currentTime, contNetStatsCachePrefix+containerID, cacheValidity)
