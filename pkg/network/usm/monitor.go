@@ -119,7 +119,7 @@ func NewMonitor(c *config.Config, connectionProtocolMap *ebpf.Map) (m *Monitor, 
 
 	closeFilterFn := func() {}
 
-	if useNewDataHooks {
+	if useNewPacketDataHooks {
 		fmt.Println("Using new data hooks")
 
 		sockmap, found, _ := mgr.GetMap("sockhash")

@@ -83,7 +83,7 @@ const (
 	maxActive = 128
 	probeUID  = "http"
 
-	useNewDataHooks = true
+	useNewPacketDataHooks = true
 )
 
 type ebpfProgram struct {
@@ -471,10 +471,10 @@ func fixupProbes(options *manager.Options) {
 		name := tc.ProbeIdentificationPair.EBPFFuncName
 
 		if strings.HasPrefix(name, "socket_") {
-			return useNewDataHooks
+			return useNewPacketDataHooks
 		}
 
-		if !useNewDataHooks {
+		if !useNewPacketDataHooks {
 			if !strings.HasPrefix(name, "sk_msg") && !strings.HasPrefix(name, "kprobe_") {
 				return false
 			}
@@ -491,10 +491,10 @@ func fixupProbes(options *manager.Options) {
 		name := ps[0].EBPFFuncName
 
 		if name == protocolDispatcherSocketFilterFunction {
-			return useNewDataHooks
+			return useNewPacketDataHooks
 		}
 
-		if !useNewDataHooks {
+		if !useNewPacketDataHooks {
 			_, found := newDataFunctionsMap[name]
 			return found
 		}
@@ -502,7 +502,7 @@ func fixupProbes(options *manager.Options) {
 		return false
 	})
 
-	if useNewDataHooks {
+	if useNewPacketDataHooks {
 		options.ExcludedFunctions = append(options.ExcludedFunctions, protocolDispatcherSocketFilterFunction)
 	} else {
 		options.ExcludedFunctions = append(options.ExcludedFunctions, newDataFunctions...)
