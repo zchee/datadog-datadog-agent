@@ -68,7 +68,7 @@ const (
 	pidFDByTupleMap                        = "pid_fd_by_tuple"
 
 	sockopsFunction         = "sockops__sockops"
-	sockhash                = "sockhash"
+	sockhashMap             = "sockhash"
 	skMsgProtocolDispatcher = "sk_msg__protocol_dispatcher"
 
 	sockFDLookup    = "kprobe__sockfd_lookup_light"
@@ -113,7 +113,7 @@ func newEBPFProgram(c *config.Config, connectionProtocolMap *ebpf.Map) (*ebpfPro
 			{Name: sockFDLookupArgsMap},
 			{Name: tupleByPidFDMap},
 			{Name: pidFDByTupleMap},
-			{Name: sockhash},
+			{Name: sockhashMap},
 		},
 		Probes: []*manager.Probe{
 			{
@@ -490,6 +490,7 @@ func fixupProbes(options *manager.Options) {
 		options.ExcludedFunctions = append(options.ExcludedFunctions, protocolDispatcherSocketFilterFunction)
 	} else {
 		options.ExcludedFunctions = append(options.ExcludedFunctions, skMsgProtocolDispatcher, sockopsFunction)
+		options.ExcludedMaps = append(options.ExcludedMaps, sockhashMap)
 	}
 }
 
