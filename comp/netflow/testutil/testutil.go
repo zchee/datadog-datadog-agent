@@ -53,7 +53,7 @@ func SendUDPPacket(port uint16, data []byte) error {
 }
 
 // ExpectNetflow5Payloads expects the payloads that should result from our
-// recorded pcap files.
+// recorded pcap files. // JMWTESTPCAP
 func ExpectNetflow5Payloads(t *testing.T, mockEpForwarder forwarder.MockComponent) {
 	events := [][]byte{
 		[]byte(`
@@ -78,7 +78,8 @@ func ExpectNetflow5Payloads(t *testing.T, mockEpForwarder forwarder.MockComponen
         "ip": "10.154.20.12",
         "port": "22",
         "mac": "00:00:00:00:00:00",
-        "mask": "0.0.0.0/0"
+        "mask": "0.0.0.0/0",
+        "reverse_dns_hostname": "hostname-10.154.20.12"
     },
     "destination": {
         "ip": "0.0.0.92",
@@ -124,7 +125,8 @@ func ExpectNetflow5Payloads(t *testing.T, mockEpForwarder forwarder.MockComponen
         "ip": "10.154.20.12",
         "port": "22",
         "mac": "00:00:00:00:00:00",
-        "mask": "0.0.0.0/0"
+        "mask": "0.0.0.0/0",
+        "reverse_dns_hostname": "hostname-10.154.20.12"
     },
     "destination": {
         "ip": "0.0.0.93",

@@ -8,6 +8,7 @@ package rdnsquerierimpl
 
 import (
 	"context"
+	"net"
 	"net/netip"
 	"time"
 
@@ -40,7 +41,7 @@ type rdnsQuerierImpl struct {
 	//JMWmutex sync.RWMutex
 
 	// map of ip to hostname and expiration time
-	cache map[string]rdnsCacheEntry
+	//JMWcache map[string]rdnsCacheEntry
 }
 
 // NewComponent creates a new rdnsquerier component
@@ -79,12 +80,12 @@ func (q *rdnsQuerierImpl) GetHostnameEmtyString(_ []byte) string {
 }
 
 // JMWNEXT-----------------------------------------------------------------------------------------------------------------------
-type rdnsCacheEntry struct {
-	//JMWhostname string
-	//JMWUNUSED expirationTime int64
-	// map of hashes to callback to set hostname
-	//JMWcallbacks map[string]func(string)
-}
+//JMWtype rdnsCacheEntry struct {
+//JMWhostname string
+//JMWUNUSED expirationTime int64
+// map of hashes to callback to set hostname
+//JMWcallbacks map[string]func(string)
+//JMW}
 
 func (q *rdnsQuerierImpl) timer(name string) func() {
 	start := time.Now()
@@ -105,7 +106,7 @@ func (q *rdnsQuerierImpl) GetHostname(ipAddr []byte) string {
 	}
 
 	if !ipaddr.IsPrivate() {
-		q.logger.Infof("JMW GetHostname() IP address `%s` is not private\n", ip.String())
+		q.logger.Infof("JMW GetHostname() IP address `%s` is not private\n", ipaddr.String())
 		// JMWTELEMETRY increment NOT private IP address counter
 		return ""
 	}

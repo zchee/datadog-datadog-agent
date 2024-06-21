@@ -82,18 +82,15 @@ func TestAggregator(t *testing.T) {
 		Packets:        4,
 		SrcAddr:        []byte{10, 10, 10, 10},
 		DstAddr:        []byte{10, 10, 10, 20},
-		/* JMWTEST
-		SrcReverseDNSHostname string
-		DstReverseDNSHostname string
-		*/
-		IPProtocol: uint32(6),
-		SrcPort:    2000,
-		DstPort:    80,
-		TCPFlags:   19,
-		EtherType:  uint32(0x0800),
+		IPProtocol:     uint32(6),
+		SrcPort:        2000,
+		DstPort:        80,
+		TCPFlags:       19,
+		EtherType:      uint32(0x0800),
 	}
 	epForwarder := eventplatformimpl.NewMockEventPlatformForwarder(gomock.NewController(t))
 
+	// JMW test both with and without private IP addresses
 	// JMWTEST - add to destination: "rdns_domain": "jmw-test-destination-domain.com"
 	// JMWTEST - add to source: "rdns_domain": "jmw-test-source-domain.com"
 	// JMWTEST add? destination and source "reverse_dns_hostname": ""
@@ -105,7 +102,8 @@ func TestAggregator(t *testing.T) {
     "ip": "10.10.10.20",
     "port": "80",
     "mac": "00:00:00:00:00:00",
-    "mask": "0.0.0.0/0"
+    "mask": "0.0.0.0/0",
+    "reverse_dns_hostname": "hostname-10.10.10.20"
   },
   "device": {
     "namespace": "my-ns"
@@ -138,7 +136,8 @@ func TestAggregator(t *testing.T) {
     "ip": "10.10.10.10",
     "port": "2000",
     "mac": "00:00:00:00:00:00",
-    "mask": "0.0.0.0/0"
+    "mask": "0.0.0.0/0",
+    "reverse_dns_hostname": "hostname-10.10.10.10"
   },
   "start": 1234568,
   "tcp_flags": [
@@ -196,6 +195,7 @@ func TestAggregator(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(1), netflowEvents)
 
+	//JMWTELEMETRY
 	sender.AssertMetric(t, "Count", "datadog.netflow.aggregator.flows_flushed", 1, "", nil)
 	sender.AssertMetric(t, "MonotonicCount", "datadog.netflow.aggregator.flows_received", 1, "", nil)
 	sender.AssertMetric(t, "Gauge", "datadog.netflow.aggregator.flows_contexts", 1, "", nil)
@@ -313,6 +313,7 @@ func TestAggregator_withMockPayload(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(2), netflowEvents)
 
+	//JMWTELEMETRY
 	sender.AssertMetric(t, "Count", "datadog.netflow.aggregator.flows_flushed", 2, "", nil)
 	sender.AssertMetric(t, "MonotonicCount", "datadog.netflow.aggregator.flows_received", 2, "", nil)
 	sender.AssertMetric(t, "Gauge", "datadog.netflow.aggregator.flows_contexts", 2, "", nil)
