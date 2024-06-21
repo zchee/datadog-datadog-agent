@@ -46,6 +46,7 @@ ALL_TAGS = {
     "serverless",
     "systemd",
     "trivy",
+    "wmi",
     "zk",
     "zlib",
     "zstd",
@@ -221,12 +222,6 @@ build_tags = {
         "lint": DOGSTATSD_TAGS.union(UNIT_TEST_TAGS).difference(UNIT_TEST_EXCLUDE_TAGS),
         "unit-tests": DOGSTATSD_TAGS.union(UNIT_TEST_TAGS).difference(UNIT_TEST_EXCLUDE_TAGS),
     },
-    AgentFlavor.agentless_scanner: {
-        "dogstatsd": AGENTLESS_SCANNER_TAGS,
-        "system-tests": AGENT_TAGS,
-        "lint": AGENTLESS_SCANNER_TAGS.union(UNIT_TEST_TAGS).difference(UNIT_TEST_EXCLUDE_TAGS),
-        "unit-tests": AGENTLESS_SCANNER_TAGS.union(UNIT_TEST_TAGS).difference(UNIT_TEST_EXCLUDE_TAGS),
-    },
 }
 
 
@@ -308,6 +303,7 @@ def filter_incompatible_tags(include, platform=sys.platform):
         exclude = exclude.union(LINUX_ONLY_TAGS)
 
     if platform == "win32":
+        include = include.union(["wmi"])
         exclude = exclude.union(WINDOWS_EXCLUDE_TAGS)
 
     if platform == "darwin":

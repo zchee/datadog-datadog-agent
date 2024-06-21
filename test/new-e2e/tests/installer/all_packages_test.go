@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"slices"
 	"strings"
 	"testing"
 
@@ -47,29 +46,38 @@ var (
 		e2eos.RedHat9,
 		e2eos.Fedora37,
 		e2eos.CentOS7,
-		// e2eos.Suse15,
+		e2eos.Suse15,
 	}
 	arm64Flavors = []e2eos.Descriptor{
 		e2eos.Ubuntu2204,
 		e2eos.AmazonLinux2,
-		// e2eos.Suse15,
+		e2eos.Suse15,
 	}
-	packagesTestsWithSkipedFlavors = []packageTestsWithSkipedFlavors{
+	packagesTestsWithSkippedFlavors = []packageTestsWithSkipedFlavors{
 		{t: testInstaller},
 		{t: testAgent},
-		{t: testApmInjectAgent, skippedFlavors: []e2eos.Descriptor{e2eos.CentOS7, e2eos.RedHat9, e2eos.Fedora37}},
+		{t: testApmInjectAgent, skippedFlavors: []e2eos.Descriptor{e2eos.CentOS7, e2eos.RedHat9, e2eos.Fedora37, e2eos.Suse15}},
 	}
 )
 
 var packagesConfig = []testPackageConfig{
 	{name: "datadog-installer", defaultVersion: fmt.Sprintf("pipeline-%v", os.Getenv("CI_PIPELINE_ID")), registry: "669783387624.dkr.ecr.us-east-1.amazonaws.com", auth: "ecr"},
 	{name: "datadog-agent", defaultVersion: fmt.Sprintf("pipeline-%v", os.Getenv("CI_PIPELINE_ID")), registry: "669783387624.dkr.ecr.us-east-1.amazonaws.com", auth: "ecr"},
-	{name: "datadog-apm-inject", defaultVersion: "latest", registry: "gcr.io/datadoghq", auth: "docker"},
+	{name: "datadog-apm-inject", defaultVersion: "latest"},
 	{name: "datadog-apm-library-java", defaultVersion: "latest"},
 	{name: "datadog-apm-library-ruby", defaultVersion: "latest"},
 	{name: "datadog-apm-library-js", defaultVersion: "latest"},
 	{name: "datadog-apm-library-dotnet", defaultVersion: "latest"},
 	{name: "datadog-apm-library-python", defaultVersion: "latest"},
+}
+
+func shouldSkip(flavors []e2eos.Descriptor, flavor e2eos.Descriptor) bool {
+	for _, f := range flavors {
+		if f.Flavor == flavor.Flavor && f.Version == flavor.Version {
+			return true
+		}
+	}
+	return false
 }
 
 func TestPackages(t *testing.T) {
@@ -83,9 +91,9 @@ func TestPackages(t *testing.T) {
 		flavors = append(flavors, flavor)
 	}
 	for _, f := range flavors {
-		for _, test := range packagesTestsWithSkipedFlavors {
+		for _, test := range packagesTestsWithSkippedFlavors {
 			flavor := f // capture range variable for parallel tests closure
-			if slices.Contains(test.skippedFlavors, flavor) {
+			if shouldSkip(test.skippedFlavors, flavor) {
 				continue
 			}
 			suite := test.t(flavor, flavor.Architecture)
@@ -145,8 +153,15 @@ func (s *packageBaseSuite) ProvisionerOptions() []awshost.ProvisionerOption {
 
 func (s *packageBaseSuite) SetupSuite() {
 	s.BaseSuite.SetupSuite()
-	s.setupGlobalEnv()
+	s.setupFakeIntake()
 	s.host = host.New(s.T(), s.Env().RemoteHost, s.os, s.arch)
+}
+
+func (s *packageBaseSuite) RunInstallScriptProdOci(params ...string) error {
+	env := map[string]string{}
+	installScriptPackageManagerEnv(env, s.arch)
+	_, err := s.Env().RemoteHost.Execute(fmt.Sprintf(`%s bash -c "$(curl -L https://storage.googleapis.com/updater-dev/install_script_agent7.sh)"`, strings.Join(params, " ")), client.WithEnvVariables(env))
+	return err
 }
 
 func (s *packageBaseSuite) RunInstallScriptWithError(params ...string) error {
@@ -156,6 +171,10 @@ func (s *packageBaseSuite) RunInstallScriptWithError(params ...string) error {
 }
 
 func (s *packageBaseSuite) RunInstallScript(params ...string) {
+	// bugfix for https://major.io/p/systemd-in-fedora-22-failed-to-restart-service-access-denied/
+	if s.os.Flavor == e2eos.CentOS && s.os.Version == e2eos.CentOS7.Version {
+		s.Env().RemoteHost.MustExecute("sudo systemctl daemon-reexec")
+	}
 	err := s.RunInstallScriptWithError(params...)
 	require.NoErrorf(s.T(), err, "installer not properly installed. logs: \n%s\n%s", s.Env().RemoteHost.MustExecute("cat /tmp/datadog-installer-stdout.log"), s.Env().RemoteHost.MustExecute("cat /tmp/datadog-installer-stderr.log"))
 }
@@ -164,18 +183,22 @@ func envForceInstall(pkg string) string {
 	return "DD_INSTALLER_DEFAULT_PKG_INSTALL_" + strings.ToUpper(strings.ReplaceAll(pkg, "-", "_")) + "=true"
 }
 
-func (s *packageBaseSuite) Purge() {
-	s.Env().RemoteHost.MustExecute("sudo apt-get remove -y --purge datadog-installer || sudo yum remove -y datadog-installer")
+func envForceNoInstall(pkg string) string {
+	return "DD_INSTALLER_DEFAULT_PKG_INSTALL_" + strings.ToUpper(strings.ReplaceAll(pkg, "-", "_")) + "=false"
 }
 
-// setupGlobalEnv sets up the global environment variables for the agent processes
+func envForceVersion(pkg, version string) string {
+	return "DD_INSTALLER_DEFAULT_PKG_VERSION_" + strings.ToUpper(strings.ReplaceAll(pkg, "-", "_")) + "=" + version
+}
+
+func (s *packageBaseSuite) Purge() {
+	s.Env().RemoteHost.MustExecute("sudo apt-get remove -y --purge datadog-installer || sudo yum remove -y datadog-installer || sudo zypper remove -y datadog-installer")
+}
+
+// setupFakeIntake sets up the fake intake for the agent and trace agent.
 // This is done with SystemD environment files overrides to avoid having to touch the agent configuration files
 // and potentially interfere with the tests.
-func (s *packageBaseSuite) setupGlobalEnv() {
-	// FIXME: this should be done in the installer
-	s.Env().RemoteHost.MustExecute("sudo mkdir -p /etc/datadog-agent")
-	s.Env().RemoteHost.MustExecute(`echo "api_key: deadbeefdeadbeefdeadbeefdeadbeef" | sudo tee /etc/datadog-agent/datadog.yaml`)
-
+func (s *packageBaseSuite) setupFakeIntake() {
 	var env []string
 	if s.Env().FakeIntake != nil {
 		env = append(env, []string{
@@ -189,27 +212,29 @@ func (s *packageBaseSuite) setupGlobalEnv() {
 	}
 	s.Env().RemoteHost.MustExecute("sudo mkdir -p /etc/systemd/system/datadog-agent.service.d")
 	s.Env().RemoteHost.MustExecute("sudo mkdir -p /etc/systemd/system/datadog-agent-trace.service.d")
-	s.Env().RemoteHost.MustExecute(`printf "[Service]\nEnvironmentFile=-/etc/environment\n" | sudo tee /etc/systemd/system/datadog-agent-trace.service.d/inject.conf`)
-	s.Env().RemoteHost.MustExecute(`printf "[Service]\nEnvironmentFile=-/etc/environment\n" | sudo tee /etc/systemd/system/datadog-agent-trace.service.d/inject.conf`)
+	s.Env().RemoteHost.MustExecute(`printf "[Service]\nEnvironmentFile=-/etc/environment\n" | sudo tee /etc/systemd/system/datadog-agent-trace.service.d/fake-intake.conf`)
+	s.Env().RemoteHost.MustExecute(`printf "[Service]\nEnvironmentFile=-/etc/environment\n" | sudo tee /etc/systemd/system/datadog-agent-trace.service.d/fake-intake.conf`)
 	s.Env().RemoteHost.MustExecute("sudo systemctl daemon-reload")
 }
 
-func installScriptEnv(arch e2eos.Architecture) map[string]string {
+func installScriptPackageManagerEnv(env map[string]string, arch e2eos.Architecture) {
 	apiKey := os.Getenv("DD_API_KEY")
 	if apiKey == "" {
 		apiKey = "deadbeefdeadbeefdeadbeefdeadbeef"
 	}
-	env := map[string]string{
-		"DD_API_KEY": apiKey,
-		"DD_SITE":    "datadoghq.com",
-		// Install Script env variables
-		"DD_INSTALLER":             "true",
-		"TESTING_KEYS_URL":         "keys.datadoghq.com",
-		"TESTING_APT_URL":          "apttesting.datad0g.com",
-		"TESTING_APT_REPO_VERSION": fmt.Sprintf("pipeline-%s-i7-%s 7", os.Getenv("CI_PIPELINE_ID"), arch),
-		"TESTING_YUM_URL":          "yumtesting.datad0g.com",
-		"TESTING_YUM_VERSION_PATH": fmt.Sprintf("testing/pipeline-%s-i7/7", os.Getenv("CI_PIPELINE_ID")),
-	}
+	env["DD_API_KEY"] = apiKey
+	env["DD_SITE"] = "datadoghq.com"
+	// Install Script env variables
+	env["DD_INSTALLER"] = "true"
+	env["TESTING_KEYS_URL"] = "keys.datadoghq.com"
+	env["TESTING_APT_URL"] = "apttesting.datad0g.com"
+	env["TESTING_APT_REPO_VERSION"] = fmt.Sprintf("pipeline-%s-a7-%s 7", os.Getenv("CI_PIPELINE_ID"), arch)
+	env["TESTING_YUM_URL"] = "yumtesting.datad0g.com"
+	env["TESTING_YUM_VERSION_PATH"] = fmt.Sprintf("testing/pipeline-%s-a7/7", os.Getenv("CI_PIPELINE_ID"))
+
+}
+
+func installScriptInstallerEnv(env map[string]string) {
 	for _, pkg := range packagesConfig {
 		name := strings.ToUpper(strings.ReplaceAll(pkg.name, "-", "_"))
 		image := strings.TrimPrefix(name, "DATADOG_") + "_PACKAGE"
@@ -223,5 +248,11 @@ func installScriptEnv(arch e2eos.Architecture) map[string]string {
 			env[fmt.Sprintf("DD_INSTALLER_DEFAULT_PKG_VERSION_%s", name)] = pkg.defaultVersion
 		}
 	}
+}
+
+func installScriptEnv(arch e2eos.Architecture) map[string]string {
+	env := map[string]string{}
+	installScriptPackageManagerEnv(env, arch)
+	installScriptInstallerEnv(env)
 	return env
 }
