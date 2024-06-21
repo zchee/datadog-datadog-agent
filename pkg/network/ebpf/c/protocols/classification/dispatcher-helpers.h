@@ -37,24 +37,6 @@ __maybe_unused static __always_inline protocol_prog_t protocol_to_program(protoc
     }
 }
 
-__maybe_unused static __always_inline kprobe_prog_t kprobe_protocol_to_program(protocol_t proto) {
-    switch(proto) {
-    case PROTOCOL_HTTP:
-        return KPROBE_HTTP_PROCESS;
-    case PROTOCOL_HTTP2:
-        return KPROBE_HTTP2_HANDLE_FIRST_FRAME;
-    case PROTOCOL_KAFKA:
-        return KPROBE_KAFKA;
-    case PROTOCOL_POSTGRES:
-        return KPROBE_POSTGRES;
-    default:
-        if (proto != PROTOCOL_UNKNOWN) {
-            log_debug("protocol doesn't have a matching kprobe program: %d", proto);
-        }
-        return KPROBE_PROG_UNKNOWN;
-    }
-}
-
 // Returns true if the payload represents a TCP termination by checking if the tcp flags contains TCPHDR_FIN or TCPHDR_RST.
 static __always_inline bool is_tcp_termination(skb_info_t *skb_info) {
     return skb_info->tcp_flags & (TCPHDR_FIN | TCPHDR_RST);
@@ -327,7 +309,7 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
                 .data_end = bytes,
                 .data_off = 0,
             };
-            bpf_tail_call_compat(ctx, &kprobe_dispatcher_classification_progs, KPROBE_DISPATCHER_KAFKA_PROG);
+            bpf_tail_call_compat(ctx, &kprobe_dispatcher_classification_progs, DISPATCHER_KAFKA_PROG);
         }
         log_debug("[kprobe_protocol_dispatcher_entrypoint]: %p Classifying protocol as: %d", sock, cur_fragment_protocol);
         // If there has been a change in the classification, save the new protocol.
@@ -351,7 +333,7 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
         args->data_end = bytes;
 
         log_debug("kprobe_dispatching to protocol number: %d", cur_fragment_protocol);
-        bpf_tail_call_compat(ctx, &kprobe_protocols_progs, kprobe_protocol_to_program(cur_fragment_protocol));
+        bpf_tail_call_compat(ctx, &kprobe_protocols_progs, protocol_to_program(cur_fragment_protocol));
     }
 }
 
@@ -551,7 +533,7 @@ static __always_inline void kprobe_dispatch_kafka(struct pt_regs *ctx)
     }
 
     set_protocol(stack, PROTOCOL_KAFKA);
-    bpf_tail_call_compat(ctx, &kprobe_protocols_progs, KPROBE_KAFKA);
+    bpf_tail_call_compat(ctx, &kprobe_protocols_progs, PROG_KAFKA);
 }
 
 static __always_inline void dispatch_kafka(struct __sk_buff *skb) {

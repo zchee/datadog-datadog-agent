@@ -269,11 +269,7 @@ PKTBUF_READ_BIG_ENDIAN(s8)
 
 //            read_into_kernel_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                     
 
-#define PKTBUF_READ_INTO_BUFFER(name, total_size, blk_size)                                              \
-    READ_INTO_USER_BUFFER(name, total_size)                                                              \
-    READ_INTO_KERNEL_BUFFER(name, total_size)                                                            \
-    READ_INTO_BUFFER(name, total_size, blk_size)                                                         \
-    READ_INTO_BUFFER_SK_MSG(name, total_size, blk_size)           \
+#define PKTBUF_READ_INTO_BUFFER_INTERNAL(name, total_size)                                              \
     static __always_inline void pktbuf_read_into_buffer_##name(char *buffer, pktbuf_t pkt, u32 offset) { \
         switch (pkt.type) {                                                                              \
         case PKTBUF_SKB:                                                                                 \
@@ -283,7 +279,7 @@ PKTBUF_READ_BIG_ENDIAN(s8)
             read_into_user_buffer_##name(buffer, pkt.tls->buffer_ptr + offset);                          \
             return;                                                                                      \
         case PKTBUF_KPROBE:                                                                              \
-            read_into_user_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                     \
+            read_into_user_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                       \
             return;                                                                                      \
         case PKTBUF_SK_MSG:                                                                              \
             read_into_buffer_sk_msg_##name(buffer, pkt.sk_msg.md, offset);                               \
@@ -291,6 +287,24 @@ PKTBUF_READ_BIG_ENDIAN(s8)
         }                                                                                                \
         pktbuf_invalid_operation();                                                                      \
     }
+
+// Reads `total_size` bytes from the packet (starting from `offset`), into the given buffer. Every read operation is
+// wrapped with a telemetry callback to track the read operation.
+#define PKTBUF_READ_INTO_BUFFER(name, total_size, blk_size)         \
+    READ_INTO_USER_BUFFER(name, total_size)                         \
+    READ_INTO_BUFFER(name, total_size, blk_size)                    \
+    READ_INTO_BUFFER_SK_MSG(name, total_size, blk_size)                    \
+    PKTBUF_READ_INTO_BUFFER_INTERNAL(name, total_size)
+
+
+// Reads `total_size` bytes from the packet (starting from `offset`), into the given buffer. No telemetry is used.
+// Should be used if instruction limit is being hit or telemetry causes pressure on the eBPF verifier.
+#define PKTBUF_READ_INTO_BUFFER_WITHOUT_TELEMETRY(name, total_size, blk_size)   \
+    READ_INTO_USER_BUFFER_WITHOUT_TELEMETRY(name, total_size)                   \
+    READ_INTO_BUFFER_WITHOUT_TELEMETRY(name, total_size, blk_size)              \
+    READ_INTO_BUFFER_SK_MSG(name, total_size, blk_size)                    \
+    PKTBUF_READ_INTO_BUFFER_INTERNAL(name, total_size)
+
 
 // Wraps the mechanism of reading big-endian number (s16 or s32) from the packet, and increasing the offset.
 #define PKTBUF_READ_BIG_ENDIAN_WRAPPER(type, name, pkt, offset) \
