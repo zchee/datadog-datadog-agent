@@ -83,7 +83,7 @@ const (
 	maxActive = 128
 	probeUID  = "http"
 
-	useNewDataHooks = false
+	useNewDataHooks = true
 )
 
 type ebpfProgram struct {
@@ -448,6 +448,25 @@ func (e *ebpfProgram) configureManagerWithSupportedProtocols(protocols []*protoc
 }
 
 func fixupProbes(options *manager.Options) {
+	newDataFunctions := []string{
+		skMsgProtocolDispatcher,
+		sockopsFunction,
+		"kprobe__tcp_splice_data_recv",
+		"kretprobe__tcp_splice_data_recv",
+		"kprobe__tcp_splice_read",
+		"kprobe__tcp_sendmsg",
+		"kprobe__tcp_recvmsg",
+		"kretprobe__tcp_recvmsg",
+		"kprobe__simple_copy_to_iter",
+		"kretprobe__simple_copy_to_iter",
+		"kprobe__splice_to_socket",
+		"kretprobe__splice_to_socket",
+	}
+	newDataFunctionsMap := make(map[string]bool)
+	for _, fn := range newDataFunctions {
+		newDataFunctionsMap[fn] = true
+	}
+
 	options.TailCallRouter = slices.DeleteFunc(options.TailCallRouter, func(tc manager.TailCallRoute) bool {
 		name := tc.ProbeIdentificationPair.EBPFFuncName
 
@@ -475,12 +494,9 @@ func fixupProbes(options *manager.Options) {
 			return useNewDataHooks
 		}
 
-		if name == skMsgProtocolDispatcher {
-			return !useNewDataHooks
-		}
-
-		if name == sockopsFunction {
-			return !useNewDataHooks
+		if !useNewDataHooks {
+			_, found := newDataFunctionsMap[name]
+			return found
 		}
 
 		return false
@@ -489,7 +505,7 @@ func fixupProbes(options *manager.Options) {
 	if useNewDataHooks {
 		options.ExcludedFunctions = append(options.ExcludedFunctions, protocolDispatcherSocketFilterFunction)
 	} else {
-		options.ExcludedFunctions = append(options.ExcludedFunctions, skMsgProtocolDispatcher, sockopsFunction)
+		options.ExcludedFunctions = append(options.ExcludedFunctions, newDataFunctions...)
 		options.ExcludedMaps = append(options.ExcludedMaps, sockhashMap)
 	}
 }
