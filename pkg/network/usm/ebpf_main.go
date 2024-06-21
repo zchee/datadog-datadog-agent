@@ -455,12 +455,13 @@ func fixupProbes(options *manager.Options) {
 			return useNewDataHooks
 		}
 
-		if strings.HasPrefix(name, "kprobe_") {
-			return !useNewDataHooks
-		}
+		if !useNewDataHooks {
+			if !strings.HasPrefix(name, "sk_msg") && !strings.HasPrefix(name, "kprobe_") {
+				return false
+			}
 
-		if strings.HasPrefix(name, "sk_skb") {
-			return !useNewDataHooks
+			options.ExcludedFunctions = append(options.ExcludedFunctions, name)
+			return true
 		}
 
 		return false
