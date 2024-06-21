@@ -263,14 +263,14 @@ int BPF_KRETPROBE(kretprobe__tcp_recvmsg, int ret) {
 
 SEC("kprobe/tcp_splice_read")
 int BPF_KPROBE(kprobe__tcp_splice_read, struct socket *sock) {
-    bpf_printk("kprobe/tcp_splice_read sock=%llx\n", (unsigned long)sock);
+    log_debug("kprobe/tcp_splice_read sock=%lx\n", (unsigned long)sock);
 
     return 0;
 }
 
 SEC("kprobe/simple_copy_to_iter")
 int BPF_KPROBE(kprobe__simple_copy_to_iter, const void *addr, size_t bytes) {
-    bpf_printk("kprobe/simple_copy_to_iter addr=%p bytes=%lu\n", addr, bytes);
+    log_debug("kprobe/simple_copy_to_iter addr=%p bytes=%lu\n", addr, bytes);
 
     // u64 pid_tgid = bpf_get_current_pid_tgid();
     // tcp_kprobe_state_t *state = bpf_map_lookup_elem(&tcp_kprobe_state, &pid_tgid);
@@ -304,7 +304,7 @@ int BPF_KRETPROBE(kretprobe__simple_copy_to_iter, size_t bytes) {
 
 SEC("kprobe/splice_to_socket")
 int BPF_KPROBE(kprobe__splice_to_socket) {
-    bpf_printk("kprobe/splice_to_socket\n");
+    log_debug("kprobe/splice_to_socket\n");
 
     u64 pid_tgid = bpf_get_current_pid_tgid();
     __u32 splicing = 1;
@@ -325,7 +325,7 @@ int BPF_KRETPROBE(kretprobe__splice_to_socket) {
 
 SEC("kprobe/tcp_splice_data_recv")
 int BPF_KPROBE(kprobe__tcp_splice_data_recv, read_descriptor_t *rd_desc, struct sk_buff *skb, unsigned int offset, size_t len) {
-    bpf_printk("kprobe/tcp_splice_data_recv skb=%p offset=%u len=%lu\n", skb, offset, len);
+    log_debug("kprobe/tcp_splice_data_recv skb=%p offset=%u len=%lu\n", skb, offset, len);
 
     __u32 skb_len;
     BPF_CORE_READ_INTO(&skb_len, skb, len);
@@ -336,17 +336,17 @@ int BPF_KPROBE(kprobe__tcp_splice_data_recv, read_descriptor_t *rd_desc, struct 
     __u32 skb_end;
     BPF_CORE_READ_INTO(&skb_end, skb, end);
 
-    bpf_printk("kprobe/tcp_splice_data_recv skb->len %u data_len %u skb_headlen %u\n", skb_len, skb_data_len, skb_len - skb_data_len);
-    bpf_printk("kprobe/tcp_splice_data_recv skb->head %p end %u\n", skb_head, skb_end);
+    log_debug("kprobe/tcp_splice_data_recv skb->len %u data_len %u skb_headlen %u\n", skb_len, skb_data_len, skb_len - skb_data_len);
+    log_debug("kprobe/tcp_splice_data_recv skb->head %p end %u\n", skb_head, skb_end);
 
     void *skb_end_pointer = skb_head + skb_end;
     struct skb_shared_info *shinfo = skb_end_pointer;
-    bpf_printk("kprobe/tcp_splice_data_recv shinfo %p\n", shinfo);
+    log_debug("kprobe/tcp_splice_data_recv shinfo %p\n", shinfo);
 
     __u8 nr_frags;
     BPF_CORE_READ_INTO(&nr_frags, shinfo, nr_frags);
 
-    bpf_printk("kprobe/tcp_splice_data_recv nr_frags %u\n", nr_frags);
+    log_debug("kprobe/tcp_splice_data_recv nr_frags %u\n", nr_frags);
 
     struct page *frag_page;
     BPF_CORE_READ_INTO(&frag_page, shinfo, frags[0].bv_page);
@@ -355,7 +355,7 @@ int BPF_KPROBE(kprobe__tcp_splice_data_recv, read_descriptor_t *rd_desc, struct 
     __u32 frag_offset;
     BPF_CORE_READ_INTO(&frag_offset, shinfo, frags[0].bv_offset);
 
-    bpf_printk("kprobe/tcp_splice_data_recv frag[0] page %p len %u offset %u\n", frag_page, frag_len, frag_offset);
+    log_debug("kprobe/tcp_splice_data_recv frag[0] page %p len %u offset %u\n", frag_page, frag_len, frag_offset);
 
     // u64 pid_tgid = bpf_get_current_pid_tgid();
     // tcp_kprobe_state_t *state = bpf_map_lookup_elem(&tcp_kprobe_state, &pid_tgid);

@@ -83,7 +83,7 @@ const (
 	maxActive = 128
 	probeUID  = "http"
 
-	useNewDataHooks = true
+	useNewDataHooks = false
 )
 
 type ebpfProgram struct {
