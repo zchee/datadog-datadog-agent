@@ -115,19 +115,18 @@ func NewMonitor(c *config.Config, connectionProtocolMap *ebpf.Map) (m *Monitor, 
 		return nil, fmt.Errorf("error initializing ebpf program: %w", err)
 	}
 
-	filter, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: protocolDispatcherSocketFilterFunction, UID: probeUID})
-	if filter == nil {
-		return nil, fmt.Errorf("error retrieving socket filter")
-	}
 	ddebpf.AddNameMappings(mgr.Manager.Manager, "usm_monitor")
 
-	closeFilterFn, err := filterpkg.HeadlessSocketFilter(c, filter)
-	if err != nil {
-		return nil, fmt.Errorf("error enabling traffic inspection: %s", err)
-	}
+	closeFilterFn := func() {}
 
-	sockmap, found, _ := mgr.GetMap("sockhash")
-	if found {
+	if useNewDataHooks {
+		fmt.Println("Using new data hooks")
+
+		sockmap, found, _ := mgr.GetMap("sockhash")
+		if !found {
+			return nil, fmt.Errorf("no sockhash")
+		}
+
 		fmt.Println("sockhash", sockmap)
 
 		probe, found := mgr.GetProbe(manager.ProbeIdentificationPair{
@@ -138,61 +137,44 @@ func NewMonitor(c *config.Config, connectionProtocolMap *ebpf.Map) (m *Monitor, 
 			probe.SockMap = sockmap
 		}
 
-		// probe, found := mgr.GetProbe(manager.ProbeIdentificationPair{
-		// 	EBPFFuncName: kafkaStreamParser,
-		// 	UID:          probeUID,
-		// })
-		// if found {
-		// 	probe.SockMap = sockmap
-		// }
+		cgroupList, err := findScopeFiles("/sys/fs/cgroup")
+		if err != nil {
+			return nil, fmt.Errorf("error finding cgroup scope files: %s", err)
+		}
+
+		sockops, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: sockopsFunction, UID: probeUID})
+		sockops.CGroupPath = "/sys/fs/cgroup"
+		for _, cgroup := range cgroupList {
+			if strings.Contains(cgroup, "docker") {
+				// fmt.Println("skipping", cgroup)
+				continue
+			}
+			if cgroup != "/sys/fs/cgroup/user.slice/user-0.slice/session-1.scope" {
+				// fmt.Println("skipping", cgroup)
+				continue
+			}
+			uid, _ := utils.NewPathIdentifier(cgroup)
+			probe := &manager.Probe{
+				ProbeIdentificationPair: manager.ProbeIdentificationPair{
+					EBPFFuncName: sockopsFunction,
+					UID:          uid.Key()[:10],
+				},
+				CGroupPath: cgroup,
+			}
+			fmt.Println(cgroup)
+			if err := mgr.AddHook("", probe); err != nil {
+				log.Errorf("error adding hook: %s", err)
+			}
+		}
 	} else {
-		fmt.Println("no sockhash")
-	}
-
-	// sockmap, found, _ := mgr.GetMap("sockhash")
-	// if found {
-	// 	probe := &manager.Probe{
-	// 		ProbeIdentificationPair: manager.ProbeIdentificationPair{
-	// 			EBPFFuncName: "sk_skb__kafka_stream_parser",
-	// 		},
-	// 		SockMap: sockmap,
-	// 	}
-	// 	if err := mgr.AddHook("", probe); err != nil {
-	// 		log.Errorf("error adding hook: %s", err)
-	// 	}
-	// 	fmt.Println("sockhash", sockmap)
-	// } else {
-	// 	fmt.Println("no sockhash")
-	// }
-
-	cgroupList, err := findScopeFiles("/sys/fs/cgroup")
-	if err != nil {
-		return nil, fmt.Errorf("error enabling traffic inspection: %s", err)
-		return nil, fmt.Errorf("error finding cgroup scope files: %s", err)
-	}
-
-	sockops, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: sockopsFunction, UID: probeUID})
-	sockops.CGroupPath = "/sys/fs/cgroup"
-	for _, cgroup := range cgroupList {
-		if strings.Contains(cgroup, "docker") {
-			// fmt.Println("skipping", cgroup)
-			continue
+		filter, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: protocolDispatcherSocketFilterFunction, UID: probeUID})
+		if filter == nil {
+			return nil, fmt.Errorf("error retrieving socket filter")
 		}
-		if cgroup != "/sys/fs/cgroup/user.slice/user-0.slice/session-1.scope" {
-			// fmt.Println("skipping", cgroup)
-			continue
-		}
-		uid, _ := utils.NewPathIdentifier(cgroup)
-		probe := &manager.Probe{
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: sockopsFunction,
-				UID:          uid.Key()[:10],
-			},
-			CGroupPath: cgroup,
-		}
-		fmt.Println(cgroup)
-		if err := mgr.AddHook("", probe); err != nil {
-			log.Errorf("error adding hook: %s", err)
+
+		closeFilterFn, err = filterpkg.HeadlessSocketFilter(c, filter)
+		if err != nil {
+			return nil, fmt.Errorf("error enabling traffic inspection: %s", err)
 		}
 	}
 

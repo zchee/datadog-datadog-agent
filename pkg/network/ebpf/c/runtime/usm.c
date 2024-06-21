@@ -37,12 +37,7 @@
 // The entrypoint for all packets classification & decoding in universal service monitoring.
 SEC("socket/protocol_dispatcher")
 int socket__protocol_dispatcher(struct __sk_buff *skb) {
-    log_debug("protocl disp skb %p pkt_type %u", skb, skb->pkt_type);
-    if (skb->pkt_type != 4) {
-        return 0;
-    }
-
-    // protocol_dispatcher_entrypoint(skb);
+    protocol_dispatcher_entrypoint(skb);
     return 0;
 }
 

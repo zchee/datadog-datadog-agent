@@ -13,6 +13,7 @@ import (
 	"io"
 	"math"
 	"slices"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -81,6 +82,8 @@ const (
 	// the accept syscall).
 	maxActive = 128
 	probeUID  = "http"
+
+	useNewDataHooks = true
 )
 
 type ebpfProgram struct {
@@ -444,6 +447,51 @@ func (e *ebpfProgram) configureManagerWithSupportedProtocols(protocols []*protoc
 	}
 }
 
+func fixupProbes(options *manager.Options) {
+	options.TailCallRouter = slices.DeleteFunc(options.TailCallRouter, func(tc manager.TailCallRoute) bool {
+		name := tc.ProbeIdentificationPair.EBPFFuncName
+
+		if strings.HasPrefix(name, "socket_") {
+			return useNewDataHooks
+		}
+
+		if strings.HasPrefix(name, "kprobe_") {
+			return !useNewDataHooks
+		}
+
+		if strings.HasPrefix(name, "sk_skb") {
+			return !useNewDataHooks
+		}
+
+		return false
+	})
+
+	options.ActivatedProbes = slices.DeleteFunc(options.ActivatedProbes, func(p manager.ProbesSelector) bool {
+		ps := p.GetProbesIdentificationPairList()
+		name := ps[0].EBPFFuncName
+
+		if name == protocolDispatcherSocketFilterFunction {
+			return useNewDataHooks
+		}
+
+		if name == skMsgProtocolDispatcher {
+			return !useNewDataHooks
+		}
+
+		if name == sockopsFunction {
+			return !useNewDataHooks
+		}
+
+		return false
+	})
+
+	if useNewDataHooks {
+		options.ExcludedFunctions = append(options.ExcludedFunctions, protocolDispatcherSocketFilterFunction)
+	} else {
+		options.ExcludedFunctions = append(options.ExcludedFunctions, skMsgProtocolDispatcher, sockopsFunction)
+	}
+}
+
 func (e *ebpfProgram) init(buf bytecode.AssetReader, options manager.Options) error {
 	kprobeAttachMethod := manager.AttachKprobeWithPerfEventOpen
 	if e.cfg.AttachKprobesWithKprobeEventsABI {
@@ -536,6 +584,8 @@ func (e *ebpfProgram) init(buf bytecode.AssetReader, options manager.Options) er
 			options.ExcludedFunctions = append(options.ExcludedFunctions, tc.ProbeIdentificationPair.EBPFFuncName)
 		}
 	}
+
+	fixupProbes(&options)
 
 	err := e.InitWithOptions(buf, &options)
 	if err != nil {
