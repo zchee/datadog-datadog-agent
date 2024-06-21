@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/process/util"
-	"github.com/DataDog/datadog-agent/pkg/telemetry"
+	"github.com/DataDog/datadog-agent/pkg/telemetry" // JMWTELEMETRY
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
@@ -27,6 +27,7 @@ var cacheTelemetry = struct {
 	expired   *telemetry.StatCounterWrapper
 	oversized *telemetry.StatCounterWrapper
 }{
+	// JMWTELEMETRY
 	telemetry.NewStatGaugeWrapper(dnsCacheModuleName, "size", []string{}, "Gauge measuring the current size of the DNS cache"),
 	telemetry.NewStatCounterWrapper(dnsCacheModuleName, "lookups", []string{}, "Counter measuring the number of lookups to the DNS cache"),
 	telemetry.NewStatCounterWrapper(dnsCacheModuleName, "hits", []string{}, "Counter measuring the number of successful lookups to the DNS cache"),

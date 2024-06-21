@@ -42,14 +42,14 @@ type provides struct {
 }
 
 // newServer configures a netflow server.
-func newServer(lc fx.Lifecycle, deps dependencies) (provides, error) {
+func newServer(lc fx.Lifecycle, deps dependencies) (provides, error) { // JMWINIT0
 	conf := deps.Config.Get()
 	sender, err := deps.Demultiplexer.GetDefaultSender()
 	if err != nil {
 		return provides{}, err
 	}
 
-	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger, deps.RDNSQuerier)
+	flowAgg := flowaggregator.NewFlowAggregator(sender, deps.Forwarder, conf, deps.Hostname.GetSafe(context.Background()), deps.Logger, deps.RDNSQuerier) //JMWINIT1
 
 	server := &Server{
 		config:  conf,
@@ -68,7 +68,7 @@ func newServer(lc fx.Lifecycle, deps dependencies) (provides, error) {
 		lc.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
 
-				err := server.Start()
+				err := server.Start() // JMWINIT3
 				return err
 			},
 			OnStop: func(context.Context) error {
@@ -94,12 +94,12 @@ type Server struct {
 }
 
 // Start starts the server running
-func (s *Server) Start() error {
+func (s *Server) Start() error { // JMWINIT3
 	if s.running {
 		return errors.New("server already started")
 	}
 	s.running = true
-	go s.FlowAgg.Start()
+	go s.FlowAgg.Start() // JMWINIT4
 
 	if s.config.PrometheusListenerEnabled {
 		go func() {

@@ -82,14 +82,21 @@ func TestAggregator(t *testing.T) {
 		Packets:        4,
 		SrcAddr:        []byte{10, 10, 10, 10},
 		DstAddr:        []byte{10, 10, 10, 20},
-		IPProtocol:     uint32(6),
-		SrcPort:        2000,
-		DstPort:        80,
-		TCPFlags:       19,
-		EtherType:      uint32(0x0800),
+		/* JMWTEST
+		SrcReverseDNSHostname string
+		DstReverseDNSHostname string
+		*/
+		IPProtocol: uint32(6),
+		SrcPort:    2000,
+		DstPort:    80,
+		TCPFlags:   19,
+		EtherType:  uint32(0x0800),
 	}
 	epForwarder := eventplatformimpl.NewMockEventPlatformForwarder(gomock.NewController(t))
 
+	// JMWTEST - add to destination: "rdns_domain": "jmw-test-destination-domain.com"
+	// JMWTEST - add to source: "rdns_domain": "jmw-test-source-domain.com"
+	// JMWTEST add? destination and source "reverse_dns_hostname": ""
 	// language=json
 	event := []byte(`
 {

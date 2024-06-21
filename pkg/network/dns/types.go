@@ -15,7 +15,7 @@ import (
 
 var si = intern.NewStringInterner()
 
-// Hostname represents a DNS hostname (aka domain name)
+// Hostname represents a DNS hostname (aka domain name) // JMW
 type Hostname = *intern.StringValue
 
 // ToString converts a dns.Hostname to a string

@@ -78,13 +78,13 @@ var maxNegativeSequenceDiffToReset = map[common.FlowType]int{
 }
 
 // NewFlowAggregator returns a new FlowAggregator
-func NewFlowAggregator(sender sender.Sender, epForwarder eventplatform.Forwarder, config *config.NetflowConfig, hostname string, logger log.Component, rdnsQuerier rdnsquerier.Component) *FlowAggregator {
+func NewFlowAggregator(sender sender.Sender, epForwarder eventplatform.Forwarder, config *config.NetflowConfig, hostname string, logger log.Component, rdnsQuerier rdnsquerier.Component) *FlowAggregator { // JMWINIT1 // JMWCONFIG1
 	flushInterval := time.Duration(config.AggregatorFlushInterval) * time.Second
 	flowContextTTL := time.Duration(config.AggregatorFlowContextTTL) * time.Second
 	rollupTrackerRefreshInterval := time.Duration(config.AggregatorRollupTrackerRefreshInterval) * time.Second
 	return &FlowAggregator{
 		flowIn:                       make(chan *common.Flow, config.AggregatorBufferSize),
-		flowAcc:                      newFlowAccumulator(flushInterval, flowContextTTL, config.AggregatorPortRollupThreshold, config.AggregatorPortRollupDisabled, logger, rdnsQuerier),
+		flowAcc:                      newFlowAccumulator(flushInterval, flowContextTTL, config.AggregatorPortRollupThreshold, config.AggregatorPortRollupDisabled, logger, rdnsQuerier), // JMWINIT2
 		FlushFlowsToSendInterval:     flushFlowsToSendInterval,
 		rollupTrackerRefreshInterval: rollupTrackerRefreshInterval,
 		sender:                       sender,
@@ -103,10 +103,10 @@ func NewFlowAggregator(sender sender.Sender, epForwarder eventplatform.Forwarder
 }
 
 // Start will start the FlowAggregator worker
-func (agg *FlowAggregator) Start() {
+func (agg *FlowAggregator) Start() { // JMWINIT4
 	agg.logger.Info("Flow Aggregator started")
-	go agg.run()
-	agg.flushLoop() // blocking call
+	go agg.run()    // JMWINIT5
+	agg.flushLoop() // blocking call // JMWINIT6
 }
 
 // Stop will stop running FlowAggregator
@@ -121,7 +121,7 @@ func (agg *FlowAggregator) GetFlowInChan() chan *common.Flow {
 	return agg.flowIn
 }
 
-func (agg *FlowAggregator) run() {
+func (agg *FlowAggregator) run() { // JMWINIT5
 	for {
 		select {
 		case <-agg.stopChan:
@@ -130,14 +130,14 @@ func (agg *FlowAggregator) run() {
 			return
 		case flow := <-agg.flowIn:
 			agg.receivedFlowCount.Inc()
-			agg.flowAcc.add(flow)
+			agg.flowAcc.add(flow) // JMW1 add the flow to the agg.flowAcc
 		}
 	}
 }
 
-func (agg *FlowAggregator) sendFlows(flows []*common.Flow, flushTime time.Time) {
+func (agg *FlowAggregator) sendFlows(flows []*common.Flow, flushTime time.Time) { // JMW6
 	for _, flow := range flows {
-		flowPayload := buildPayload(flow, agg.hostname, flushTime)
+		flowPayload := buildPayload(flow, agg.hostname, flushTime) // JMW7
 
 		// Calling MarshalJSON directly as it's faster than calling json.Marshall
 		payloadBytes, err := flowPayload.MarshalJSON()
@@ -148,7 +148,7 @@ func (agg *FlowAggregator) sendFlows(flows []*common.Flow, flushTime time.Time) 
 		agg.logger.Tracef("flushed flow: %s", string(payloadBytes))
 
 		m := message.NewMessage(payloadBytes, nil, "", 0)
-		err = agg.epForwarder.SendEventPlatformEventBlocking(m, eventplatform.EventTypeNetworkDevicesNetFlow)
+		err = agg.epForwarder.SendEventPlatformEventBlocking(m, eventplatform.EventTypeNetworkDevicesNetFlow) // JMW send flow via EP Forwarder
 		if err != nil {
 			// at the moment, SendEventPlatformEventBlocking can only fail if the event type is invalid
 			agg.logger.Errorf("Error sending to event platform forwarder: %s", err)
@@ -208,7 +208,7 @@ func (agg *FlowAggregator) sendExporterMetadata(flows []*common.Flow, flushTime 
 	}
 }
 
-func (agg *FlowAggregator) flushLoop() {
+func (agg *FlowAggregator) flushLoop() { // JMWINIT6
 	var flushFlowsToSendTicker <-chan time.Time
 
 	if agg.FlushFlowsToSendInterval > 0 {
@@ -232,13 +232,13 @@ func (agg *FlowAggregator) flushLoop() {
 			now := time.Now()
 			if !lastFlushTime.IsZero() {
 				flushInterval := now.Sub(lastFlushTime)
-				agg.sender.Gauge("datadog.netflow.aggregator.flush_interval", flushInterval.Seconds(), "", nil)
+				agg.sender.Gauge("datadog.netflow.aggregator.flush_interval", flushInterval.Seconds(), "", nil) // JMWTELEMETRY flush_interval
 			}
 			lastFlushTime = now
 
 			flushStartTime := time.Now()
 			agg.flush()
-			agg.sender.Gauge("datadog.netflow.aggregator.flush_duration", time.Since(flushStartTime).Seconds(), "", nil)
+			agg.sender.Gauge("datadog.netflow.aggregator.flush_duration", time.Since(flushStartTime).Seconds(), "", nil) // JMWTELEMETRY flush_duration
 			agg.sender.Commit()
 		// refresh rollup trackers
 		case <-rollupTrackersRefresh:
@@ -251,27 +251,28 @@ func (agg *FlowAggregator) flushLoop() {
 func (agg *FlowAggregator) flush() int {
 	flowsContexts := agg.flowAcc.getFlowContextCount()
 	flushTime := agg.TimeNowFunction()
-	flowsToFlush := agg.flowAcc.flush()
+	flowsToFlush := agg.flowAcc.flush() // JMW5
 	agg.logger.Debugf("Flushing %d flows to the forwarder (flush_duration=%d, flow_contexts_before_flush=%d)", len(flowsToFlush), time.Since(flushTime).Milliseconds(), flowsContexts)
 
 	sequenceDeltaPerExporter := agg.getSequenceDelta(flowsToFlush)
 	for key, seqDelta := range sequenceDeltaPerExporter {
 		tags := []string{"device_namespace:" + key.Namespace, "exporter_ip:" + key.ExporterIP, "flow_type:" + string(key.FlowType)}
-		agg.sender.Count("datadog.netflow.aggregator.sequence.delta", float64(seqDelta.Delta), "", tags)
-		agg.sender.Gauge("datadog.netflow.aggregator.sequence.last", float64(seqDelta.LastSequence), "", tags)
+		agg.sender.Count("datadog.netflow.aggregator.sequence.delta", float64(seqDelta.Delta), "", tags)       // JMWTELEMETRY
+		agg.sender.Gauge("datadog.netflow.aggregator.sequence.last", float64(seqDelta.LastSequence), "", tags) // JMWTELEMETRY
 		if seqDelta.Reset {
-			agg.sender.Count("datadog.netflow.aggregator.sequence.reset", float64(1), "", tags)
+			agg.sender.Count("datadog.netflow.aggregator.sequence.reset", float64(1), "", tags) // JMWTELEMETRY
 		}
 	}
 
 	// TODO: Add flush stats to agent telemetry e.g. aggregator newFlushCountStats()
 	if len(flowsToFlush) > 0 {
-		agg.sendFlows(flowsToFlush, flushTime)
+		agg.sendFlows(flowsToFlush, flushTime) // JMW6
 	}
 	agg.sendExporterMetadata(flowsToFlush, flushTime)
 
 	flushCount := len(flowsToFlush)
 
+	//JMWTELEMETRY
 	agg.sender.MonotonicCount("datadog.netflow.aggregator.hash_collisions", float64(agg.flowAcc.hashCollisionFlowCount.Load()), "", nil)
 	agg.sender.MonotonicCount("datadog.netflow.aggregator.flows_received", float64(agg.receivedFlowCount.Load()), "", nil)
 	agg.sender.Count("datadog.netflow.aggregator.flows_flushed", float64(flushCount), "", nil)
@@ -289,6 +290,9 @@ func (agg *FlowAggregator) flush() int {
 	// We increase `flushedFlowCount` at the end to be sure that the metrics are submitted before hand.
 	// Tests will wait for `flushedFlowCount` to be increased before asserting the metrics.
 	agg.flushedFlowCount.Add(uint64(flushCount))
+
+	agg.logger.Debugf("JMW FlowAggregator flush() incremented flushedFlowCount to %d len(flowsToFlush)=%d", agg.flushedFlowCount.Load(), len(flowsToFlush))
+
 	return len(flowsToFlush)
 }
 

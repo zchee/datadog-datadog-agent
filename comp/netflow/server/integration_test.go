@@ -137,7 +137,7 @@ func TestNetFlow_IntegrationTest_SFlow5(t *testing.T) {
 	epForwarder.EXPECT().SendEventPlatformEventBlocking(gomock.Any(), eventplatform.EventTypeNetworkDevicesNetFlow).Return(nil).Times(7)
 	epForwarder.EXPECT().SendEventPlatformEventBlocking(gomock.Any(), "network-devices-metadata").Return(nil).Times(1)
 
-	packetData, err := testutil.GetSFlow5Packet()
+	packetData, err := testutil.GetSFlow5Packet() // JMWPCAP
 	require.NoError(t, err, "error getting sflow data")
 
 	assertFlowEventsCount(t, port, srv, packetData, 7)

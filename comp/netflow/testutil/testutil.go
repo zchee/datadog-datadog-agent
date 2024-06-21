@@ -30,6 +30,8 @@ import (
 	"github.com/DataDog/datadog-agent/comp/netflow/payload"
 )
 
+// JMWTESTPCAP
+//
 //go:embed pcap_recordings/netflow5.pcapng
 var netflow5pcapng []byte
 
@@ -253,15 +255,15 @@ func GetPacketFromPCAP(pcapdata []byte, layer gopacket.Decoder, packetIndex int)
 
 // GetNetFlow5Packet parses our saved netflow5 packet.
 func GetNetFlow5Packet() ([]byte, error) {
-	return GetPacketFromPCAP(netflow5pcapng, layers.LayerTypeLoopback, 0)
+	return GetPacketFromPCAP(netflow5pcapng, layers.LayerTypeLoopback, 0) // JMWTESTPCAP
 }
 
 // GetNetFlow9Packet parses our saved netflow9 packet.
 func GetNetFlow9Packet() ([]byte, error) {
-	return GetPacketFromPCAP(netflow9pcapng, layers.LayerTypeLoopback, 0)
+	return GetPacketFromPCAP(netflow9pcapng, layers.LayerTypeLoopback, 0) // JMWTESTPCAP
 }
 
 // GetSFlow5Packet parses our saved sflow5 packet.
 func GetSFlow5Packet() ([]byte, error) {
-	return GetPacketFromPCAP(sflowpcapng, layers.LayerTypeEthernet, 1)
+	return GetPacketFromPCAP(sflowpcapng, layers.LayerTypeEthernet, 1) // JMWTESTPCAP
 }

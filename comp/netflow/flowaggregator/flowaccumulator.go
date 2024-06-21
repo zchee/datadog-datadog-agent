@@ -53,7 +53,7 @@ func newFlowContext(flow *common.Flow) flowContext {
 	}
 }
 
-func newFlowAccumulator(aggregatorFlushInterval time.Duration, aggregatorFlowContextTTL time.Duration, portRollupThreshold int, portRollupDisabled bool, logger log.Component, rdnsQuerier rdnsquerier.Component) *flowAccumulator {
+func newFlowAccumulator(aggregatorFlushInterval time.Duration, aggregatorFlowContextTTL time.Duration, portRollupThreshold int, portRollupDisabled bool, logger log.Component, rdnsQuerier rdnsquerier.Component) *flowAccumulator { // JMWINIT2
 	return &flowAccumulator{
 		flows:                  make(map[uint64]flowContext),
 		flowFlushInterval:      aggregatorFlushInterval,
@@ -77,7 +77,7 @@ func newFlowAccumulator(aggregatorFlushInterval time.Duration, aggregatorFlowCon
 // We need to keep flowContext (contains `nextFlush` and `lastSuccessfulFlush`) after flush
 // to be able to flush at regular interval (`flowFlushInterval`).
 // Example, after a flush, flowContext will have a new nextFlush, that will be the next flush time for new flows being added.
-func (f *flowAccumulator) flush() []*common.Flow {
+func (f *flowAccumulator) flush() []*common.Flow { // JMW5
 	f.flowsMutex.Lock()
 	defer f.flowsMutex.Unlock()
 
@@ -104,7 +104,7 @@ func (f *flowAccumulator) flush() []*common.Flow {
 	return flowsToFlush
 }
 
-func (f *flowAccumulator) add(flowToAdd *common.Flow) {
+func (f *flowAccumulator) add(flowToAdd *common.Flow) { // JMW1
 	f.logger.Tracef("Add new flow: %+v", flowToAdd)
 
 	if !f.portRollupDisabled {
@@ -119,22 +119,42 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) {
 		}
 	}
 
+	// JMW - Enabled or Disabled, like portRollupDisabled?
+	// JMW should flowAccumulator resolve hostnames or should it be done before calling add()?  I think goflow sends it to the channel, received in FlowAggregator::run(), and then add() is called.
+	// if !f.rDNSDisabled {
+	// 	// Tell the rDNSCache that we are interested in the source and destination IP addresses
+	// JMWFRI move to FlowAggregator?
+	// JMWFRI f.rDNSCache.PreFetch(SrcAddr)
+	// JMWFRI f.rDNSCache.PreFetch(DstAddr)
+	// }
+
 	f.flowsMutex.Lock()
 	defer f.flowsMutex.Unlock()
 
 	aggHash := flowToAdd.AggregationHash()
 	aggFlow, ok := f.flows[aggHash]
 	if !ok {
+		f.flows[aggHash] = newFlowContext(flowToAdd) // JMW2
+		// JMWFRI - can/should we do this here?  (w/ defer so it's done after the lock is released)
+		// JMWJMW but aren't defers done in reverse order?  so the lock would still be held when this is called?  Instead, can I defer a function that uses variables that aren't set until here?  OR pass callback func that can be called after the lock is released, and it will acquire the lock again?  OR if IP is in cache already then set the hostname here while we have the lock
+		// JMWFRI defer rdnscache.PreFetch(flowToAdd.SrcAddr, flowToAdd.DstAddr)
+
+		// JMWJMW how long can the flow exist?  does it last after a flush (and get resused??)  if so do we need to always go thru the cache to see if the hostname was updated? - see JMWRDNS2, below
+		// JMWRDNS1 for the first prototype simply get the hostname synchronously here - add code timing?
 		flowToAdd.SrcReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.SrcAddr)
 		flowToAdd.DstReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.DstAddr)
-		f.flows[aggHash] = newFlowContext(flowToAdd)
+		// JMWRDNS1 rdnsCache.Get(flowToAdd.SrcAddr, callbackFuncToSetTheHostname)
+
+		// JMWTEST how to fix TestAggregator failure
 		return
 	}
 	if aggFlow.flow == nil {
-		// flowToAdd is for the same hash as an aggregated flow that has been flushed
+		// JMWRDNS2 this path is for when a flow has been flushed and a new flow comes in for the same hash - we need to do the rdns enrichment here too
+		aggFlow.flow = flowToAdd
+		// JMWRDNS2 for the first prototype simply get the hostname synchronously here - add code timing?
 		flowToAdd.SrcReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.SrcAddr)
 		flowToAdd.DstReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.DstAddr)
-		aggFlow.flow = flowToAdd
+		// JMWRDNS2 rdnsCache.Get(flowToAdd.SrcAddr, callbackFuncToSetTheHostname)
 	} else {
 		// use go routine for hash collision detection to avoid blocking critical path
 		go f.detectHashCollision(aggHash, *aggFlow.flow, *flowToAdd)
@@ -142,6 +162,7 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) {
 		// accumulate flowToAdd with existing flow(s) with same hash
 		aggFlow.flow.Bytes += flowToAdd.Bytes
 		aggFlow.flow.Packets += flowToAdd.Packets
+		// JMW add metrics here to count if/when aggregation of overlapping timeslots occur
 		aggFlow.flow.StartTimestamp = common.Min(aggFlow.flow.StartTimestamp, flowToAdd.StartTimestamp)
 		aggFlow.flow.EndTimestamp = common.Max(aggFlow.flow.EndTimestamp, flowToAdd.EndTimestamp)
 		aggFlow.flow.SequenceNum = common.Max(aggFlow.flow.SequenceNum, flowToAdd.SequenceNum)
@@ -173,6 +194,6 @@ func (f *flowAccumulator) getFlowContextCount() int {
 func (f *flowAccumulator) detectHashCollision(hash uint64, existingFlow common.Flow, flowToAdd common.Flow) {
 	if !common.IsEqualFlowContext(existingFlow, flowToAdd) {
 		f.logger.Warnf("Hash collision for flows with hash `%d`: existingFlow=`%+v` flowToAdd=`%+v`", hash, existingFlow, flowToAdd)
-		f.hashCollisionFlowCount.Inc()
+		f.hashCollisionFlowCount.Inc() // JMW this becomes metric: datadog.netflow.aggregator.hash_collisions
 	}
 }
