@@ -145,7 +145,7 @@ func (agg *FlowAggregator) sendFlows(flows []*common.Flow, flushTime time.Time) 
 			agg.logger.Errorf("Error marshalling device metadata: %s", err)
 			continue
 		}
-		agg.logger.Tracef("flushed flow: %s", string(payloadBytes))
+		agg.logger.Tracef("flushed flow: %s", string(payloadBytes)) // JMW
 
 		m := message.NewMessage(payloadBytes, nil, "", 0)
 		err = agg.epForwarder.SendEventPlatformEventBlocking(m, eventplatform.EventTypeNetworkDevicesNetFlow) // JMW send flow via EP Forwarder

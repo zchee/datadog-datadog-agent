@@ -8,7 +8,7 @@ package rdnsquerierimpl
 
 import (
 	"context"
-	"net"
+	"net/netip"
 	"time"
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
@@ -97,15 +97,22 @@ func (q *rdnsQuerierImpl) timer(name string) func() {
 func (q *rdnsQuerierImpl) GetHostname(ipAddr []byte) string {
 	defer q.timer("timer JMW GetHostname() all")()
 
-	ip := net.IP(ipAddr)
-	if !ip.IsPrivate() { // Note that IsPrivate() also returns false for invalid IP addresses
+	ipaddr, ok := netip.AddrFromSlice(ipAddr)
+	if !ok {
+		q.logger.Infof("JMW GetHostname() IP address is invalid\n")
+		// JMWTELEMETRY increment invalid IP address counter
+		return ""
+	}
+
+	if !ipaddr.IsPrivate() {
 		q.logger.Infof("JMW GetHostname() IP address `%s` is not private\n", ip.String())
 		// JMWTELEMETRY increment NOT private IP address counter
 		return ""
 	}
 
 	// JMWTELEMETRY increment private IP address counter
-	addr := ip.String()
+	addr := ipaddr.String()
+
 	// JMW LookupAddr can return both a non-zero length slice of hostnames and an error.
 	// BUT When using the host C library resolver, at most one result will be returned.
 	// So for now, when specifying DNS resolvers is not supported, if we get an error we know that there is no valid hostname returned.

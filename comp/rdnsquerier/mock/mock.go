@@ -9,6 +9,8 @@
 package mock
 
 import (
+	"net/netip"
+
 	rdnsquerier "github.com/DataDog/datadog-agent/comp/rdnsquerier/def"
 )
 
@@ -24,16 +26,21 @@ func NewMock() rdnsquerier.Component {
 	return &rdnsQuerierMock{}
 }
 
-func (m *rdnsQuerierMock) GetHostname(_ []byte) string {
+func (m *rdnsQuerierMock) GetHostnameEmptyString(_ []byte) string {
 	return ""
 }
 
-/* JMWBREAKSTESTS need to figure out how to regenerate the pcap files
+// JMWBREAKSTESTS need to figure out how to regenerate the pcap files
 func (q *rdnsQuerierMock) GetHostname(ipAddr []byte) string {
-	ip := net.IP(ipAddr)
-	if !ip.IsPrivate() { // JMW IsPrivate() also returns false for invalid IP addresses JMWCHECK
-		return "hostname-" + ip.String()
+	ipaddr, ok := netip.AddrFromSlice(ipAddr)
+	if !ok {
+		return ""
 	}
-	return ""
+
+	if !ipaddr.IsPrivate() {
+		return ""
+	}
+
+	// JMW make sure the tests have some private IPs to test - and/or add some
+	return "hostname-" + ipaddr.String()
 }
-*/
