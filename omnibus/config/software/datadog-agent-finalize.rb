@@ -19,6 +19,7 @@ always_build true
 build do
     license :project_license
 
+    flavor_arg = ENV['AGENT_FLAVOR']
     # TODO too many things done here, should be split
     block do
         # Conf files
@@ -99,6 +100,9 @@ build do
             move "#{install_dir}/etc/datadog-agent/datadog.yaml.example", "/etc/datadog-agent"
             move "#{install_dir}/etc/datadog-agent/conf.d", "/etc/datadog-agent", :force=>true
             unless heroku_target?
+              if flavor_arg.eql? "ua"
+                move "#{install_dir}/etc/datadog-agent/otel-config.yaml.example", "/etc/datadog-agent"
+              end
               move "#{install_dir}/etc/datadog-agent/system-probe.yaml.example", "/etc/datadog-agent"
               move "#{install_dir}/etc/datadog-agent/security-agent.yaml.example", "/etc/datadog-agent", :force=>true
               move "#{install_dir}/etc/datadog-agent/runtime-security.d", "/etc/datadog-agent", :force=>true
