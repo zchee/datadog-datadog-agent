@@ -37,11 +37,12 @@ type rdnsQuerierImpl struct {
 	config config.Component
 	logger log.Component
 
-	// mutex for JMW
-	//JMWmutex sync.RWMutex
+	// mutex for JMW - Mutex, not RWMutex cuz only one reader at a time, multiple potential writers by worker, right?  OR should readers also be done by worker to avoid slowing the aggregation pipeline blocking on reads when lots of workers can get writer lock?
+	mutex sync.RWMutex
 
-	// map of ip to hostname and expiration time
-	//JMWcache map[string]rdnsCacheEntry
+	// JMW map of ip to hostname and expiration time
+	cache map[string]rdnsCacheEntry
+	//JMWTELEMETRY add guage for cache size
 }
 
 // NewComponent creates a new rdnsquerier component
@@ -74,18 +75,20 @@ func (q *rdnsQuerierImpl) stop(context.Context) error {
 
 // GetHostname gets the hostname for the given IP address.  If the IP address is invalid or is not in the private address space then it returns an empty string.
 // The initial implementation always returns an empty string.
-func (q *rdnsQuerierImpl) GetHostnameEmtyString(_ []byte) string {
+func (q *rdnsQuerierImpl) GetHostnameEmptyString(_ []byte) string {
 	q.logger.Infof("JMWRDNSQ GetHostname() - returning empty string")
 	return ""
 }
 
 // JMWNEXT-----------------------------------------------------------------------------------------------------------------------
-//JMWtype rdnsCacheEntry struct {
-//JMWhostname string
-//JMWUNUSED expirationTime int64
-// map of hashes to callback to set hostname
-//JMWcallbacks map[string]func(string)
-//JMW}
+type rdnsCacheEntry struct {
+	hostname       string
+	expirationTime int64
+
+	// JMWNEEDED in cache entry?
+	// map of hashes to callback to set hostname
+	//JMWcallbacks map[string]func(string)
+}
 
 func (q *rdnsQuerierImpl) timer(name string) func() {
 	start := time.Now()
@@ -94,8 +97,87 @@ func (q *rdnsQuerierImpl) timer(name string) func() {
 	}
 }
 
+// GetHostname JMW gets the hostname for the given IP address, if the IP address is in the private address space.
+func (q *rdnsQuerierImpl) GetHostname(ipAddr []byte, updateHostnameLocked func(string), updateHostnameUnlocked func(string)) {
+	defer q.timer("timer JMW GetHostname() all")()
+
+	ipaddr, ok := netip.AddrFromSlice(ipAddr)
+	if !ok {
+		q.logger.Infof("JMW GetHostname() IP address is invalid\n")
+		// JMWTELEMETRY increment invalid IP address counter
+		return
+	}
+
+	if !ipaddr.IsPrivate() {
+		q.logger.Infof("JMW GetHostname() IP address `%s` is not private\n", ipaddr.String())
+		// JMWTELEMETRY increment NOT private IP address counter
+		return
+	}
+
+	// JMWTELEMETRY increment private IP address counter
+	addr := ipaddr.String()
+
+	//JMWNEXT check for ipaddr in the cache
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	hostname, ok := q.cache[addr]
+	if ok {
+		if entry.expirationTime < time.Now().Unix() { //JMW
+			// The entry is expired.  Remove it from the cache and fall thru to lookup the hostname.
+			delete(q.cache, addr)
+			return
+		}
+		q.logger.Infof("JMW GetHostname() IP address `%s` found in cache - using hostname `%s`\n", addr, hostname)
+		updateHostnameLocked(hostname)
+		return
+	}
+
+	go func() {
+		// JMW LookupAddr can return both a non-zero length slice of hostnames and an error.
+		// BUT When using the host C library resolver, at most one result will be returned.
+		// So for now, when specifying DNS resolvers is not supported, if we get an error we know that there is no valid hostname returned.
+		// If/when we add support for specifying DNS resolvers, there may be multiple hostnames returned, and there may be one or more hostname returned AT THE SAME TIME an error is returned.  To keep it simple, if there is no error, we will just return the first hostname, and if there is an error, we will return an empty string and add telemetry about the error.
+		defer q.timer("JMW GetHostname() LookupAddr")()
+
+		// JMWNEXT add async processing of rdns lookup
+		hostnames, err := net.LookupAddr(addr)
+		if err != nil {
+			//JMWADDLOGGER f.logger.Warnf("JMW Failed to lookup hostname for IP address `%s`: %s", addr, err)
+			q.logger.Infof("JMW GetHostname() error looking up hostname for IP address `%s`: %v\n", addr, err)
+			// JMWTELEMETRY increment metric for failed lookups - JMW should I differentiate between no match and other errors? or just tag w/ error?  how to tag w/ error w/out the tag being a string (unlimited cardinality)?
+			return
+		}
+
+		if len(hostnames) == 0 { // JMW is this even possible? // JMWRM?
+			q.logger.Infof("JMW IP address `%s` has no match - returning empty hostname", addr)
+			// JMWTELEMETRY increment metric for no match
+			return
+		}
+
+		// JMWTELEMETRY increment metric for successful lookups
+		//if (len(hostnames) > 1) {
+		// JMWTELEMETRY increment metric for multiple hostnames
+		//}
+		q.logger.Infof("JMW GetHostname() IP address `%s` matched - using hostname `%s`\n", addr, hostnames[0])
+
+		updateHostnameUnlocked(hostnames[0])
+
+		// JMW add the hostname to the cache
+		q.mutex.Lock()
+		defer q.mutex.Unlock()
+		q.cache[addr] = rdnsCacheEntry{
+			hostname:       hostnames[0],
+			expirationTime: time.Now().Unix() + 600, //JMW 600 --> config param
+		}
+
+		return
+	}()
+
+	return
+}
+
 // GetHostname gets the hostname for the given IP address, if the IP address is in the private address space.
-func (q *rdnsQuerierImpl) GetHostname(ipAddr []byte) string {
+func (q *rdnsQuerierImpl) GetHostnameSync(ipAddr []byte) string {
 	defer q.timer("timer JMW GetHostname() all")()
 
 	ipaddr, ok := netip.AddrFromSlice(ipAddr)
@@ -114,11 +196,27 @@ func (q *rdnsQuerierImpl) GetHostname(ipAddr []byte) string {
 	// JMWTELEMETRY increment private IP address counter
 	addr := ipaddr.String()
 
+	//JMWNEXT check for ipaddr in the cache
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	hostname, ok := q.cache[addr]
+	if ok {
+		// if not expired
+		if entry.expirationTime > time.Now().Unix() { //JMW
+			q.logger.Infof("JMW GetHostname() IP address `%s` found in cache - returning hostname `%s`\n", addr, hostname)
+			return hostname
+		}
+		// The entry is expired.  Remove it from the cache and fall thru to lookup the hostname.
+		delete(q.cache, addr)
+	}
+
 	// JMW LookupAddr can return both a non-zero length slice of hostnames and an error.
 	// BUT When using the host C library resolver, at most one result will be returned.
 	// So for now, when specifying DNS resolvers is not supported, if we get an error we know that there is no valid hostname returned.
 	// If/when we add support for specifying DNS resolvers, there may be multiple hostnames returned, and there may be one or more hostname returned AT THE SAME TIME an error is returned.  To keep it simple, if there is no error, we will just return the first hostname, and if there is an error, we will return an empty string and add telemetry about the error.
 	defer q.timer("JMW GetHostname() LookupAddr")()
+
+	// JMWNEXT add async processing of rdns lookup
 	hostnames, err := net.LookupAddr(addr)
 	if err != nil {
 		//JMWADDLOGGER f.logger.Warnf("JMW Failed to lookup hostname for IP address `%s`: %s", addr, err)
@@ -138,6 +236,11 @@ func (q *rdnsQuerierImpl) GetHostname(ipAddr []byte) string {
 	// JMWTELEMETRY increment metric for multiple hostnames
 	//}
 	q.logger.Infof("JMW GetHostname() IP address `%s` matched - returning hostname `%s`\n", addr, hostnames[0])
+	q.cache[addr] = rdnsCacheEntry{
+		hostname:       hostnames[0],
+		expirationTime: time.Now().Unix() + 600, //JMW 600 --> config param
+	}
+
 	return hostnames[0]
 }
 

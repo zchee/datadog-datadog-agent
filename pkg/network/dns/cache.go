@@ -18,7 +18,7 @@ import (
 
 const dnsCacheModuleName = "network_tracer__dns_cache"
 
-// Telemetry
+// Telemetry //JMWTELEMETRY
 var cacheTelemetry = struct {
 	length    *telemetry.StatGaugeWrapper
 	lookups   *telemetry.StatCounterWrapper

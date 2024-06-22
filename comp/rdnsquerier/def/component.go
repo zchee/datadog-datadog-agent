@@ -10,5 +10,6 @@ package rdnsquerier
 
 // Component is the component type.
 type Component interface {
-	GetHostname([]byte) string
+	//JMWOLDGetHostname([]byte) string
+	GetHostname(ipAddr []byte, updateHostnameLocked func(string), updateHostnameUnlocked func(string))
 }

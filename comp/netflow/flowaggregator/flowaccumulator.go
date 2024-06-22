@@ -141,20 +141,51 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) { // JMW1
 
 		// JMWJMW how long can the flow exist?  does it last after a flush (and get resused??)  if so do we need to always go thru the cache to see if the hostname was updated? - see JMWRDNS2, below
 		// JMWRDNS1 for the first prototype simply get the hostname synchronously here - add code timing?
-		flowToAdd.SrcReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.SrcAddr)
-		flowToAdd.DstReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.DstAddr)
+		// JMW have a GetGostnames() that takes both src and dest IP addresses and 2 callbacks, one for sync and one for async? (to avoid getting mutex on cache twice)
+		//JMWDUP
+		f.rdnsQuerier.GetHostname(
+			flowToAdd.SrcAddr,
+			func(hostname string) {
+				f.updateSrcHostnameLocked(aggHash, hostname)
+			},
+			func(hostname string) {
+				f.updateSrcHostnameUnlocked(aggHash, hostname)
+			},
+		)
+		f.rdnsQuerier.GetHostname(
+			flowToAdd.DstAddr,
+			func(hostname string) {
+				f.updateDstHostnameLocked(aggHash, hostname)
+			},
+			func(hostname string) {
+				f.updateDstHostnameUnlocked(aggHash, hostname)
+			},
+		)
 		// JMWRDNS1 rdnsCache.Get(flowToAdd.SrcAddr, callbackFuncToSetTheHostname)
-
-		// JMWTEST how to fix TestAggregator failure
 		return
 	}
 	if aggFlow.flow == nil {
 		// JMWRDNS2 this path is for when a flow has been flushed and a new flow comes in for the same hash - we need to do the rdns enrichment here too
 		aggFlow.flow = flowToAdd
-		// JMWRDNS2 for the first prototype simply get the hostname synchronously here - add code timing?
-		flowToAdd.SrcReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.SrcAddr)
-		flowToAdd.DstReverseDNSHostname = f.rdnsQuerier.GetHostname(flowToAdd.DstAddr)
-		// JMWRDNS2 rdnsCache.Get(flowToAdd.SrcAddr, callbackFuncToSetTheHostname)
+		//JMWDUP
+		f.rdnsQuerier.GetHostname(
+			flowToAdd.SrcAddr,
+			func(hostname string) {
+				f.updateSrcHostnameLocked(aggHash, hostname)
+			},
+			func(hostname string) {
+				f.updateSrcHostnameUnlocked(aggHash, hostname)
+			},
+		)
+		f.rdnsQuerier.GetHostname(
+			flowToAdd.DstAddr,
+			func(hostname string) {
+				f.updateDstHostnameLocked(aggHash, hostname)
+			},
+			func(hostname string) {
+				f.updateDstHostnameUnlocked(aggHash, hostname)
+			},
+		)
 	} else {
 		// use go routine for hash collision detection to avoid blocking critical path
 		go f.detectHashCollision(aggHash, *aggFlow.flow, *flowToAdd)
@@ -182,6 +213,40 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) { // JMW1
 		}
 	}
 	f.flows[aggHash] = aggFlow
+}
+
+// JMWNAME OR updateSrcHostnameSync
+func (f *flowAccumulator) updateSrcHostnameLocked(aggHash uint64, hostname string) {
+	f.logger.Tracef("JMW updateSrcHostnameLocked(): Update src hostname for hash `%d` to `%s`", aggHash, hostname)
+	aggFlow, ok := f.flows[aggHash]
+	if ok && aggFlow.flow != nil {
+		aggFlow.flow.SrcReverseDNSHostname = hostname
+	}
+}
+
+// JMWNAME OR updateSrcHostnameAsync
+func (f *flowAccumulator) updateSrcHostnameUnlocked(aggHash uint64, hostname string) {
+	f.logger.Tracef("JMW updateSrcHostnameUnlocked(): Update src hostname for hash `%d` to `%s`", aggHash, hostname)
+	f.flowsMutex.Lock()
+	defer f.flowsMutex.Unlock()
+
+	f.updateSrcHostnameLocked(aggHash, hostname)
+}
+
+func (f *flowAccumulator) updateDstHostnameLocked(aggHash uint64, hostname string) {
+	f.logger.Tracef("JMW updateDstHostnameLocked(): Update dst hostname for hash `%d` to `%s`", aggHash, hostname)
+	aggFlow, ok := f.flows[aggHash]
+	if ok && aggFlow.flow != nil {
+		aggFlow.flow.DstReverseDNSHostname = hostname
+	}
+}
+
+func (f *flowAccumulator) updateDstHostnameUnlocked(aggHash uint64, hostname string) {
+	f.logger.Tracef("JMW updateDstHostnameUnlocked(): Update dst hostname for hash `%d` to `%s`", aggHash, hostname)
+	f.flowsMutex.Lock()
+	defer f.flowsMutex.Unlock()
+
+	f.updateDstHostnameLocked(aggHash, hostname)
 }
 
 func (f *flowAccumulator) getFlowContextCount() int {

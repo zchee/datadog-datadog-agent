@@ -31,16 +31,16 @@ func (m *rdnsQuerierMock) GetHostnameEmptyString(_ []byte) string {
 }
 
 // JMWBREAKSTESTS need to figure out how to regenerate the pcap files
-func (q *rdnsQuerierMock) GetHostname(ipAddr []byte) string {
+func (q *rdnsQuerierMock) GetHostname(ipAddr []byte, updateHostnameLocked func(string), updateHostnameUnlocked func(string)) {
 	ipaddr, ok := netip.AddrFromSlice(ipAddr)
 	if !ok {
-		return ""
+		return
 	}
 
 	if !ipaddr.IsPrivate() {
-		return ""
+		return
 	}
 
 	// JMW make sure the tests have some private IPs to test - and/or add some
-	return "hostname-" + ipaddr.String()
+	updateHostnameLocked("hostname-" + ipaddr.String())
 }
