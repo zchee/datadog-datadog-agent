@@ -251,6 +251,27 @@ int socket__http_filter(struct __sk_buff* skb) {
     return 0;
 }
 
+SEC("sk_msg/http_process")
+int sk_msg__http_process(struct sk_msg_md *msg) {
+    skb_info_t skb_info;
+    http_event_t event;
+    bpf_memset(&event, 0, sizeof(http_event_t));
+
+    if (!fetch_dispatching_arguments(&event.tuple, &skb_info)) {
+        log_debug("http_filter failed to fetch arguments for tail call");
+        return 0;
+    }
+
+    if (!http_allow_packet(&event.tuple, &skb_info)) {
+        return 0;
+    }
+    normalize_tuple(&event.tuple);
+
+    read_into_sk_msg_buffer_http(msg, 0, (char *)event.http.request_fragment);
+    http_process(&event, &skb_info, NO_TAGS);
+    return 0;
+}
+
 SEC("uprobe/http_process")
 int uprobe__http_process(struct pt_regs *ctx) {
     const __u32 zero = 0;
@@ -264,6 +285,24 @@ int uprobe__http_process(struct pt_regs *ctx) {
     bpf_memcpy(&event.tuple, &args->tup, sizeof(conn_tuple_t));
     read_into_user_buffer_http(event.http.request_fragment, args->buffer_ptr);
     http_process(&event, NULL, args->tags);
+    http_batch_flush(ctx);
+
+    return 0;
+}
+
+SEC("kprobe/http_process")
+int kprobe__http_process(struct pt_regs *ctx) {
+    const __u32 zero = 0;
+    kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
+    if (args == NULL) {
+        return 0;
+    }
+
+    http_event_t event;
+    bpf_memset(&event, 0, sizeof(http_event_t));
+    bpf_memcpy(&event.tuple, &args->tup, sizeof(conn_tuple_t));
+    read_into_user_buffer_http(event.http.request_fragment, args->buffer_ptr);
+    http_process(&event, NULL, 0);
     http_batch_flush(ctx);
 
     return 0;
