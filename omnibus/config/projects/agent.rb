@@ -249,6 +249,7 @@ dependency 'snmp-traps'
 if windows_target?
   if ENV['WINDOWS_DDNPM_DRIVER'] and not ENV['WINDOWS_DDNPM_DRIVER'].empty?
     dependency 'datadog-windows-filter-driver'
+  end
   # System-probe
   if linux_target? && !heroku_target?
     dependency 'system-probe'
