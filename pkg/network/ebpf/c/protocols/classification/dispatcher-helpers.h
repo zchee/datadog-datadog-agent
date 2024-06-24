@@ -121,12 +121,17 @@ static __always_inline void protocol_dispatcher_entrypoint_sk_msg(struct sk_msg_
     u64 pid_tgid = bpf_get_current_pid_tgid();
     skb_tup.pid = pid_tgid >> 32;
 
-    // skb_tup.pid = *cookie >> 32;
-    //skb_tup.netns = *cookie;
+    skb_tup.pid = *cookie >> 32;
+    skb_tup.netns = *cookie;
 
     log_debug("sk_msg tup: saddr: %08llx %08llx (%u)", skb_tup.saddr_h, skb_tup.saddr_l, skb_tup.sport);
     log_debug("sk_msg tup: daddr: %08llx %08llx (%u)", skb_tup.daddr_h, skb_tup.daddr_l, skb_tup.dport);
     log_debug("sk_msg tup: netns: %08x pid: %u", skb_tup.netns, skb_tup.pid);
+
+    conn_tuple_t normalized_tuple = skb_tup;
+    normalize_tuple(&normalized_tuple);
+    normalized_tuple.pid = 0;
+    normalized_tuple.netns = 0;
  
     bool tcp_termination = is_tcp_termination(&skb_info);
     // We don't process non tcp packets, nor empty tcp packets which are not tcp termination packets.
@@ -146,7 +151,7 @@ static __always_inline void protocol_dispatcher_entrypoint_sk_msg(struct sk_msg_
         bpf_map_delete_elem(&connection_states, &skb_tup);
     }
 
-    protocol_stack_t *stack = get_protocol_stack(&skb_tup);
+    protocol_stack_t *stack = get_protocol_stack(&normalized_tuple);
     if (!stack) {
         // should never happen, but it is required by the eBPF verifier
         return;
@@ -159,7 +164,7 @@ static __always_inline void protocol_dispatcher_entrypoint_sk_msg(struct sk_msg_
 
     protocol_t cur_fragment_protocol = get_protocol_from_stack(stack, LAYER_APPLICATION);
     if (tcp_termination) {
-        dispatcher_delete_protocol_stack(&skb_tup, stack);
+        dispatcher_delete_protocol_stack(&normalized_tuple, stack);
     } else if (is_protocol_layer_known(stack, LAYER_ENCRYPTION)) {
         // If we have a TLS connection and we're not in the middle of a TCP termination, we can skip the packet.
         return;
@@ -225,6 +230,13 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
         return;
     }
 
+    struct sockhash_key key = {
+        .remote_ip4 = tup.daddr_l,
+        .local_ip4 = tup.saddr_l,
+        .remote_port = bpf_ntohl(tup.dport),
+        .local_port = tup.sport,
+    };
+
     __u64 tmp_h;
     __u64 tmp_l;
 
@@ -243,11 +255,23 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
     tup.dport = tup.sport;
     tup.sport = tmp_port;
 
-    tup.netns = 0;
+    u64 *cookie = bpf_map_lookup_elem(&socket_cookie_hash, &key);
+    if (!cookie) {
+        log_debug("kprobe_protocol_dipatcher_entrypoint: no cookie");
+        return;
+    }
+
+    tup.pid = *cookie >> 32;
+    tup.netns = *cookie;
 
     log_debug("kprobe tup: saddr: %08llx %08llx (%u)", tup.saddr_h, tup.saddr_l, tup.sport);
     log_debug("kprobe tup: daddr: %08llx %08llx (%u)", tup.daddr_h, tup.daddr_l, tup.dport);
     log_debug("kprobe tup: netns: %08x pid: %u", tup.netns, tup.pid);
+
+    conn_tuple_t normalized_tuple = tup;
+    normalize_tuple(&normalized_tuple);
+    normalized_tuple.pid = 0;
+    normalized_tuple.netns = 0;
 
     // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
     // if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
@@ -270,7 +294,7 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
     //     bpf_map_delete_elem(&connection_states, &skb_tup);
     // }
 
-    protocol_stack_t *stack = get_protocol_stack(&tup);
+    protocol_stack_t *stack = get_protocol_stack(&normalized_tuple);
     if (!stack) {
         // should never happen, but it is required by the eBPF verifier
         return;
@@ -283,7 +307,7 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
 
     protocol_t cur_fragment_protocol = get_protocol_from_stack(stack, LAYER_APPLICATION);
     if (0 /* tcp_termination */) {
-        dispatcher_delete_protocol_stack(&tup, stack);
+        dispatcher_delete_protocol_stack(&normalized_tuple, stack);
     } else if (is_protocol_layer_known(stack, LAYER_ENCRYPTION)) {
         // If we have a TLS connection and we're not in the middle of a TCP termination, we can skip the packet.
         return;
@@ -444,12 +468,13 @@ static __always_inline void sk_msg_dispatch_kafka(struct sk_msg_md *msg) {
     skb_tup.netns = 0;
     skb_tup.pid = pid_tgid >> 32;
 
+    skb_tup.pid = *cookie >> 32;
+    skb_tup.netns = *cookie;
+
     log_debug("kafka sk_msg tup: saddr: %08llx %08llx (%u)", skb_tup.saddr_h, skb_tup.saddr_l, skb_tup.sport);
     log_debug("kafka sk_msg tup: daddr: %08llx %08llx (%u)", skb_tup.daddr_h, skb_tup.daddr_l, skb_tup.dport);
     log_debug("kafka sk_msg tup: netns: %08x pid: %u", skb_tup.netns, skb_tup.pid);
 
-    // skb_tup.pid = *cookie >> 32;
-    // skb_tup.netns = *cookie;
 
     char request_fragment[CLASSIFICATION_MAX_BUFFER];
     bpf_memset(request_fragment, 0, sizeof(request_fragment));
@@ -469,12 +494,17 @@ static __always_inline void sk_msg_dispatch_kafka(struct sk_msg_md *msg) {
 
     bpf_memcpy(request_fragment, data, CLASSIFICATION_MAX_BUFFER);
 
+    conn_tuple_t normalized_tuple = skb_tup;
+    normalize_tuple(&normalized_tuple);
+    normalized_tuple.pid = 0;
+    normalized_tuple.netns = 0;
+
     const size_t payload_length = skb_info.data_end - skb_info.data_off;
     const size_t final_fragment_size = payload_length < CLASSIFICATION_MAX_BUFFER ? payload_length : CLASSIFICATION_MAX_BUFFER;
     protocol_t cur_fragment_protocol = PROTOCOL_UNKNOWN;
     if (skskb_is_kafka(msg, &skb_info, request_fragment, final_fragment_size)) {
         cur_fragment_protocol = PROTOCOL_KAFKA;
-        update_protocol_stack(&skb_tup, cur_fragment_protocol);
+        update_protocol_stack(&normalized_tuple, cur_fragment_protocol);
     }
 
     if (cur_fragment_protocol != PROTOCOL_UNKNOWN) {
@@ -516,8 +546,8 @@ static __always_inline void kprobe_dispatch_kafka(struct pt_regs *ctx)
 
     conn_tuple_t normalized_tuple = args->tup;
     normalize_tuple(&normalized_tuple);
-    // normalized_tuple.pid = 0;
-    // normalized_tuple.netns = 0;
+    normalized_tuple.pid = 0;
+    normalized_tuple.netns = 0;
 
     // read_into_kernel_buffer_for_classification(request_fragment, args->buffer_ptr);
     read_into_user_buffer_for_classification(request_fragment, args->buffer_ptr);
