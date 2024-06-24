@@ -163,7 +163,7 @@ int sockops__sockops(struct bpf_sock_ops *skops) {
     u64 cookie = bpf_get_socket_cookie(skops);
     bpf_map_update_elem(&socket_cookie_hash, &key, &cookie, BPF_NOEXIST);
 
-    // bpf_sock_ops_cb_flags_set(skops, BPF_SOCK_OPS_STATE_CB_FLAG);
+    bpf_sock_ops_cb_flags_set(skops, BPF_SOCK_OPS_STATE_CB_FLAG);
 
     // case (op) {
     // case BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB:
