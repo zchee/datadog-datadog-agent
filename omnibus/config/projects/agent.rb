@@ -217,40 +217,7 @@ end
 if do_build
   # Datadog agent
   dependency 'datadog-agent'
-end
 
-# System-probe
-if linux_target? && !heroku_target?
-  dependency 'system-probe'
-end
-
-if osx_target?
-  dependency 'datadog-agent-mac-app'
-end
-
-if with_python_runtime? "2"
-  dependency 'pylint2'
-  dependency 'datadog-agent-integrations-py2'
-end
-
-if with_python_runtime? "3"
-  dependency 'datadog-agent-integrations-py3'
-end
-
-if linux_target?
-  dependency 'datadog-security-agent-policies'
-end
-
-dependency 'openssl-fips'
-
-# Include traps db file in snmp.d/traps_db/
-dependency 'snmp-traps'
-
-# Additional software
-if windows_target?
-  if ENV['WINDOWS_DDNPM_DRIVER'] and not ENV['WINDOWS_DDNPM_DRIVER'].empty?
-    dependency 'datadog-windows-filter-driver'
-  end
   # System-probe
   if linux_target? && !heroku_target?
     dependency 'system-probe'
@@ -272,6 +239,8 @@ if windows_target?
   if linux_target?
     dependency 'datadog-security-agent-policies'
   end
+
+  dependency 'openssl-fips'
 
   # Include traps db file in snmp.d/traps_db/
   dependency 'snmp-traps'
