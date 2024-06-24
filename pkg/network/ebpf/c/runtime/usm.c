@@ -122,6 +122,10 @@ int sockops__sockops(struct bpf_sock_ops *skops) {
             tup.pid = cookie >> 32;
             tup.netns = cookie;
 
+            log_debug("termination tup: saddr: %08llx %08llx (%u)", tup.saddr_h, tup.saddr_l, tup.sport);
+            log_debug("termination tup: daddr: %08llx %08llx (%u)", tup.daddr_h, tup.daddr_l, tup.dport);
+            log_debug("termination tup: netns: %08x pid: %u", tup.netns, tup.pid);
+
             sockops_http_termination(&tup);
             sockops_kafka_termination(&tup);
             sockops_http2_termination(&tup);
