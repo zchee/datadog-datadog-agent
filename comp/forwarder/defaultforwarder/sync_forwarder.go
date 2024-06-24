@@ -39,13 +39,15 @@ func NewSyncForwarder(config config.Component, log log.Component, keysPerDomain 
 	}
 }
 
-// Start starts the sync forwarder: nothing to do.
+// Start starts the sync forwarder.
 func (f *SyncForwarder) Start() error {
+	f.defaultForwarder.healthChecker.Start()
 	return nil
 }
 
-// Stop stops the sync forwarder: nothing to do.
+// Stop stops the sync forwarder.
 func (f *SyncForwarder) Stop() {
+	f.defaultForwarder.healthChecker.Stop()
 }
 
 func (f *SyncForwarder) sendHTTPTransactions(transactions []*transaction.HTTPTransaction) error {
