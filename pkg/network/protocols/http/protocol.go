@@ -90,14 +90,14 @@ var Spec = &protocols.ProtocolSpec{
 		},
 		{
 			ProgArrayName: protocols.KprobeDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramHTTPTermination),
+			Key:           uint32(protocols.ProgramHTTP),
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFFuncName: kprobeProcessTailCall,
 			},
 		},
 		{
 			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramHTTPTermination),
+			Key:           uint32(protocols.ProgramHTTP),
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFFuncName: skMsgProcessTailCall,
 			},

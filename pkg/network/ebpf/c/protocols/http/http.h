@@ -180,8 +180,11 @@ static __always_inline void http_process(http_event_t *event, skb_info_t *skb_in
     http_method_t method = HTTP_METHOD_UNKNOWN;
     http_parse_data(buffer, &packet_type, &method);
 
+    log_debug("http_process initial: type=%d method=%d", packet_type, method);
+
     http = http_fetch_state(tuple, http, packet_type);
     if (!http || http_seen_before(http, skb_info, packet_type)) {
+        log_debug("http_process: reject");
         return;
     }
 
@@ -257,19 +260,22 @@ int sk_msg__http_process(struct sk_msg_md *msg) {
     http_event_t event;
     bpf_memset(&event, 0, sizeof(http_event_t));
 
+    log_debug("sk_msg__http_process size=%u", msg->size);
+
     if (!fetch_dispatching_arguments(&event.tuple, &skb_info)) {
         log_debug("http_filter failed to fetch arguments for tail call");
-        return 0;
+        return SK_PASS;
     }
 
     if (!http_allow_packet(&event.tuple, &skb_info)) {
-        return 0;
+        return SK_PASS;
     }
     normalize_tuple(&event.tuple);
 
-    read_into_sk_msg_buffer_http(msg, 0, (char *)event.http.request_fragment);
-    http_process(&event, &skb_info, NO_TAGS);
-    return 0;
+    read_into_buffer_sk_msg_http((char *)event.http.request_fragment, msg, 0);
+    log_debug("sk_msg fragment: [%s]", event.http.request_fragment);
+    http_process(&event, NULL, NO_TAGS);
+    return SK_PASS;
 }
 
 SEC("uprobe/http_process")
@@ -293,6 +299,9 @@ int uprobe__http_process(struct pt_regs *ctx) {
 SEC("kprobe/http_process")
 int kprobe__http_process(struct pt_regs *ctx) {
     const __u32 zero = 0;
+
+    log_debug("kprobe__http_process");
+
     kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
     if (args == NULL) {
         return 0;
@@ -302,6 +311,7 @@ int kprobe__http_process(struct pt_regs *ctx) {
     bpf_memset(&event, 0, sizeof(http_event_t));
     bpf_memcpy(&event.tuple, &args->tup, sizeof(conn_tuple_t));
     read_into_user_buffer_http(event.http.request_fragment, args->buffer_ptr);
+    log_debug("kprobe fragment: [%s]", event.http.request_fragment);
     http_process(&event, NULL, 0);
     http_batch_flush(ctx);
 
@@ -328,6 +338,8 @@ int uprobe__http_termination(struct pt_regs *ctx) {
 }
 
 static __always_inline  int sockops_http_termination(conn_tuple_t *tup) {
+    log_debug("sockops_http_termination");
+
     http_event_t event;
     bpf_memset(&event, 0, sizeof(http_event_t));
     bpf_memcpy(&event.tuple, tup, sizeof(conn_tuple_t));
