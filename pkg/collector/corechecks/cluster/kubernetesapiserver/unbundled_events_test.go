@@ -498,9 +498,10 @@ func TestGetTagsFromTagger(t *testing.T) {
 
 func TestUnbundledEventsShouldCollect(t *testing.T) {
 	tests := []struct {
-		name     string
-		event    *v1.Event
-		expected bool
+		name                                  string
+		event                                 *v1.Event
+		expected                              bool
+		kubernetesEventSourceDetectionEnabled bool
 	}{
 		{
 			name: "matches kind and reason",
@@ -509,7 +510,8 @@ func TestUnbundledEventsShouldCollect(t *testing.T) {
 				Reason:         "Failed",
 				Source:         v1.EventSource{Component: "kubelet"},
 			},
-			expected: true,
+			expected:                              true,
+			kubernetesEventSourceDetectionEnabled: false,
 		},
 		{
 			name: "matches source and reason",
@@ -518,7 +520,8 @@ func TestUnbundledEventsShouldCollect(t *testing.T) {
 				Reason:         "SomeReason",
 				Source:         v1.EventSource{Component: "some-component"},
 			},
-			expected: true,
+			expected:                              true,
+			kubernetesEventSourceDetectionEnabled: false,
 		},
 		{
 			name: "matches source",
@@ -527,7 +530,8 @@ func TestUnbundledEventsShouldCollect(t *testing.T) {
 				Reason:         "AnyReason",
 				Source:         v1.EventSource{Component: "a-component"},
 			},
-			expected: true,
+			expected:                              true,
+			kubernetesEventSourceDetectionEnabled: false,
 		},
 		{
 			name: "matches kind",
@@ -536,7 +540,8 @@ func TestUnbundledEventsShouldCollect(t *testing.T) {
 				Reason:         "AnyReason",
 				Source:         v1.EventSource{Component: "other-component"},
 			},
-			expected: true,
+			expected:                              true,
+			kubernetesEventSourceDetectionEnabled: false,
 		},
 		{
 			name: "matches none",
@@ -545,11 +550,23 @@ func TestUnbundledEventsShouldCollect(t *testing.T) {
 				Reason:         "AnyReason",
 				Source:         v1.EventSource{Component: "other-component"},
 			},
-			expected: false,
+			expected:                              false,
+			kubernetesEventSourceDetectionEnabled: false,
+		},
+		{
+			name: "non-kubernetes event is collected",
+			event: &v1.Event{
+				InvolvedObject: v1.ObjectReference{Kind: "Pod"},
+				Reason:         "AnyReason",
+				Source:         v1.EventSource{Component: "datadog-operator-manager"},
+			},
+			expected:                              true,
+			kubernetesEventSourceDetectionEnabled: true,
 		},
 	}
 
 	for _, tt := range tests {
+		t.Setenv("DD_KUBERNETES_EVENTS_SOURCE_DETECTION_ENABLED", fmt.Sprintf("%t", tt.kubernetesEventSourceDetectionEnabled))
 		t.Run(tt.name, func(t *testing.T) {
 			collectedTypes := []collectedEventType{
 				{
@@ -567,7 +584,6 @@ func TestUnbundledEventsShouldCollect(t *testing.T) {
 					Source: "a-component",
 				},
 			}
-
 			transformer := newUnbundledTransformer("test-cluster", local.NewFakeTagger(), collectedTypes, false)
 			got := transformer.(*unbundledTransformer).shouldCollect(tt.event)
 			assert.Equal(t, tt.expected, got)

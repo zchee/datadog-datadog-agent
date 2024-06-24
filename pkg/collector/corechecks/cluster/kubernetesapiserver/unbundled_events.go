@@ -9,6 +9,7 @@ package kubernetesapiserver
 
 import (
 	"fmt"
+	"slices"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -157,6 +158,11 @@ func (c *unbundledTransformer) getTagsFromTagger(obj v1.ObjectReference, tagsAcc
 }
 
 func (c *unbundledTransformer) shouldCollect(ev *v1.Event) bool {
+	// Collect any non-kubernetes events
+	if !slices.Contains([]string{"kubernetes", "kubernetes controller manager", "kubernetes scheduler"}, getEventSource(ev.ReportingController, ev.Source.Component)) {
+		return true
+	}
+
 	involvedObject := ev.InvolvedObject
 
 	for _, f := range c.collectedTypes {
