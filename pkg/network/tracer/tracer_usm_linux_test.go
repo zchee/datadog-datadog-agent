@@ -540,6 +540,7 @@ func testHTTPSClassification(t *testing.T, tr *Tracer, clientHost, targetHost, s
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.context.extras["klw"] = protocolsUtils.WithPCAP(t, "8443", protocolsUtils.GetShortTestName("HTTP", tt.name), false)
 			testProtocolClassificationInner(t, tt, tr)
 		})
 	}
@@ -838,6 +839,7 @@ func testKafkaProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.context.extras["klw"] = protocolsUtils.WithPCAP(t, "9092", protocolsUtils.GetShortTestName("Kafka", tt.name), false)
 			testProtocolClassificationInner(t, tt, tr)
 		})
 	}
@@ -1194,6 +1196,7 @@ func testMySQLProtocolClassificationInner(t *testing.T, tr *Tracer, clientHost, 
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.context.extras["klw"] = protocolsUtils.WithPCAP(t, "3306", protocolsUtils.GetShortTestName("MySQL", tt.name), false)
 			testProtocolClassificationInner(t, tt, tr)
 		})
 	}
@@ -1426,6 +1429,7 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 		},
 	}
 	for _, tt := range tests {
+		tt.context.extras["klw"] = protocolsUtils.WithPCAP(t, "5432", protocolsUtils.GetShortTestName("Postgres", tt.name), false)
 		t.Run(tt.name, func(t *testing.T) {
 			tt.validation = validateProtocolConnection(expectedProtocolStack)
 			tt.teardown = func(t *testing.T, ctx testContext) {
@@ -1591,6 +1595,7 @@ func testMongoProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 		},
 	}
 	for _, tt := range tests {
+		tt.context.extras["klw"] = protocolsUtils.WithPCAP(t, "27017", protocolsUtils.GetShortTestName("Mongo", tt.name), false)
 		t.Run(tt.name, func(t *testing.T) {
 			testProtocolClassificationInner(t, tt, tr)
 		})
@@ -1778,6 +1783,7 @@ func testRedisProtocolClassificationInner(t *testing.T, tr *Tracer, clientHost, 
 		},
 	}
 	for _, tt := range tests {
+		tt.context.extras["klw"] = protocolsUtils.WithPCAP(t, "6379", protocolsUtils.GetShortTestName("Redis", tt.name), false)
 		t.Run(tt.name, func(t *testing.T) {
 			testProtocolClassificationInner(t, tt, tr)
 		})
@@ -2232,6 +2238,7 @@ func testHTTP2ProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 		},
 	}
 	for _, tt := range tests {
+		tt.context.extras["klw"] = protocolsUtils.WithPCAP(t, "9091", protocolsUtils.GetShortTestName("GRPC", tt.name), false)
 		t.Run(tt.name, func(t *testing.T) {
 			testProtocolClassificationInner(t, tt, tr)
 		})
