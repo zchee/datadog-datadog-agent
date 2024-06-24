@@ -39,6 +39,7 @@ func NewCollectorInventory() *CollectorInventory {
 			k8sCollectors.NewNodeCollectorVersions(),
 			k8sCollectors.NewPersistentVolumeCollectorVersions(),
 			k8sCollectors.NewPersistentVolumeClaimCollectorVersions(),
+			k8sCollectors.NewPodLifecycleEventCollectorVersions(),
 			k8sCollectors.NewReplicaSetCollectorVersions(),
 			k8sCollectors.NewRoleCollectorVersions(),
 			k8sCollectors.NewRoleBindingCollectorVersions(),
