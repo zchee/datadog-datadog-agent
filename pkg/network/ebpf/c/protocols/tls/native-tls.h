@@ -121,6 +121,7 @@ static __always_inline int SSL_read_ret(struct pt_regs *ctx, __u64 tags) {
         goto cleanup;
     }
 
+    log_debug("[%d<->%d][%llx] Entering TLS uprobe", t->sport, t->dport, pid_tgid);
     char *buffer_ptr = args->buf;
     bpf_map_delete_elem(&ssl_read_args, &pid_tgid);
     // The read tuple should be flipped (compared to the write tuple).
@@ -181,6 +182,7 @@ static __always_inline int SSL_write_ret(struct pt_regs* ctx, __u64 flags) {
         goto cleanup;
     }
 
+    log_debug("[%d<->%d][%llx] Entering TLS uprobe", t->sport, t->dport, pid_tgid);
     char *buffer_ptr = args->buf;
     bpf_map_delete_elem(&ssl_write_args, &pid_tgid);
     conn_tuple_t copy = {0};
@@ -260,6 +262,7 @@ static __always_inline int SSL_read_ex_ret(struct pt_regs* ctx, __u64 tags) {
         goto cleanup;
     }
 
+    log_debug("[%d<->%d][%llx] Entering TLS uprobe", conn_tuple->sport, conn_tuple->dport, pid_tgid);
     char *buffer_ptr = args->buf;
     bpf_map_delete_elem(&ssl_read_ex_args, &pid_tgid);
     // The read tuple should be flipped (compared to the write tuple).
@@ -330,6 +333,7 @@ static __always_inline int SSL_write_ex_ret(struct pt_regs* ctx, __u64 tags) {
         goto cleanup;
     }
 
+    log_debug("[%d<->%d][%llx] Entering TLS uprobe", conn_tuple->sport, conn_tuple->dport, pid_tgid);
     char *buffer_ptr = args->buf;
     bpf_map_delete_elem(&ssl_write_ex_args, &pid_tgid);
     conn_tuple_t copy = {0};

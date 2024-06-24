@@ -173,6 +173,7 @@ func (s *USMSuite) TestProtocolClassification() {
 		t.Skip("Classification is not supported")
 	}
 
+	cfg.BPFDebug = true
 	cfg.ServiceMonitoringEnabled = true
 	cfg.EnableNativeTLSMonitoring = true
 	cfg.EnableHTTPMonitoring = true

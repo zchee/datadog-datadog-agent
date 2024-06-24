@@ -41,6 +41,8 @@ static __always_inline void classify_decrypted_payload(protocol_stack_t *stack, 
     // we're in the context of TLS hookpoints, thus the protocol is TLS.
     set_protocol(stack, PROTOCOL_TLS);
 
+    log_debug("[%d<->%d] Classifying TLS payload", t->sport, t->dport);
+
     if (is_protocol_layer_known(stack, LAYER_APPLICATION)) {
         // No classification is needed.
         return;
