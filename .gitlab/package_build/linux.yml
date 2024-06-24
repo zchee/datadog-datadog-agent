@@ -40,9 +40,7 @@
   needs:
     [
       "go_mod_tidy_check",
-      "build_system-probe-x64",
       "go_deps",
-      "generate_minimized_btfs_x64",
     ]
   variables:
     PACKAGE_ARCH: amd64
@@ -53,9 +51,7 @@
   needs:
     [
       "go_mod_tidy_check",
-      "build_system-probe-arm64",
       "go_deps",
-      "generate_minimized_btfs_arm64",
     ]
   variables:
     PACKAGE_ARCH: arm64
