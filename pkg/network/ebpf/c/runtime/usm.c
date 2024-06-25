@@ -41,6 +41,17 @@ int socket__protocol_dispatcher(struct __sk_buff *skb) {
     return 0;
 }
 
+SEC("socket/protocol_dispatcher")
+int socket__sockmap_filter(struct __sk_buff *skb) {
+    log_debug("sockmap_filter len %u pkt_type %u", skb->len, skb->pkt_type);
+    // log_debug("sockmap_filter tup: remote: %08x (%u)", skb->remote_ip4, skb->remote_port);
+    // log_debug("sockmap_filter tup:  local: %08x (%u)", skb->local_ip4, skb->local_port);
+    log_debug("sockmap_filter: skb: %lx sk: %lx", (unsigned long)skb, (unsigned long)skb->sk);
+    log_debug("sockmap_filter: cookie: %llx\n", bpf_get_socket_cookie(skb));
+
+    return 0;
+}
+
 // This entry point is needed to bypass a memory limit on socket filters
 // See: https://datadoghq.atlassian.net/wiki/spaces/NET/pages/2326855913/HTTP#Known-issues
 SEC("socket/protocol_dispatcher_kafka")

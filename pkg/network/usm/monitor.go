@@ -118,9 +118,12 @@ func NewMonitor(c *config.Config, connectionProtocolMap *ebpf.Map) (m *Monitor, 
 	ddebpf.AddNameMappings(mgr.Manager.Manager, "usm_monitor")
 
 	closeFilterFn := func() {}
+	filterName := protocolDispatcherSocketFilterFunction
 
 	if useNewPacketDataHooks {
 		fmt.Println("Using new data hooks")
+
+		filterName = sockmapSocketFilterFunction
 
 		sockmap, found, _ := mgr.GetMap("sockhash")
 		if !found {
@@ -166,16 +169,16 @@ func NewMonitor(c *config.Config, connectionProtocolMap *ebpf.Map) (m *Monitor, 
 				log.Errorf("error adding hook: %s", err)
 			}
 		}
-	} else {
-		filter, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: protocolDispatcherSocketFilterFunction, UID: probeUID})
-		if filter == nil {
-			return nil, fmt.Errorf("error retrieving socket filter")
-		}
+	}
 
-		closeFilterFn, err = filterpkg.HeadlessSocketFilter(c, filter)
-		if err != nil {
-			return nil, fmt.Errorf("error enabling traffic inspection: %s", err)
-		}
+	filter, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: filterName, UID: probeUID})
+	if filter == nil {
+		return nil, fmt.Errorf("error retrieving socket filter")
+	}
+
+	closeFilterFn, err = filterpkg.HeadlessSocketFilter(c, filter)
+	if err != nil {
+		return nil, fmt.Errorf("error enabling traffic inspection: %s", err)
 	}
 
 	processMonitor := monitor.GetProcessMonitor()
