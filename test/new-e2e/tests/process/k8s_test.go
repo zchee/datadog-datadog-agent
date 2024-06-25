@@ -87,6 +87,15 @@ func (s *K8sSuite) TestProcessCheck() {
 	t := s.T()
 	flake.Mark(t)
 
+	agent := getAgentPod(t, s.Env().KubernetesCluster.Client())
+	stdout, stderr, err := s.Env().KubernetesCluster.KubernetesClient.
+		PodExec(agent.Namespace, agent.Name, "agent",
+			[]string{"bash", "-c", "DD_LOG_LEVEL=OFF process-agent status "})
+	require.NoError(t, err)
+	assert.Empty(t, stderr)
+	assert.NotNil(t, stdout, "failed to get agent status")
+	t.Logf("process-agent status: %s", stdout)
+
 	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
 		status := k8sAgentStatus(t, s.Env().KubernetesCluster)
 		assert.ElementsMatch(t, []string{"process", "rtprocess"}, status.ProcessAgentStatus.Expvars.Map.EnabledChecks)
