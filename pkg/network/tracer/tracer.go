@@ -40,7 +40,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/process/procutil"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	timeresolver "github.com/DataDog/datadog-agent/pkg/security/resolvers/time"
-	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
 	"github.com/DataDog/datadog-agent/pkg/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -105,8 +104,6 @@ type Tracer struct {
 	timeResolver *timeresolver.Resolver
 
 	telemetryComp telemetryComponent.Component
-
-	rawPacketChan chan *model.Event
 }
 
 // NewTracer creates a Tracer
@@ -191,15 +188,6 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 		log.Info("gateway lookup enabled")
 	}
 
-	if cfg.TCRawPacketEnabled {
-		tr.rawPacketChan = make(chan *model.Event, 1000)
-		tr.reverseDNS = newReverseDNS(cfg, nil, tr.rawPacketChan)
-	} else {
-		tr.reverseDNS = newReverseDNS(cfg, nil, nil)
-	}
-
-	tr.usmMonitor = newUSMMonitor(cfg, tr.ebpfTracer)
-
 	if cfg.EnableProcessEventMonitoring {
 		if tr.processCache, err = newProcessCache(cfg.MaxProcessesTracked); err != nil {
 			return nil, fmt.Errorf("could not create process cache; %w", err)
@@ -215,12 +203,10 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 		}
 
 		events.RegisterHandler(tr.processCache)
-
-		// NOTE(safchain) register handler
-		if cfg.TCRawPacketEnabled {
-			events.RegisterPacketHandler(tr)
-		}
 	}
+
+	tr.reverseDNS = newReverseDNS(cfg, nil)
+	tr.usmMonitor = newUSMMonitor(cfg, tr.ebpfTracer)
 
 	tr.sourceExcludes = network.ParseConnectionFilters(cfg.ExcludedSourceConnections)
 	tr.destExcludes = network.ParseConnectionFilters(cfg.ExcludedDestinationConnections)
@@ -238,14 +224,6 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 	)
 
 	return tr, nil
-}
-
-// HandlePacket from event
-func (t *Tracer) HandlePacket(ev *model.Event) {
-	select {
-	case t.rawPacketChan <- ev:
-	default:
-	}
 }
 
 // start starts the tracer. This function is present to separate
@@ -304,12 +282,26 @@ func newConntracker(cfg *config.Config, telemetryComponent telemetryComponent.Co
 	return nil, fmt.Errorf("error initializing conntracker: %s. set network_config.ignore_conntrack_init_failure to true to ignore conntrack failures on startup", err)
 }
 
-func newReverseDNS(c *config.Config, telemetrycomp telemetryComponent.Component, ch chan *model.Event) dns.ReverseDNS {
+func newReverseDNS(c *config.Config, telemetrycomp telemetryComponent.Component) dns.ReverseDNS {
 	if !c.DNSInspection {
 		return dns.NewNullReverseDNS()
 	}
 
-	rdns, err := dns.NewReverseDNS(c, telemetrycomp, ch)
+	var (
+		rdns dns.ReverseDNS
+		err  error
+	)
+
+	if c.TCRawPacketEnabled && c.EnableProcessEventMonitoring {
+		r, err := dns.NewReverseDNSRawPacket(c, telemetrycomp)
+		if err == nil {
+			events.RegisterPacketHandler(r)
+			rdns = r
+		}
+	} else {
+		rdns, err = dns.NewReverseDNS(c, telemetrycomp)
+	}
+
 	if err != nil {
 		log.Errorf("could not instantiate dns inspector: %s", err)
 		return dns.NewNullReverseDNS()

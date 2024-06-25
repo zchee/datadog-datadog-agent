@@ -10,6 +10,7 @@ package dns
 import (
 	"fmt"
 	"math"
+	"sync/atomic"
 
 	"golang.org/x/net/bpf"
 
@@ -32,8 +33,47 @@ type dnsMonitor struct {
 	p *ebpfProgram
 }
 
+type rawPacketDnsMonitor struct {
+	*socketFilterSnooper
+	rawPacketChan chan *model.Event
+	running       atomic.Value
+}
+
+// HandlePacket from event
+func (m *rawPacketDnsMonitor) HandlePacket(ev *model.Event) {
+	if m.running.Load() != true {
+		return
+	}
+
+	select {
+	case m.rawPacketChan <- ev:
+		snooperTelemetry.rawPktsReceived.Inc()
+	default:
+		snooperTelemetry.rawPktsChanErrors.Inc()
+	}
+}
+
 // NewReverseDNS starts snooping on DNS traffic to allow IP -> domain reverse resolution
-func NewReverseDNS(cfg *config.Config, _ telemetry.Component, ch chan *model.Event) (ReverseDNS, error) {
+func NewReverseDNSRawPacket(cfg *config.Config, _ telemetry.Component) (*rawPacketDnsMonitor, error) {
+	ch := make(chan *model.Event, 10000)
+
+	packetSrc := &rawPacketSource{ch: ch}
+
+	snoop, err := newSocketFilterSnooper(cfg, packetSrc)
+	if err != nil {
+		return nil, err
+	}
+	m := &rawPacketDnsMonitor{
+		socketFilterSnooper: snoop,
+		rawPacketChan:       ch,
+	}
+	m.running.Store(true)
+
+	return m, nil
+}
+
+// NewReverseDNS starts snooping on DNS traffic to allow IP -> domain reverse resolution
+func NewReverseDNS(cfg *config.Config, _ telemetry.Component) (ReverseDNS, error) {
 	currKernelVersion, err := kernel.HostVersion()
 	if err != nil {
 		// if the platform couldn't be determined, treat it as new kernel case
@@ -45,26 +85,25 @@ func NewReverseDNS(cfg *config.Config, _ telemetry.Component, ch chan *model.Eve
 	var p *ebpfProgram
 	var filter *manager.Probe
 	var bpfFilter []bpf.RawInstruction
-	if ch == nil {
-		if pre410Kernel {
-			bpfFilter, err = generateBPFFilter(cfg)
-			if err != nil {
-				return nil, fmt.Errorf("error creating bpf classic filter: %w", err)
-			}
-		} else {
-			p, err = newEBPFProgram(cfg)
-			if err != nil {
-				return nil, fmt.Errorf("error creating ebpf program: %w", err)
-			}
 
-			if err := p.Init(); err != nil {
-				return nil, fmt.Errorf("error initializing ebpf programs: %w", err)
-			}
+	if pre410Kernel {
+		bpfFilter, err = generateBPFFilter(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("error creating bpf classic filter: %w", err)
+		}
+	} else {
+		p, err = newEBPFProgram(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("error creating ebpf program: %w", err)
+		}
 
-			filter, _ = p.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: probes.SocketDNSFilter, UID: probeUID})
-			if filter == nil {
-				return nil, fmt.Errorf("error retrieving socket filter")
-			}
+		if err := p.Init(); err != nil {
+			return nil, fmt.Errorf("error initializing ebpf programs: %w", err)
+		}
+
+		filter, _ = p.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: probes.SocketDNSFilter, UID: probeUID})
+		if filter == nil {
+			return nil, fmt.Errorf("error retrieving socket filter")
 		}
 	}
 
@@ -79,16 +118,12 @@ func NewReverseDNS(cfg *config.Config, _ telemetry.Component, ch chan *model.Eve
 	}
 	defer ns.Close()
 
-	if ch != nil {
-		packetSrc = &RawPacketSource{ch: ch}
-	} else {
-		err = kernel.WithNS(ns, func() error {
-			packetSrc, srcErr = filterpkg.NewPacketSource(filter, bpfFilter)
-			return srcErr
-		})
-		if err != nil {
-			return nil, err
-		}
+	err = kernel.WithNS(ns, func() error {
+		packetSrc, srcErr = filterpkg.NewPacketSource(filter, bpfFilter)
+		return srcErr
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	snoop, err := newSocketFilterSnooper(cfg, packetSrc)
@@ -120,4 +155,10 @@ func (m *dnsMonitor) Close() {
 		ddebpf.RemoveNameMappings(m.p.Manager)
 		_ = m.p.Stop(manager.CleanAll)
 	}
+}
+
+// Close releases associated resources
+func (m *rawPacketDnsMonitor) Close() {
+	m.socketFilterSnooper.Close()
+	m.running.Store(false)
 }

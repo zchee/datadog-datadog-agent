@@ -85,6 +85,10 @@ func NewPacketSource(filter *manager.Probe, bpfFilter []bpf.RawInstruction) (*AF
 
 // VisitPackets starts reading packets from the source
 func (p *AFPacketSource) VisitPackets(exit <-chan struct{}, visit func([]byte, time.Time) error) error {
+	defer func() {
+		time.Sleep(5 * time.Millisecond)
+	}()
+
 	for {
 		// allow the read loop to be prematurely interrupted
 		select {

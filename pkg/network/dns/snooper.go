@@ -29,11 +29,14 @@ const (
 
 // Telemetry
 var snooperTelemetry = struct {
-	decodingErrors *telemetry.StatCounterWrapper
-	truncatedPkts  *telemetry.StatCounterWrapper
-	queries        *telemetry.StatCounterWrapper
-	successes      *telemetry.StatCounterWrapper
-	errors         *telemetry.StatCounterWrapper
+	decodingErrors    *telemetry.StatCounterWrapper
+	truncatedPkts     *telemetry.StatCounterWrapper
+	queries           *telemetry.StatCounterWrapper
+	successes         *telemetry.StatCounterWrapper
+	errors            *telemetry.StatCounterWrapper
+	rawPktsVisited    *telemetry.StatCounterWrapper
+	rawPktsChanErrors *telemetry.StatCounterWrapper
+	rawPktsReceived   *telemetry.StatCounterWrapper
 }{
 	telemetry.NewStatCounterWrapper(dnsModuleName, "decoding_errors", []string{}, "Counter measuring the number of decoding errors while processing packets"),
 	telemetry.NewStatCounterWrapper(dnsModuleName, "truncated_pkts", []string{}, "Counter measuring the number of truncated packets while processing"),
@@ -41,6 +44,9 @@ var snooperTelemetry = struct {
 	telemetry.NewStatCounterWrapper(dnsModuleName, "queries", []string{}, "Counter measuring the number of packets that are DNS queries in processed packets"),
 	telemetry.NewStatCounterWrapper(dnsModuleName, "successes", []string{}, "Counter measuring the number of successful DNS responses in processed packets"),
 	telemetry.NewStatCounterWrapper(dnsModuleName, "errors", []string{}, "Counter measuring the number of failed DNS responses in processed packets"),
+	telemetry.NewStatCounterWrapper(dnsModuleName, "raw_pkts_visited", []string{}, "Counter measuring the number of raw packets visited"),
+	telemetry.NewStatCounterWrapper(dnsModuleName, "raw_pkts_chan_errors", []string{}, "Counter measuring the number of packets chan write errors"),
+	telemetry.NewStatCounterWrapper(dnsModuleName, "raw_pkts_received", []string{}, "Counter measuring the number of packets received"),
 }
 
 var _ ReverseDNS = &socketFilterSnooper{}
@@ -81,33 +87,32 @@ type packetSource interface {
 }
 
 // RawPacketSource packet source from a event chan
-type RawPacketSource struct {
+type rawPacketSource struct {
 	ch chan *model.Event
 }
 
 // PacketType return the 1st layer type of the packets
-func (rp *RawPacketSource) PacketType() gopacket.LayerType {
+func (rp *rawPacketSource) PacketType() gopacket.LayerType {
 	return layers.LayerTypeEthernet
 }
 
 // VisitPackets call the callback for each packets from the chan
-func (rp *RawPacketSource) VisitPackets(cancel <-chan struct{}, visitor func(data []byte, timestamp time.Time) error) error {
+func (rp *rawPacketSource) VisitPackets(exit <-chan struct{}, visitor func(data []byte, timestamp time.Time) error) error {
 	for {
 		select {
 		case ev := <-rp.ch:
+			snooperTelemetry.rawPktsVisited.Inc()
 			if err := visitor(ev.RawPacket.Data, time.Now()); err != nil {
 				return err
 			}
-		case <-cancel:
-			return nil
-		default:
+		case <-exit:
 			return nil
 		}
 	}
 }
 
 // Close the packets source
-func (rp *RawPacketSource) Close() {
+func (rp *rawPacketSource) Close() {
 	close(rp.ch)
 }
 
@@ -229,9 +234,6 @@ func (s *socketFilterSnooper) pollPackets() {
 				log.Warnf("error reading packet: %s", err)
 			}
 		}
-
-		// Sleep briefly and try again
-		time.Sleep(5 * time.Millisecond)
 	}
 }
 
