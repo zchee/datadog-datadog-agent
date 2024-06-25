@@ -103,6 +103,15 @@ lint_linux-x64:
   extends:
     - .linux_lint
     - .linux_x64
+
+lint_linux-x64-2:
+  needs: []
+  script:
+    - which golangci-lint
+  extends:
+    - .linux_lint
+    - .linux_x64
+
 tests_flavor_iot_deb-x64:
   extends:
     - .rtloader_tests
