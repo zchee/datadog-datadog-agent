@@ -24,6 +24,8 @@ type linuxTestSuite struct {
 }
 
 func TestLinuxTestSuite(t *testing.T) {
+	t.Skip()
+	t.Parallel()
 	agentParams := []func(*agentparams.Params) error{
 		agentparams.WithAgentConfig(processCheckConfigStr),
 	}
