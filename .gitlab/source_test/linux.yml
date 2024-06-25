@@ -71,7 +71,7 @@
     - inv -e rtloader.make --install-prefix=$CI_PROJECT_DIR/dev --python-runtimes "3"
     - inv -e rtloader.install
     - inv -e install-tools
-    - which golang-ci-lint
+    - which golangci-lint
     - inv -e linter.go --cpus $KUBERNETES_CPU_REQUEST $FLAVORS $EXTRA_OPTS
 
 
