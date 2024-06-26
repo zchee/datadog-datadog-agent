@@ -49,6 +49,18 @@ int socket__sockmap_filter(struct __sk_buff *skb) {
     log_debug("sockmap_filter: skb: %lx sk: %lx", (unsigned long)skb, (unsigned long)skb->sk);
     log_debug("sockmap_filter: cookie: %llx\n", bpf_get_socket_cookie(skb));
 
+    skb_info_t skb_info = {0};
+    conn_tuple_t skb_tup = {0};
+
+    // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
+    if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
+        return 0;
+    }
+
+    log_debug("filter tup: saddr: %08llx %08llx (%u)", skb_tup.saddr_h, skb_tup.saddr_l, skb_tup.sport);
+    log_debug("filter tup: daddr: %08llx %08llx (%u)", skb_tup.daddr_h, skb_tup.daddr_l, skb_tup.dport);
+    // log_debug("filter tup: netns: %08x pid: %u", skb_tup.netns, skb_tup.pid);
+
     return 0;
 }
 
