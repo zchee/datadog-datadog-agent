@@ -2493,7 +2493,10 @@ func (s *TracerSuite) TestTCPFailureConnectionReset() {
 	require.Eventually(t, func() bool {
 		conns := getConnections(t, tr)
 		// 104 is the errno for ECONNRESET
-		return findFailedConnection(t, c.LocalAddr().String(), serverAddr.String(), conns, 104)
+		errCode := uint32(104)
+		clientFailedConnFound := findFailedConnection(t, c.LocalAddr().String(), serverAddr.String(), conns, errCode)
+		serverFailedConnFound := findFailedConnection(t, serverAddr.String(), c.LocalAddr().String(), conns, errCode)
+		return clientFailedConnFound && serverFailedConnFound
 	}, 3*time.Second, 100*time.Millisecond, "Failed connection not recorded properly")
 
 	require.NoError(t, c.Close(), "error closing client connection")
