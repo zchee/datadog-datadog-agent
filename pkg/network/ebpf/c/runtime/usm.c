@@ -70,7 +70,7 @@ int uprobe__tls_protocol_dispatcher_kafka(struct pt_regs *ctx) {
 
 SEC("sk_msg/protocol_dispatcher")
 int sk_msg__protocol_dispatcher(struct sk_msg_md *msg) {
-    log_debug("sk_msg__protocol_dispatcher: msg %p msg->sk %lx size %u", msg, (unsigned long)msg->sk, msg->size);
+    log_debug("sk_msg__protocol_dispatcher: msg %lx msg->sk %lx size %u", (unsigned long)msg, (unsigned long)msg->sk, msg->size);
 
     u64 pid_tgid = bpf_get_current_pid_tgid();
     u32 *splicing = bpf_map_lookup_elem(&tcp_splicing, &pid_tgid);
@@ -211,7 +211,7 @@ SEC("kprobe/tcp_recvmsg")
 int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t len, int flags) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
 
-    log_debug("kprobe/tcp_recvmsg: sk=%p msghdr=%p!\n", sk, msg);
+    log_debug("kprobe/tcp_recvmsg: sk=%lx msghdr=%lx!\n", (unsigned long)sk, (unsigned long)msg);
     log_debug("kprobe/tcp_recvmsg: len=%lu\n", len);
 
     u8 iter_type;
@@ -285,7 +285,7 @@ int BPF_KPROBE(kprobe__tcp_splice_read, struct socket *sock) {
 
 SEC("kprobe/simple_copy_to_iter")
 int BPF_KPROBE(kprobe__simple_copy_to_iter, const void *addr, size_t bytes) {
-    log_debug("kprobe/simple_copy_to_iter addr=%p bytes=%lu\n", addr, bytes);
+    log_debug("kprobe/simple_copy_to_iter addr=%lx bytes=%lu\n", (unsigned long)addr, bytes);
 
     // u64 pid_tgid = bpf_get_current_pid_tgid();
     // tcp_kprobe_state_t *state = bpf_map_lookup_elem(&tcp_kprobe_state, &pid_tgid);
@@ -340,7 +340,7 @@ int BPF_KRETPROBE(kretprobe__splice_to_socket) {
 
 SEC("kprobe/tcp_splice_data_recv")
 int BPF_KPROBE(kprobe__tcp_splice_data_recv, read_descriptor_t *rd_desc, struct sk_buff *skb, unsigned int offset, size_t len) {
-    log_debug("kprobe/tcp_splice_data_recv skb=%p offset=%u len=%lu\n", skb, offset, len);
+    log_debug("kprobe/tcp_splice_data_recv skb=%lx offset=%u len=%lu\n", (unsigned long)skb, offset, len);
 
     __u32 skb_len;
     BPF_CORE_READ_INTO(&skb_len, skb, len);
@@ -352,11 +352,11 @@ int BPF_KPROBE(kprobe__tcp_splice_data_recv, read_descriptor_t *rd_desc, struct 
     BPF_CORE_READ_INTO(&skb_end, skb, end);
 
     log_debug("kprobe/tcp_splice_data_recv skb->len %u data_len %u skb_headlen %u\n", skb_len, skb_data_len, skb_len - skb_data_len);
-    log_debug("kprobe/tcp_splice_data_recv skb->head %p end %u\n", skb_head, skb_end);
+    log_debug("kprobe/tcp_splice_data_recv skb->head %lx end %u\n", (unsigned long)skb_head, skb_end);
 
     void *skb_end_pointer = skb_head + skb_end;
     struct skb_shared_info *shinfo = skb_end_pointer;
-    log_debug("kprobe/tcp_splice_data_recv shinfo %p\n", shinfo);
+    log_debug("kprobe/tcp_splice_data_recv shinfo %lx\n", (unsigned long)shinfo);
 
     __u8 nr_frags;
     BPF_CORE_READ_INTO(&nr_frags, shinfo, nr_frags);
@@ -370,7 +370,7 @@ int BPF_KPROBE(kprobe__tcp_splice_data_recv, read_descriptor_t *rd_desc, struct 
     __u32 frag_offset;
     BPF_CORE_READ_INTO(&frag_offset, shinfo, frags[0].bv_offset);
 
-    log_debug("kprobe/tcp_splice_data_recv frag[0] page %p len %u offset %u\n", frag_page, frag_len, frag_offset);
+    log_debug("kprobe/tcp_splice_data_recv frag[0] page %lx len %u offset %u\n", (unsigned long)frag_page, frag_len, frag_offset);
 
     // u64 pid_tgid = bpf_get_current_pid_tgid();
     // tcp_kprobe_state_t *state = bpf_map_lookup_elem(&tcp_kprobe_state, &pid_tgid);
