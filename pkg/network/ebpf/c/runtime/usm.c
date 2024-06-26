@@ -41,31 +41,15 @@ int socket__protocol_dispatcher(struct __sk_buff *skb) {
     return 0;
 }
 
-SEC("cgroup_skb/egress/sockmap_filter")
-int cgroup_skb__egress_filter(struct __sk_buff *skb) {
-    log_debug("cgroup_skb__egress_filter len %u pkt_type %u", skb->len, skb->pkt_type);
-    log_debug("sockmap_filter tup: remote: %08x (%u)", skb->remote_ip4, skb->remote_port);
-    log_debug("sockmap_filter tup:  local: %08x (%u)", skb->local_ip4, skb->local_port);
-    log_debug("cgroup_skb__egress_filter: skb: %lx sk: %lx", (unsigned long)skb, (unsigned long)skb->sk);
-    log_debug("cgroup_skb__egress_filter: cookie: %llx\n", bpf_get_socket_cookie(skb));
+SEC("socket/protocol_dispatcher")
+int socket__sockmap_filter(struct __sk_buff *skb) {
+    log_debug("sockmap_filter len %u pkt_type %u", skb->len, skb->pkt_type);
+    // log_debug("sockmap_filter tup: remote: %08x (%u)", skb->remote_ip4, skb->remote_port);
+    // log_debug("sockmap_filter tup:  local: %08x (%u)", skb->local_ip4, skb->local_port);
+    log_debug("sockmap_filter: skb: %lx sk: %lx", (unsigned long)skb, (unsigned long)skb->sk);
+    log_debug("sockmap_filter: cookie: %llx\n", bpf_get_socket_cookie(skb));
 
-    // struct sockhash_key key = {
-    //     .remote_ip4 = skb->remote_ip4,
-    //     .local_ip4 = skb->local_ip4,
-    //     .remote_port = skb->remote_port,
-    //     .local_port = skb->local_port,
-    // };
-
-    // struct bpf_sock *sock = skb->sk;
-    // if (sock) {
-    //     long ret = bpf_map_update_elem(&sockhash, &key, sock, BPF_NOEXIST);
-    //     if (ret != 1000) {
-    //         log_debug("cgroup_skb sockhash update ret %ld", ret);
-    //     }
-    // }
-
-    /* Keep packet, see comments in __cgroup_bpf_run_filter_skb() */
-    return 1;
+    return 0;
 }
 
 // This entry point is needed to bypass a memory limit on socket filters
