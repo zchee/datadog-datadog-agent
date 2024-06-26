@@ -250,8 +250,31 @@ int socket__http_filter(struct __sk_buff* skb) {
     normalize_tuple(&event.tuple);
 
     read_into_buffer_skb((char *)event.http.request_fragment, skb, skb_info.data_off);
+    log_debug("socket filter fragment: [%s]", event.http.request_fragment);
     http_process(&event, &skb_info, NO_TAGS);
     return 0;
+}
+
+SEC("cgroup/skb/http_process")
+int cgroup_skb__http_process(struct __sk_buff* skb) {
+    skb_info_t skb_info;
+    http_event_t event;
+    bpf_memset(&event, 0, sizeof(http_event_t));
+
+    if (!fetch_dispatching_arguments(&event.tuple, &skb_info)) {
+        log_debug("http_filter failed to fetch arguments for tail call");
+        return 1;
+    }
+
+    if (!http_allow_packet(&event.tuple, &skb_info)) {
+        return 1;
+    }
+    normalize_tuple(&event.tuple);
+
+    read_into_buffer_skb((char *)event.http.request_fragment, skb, skb_info.data_off);
+    log_debug("cgroup skb filter fragment: [%s]", event.http.request_fragment);
+    http_process(&event, &skb_info, NO_TAGS);
+    return 1;
 }
 
 SEC("sk_msg/http_process")

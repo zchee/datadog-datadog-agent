@@ -49,6 +49,34 @@ int cgroup_skb__egress_filter(struct __sk_buff *skb) {
     log_debug("cgroup_skb__egress_filter: skb: %lx sk: %lx", (unsigned long)skb, (unsigned long)skb->sk);
     log_debug("cgroup_skb__egress_filter: cookie: %llx\n", bpf_get_socket_cookie(skb));
 
+    skb_info_t skb_info = {0};
+    conn_tuple_t skb_tup = {0};
+
+    // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
+    if (!read_conn_tuple_skb_cgroup(skb, &skb_info, &skb_tup)) {
+        return 1;
+    }
+
+    // log_debug("egress tup: saddr: %08llx %08llx (%u)", skb_tup.saddr_h, skb_tup.saddr_l, skb_tup.sport);
+    // log_debug("egress tup: daddr: %08llx %08llx (%u)", skb_tup.daddr_h, skb_tup.daddr_l, skb_tup.dport);
+
+    char tmp[32] = {0};
+    bpf_skb_load_bytes(skb, skb_info.data_off, &tmp, sizeof(tmp));
+    log_debug("cgroup_skb__egress_filter: data: [%s]", tmp);
+
+    struct sockhash_key key = {
+        .remote_ip4 = skb->remote_ip4,
+        .local_ip4 = skb->local_ip4,
+        .remote_port = skb->remote_port,
+        .local_port = skb->local_port,
+    };
+
+    log_debug("cgroup key: remote: %x (%u)", key.remote_ip4, key.remote_port);
+    log_debug("cgroup key:  local: %x (%u)", key.local_ip4, key.local_port);
+
+    u64 cookie = bpf_get_socket_cookie(skb);
+    bpf_map_update_elem(&socket_cookie_hash, &key, &cookie, BPF_NOEXIST);
+
     // struct sockhash_key key = {
     //     .remote_ip4 = skb->remote_ip4,
     //     .local_ip4 = skb->local_ip4,
@@ -65,7 +93,14 @@ int cgroup_skb__egress_filter(struct __sk_buff *skb) {
     // }
 
     /* Keep packet, see comments in __cgroup_bpf_run_filter_skb() */
+    cgroup_protocol_dispatcher_entrypoint(skb);
     return 1;
+}
+
+SEC("cgroup_skb/egress/protocol_dispatcher_kafka")
+int cgroup_skb__protocol_dispatcher_kafka(struct __sk_buff *skb) {
+    cgroup_skb_dispatch_kafka(skb);
+    return 0;
 }
 
 // This entry point is needed to bypass a memory limit on socket filters
@@ -126,7 +161,7 @@ SEC("sockops/sockops")
 int sockops__sockops(struct bpf_sock_ops *skops) {
     int op = (int) skops->op;
 
-    // return 0;
+    return 0;
 
     if (op == BPF_SOCK_OPS_STATE_CB) {
         u32 new = skops->args[1];

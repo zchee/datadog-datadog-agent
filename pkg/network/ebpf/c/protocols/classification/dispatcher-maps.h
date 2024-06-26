@@ -28,6 +28,8 @@ BPF_HASH_MAP(connection_states, conn_tuple_t, u32, 0)
 // See: https://datadoghq.atlassian.net/wiki/spaces/NET/pages/2326855913/HTTP#Program-size-limit-for-socket-filters
 BPF_PROG_ARRAY(protocols_progs, PROG_MAX)
 
+BPF_PROG_ARRAY(cgroup_skb_protocols_progs, PROG_MAX)
+
 BPF_PROG_ARRAY(skmsg_protocols_progs, PROG_MAX)
 
 // Map used to store the sub programs responsible for decoding of TLS encrypted
@@ -41,6 +43,8 @@ BPF_PROG_ARRAY(kprobe_protocols_progs, PROG_MAX)
 // as we dispatching more protocols, we reached that limit, thus we workaround it
 // by using tail call.
 BPF_PROG_ARRAY(dispatcher_classification_progs, DISPATCHER_PROG_MAX)
+
+BPF_PROG_ARRAY(cgroup_skb_dispatcher_classification_progs, DISPATCHER_PROG_MAX)
 
 BPF_PROG_ARRAY(kprobe_dispatcher_classification_progs, DISPATCHER_PROG_MAX)
 

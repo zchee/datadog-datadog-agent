@@ -340,7 +340,7 @@ static __always_inline bool __is_kafka(pktbuf_t pkt, const char* buf, __u32 buf_
     kafka_header.client_id_size = bpf_ntohs(header_view->client_id_size);
     u32 offset = pktbuf_data_offset(pkt);
 
-    log_debug("message_size: %x", kafka_header.message_size);
+    log_debug("message_size: %u", kafka_header.message_size);
 
     if (is_valid_kafka_request_header(&kafka_header)) {
         offset += sizeof(kafka_header_t);

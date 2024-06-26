@@ -37,13 +37,14 @@ type protocol struct {
 }
 
 const (
-	inFlightMap            = "http_in_flight"
-	filterTailCall         = "socket__http_filter"
-	tlsProcessTailCall     = "uprobe__http_process"
-	kprobeProcessTailCall  = "kprobe__http_process"
-	skMsgProcessTailCall   = "sk_msg__http_process"
-	tlsTerminationTailCall = "uprobe__http_termination"
-	eventStream            = "http"
+	inFlightMap              = "http_in_flight"
+	filterTailCall           = "socket__http_filter"
+	tlsProcessTailCall       = "uprobe__http_process"
+	kprobeProcessTailCall    = "kprobe__http_process"
+	cgroupSkbProcessTailCall = "cgroup_skb__http_process"
+	skMsgProcessTailCall     = "sk_msg__http_process"
+	tlsTerminationTailCall   = "uprobe__http_termination"
+	eventStream              = "http"
 )
 
 // Spec is the protocol spec for the HTTP protocol.
@@ -86,6 +87,13 @@ var Spec = &protocols.ProtocolSpec{
 			Key:           uint32(protocols.ProgramHTTPTermination),
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFFuncName: tlsTerminationTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: cgroupSkbProcessTailCall,
 			},
 		},
 		{
