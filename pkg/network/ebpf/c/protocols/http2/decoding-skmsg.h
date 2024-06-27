@@ -5,6 +5,7 @@
 #include "protocols/http2/usm-events.h"
 #include "protocols/http/types.h"
 
+#if 0
 // http2_tls_handle_first_frame is the entry point of our HTTP2+TLS processing.
 // It is responsible for getting and filtering the first frame present in the
 // buffer we get from the TLS sk_msgs.
@@ -111,6 +112,7 @@ int sk_msg__http2_eos_parser(struct sk_msg_md *msg) {
 
     return SK_PASS;
 }
+#endif
 
 // http2_tls_termination is responsible for cleaning up the state of the HTTP2
 // decoding once the TLS connection is terminated.

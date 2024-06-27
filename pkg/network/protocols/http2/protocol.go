@@ -268,41 +268,41 @@ var Spec = &protocols.ProtocolSpec{
 				EBPFFuncName: kprobeEOSParserTailCall,
 			},
 		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramHTTP2HandleFirstFrame),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgFirstFrameTailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramHTTP2FrameFilter),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgFilterTailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramHTTP2HeadersParser),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgHeadersParserTailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramHTTP2DynamicTableCleaner),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgDynamicTableCleaner,
-			},
-		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramHTTP2EOSParser),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgEOSParserTailCall,
-			},
-		},
+		// {
+		// 	ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+		// 	Key:           uint32(protocols.ProgramHTTP2HandleFirstFrame),
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: skMsgFirstFrameTailCall,
+		// 	},
+		// },
+		// {
+		// 	ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+		// 	Key:           uint32(protocols.ProgramHTTP2FrameFilter),
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: skMsgFilterTailCall,
+		// 	},
+		// },
+		// {
+		// 	ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+		// 	Key:           uint32(protocols.ProgramHTTP2HeadersParser),
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: skMsgHeadersParserTailCall,
+		// 	},
+		// },
+		// {
+		// 	ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+		// 	Key:           uint32(protocols.ProgramHTTP2DynamicTableCleaner),
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: skMsgDynamicTableCleaner,
+		// 	},
+		// },
+		// {
+		// 	ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
+		// 	Key:           uint32(protocols.ProgramHTTP2EOSParser),
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: skMsgEOSParserTailCall,
+		// 	},
+		// },
 		{
 			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
 			Key:           uint32(protocols.ProgramHTTP2HandleFirstFrame),
