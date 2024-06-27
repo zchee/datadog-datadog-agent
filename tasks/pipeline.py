@@ -883,7 +883,7 @@ def trigger_external(ctx, owner_branch_name: str, no_verify=False):
     no_verify_flag = ' --no-verify' if no_verify else ''
 
     # Can checkout
-    status_res = ctx.run('git status --porcelain')
+    status_res = ctx.run('git status --porcelain --untracked-files no')
     assert status_res.stdout.strip() == '', 'Cannot run this task if changes have not been committed'
     branch_res = ctx.run('git branch', hide='stdout')
     assert (
