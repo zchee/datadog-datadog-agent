@@ -473,6 +473,7 @@ func (s *usmHTTP2Suite) TestHTTP2ManyDifferentPaths() {
 	seenRequests := map[string]int{}
 	assert.Eventuallyf(t, func() bool {
 		for key, stat := range getHTTPLikeProtocolStats(monitor, protocols.HTTP2) {
+			fmt.Println(key, stat)
 			if (key.DstPort == srvPort || key.SrcPort == srvPort) && key.Method == usmhttp.MethodPost && strings.HasPrefix(key.Path.Content.Get(), "/test") {
 				if _, ok := seenRequests[key.Path.Content.Get()]; !ok {
 					seenRequests[key.Path.Content.Get()] = 0

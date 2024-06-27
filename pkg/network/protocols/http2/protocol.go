@@ -46,20 +46,21 @@ type Protocol struct {
 
 const (
 	// InFlightMap is the name of the map used to store in-flight HTTP/2 streams
-	InFlightMap                = "http2_in_flight"
-	remainderTable             = "http2_remainder"
-	dynamicTable               = "http2_dynamic_table"
-	dynamicTableCounter        = "http2_dynamic_counter_table"
-	http2IterationsTable       = "http2_iterations"
-	tlsHTTP2IterationsTable    = "tls_http2_iterations"
-	kprobeHTTP2IterationsTable = "kprobe_http2_iterations"
-	skMsgHTTP2IterationsTable  = "sk_msg_http2_iterations"
-	firstFrameHandlerTailCall  = "socket__http2_handle_first_frame"
-	filterTailCall             = "socket__http2_filter"
-	headersParserTailCall      = "socket__http2_headers_parser"
-	dynamicTableCleaner        = "socket__http2_dynamic_table_cleaner"
-	eosParserTailCall          = "socket__http2_eos_parser"
-	eventStream                = "http2"
+	InFlightMap                   = "http2_in_flight"
+	remainderTable                = "http2_remainder"
+	dynamicTable                  = "http2_dynamic_table"
+	dynamicTableCounter           = "http2_dynamic_counter_table"
+	http2IterationsTable          = "http2_iterations"
+	tlsHTTP2IterationsTable       = "tls_http2_iterations"
+	cgroupSkbHTTP2IterationsTable = "cgroup_skb_http2_iterations"
+	kprobeHTTP2IterationsTable    = "kprobe_http2_iterations"
+	skMsgHTTP2IterationsTable     = "sk_msg_http2_iterations"
+	firstFrameHandlerTailCall     = "socket__http2_handle_first_frame"
+	filterTailCall                = "socket__http2_filter"
+	headersParserTailCall         = "socket__http2_headers_parser"
+	dynamicTableCleaner           = "socket__http2_dynamic_table_cleaner"
+	eosParserTailCall             = "socket__http2_eos_parser"
+	eventStream                   = "http2"
 
 	// TelemetryMap is the name of the map used to retrieve plaintext metrics from the kernel
 	TelemetryMap = "http2_telemetry"
@@ -78,6 +79,12 @@ const (
 	kprobeHeadersParserTailCall = "kprobe__http2_headers_parser"
 	kprobeDynamicTableCleaner   = "kprobe__http2_dynamic_table_cleaner"
 	kprobeEOSParserTailCall     = "kprobe__http2_eos_parser"
+
+	cgroupSkbFirstFrameTailCall    = "cgroup_skb__http2_handle_first_frame"
+	cgroupSkbFilterTailCall        = "cgroup_skb__http2_frame_filter"
+	cgroupSkbHeadersParserTailCall = "cgroup_skb__http2_headers_parser"
+	cgroupSkbDynamicTableCleaner   = "cgroup_skb__http2_dynamic_table_cleaner"
+	cgroupSkbEOSParserTailCall     = "cgroup_skb__http2_eos_parser"
 
 	skMsgFirstFrameTailCall    = "sk_msg__http2_handle_first_frame"
 	skMsgFilterTailCall        = "sk_msg__http2_frame_filter"
@@ -107,6 +114,9 @@ var Spec = &protocols.ProtocolSpec{
 		},
 		{
 			Name: kprobeHTTP2IterationsTable,
+		},
+		{
+			Name: cgroupSkbHTTP2IterationsTable,
 		},
 		{
 			Name: skMsgHTTP2IterationsTable,
@@ -293,6 +303,41 @@ var Spec = &protocols.ProtocolSpec{
 				EBPFFuncName: skMsgEOSParserTailCall,
 			},
 		},
+		{
+			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2HandleFirstFrame),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: cgroupSkbFirstFrameTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2FrameFilter),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: cgroupSkbFilterTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2HeadersParser),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: cgroupSkbHeadersParserTailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2DynamicTableCleaner),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: cgroupSkbDynamicTableCleaner,
+			},
+		},
+		{
+			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramHTTP2EOSParser),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: cgroupSkbEOSParserTailCall,
+			},
+		},
 	},
 }
 
@@ -357,6 +402,10 @@ func (p *Protocol) ConfigureOptions(mgr *manager.Manager, opts *manager.Options)
 		EditorFlag: manager.EditMaxEntries,
 	}
 	opts.MapSpecEditors[kprobeHTTP2IterationsTable] = manager.MapSpecEditor{
+		MaxEntries: mapSizeValue,
+		EditorFlag: manager.EditMaxEntries,
+	}
+	opts.MapSpecEditors[cgroupSkbHTTP2IterationsTable] = manager.MapSpecEditor{
 		MaxEntries: mapSizeValue,
 		EditorFlag: manager.EditMaxEntries,
 	}

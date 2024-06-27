@@ -174,8 +174,9 @@ static __always_inline __maybe_unused long pktbuf_tail_call_compact(pktbuf_t pkt
 {
     switch (pkt.type) {
     case PKTBUF_SKB:
-    case PKTBUF_CGROUP_SKB_EGRESS:
         return bpf_tail_call_compat(pkt.skb, options[PKTBUF_SKB].prog_array_map, options[PKTBUF_SKB].index);
+    case PKTBUF_CGROUP_SKB_EGRESS:
+        return bpf_tail_call_compat(pkt.skb, options[PKTBUF_CGROUP_SKB_EGRESS].prog_array_map, options[PKTBUF_CGROUP_SKB_EGRESS].index);
     case PKTBUF_TLS:
         return bpf_tail_call_compat(pkt.ctx, options[PKTBUF_TLS].prog_array_map, options[PKTBUF_TLS].index);
     case PKTBUF_KPROBE:
