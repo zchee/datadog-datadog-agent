@@ -41,11 +41,80 @@ int socket__protocol_dispatcher(struct __sk_buff *skb) {
     return 0;
 }
 
+SEC("classifier/egress")
+int classifier__egress(struct __sk_buff *skb)
+{
+    log_debug("classifier__egress len %u pkt_type %u", skb->len, skb->pkt_type);
+    // log_debug("classifier_egress tup: remote: %08x (%u)", skb->remote_ip4, skb->remote_port);
+    // log_debug("classifier_egress tup:  local: %08x (%u)", skb->local_ip4, skb->local_port);
+    log_debug("classifier_egress: skb: %lx sk: %lx", (unsigned long)skb, (unsigned long)skb->sk);
+    log_debug("classifier_egress: cookie: %llx\n", bpf_get_socket_cookie(skb));
+
+    skb_info_t skb_info = {0};
+    conn_tuple_t skb_tup = {0};
+
+    // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
+    if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
+        return 0;
+    }
+
+    log_debug("classifier_egress tup: saddr: %08llx %08llx (%u)", skb_tup.saddr_h, skb_tup.saddr_l, skb_tup.sport);
+    log_debug("classifier_egress tup: daddr: %08llx %08llx (%u)", skb_tup.daddr_h, skb_tup.daddr_l, skb_tup.dport);
+
+    // XXX soft lockup in kernel with this
+    // struct bpf_sock *sock = skb->sk;
+    // if (sock) {
+    //u64 cookie = bpf_get_socket_cookie(skb);
+    //     long ret = bpf_map_update_elem(&sockhash, &cookie, sock, BPF_NOEXIST);
+    //     if (ret != 1000) {
+    //         log_debug("classifier__egress sockhash update ret %ld", ret);
+    //     }
+    // }
+    // log_debug("filter tup: netns: %08x pid: %u", skb_tup.netns, skb_tup.pid);
+
+    return 0;
+};
+
+SEC("classifier/ingress")
+int classifier__ingress(struct __sk_buff *skb)
+{
+    log_debug("classifier__ingress len %u pkt_type %u", skb->len, skb->pkt_type);
+    // log_debug("classifier_inegress tup: remote: %08x (%u)", skb->remote_ip4, skb->remote_port);
+    // log_debug("classifier_inegress tup:  local: %08x (%u)", skb->local_ip4, skb->local_port);
+    log_debug("classifier_ingress: skb: %lx sk: %lx", (unsigned long)skb, (unsigned long)skb->sk);
+    log_debug("classifier_ingress: cookie: %llx\n", bpf_get_socket_cookie(skb));
+
+    skb_info_t skb_info = {0};
+    conn_tuple_t skb_tup = {0};
+
+    // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
+    if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
+        return 0;
+    }
+
+    log_debug("classifier_ingress tup: saddr: %08llx %08llx (%u)", skb_tup.saddr_h, skb_tup.saddr_l, skb_tup.sport);
+    log_debug("classifier_ingress tup: daddr: %08llx %08llx (%u)", skb_tup.daddr_h, skb_tup.daddr_l, skb_tup.dport);
+
+
+    // XXX soft lockup in kernel with this
+    // struct bpf_sock *sock = skb->sk;
+    // if (sock) {
+    // u64 cookie = bpf_get_socket_cookie(skb);
+    //     long ret = bpf_map_update_elem(&sockhash, &cookie, sock, BPF_NOEXIST);
+    //     if (ret != 1000) {
+    //         log_debug("classifier__egress sockhash update ret %ld", ret);
+    //     }
+    // }
+    // log_debug("filter tup: netns: %08x pid: %u", skb_tup.netns, skb_tup.pid);
+
+    return 0;
+};
+
 SEC("cgroup_skb/egress/sockmap_filter")
 int cgroup_skb__egress_filter(struct __sk_buff *skb) {
     log_debug("cgroup_skb__egress_filter len %u pkt_type %u", skb->len, skb->pkt_type);
-    log_debug("sockmap_filter tup: remote: %08x (%u)", skb->remote_ip4, skb->remote_port);
-    log_debug("sockmap_filter tup:  local: %08x (%u)", skb->local_ip4, skb->local_port);
+    log_debug("cgroup_skb__egress_filter tup: remote: %08x (%u)", skb->remote_ip4, skb->remote_port);
+    log_debug("cgroup_skb__egress_filter tup:  local: %08x (%u)", skb->local_ip4, skb->local_port);
     log_debug("cgroup_skb__egress_filter: skb: %lx sk: %lx", (unsigned long)skb, (unsigned long)skb->sk);
     log_debug("cgroup_skb__egress_filter: cookie: %llx\n", bpf_get_socket_cookie(skb));
 

@@ -118,6 +118,22 @@ func newEBPFProgram(c *config.Config, connectionProtocolMap *ebpf.Map) (*ebpfPro
 		Probes: []*manager.Probe{
 			{
 				ProbeIdentificationPair: manager.ProbeIdentificationPair{
+					EBPFFuncName: "classifier__egress",
+					UID:          probeUID,
+				},
+				IfName:           "lo",
+				NetworkDirection: manager.Egress,
+			},
+			{
+				ProbeIdentificationPair: manager.ProbeIdentificationPair{
+					EBPFFuncName: "classifier__ingress",
+					UID:          probeUID,
+				},
+				IfName:           "lo",
+				NetworkDirection: manager.Ingress,
+			},
+			{
+				ProbeIdentificationPair: manager.ProbeIdentificationPair{
 					EBPFFuncName: "kprobe__tcp_sendmsg",
 					UID:          probeUID,
 				},
