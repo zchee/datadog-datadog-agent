@@ -1251,8 +1251,8 @@ func (s *usmHTTP2Suite) TestRawTraffic() {
 			require.NoError(t, writeInput(c, 500*time.Millisecond, tt.messageBuilder()...))
 
 			res := make(map[usmhttp.Key]int)
-			assert.Eventually(t, func() bool {
-				return validateStats(usmMonitor, res, tt.expectedEndpoints, s.isTLS)
+			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+				validateStats(usmMonitor, collect, res, tt.expectedEndpoints, s.isTLS)
 			}, time.Second*5, time.Millisecond*100, "%v != %v", res, tt.expectedEndpoints)
 			if t.Failed() {
 				for key := range tt.expectedEndpoints {
@@ -1325,13 +1325,11 @@ func (s *usmHTTP2Suite) TestDynamicTable() {
 			require.NoError(t, writeInput(c, 500*time.Millisecond, tt.messageBuilder()))
 
 			res := make(map[usmhttp.Key]int)
-			assert.Eventually(t, func() bool {
+			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
 				// validate the stats we get
-				require.True(t, validateStats(usmMonitor, res, tt.expectedEndpoints, s.isTLS))
+				validateStats(usmMonitor, collect, res, tt.expectedEndpoints, s.isTLS)
 
-				validateDynamicTableMap(t, usmMonitor.ebpfProgram, tt.expectedDynamicTablePathIndexes)
-
-				return true
+				validateDynamicTableMap(collect, usmMonitor.ebpfProgram, tt.expectedDynamicTablePathIndexes)
 			}, time.Second*5, time.Millisecond*100, "%v != %v", res, tt.expectedEndpoints)
 			if t.Failed() {
 				for key := range tt.expectedEndpoints {
@@ -1481,13 +1479,11 @@ func (s *usmHTTP2Suite) TestRawHuffmanEncoding() {
 			require.NoError(t, writeInput(c, 500*time.Millisecond, tt.messageBuilder()))
 
 			res := make(map[usmhttp.Key]int)
-			assert.Eventually(t, func() bool {
+			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
 				// validate the stats we get
-				if !validateStats(usmMonitor, res, tt.expectedEndpoints, s.isTLS) {
-					return false
-				}
+				validateStats(usmMonitor, collect, res, tt.expectedEndpoints, s.isTLS)
 
-				return validateHuffmanEncoded(t, usmMonitor.ebpfProgram, tt.expectedHuffmanEncoded)
+				validateHuffmanEncoded(collect, usmMonitor.ebpfProgram, tt.expectedHuffmanEncoded)
 			}, time.Second*5, time.Millisecond*100, "%v != %v", res, tt.expectedEndpoints)
 			if t.Failed() {
 				for key := range tt.expectedEndpoints {
@@ -1532,7 +1528,7 @@ func TestHTTP2InFlightMapCleaner(t *testing.T) {
 }
 
 // validateStats validates that the stats we get from the monitor are as expected.
-func validateStats(usmMonitor *Monitor, res, expectedEndpoints map[usmhttp.Key]int, isTLS bool) bool {
+func validateStats(usmMonitor *Monitor, collect *assert.CollectT, res, expectedEndpoints map[usmhttp.Key]int, isTLS bool) bool {
 	for key, stat := range getHTTPLikeProtocolStats(usmMonitor, protocols.HTTP2) {
 		if key.DstPort == srvPort || key.SrcPort == srvPort {
 			statusCode := testutil.StatusFromPath(key.Path.Content.Get())
@@ -1559,18 +1555,12 @@ func validateStats(usmMonitor *Monitor, res, expectedEndpoints map[usmhttp.Key]i
 		}
 	}
 
-	if len(res) != len(expectedEndpoints) {
-		return false
-	}
+	assert.Equal(collect, len(expectedEndpoints), len(res))
 
 	for key, endpointCount := range res {
 		_, ok := expectedEndpoints[key]
-		if !ok {
-			return false
-		}
-		if endpointCount != expectedEndpoints[key] {
-			return false
-		}
+		assert.True(collect, ok)
+		assert.Equal(collect, expectedEndpoints[key]*2, endpointCount)
 	}
 	return true
 }
@@ -1857,7 +1847,7 @@ func getClientsIndex(index, totalCount int) int {
 }
 
 // validateDynamicTableMap validates that the dynamic table map contains the expected indexes.
-func validateDynamicTableMap(t *testing.T, ebpfProgram *ebpfProgram, expectedDynamicTablePathIndexes []int) {
+func validateDynamicTableMap(t *assert.CollectT, ebpfProgram *ebpfProgram, expectedDynamicTablePathIndexes []int) {
 	dynamicTableMap, _, err := ebpfProgram.GetMap("http2_dynamic_table")
 	require.NoError(t, err)
 	resultIndexes := make([]int, 0)
@@ -1888,12 +1878,9 @@ func getRemainderTableMapKeys(t *testing.T, ebpfProgram *ebpfProgram) []usmhttp.
 }
 
 // validateHuffmanEncoded validates that the dynamic table map contains the expected huffman encoded paths.
-func validateHuffmanEncoded(t *testing.T, ebpfProgram *ebpfProgram, expectedHuffmanEncoded map[int]bool) bool {
+func validateHuffmanEncoded(collect *assert.CollectT, ebpfProgram *ebpfProgram, expectedHuffmanEncoded map[int]bool) {
 	dynamicTableMap, _, err := ebpfProgram.GetMap("http2_dynamic_table")
-	if err != nil {
-		t.Logf("could not get dynamic table map: %v", err)
-		return false
-	}
+	require.NoError(collect, err)
 	resultEncodedPaths := make(map[int]bool, 0)
 
 	var key usmhttp2.HTTP2DynamicTableIndex
@@ -1903,7 +1890,7 @@ func validateHuffmanEncoded(t *testing.T, ebpfProgram *ebpfProgram, expectedHuff
 		resultEncodedPaths[int(value.String_len)] = value.Is_huffman_encoded
 	}
 	// we compare the size of the path and if it is huffman encoded.
-	return reflect.DeepEqual(expectedHuffmanEncoded, resultEncodedPaths)
+	assert.True(collect, reflect.DeepEqual(expectedHuffmanEncoded, resultEncodedPaths))
 }
 
 // dialHTTP2Server dials the http2 server and performs the initial handshake
