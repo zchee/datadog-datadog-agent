@@ -2036,3 +2036,23 @@ def copy_ebpf_and_related_files(ctx: Context, target: Path | str, arch: Arch | N
 
     if copy_usm_jar:
         ctx.run(f"cp pkg/network/protocols/tls/java/agent-usm.jar {target}")
+
+
+@task
+def build_usm_debugger(ctx):
+    build_object_files(ctx)
+
+    build_dir = os.path.join("pkg", "ebpf", "bytecode", "build", platform.machine())
+
+    # copy compilation artifacts to the debugger root directory for the purposes of embedding
+    usm_programs = [
+        os.path.join(build_dir, "co-re", "usm-debug.o"),
+        os.path.join(build_dir, "co-re", "shared-libraries-debug.o"),
+    ]
+
+    embedded_dir = os.path.join(".", "pkg", "network", "usm", "debugger", "cmd")
+
+    for p in usm_programs:
+        shutil.copy(p, embedded_dir)
+
+    ctx.run('go build -tags="linux_bpf" -o bin/usm-debugger ./pkg/network/usm/debugger/cmd/')
