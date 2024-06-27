@@ -6,14 +6,14 @@
 #include "protocols/http2/defs.h"
 
 // Represents the maximum number of frames we'll process in a single tail call in `handle_eos_frames` program.
-#define HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL 20
+#define HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL 200
 // Represents the maximum number of tail calls to process EOS frames.
 // Currently we have up to 120 frames in a packet, thus 1 tail call is enough.
 #define HTTP2_MAX_TAIL_CALLS_FOR_EOS_PARSER 2
 #define HTTP2_MAX_FRAMES_FOR_EOS_PARSER (HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL * HTTP2_MAX_TAIL_CALLS_FOR_EOS_PARSER)
 
 // Represents the maximum number of frames we'll process in a single tail call in `handle_headers_frames` program.
-#define HTTP2_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL 8
+#define HTTP2_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL 16
 // Represents the maximum number of tail calls to process headers frames.
 // Currently we have up to 240 frames in a packet, thus 15 (15*16 = 240) tail calls is enough.
 #define HTTP2_MAX_TAIL_CALLS_FOR_HEADERS_PARSER 15
@@ -26,7 +26,7 @@
 // whose value is computed with following formula:
 // HTTP2_MAX_FRAMES_ITERATIONS = HTTP2_MAX_FRAMES_TO_FILTER * HTTP2_MAX_TAIL_CALLS_FOR_FRAMES_FILTER
 #define HTTP2_MAX_TAIL_CALLS_FOR_FRAMES_FILTER 1
-#define HTTP2_MAX_FRAMES_TO_FILTER 10
+#define HTTP2_MAX_FRAMES_TO_FILTER 240
 
 // Represents the maximum number octets we will process in the dynamic table update size.
 #define HTTP2_MAX_DYNAMIC_TABLE_UPDATE_ITERATIONS 5
@@ -34,7 +34,7 @@
 // A limit of max non pseudo headers which we process in the request/response.
 // In HTTP/2 we know that we start with pseudo headers and then we have non pseudo headers.
 // The max number of headers we process in the request/response is HTTP2_MAX_HEADERS_COUNT_FOR_FILTERING + HTTP2_MAX_PSEUDO_HEADERS_COUNT_FOR_FILTERING.
-#define HTTP2_MAX_HEADERS_COUNT_FOR_FILTERING 12
+#define HTTP2_MAX_HEADERS_COUNT_FOR_FILTERING 33
 
 // A limit of max pseudo headers which we process in the request/response.
 #define HTTP2_MAX_PSEUDO_HEADERS_COUNT_FOR_FILTERING 4

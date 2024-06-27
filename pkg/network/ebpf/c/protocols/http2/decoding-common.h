@@ -12,7 +12,7 @@
 #include "protocols/http2/maps-defs.h"
 #include "protocols/classification/defs.h"
 
-#define HEXTRA_DEBUG
+// #define HEXTRA_DEBUG
 #ifdef HEXTRA_DEBUG
 #define hextra_debug(fmt, ...) log_debug("http2: " fmt, ##__VA_ARGS__)
 #else
