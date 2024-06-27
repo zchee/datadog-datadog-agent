@@ -1231,6 +1231,7 @@ def get_ebpf_build_flags(unit_test=False, arch: Arch | None = None):
             '-D__BPF_TRACING__',
             '-DKBUILD_MODNAME=\\"ddsysprobe\\"',
             '-DCOMPILE_PREBUILT',
+            '-DBPF_NO_GLOBAL_DATA',
         ]
     )
     if arch is not None:
