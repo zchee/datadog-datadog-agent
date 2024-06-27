@@ -9,9 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DataDog/test-infra-definitions/common/config"
 	"github.com/DataDog/test-infra-definitions/components/datadog/apps/cpustress"
+	"github.com/DataDog/test-infra-definitions/components/datadog/apps/nginx"
+	"github.com/DataDog/test-infra-definitions/components/datadog/apps/redis"
 	"github.com/DataDog/test-infra-definitions/components/datadog/ecsagentparams"
+	fakeintakeComp "github.com/DataDog/test-infra-definitions/components/datadog/fakeintake"
 	"github.com/DataDog/test-infra-definitions/resources/aws"
+	"github.com/DataDog/test-infra-definitions/scenarios/aws/fakeintake"
+	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/ssm"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/stretchr/testify/assert"
 
@@ -38,7 +44,8 @@ func ecsCPUStressProvisioner() e2e.PulumiEnvRunFunc[ecsCPUStressEnv] {
 		env.ECS.AwsEnvironment = &awsEnv
 
 		params := ecs.GetProvisionerParams(
-			ecs.WithECSLinuxECSOptimizedNodeGroup(),
+			//ecs.WithECSLinuxECSOptimizedNodeGroup(),
+			ecs.WithECSFargateCapacityProvider(),
 			ecs.WithAgentOptions(
 				ecsagentparams.WithAgentServiceEnvVariable("DD_PROCESS_CONFIG_PROCESS_COLLECTION_ENABLED", "true"),
 			),
@@ -49,6 +56,30 @@ func ecsCPUStressProvisioner() e2e.PulumiEnvRunFunc[ecsCPUStressEnv] {
 		}
 
 		if _, err := cpustress.EcsAppDefinition(awsEnv, env.ClusterArn); err != nil {
+			return err
+		}
+
+		var fakeIntake *fakeintakeComp.Fakeintake
+		if fakeIntake, err = fakeintake.NewECSFargateInstance(awsEnv, "ecs"); err != nil {
+			return err
+		}
+		if err := fakeIntake.Export(awsEnv.Ctx(), nil); err != nil {
+			return err
+		}
+
+		apiKeyParam, err := ssm.NewParameter(ctx, awsEnv.Namer.ResourceName("agent-apikey"), &ssm.ParameterArgs{
+			Name:      awsEnv.CommonNamer().DisplayName(1011, pulumi.String("agent-apikey")),
+			Type:      ssm.ParameterTypeSecureString,
+			Overwrite: pulumi.Bool(true),
+			Value:     awsEnv.AgentAPIKey(),
+		}, awsEnv.WithProviders(config.ProviderAWS))
+
+		// Deploy Fargate Agents
+		if _, err := redis.FargateAppDefinition(awsEnv, env.ClusterArn, apiKeyParam.Name, fakeIntake); err != nil {
+			return err
+		}
+
+		if _, err = nginx.FargateAppDefinition(awsEnv, env.ClusterArn, apiKeyParam.Name, fakeIntake); err != nil {
 			return err
 		}
 
