@@ -74,7 +74,7 @@ func getConfiguration() *networkconfig.Config {
 
 	// run debug version of the eBPF program
 	c.BPFDebug = true
-	c.EnableHTTPMonitoring = true
+	c.EnableHTTP2Monitoring = true
 
 	// don't buffer data in userspace
 	// this is to ensure that we won't inadvertently trigger an OOM kill
