@@ -198,8 +198,8 @@ func Consumer() sprobe.EventConsumerInterface {
 type eventMonitor struct {
 	sync.Mutex
 
-	handlers      []ProcessEventHandler
-	packetHandler PacketEventHandler
+	handlers       []ProcessEventHandler
+	packetHandlers []PacketEventHandler
 }
 
 func newEventMonitor() (*eventMonitor, error) {
@@ -219,11 +219,13 @@ func (e *eventMonitor) HandlePacket(ev *model.Event) {
 	e.Lock()
 	defer e.Unlock()
 
-	e.packetHandler.HandlePacket(ev)
+	for _, handler := range e.packetHandlers {
+		handler.HandlePacket(ev)
+	}
 }
 
 func (e *eventMonitor) RegisterPacketHandler(handler PacketEventHandler) {
-	e.packetHandler = handler
+	e.packetHandlers = append(e.packetHandlers, handler)
 }
 
 func (e *eventMonitor) RegisterHandler(handler ProcessEventHandler) {
