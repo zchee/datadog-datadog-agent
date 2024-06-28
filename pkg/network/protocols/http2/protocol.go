@@ -86,11 +86,11 @@ const (
 	cgroupSkbDynamicTableCleaner   = "cgroup_skb__http2_dynamic_table_cleaner"
 	cgroupSkbEOSParserTailCall     = "cgroup_skb__http2_eos_parser"
 
-	skMsgFirstFrameTailCall    = "sk_msg__http2_handle_first_frame"
-	skMsgFilterTailCall        = "sk_msg__http2_frame_filter"
-	skMsgHeadersParserTailCall = "sk_msg__http2_headers_parser"
-	skMsgDynamicTableCleaner   = "sk_msg__http2_dynamic_table_cleaner"
-	skMsgEOSParserTailCall     = "sk_msg__http2_eos_parser"
+	// skMsgFirstFrameTailCall    = "sk_msg__http2_handle_first_frame"
+	// skMsgFilterTailCall        = "sk_msg__http2_frame_filter"
+	// skMsgHeadersParserTailCall = "sk_msg__http2_headers_parser"
+	// skMsgDynamicTableCleaner   = "sk_msg__http2_dynamic_table_cleaner"
+	// skMsgEOSParserTailCall     = "sk_msg__http2_eos_parser"
 )
 
 // Spec is the protocol spec for HTTP/2.

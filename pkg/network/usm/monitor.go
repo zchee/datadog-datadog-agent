@@ -11,8 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -61,32 +59,32 @@ type Monitor struct {
 	lastUpdateTime *atomic.Int64
 }
 
-func findScopeFiles(root string) ([]string, error) {
-	var scopeFiles []string
-
-	// Walk through the directory tree starting from the root path
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		// Check if the path matches the pattern "*.scope"
-		matched, err := filepath.Match("*.scope", info.Name())
-		if err != nil {
-			return err
-		}
-		// If the path matches, add it to the scopeFiles slice
-		if matched {
-			scopeFiles = append(scopeFiles, path)
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return scopeFiles, nil
-}
+// func findScopeFiles(root string) ([]string, error) {
+// 	var scopeFiles []string
+//
+// 	// Walk through the directory tree starting from the root path
+// 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+// 		if err != nil {
+// 			return err
+// 		}
+// 		// Check if the path matches the pattern "*.scope"
+// 		matched, err := filepath.Match("*.scope", info.Name())
+// 		if err != nil {
+// 			return err
+// 		}
+// 		// If the path matches, add it to the scopeFiles slice
+// 		if matched {
+// 			scopeFiles = append(scopeFiles, path)
+// 		}
+// 		return nil
+// 	})
+//
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return scopeFiles, nil
+// }
 
 // NewMonitor returns a new Monitor instance
 func NewMonitor(c *config.Config, connectionProtocolMap *ebpf.Map) (m *Monitor, err error) {

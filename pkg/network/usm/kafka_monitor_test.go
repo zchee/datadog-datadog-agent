@@ -177,11 +177,11 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	// the data comes from uprobes on the binary.
 	fixCount := func(count int) int {
 		return count
-		if tls {
-			return count
-		}
+		// if tls {
+		// 	return count
+		// }
 
-		return count * 2
+		// return count * 2
 	}
 
 	tmp, found := version.LookupMaxKeyVersion(kafka.FetchAPIKey)
