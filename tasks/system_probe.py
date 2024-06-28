@@ -2058,10 +2058,13 @@ def copy_ebpf_and_related_files(ctx: Context, target: Path | str, arch: Arch | N
 
 
 @task
-def build_usm_debugger(ctx):
+def build_usm_debugger(ctx,
+    arch: str = CURRENT_ARCH,
+    strip_binary=False,
+):
     build_object_files(ctx)
 
-    build_dir = os.path.join("pkg", "ebpf", "bytecode", "build", platform.machine())
+    build_dir = os.path.join("pkg", "ebpf", "bytecode", "build", arch)
 
     # copy compilation artifacts to the debugger root directory for the purposes of embedding
     usm_programs = [
@@ -2072,6 +2075,21 @@ def build_usm_debugger(ctx):
     embedded_dir = os.path.join(".", "pkg", "network", "usm", "debugger", "cmd")
 
     for p in usm_programs:
+        print(p)
         shutil.copy(p, embedded_dir)
 
-    ctx.run('go build -tags="linux_bpf" -o bin/usm-debugger ./pkg/network/usm/debugger/cmd/')
+    arch_obj = Arch.from_str(arch)
+    ldflags, gcflags, env = get_build_flags(
+        ctx, arch=arch_obj
+    )
+
+    cmd = 'go build -tags="linux_bpf" -o bin/usm-debugger -ldflags="{ldflags}" ./pkg/network/usm/debugger/cmd/'
+
+    if strip_binary:
+        ldflags += ' -s -w'
+
+    args = {
+        "ldflags": ldflags,
+    }
+
+    ctx.run(cmd.format(**args), env=env)
