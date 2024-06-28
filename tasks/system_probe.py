@@ -2058,7 +2058,8 @@ def copy_ebpf_and_related_files(ctx: Context, target: Path | str, arch: Arch | N
 
 
 @task
-def build_usm_debugger(ctx,
+def build_usm_debugger(
+    ctx,
     arch: str = CURRENT_ARCH,
     strip_binary=False,
 ):
@@ -2079,9 +2080,7 @@ def build_usm_debugger(ctx,
         shutil.copy(p, embedded_dir)
 
     arch_obj = Arch.from_str(arch)
-    ldflags, gcflags, env = get_build_flags(
-        ctx, arch=arch_obj
-    )
+    ldflags, gcflags, env = get_build_flags(ctx, arch=arch_obj)
 
     cmd = 'go build -tags="linux_bpf" -o bin/usm-debugger -ldflags="{ldflags}" ./pkg/network/usm/debugger/cmd/'
 
