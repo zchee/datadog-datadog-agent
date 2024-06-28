@@ -340,7 +340,17 @@ int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t 
     log_debug("kprobe/tcp_recvmsg: iter_type=%u", iter_type);
 
     void *ubuf;
-    BPF_CORE_READ_INTO(&ubuf, (struct msghdr___new *)msg, msg_iter.ubuf);
+
+    if (bpf_core_field_exists(((struct msghdr___new *)msg)->msg_iter.ubuf)) {
+        BPF_CORE_READ_INTO(&ubuf, (struct msghdr___new *)msg, msg_iter.ubuf);
+    } else {
+        size_t count = 0;
+
+        BPF_CORE_READ_INTO(&ubuf, msg, msg_iter.iov, iov_base);
+        BPF_CORE_READ_INTO(&count, msg, msg_iter.count);
+        log_debug("kprobe/tcp_recvmsg: count=%zu", count);
+    }
+
     // BPF_CORE_READ_INTO(&iter_type, (struct msghdr_new *)msg, msg_iter.iter_type);
 
     // int x;
