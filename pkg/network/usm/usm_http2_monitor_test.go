@@ -1560,7 +1560,7 @@ func validateStats(usmMonitor *Monitor, collect *assert.CollectT, res, expectedE
 	for key, endpointCount := range res {
 		_, ok := expectedEndpoints[key]
 		assert.True(collect, ok)
-		assert.Equal(collect, expectedEndpoints[key]*2, endpointCount)
+		assert.Equal(collect, expectedEndpoints[key]*1, endpointCount)
 	}
 	return true
 }

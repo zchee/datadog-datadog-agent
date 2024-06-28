@@ -309,16 +309,6 @@ int sockops__sockops(struct bpf_sock_ops *skops) {
      return 0;
  }
  
-
-SEC("kprobe/tcp_sendmsg")
-int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg, struct sock *sk) {
-    log_debug("kprobe/tcp_sendmsg: sk=%lx", (unsigned long)sk);
-    // map connection tuple during SSL_do_handshake(ctx)
-    map_ssl_ctx_to_sock(sk);
-
-    return 0;
-}
-
 struct iov_iter___new {
     void *ubuf;
 };
@@ -351,6 +341,9 @@ int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t 
         log_debug("kprobe/tcp_recvmsg: count=%zu", count);
     }
 
+    log_debug("kprobe/tcp_recvmsg: ubuf=%lx", (unsigned long)ubuf);
+
+
     // BPF_CORE_READ_INTO(&iter_type, (struct msghdr_new *)msg, msg_iter.iter_type);
 
     // int x;
@@ -366,8 +359,6 @@ int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t 
         log_debug("kprobe/tcp_recvmsg: no namelen2");
     }
 #endif
-
-    log_debug("kprobe/tcp_recvmsg: ubuf=%lx", (unsigned long)ubuf);
 
     tcp_kprobe_state_t state = {
         .sock = sk,
@@ -399,13 +390,82 @@ int BPF_KRETPROBE(kretprobe__tcp_recvmsg, int ret) {
         bpf_probe_read_user(&data1, sizeof(data1), state->buffer + sizeof(data1));
         log_debug("recvmsg data=%016llx %016llx", bpf_be64_to_cpu(data0), bpf_be64_to_cpu(data1));
 
-        kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, ret);
+        kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, ret, true);
     }
 
     bpf_map_delete_elem(&tcp_kprobe_state, &pid_tgid);
 
     return 0;
 }
+
+SEC("kprobe/tcp_sendmsg")
+int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg, struct sock *sk, struct msghdr *msg, size_t size) {
+    log_debug("kprobe/tcp_sendmsg: sk=%lx msghdr=%lx!\n", (unsigned long)sk, (unsigned long)msg);
+    log_debug("kprobe/tcp_sendmsg: size=%lu\n", size);
+
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    u32 *splicing = bpf_map_lookup_elem(&tcp_splicing, &pid_tgid);
+    if (splicing) {
+        log_debug("kprobe/tcp_sendmsg: ignore due to splice");
+        return 0;
+    }
+
+    // map connection tuple during SSL_do_handshake(ctx)
+    map_ssl_ctx_to_sock(sk);
+
+    u8 iter_type;
+    BPF_CORE_READ_INTO(&iter_type, msg, msg_iter.iter_type);
+    log_debug("kprobe/tcp_sendmsg: iter_type=%u", iter_type);
+
+    void *ubuf;
+
+    if (bpf_core_field_exists(((struct msghdr___new *)msg)->msg_iter.ubuf)) {
+        BPF_CORE_READ_INTO(&ubuf, (struct msghdr___new *)msg, msg_iter.ubuf);
+    } else {
+        size_t count = 0;
+
+        BPF_CORE_READ_INTO(&ubuf, msg, msg_iter.iov, iov_base);
+        BPF_CORE_READ_INTO(&count, msg, msg_iter.count);
+        log_debug("kprobe/tcp_sendmsg: count=%zu", count);
+    }
+
+    log_debug("kprobe/tcp_sendmsg: ubuf=%lx", (unsigned long)ubuf);
+
+    tcp_kprobe_state_t state = {
+        .sock = sk,
+        .buffer = ubuf,
+    };
+    bpf_map_update_with_telemetry(tcp_kprobe_state, &pid_tgid, &state, BPF_ANY);
+
+    return 0;
+}
+
+SEC("kretprobe/tcp_sendmsg")
+int BPF_KRETPROBE(kretprobe__tcp_sendmsg, int ret) {
+    log_debug("kretprobe/tcp_sendmsg ret=%d", ret);
+
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    tcp_kprobe_state_t *state = bpf_map_lookup_elem(&tcp_kprobe_state, &pid_tgid);
+    if (!state) {
+        log_debug("kretprobe/tcp_sendmsg no state");
+        return 0;
+    }
+
+    if (ret > 0) {
+        u64 data0 = 0;
+        u64 data1 = 0;
+        bpf_probe_read_user(&data0, sizeof(data0), state->buffer);
+        bpf_probe_read_user(&data1, sizeof(data1), state->buffer + sizeof(data1));
+        log_debug("sendmsg data=%016llx %016llx", bpf_be64_to_cpu(data0), bpf_be64_to_cpu(data1));
+
+        kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, ret, false);
+    }
+
+    bpf_map_delete_elem(&tcp_kprobe_state, &pid_tgid);
+
+    return 0;
+}
+
 
 SEC("kprobe/tcp_splice_read")
 int BPF_KPROBE(kprobe__tcp_splice_read, struct socket *sock) {
@@ -444,6 +504,27 @@ int BPF_KRETPROBE(kretprobe__simple_copy_to_iter, size_t bytes) {
 
     // log_debug("kretprobe/simple_copy_to_iter found state");
     // kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, bytes);
+
+    return 0;
+}
+
+SEC("kprobe/generic_splice_sendpage")
+int BPF_KPROBE(kprobe__generic_splice_sendpage) {
+    log_debug("kprobe/generic_splice_sendpage\n");
+
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    __u32 splicing = 1;
+    bpf_map_update_elem(&tcp_splicing, &pid_tgid, &splicing, BPF_ANY);
+
+    return 0;
+}
+
+SEC("kretprobe/generic_splice_sendpage")
+int BPF_KRETPROBE(kretprobe__generic_splice_sendpage) {
+    log_debug("kretprobe/generic_splice_sendpage");
+
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    bpf_map_delete_elem(&tcp_splicing, &pid_tgid);
 
     return 0;
 }

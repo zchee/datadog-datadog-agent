@@ -13,7 +13,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -137,38 +136,37 @@ func NewMonitor(c *config.Config, connectionProtocolMap *ebpf.Map) (m *Monitor, 
 			probe.SockMap = sockmap
 		}
 
-		cgroupList, err := findScopeFiles("/sys/fs/cgroup")
-		if err != nil {
-			return nil, fmt.Errorf("error finding cgroup scope files: %s", err)
-		}
+		// cgroupList, err := findScopeFiles("/sys/fs/cgroup")
+		// if err != nil {
+		// 	return nil, fmt.Errorf("error finding cgroup scope files: %s", err)
+		// }
 
-		cgroupskb, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: "cgroup_skb__egress_filter", UID: probeUID})
-		cgroupskb.CGroupPath = "/sys/fs/cgroup"
+		// cgroupskb, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: "cgroup_skb__egress_filter", UID: probeUID})
+		// cgroupskb.CGroupPath = "/sys/fs/cgroup"
 
-		sockops, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: sockopsFunction, UID: probeUID})
-		sockops.CGroupPath = "/sys/fs/cgroup"
-		for _, cgroup := range cgroupList {
-			if strings.Contains(cgroup, "docker") {
-				// fmt.Println("skipping", cgroup)
-				continue
-			}
-			if cgroup != "/sys/fs/cgroup/user.slice/user-0.slice/session-1.scope" {
-				// fmt.Println("skipping", cgroup)
-				continue
-			}
-			uid, _ := utils.NewPathIdentifier(cgroup)
-			probe := &manager.Probe{
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: sockopsFunction,
-					UID:          uid.Key()[:10],
-				},
-				CGroupPath: cgroup,
-			}
-			fmt.Println(cgroup)
-			if err := mgr.AddHook("", probe); err != nil {
-				log.Errorf("error adding hook: %s", err)
-			}
-		}
+		// sockops, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: sockopsFunction, UID: probeUID})
+		// sockops.CGroupPath = "/sys/fs/cgroup"
+		// for _, cgroup := range cgroupList {
+		// 	if strings.Contains(cgroup, "docker") {
+		// 		// fmt.Println("skipping", cgroup)
+		// 		continue
+		// 	}
+		// 	if cgroup != "/sys/fs/cgroup/user.slice/user-0.slice/session-1.scope" {
+		// 		// fmt.Println("skipping", cgroup)
+		// 		continue
+		// 	}
+		// 	uid, _ := utils.NewPathIdentifier(cgroup)
+		// 	probe := &manager.Probe{
+		// 		ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 			EBPFFuncName: sockopsFunction,
+		// 			UID:          uid.Key()[:10],
+		// 		},
+		// 		CGroupPath: cgroup,
+		// 	}
+		// 	fmt.Println(cgroup)
+		// 	if err := mgr.AddHook("", probe); err != nil {
+		// 		log.Errorf("error adding hook: %s", err)
+		// 	}
 	} else {
 		filter, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: protocolDispatcherSocketFilterFunction, UID: probeUID})
 		if filter == nil {

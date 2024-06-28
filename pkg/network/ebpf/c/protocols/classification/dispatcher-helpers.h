@@ -223,7 +223,7 @@ static __always_inline void protocol_dispatcher_entrypoint_sk_msg(struct sk_msg_
     }
 }
 
-static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs *ctx, struct sock *sock, const void *buffer, size_t bytes) {
+static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs *ctx, struct sock *sock, const void *buffer, size_t bytes, bool receive) {
     conn_tuple_t tup = {0};
 
     u64 pid_tgid = bpf_get_current_pid_tgid();
@@ -233,42 +233,47 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
         return;
     }
 
-    struct sockhash_key key = {
-        .remote_ip4 = tup.daddr_l,
-        .local_ip4 = tup.saddr_l,
-        .remote_port = bpf_ntohl(tup.dport),
-        .local_port = tup.sport,
-    };
+    // struct sockhash_key key = {
+    //     .remote_ip4 = tup.daddr_l,
+    //     .local_ip4 = tup.saddr_l,
+    //     .remote_port = bpf_ntohl(tup.dport),
+    //     .local_port = tup.sport,
+    // };
 
-    log_debug("kprobe key: remote: %x (%u)", key.remote_ip4, key.remote_port);
-    log_debug("kprobe key:  local: %x (%u)", key.local_ip4, key.local_port);
+    // log_debug("kprobe key: remote: %x (%u)", key.remote_ip4, key.remote_port);
+    // log_debug("kprobe key:  local: %x (%u)", key.local_ip4, key.local_port);
 
-    __u64 tmp_h;
-    __u64 tmp_l;
 
-    // The tup data is read from the socker so source is always local but here
-    // we are receveing data on the socket so flip things around.  Maybe this
-    // could/should even come from the skb.
-    tmp_h = tup.daddr_h;
-    tmp_l = tup.daddr_l;
-    tup.daddr_h = tup.saddr_h;
-    tup.daddr_l = tup.saddr_l;
-    tup.saddr_h = tmp_h;
-    tup.saddr_l = tmp_l;
+    if (receive) {
+        __u64 tmp_h;
+        __u64 tmp_l;
 
-    __u16 tmp_port;
-    tmp_port = tup.dport;
-    tup.dport = tup.sport;
-    tup.sport = tmp_port;
+        // The tup data is read from the socker so source is always local but here
+        // we are receveing data on the socket so flip things around.  Maybe this
+        // could/should even come from the skb.
+        tmp_h = tup.daddr_h;
+        tmp_l = tup.daddr_l;
+        tup.daddr_h = tup.saddr_h;
+        tup.daddr_l = tup.saddr_l;
+        tup.saddr_h = tmp_h;
+        tup.saddr_l = tmp_l;
 
-    u64 *cookie = bpf_map_lookup_elem(&socket_cookie_hash, &key);
-    if (!cookie) {
-        log_debug("kprobe_protocol_dipatcher_entrypoint: no cookie");
-        return;
+        __u16 tmp_port;
+        tmp_port = tup.dport;
+        tup.dport = tup.sport;
+        tup.sport = tmp_port;
     }
 
-    tup.pid = *cookie >> 32;
-    tup.netns = *cookie;
+    // u64 *cookie = bpf_map_lookup_elem(&socket_cookie_hash, &key);
+    // if (!cookie) {
+    //     log_debug("kprobe_protocol_dipatcher_entrypoint: no cookie");
+    //     return;
+    // }
+
+    // tup.pid = *cookie >> 32;
+    // tup.netns = *cookie;
+    // tup.netns = 0;
+    // tup.pid = pid_tgid >> 32;
 
     log_debug("kprobe tup: saddr: %08llx %08llx (%u)", tup.saddr_h, tup.saddr_l, tup.sport);
     log_debug("kprobe tup: daddr: %08llx %08llx (%u)", tup.daddr_h, tup.daddr_l, tup.dport);
@@ -350,6 +355,14 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
 
     if (cur_fragment_protocol != PROTOCOL_UNKNOWN) {
         // dispatch if possible
+
+
+        conn_tuple_t *final_tuple = &tup;
+        if (cur_fragment_protocol == PROTOCOL_HTTP) {
+            final_tuple = &normalized_tuple;
+
+        }
+
         const u32 zero = 0;
         kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
         if (args == NULL) {
@@ -358,7 +371,7 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
         }
 
         bpf_memset(args, 0, sizeof(*args));
-        bpf_memcpy(&args->tup, &tup, sizeof(conn_tuple_t));
+        bpf_memcpy(&args->tup, final_tuple, sizeof(conn_tuple_t));
         args->buffer_ptr = buffer;
         args->data_end = bytes;
 
