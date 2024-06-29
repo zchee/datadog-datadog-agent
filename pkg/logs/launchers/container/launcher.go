@@ -10,6 +10,7 @@ package container
 
 import (
 	"context"
+	"runtime/debug"
 
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/pkg/logs/auditor"
@@ -164,6 +165,7 @@ func (l *Launcher) startSource(source *sourcesPkg.LogSource) {
 // stopSource stops tailing from a source.
 func (l *Launcher) stopSource(source *sourcesPkg.LogSource) {
 	if tailer, exists := l.tailers[source]; exists {
+		log.Debugf("container launcher stops tailer for source %s: tailer=%#v: %s", source.Name, tailer, debug.Stack())
 		tailer.Stop()
 		delete(l.tailers, source)
 	}

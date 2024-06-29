@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -248,10 +249,12 @@ func (t *Tailer) StartFromBeginning() error {
 // Stop stops the tailer and returns only after all in-flight messages have
 // been flushed to the output channel.
 func (t *Tailer) Stop() {
+	log.Debugf("file tailer is going to stop: %s", debug.Stack())
 	t.stop <- struct{}{}
 	t.file.Source.RemoveInput(t.file.Path)
 	// wait for the decoder to be flushed
 	<-t.done
+	log.Debugf("file tailer stopped after flushing the decoder")
 }
 
 // StopAfterFileRotation prepares the tailer to stop after a timeout
@@ -328,7 +331,7 @@ func (t *Tailer) IsFinished() bool {
 // forwardMessages lets the Tailer forward log messages to the output channel
 func (t *Tailer) forwardMessages() {
 	defer func() {
-		// the decoder has successfully been flushed
+		log.Debugf("decoder has successfully been flushed for %s", t.fullpath)
 		t.isFinished.Store(true)
 		close(t.done)
 	}()
@@ -356,6 +359,7 @@ func (t *Tailer) forwardMessages() {
 		// XXX(remy): is it ok recreating a message like this here?
 		case t.outputChan <- message.NewMessage(output.GetContent(), origin, output.Status, output.IngestionTimestamp):
 		case <-t.forwardContext.Done():
+			log.Debugf("discard a message from %s", t.fullpath)
 		}
 	}
 }

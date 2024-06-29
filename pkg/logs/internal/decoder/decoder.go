@@ -7,6 +7,7 @@ package decoder
 
 import (
 	"regexp"
+	"runtime/debug"
 	"time"
 
 	"github.com/DataDog/datadog-agent/comp/logs/agent/config"
@@ -206,6 +207,7 @@ func (d *Decoder) Start() {
 func (d *Decoder) Stop() {
 	// stop the entire decoder by closing the input.  This will "bubble" through the
 	// components and eventually cause run() to finish, closing OutputChan.
+	log.Debugf("Decoder is going to close input channel: %s", debug.Stack())
 	close(d.InputChan)
 }
 
@@ -215,6 +217,7 @@ func (d *Decoder) run() {
 		// output channel
 		d.lineParser.flush()
 		d.lineHandler.flush()
+		log.Debugf("Decoder is going to close output channel")
 		close(d.OutputChan)
 	}()
 	for {

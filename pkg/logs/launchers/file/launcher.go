@@ -8,6 +8,7 @@ package file
 
 import (
 	"regexp"
+	"runtime/debug"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/util"
@@ -109,8 +110,10 @@ func (s *Launcher) run() {
 	for {
 		select {
 		case source := <-s.addedSources:
+			log.Debugf("Add a source: %s", source.Dump(false))
 			s.addSource(source)
 		case source := <-s.removedSources:
+			log.Debugf("Remove a source: %s", source.Dump(false))
 			s.removeSource(source)
 		case <-scanTicker.C:
 			s.cleanUpRotatedTailers()
@@ -145,6 +148,8 @@ func (s *Launcher) cleanup() {
 // For instance, when a file is logrotated, its tailer will keep tailing the rotated file.
 // The Scanner needs to stop that previous tailer, and start a new one for the new file.
 func (s *Launcher) scan() {
+	start := time.Now()
+	defer log.Debugf("Scan took %s", time.Since(start))
 	files := s.fileProvider.FilesToTail(s.validatePodContainerID, s.activeSources)
 	filesTailed := make(map[string]bool)
 	var allFiles []string
@@ -198,17 +203,17 @@ func (s *Launcher) scan() {
 
 	s.flarecontroller.SetAllFiles(allFiles)
 
+	stoppedTailerLen := 0
 	for _, tailer := range s.tailers.All() {
 		// stop all tailers which have not been selected
 		_, shouldTail := filesTailed[tailer.GetId()]
 		if !shouldTail {
+			stoppedTailerLen++
 			s.stopTailer(tailer)
 		}
 	}
 
 	tailersLen := s.tailers.Count()
-	log.Debugf("After stopping tailers, there are %d tailers running.\n", tailersLen)
-
 	for _, file := range files {
 		scanKey := file.GetScanKey()
 		isTailed := s.tailers.Contains(scanKey)
@@ -224,7 +229,7 @@ func (s *Launcher) scan() {
 			continue
 		}
 	}
-	log.Debugf("After starting new tailers, there are %d tailers running. Limit is %d.\n", tailersLen, s.tailingLimit)
+	log.Debugf("After stopping %d tailers, there are %d tailers running. Limit is %d.", stoppedTailerLen, tailersLen, s.tailingLimit)
 
 	// Check how many file handles the Agent process has open and log a warning if the process is coming close to the OS file limit
 	fileStats, err := util.GetProcessFileStats()
@@ -247,11 +252,13 @@ func (s *Launcher) cleanUpRotatedTailers() {
 // addSource keeps track of the new source and launch new tailers for this source.
 func (s *Launcher) addSource(source *sources.LogSource) {
 	s.activeSources = append(s.activeSources, source)
+	log.Debugf("file launcher launch a file tailer for %s: %s", source.Name, debug.Stack())
 	s.launchTailers(source)
 }
 
 // removeSource removes the source from cache.
 func (s *Launcher) removeSource(source *sources.LogSource) {
+	log.Debugf("file launcher removes a source from %s: %s", source.Name, debug.Stack())
 	for i, src := range s.activeSources {
 		if src == source {
 			// no need to stop the tailer here, it will be stopped in the next iteration of scan.
@@ -347,6 +354,7 @@ func (s *Launcher) handleTailingModeChange(tailerID string, currentTailingMode c
 
 // stopTailer stops the tailer
 func (s *Launcher) stopTailer(tailer *tailer.Tailer) {
+	log.Debugf("file lancuer stops tailer for %s", tailer.Identifier())
 	go tailer.Stop()
 	s.tailers.Remove(tailer)
 }
