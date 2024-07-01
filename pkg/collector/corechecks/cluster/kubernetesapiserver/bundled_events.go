@@ -14,16 +14,20 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/metrics/event"
 )
 
-func newBundledTransformer(clusterName string, taggerInstance tagger.Component) eventTransformer {
+func newBundledTransformer(clusterName string, taggerInstance tagger.Component, collectedTypes []collectedEventType, filteringEnabled bool) eventTransformer {
 	return &bundledTransformer{
-		clusterName:    clusterName,
-		taggerInstance: taggerInstance,
+		clusterName:      clusterName,
+		taggerInstance:   taggerInstance,
+		collectedTypes:   collectedTypes,
+		filteringEnabled: filteringEnabled,
 	}
 }
 
 type bundledTransformer struct {
-	clusterName    string
-	taggerInstance tagger.Component
+	clusterName      string
+	taggerInstance   tagger.Component
+	collectedTypes   []collectedEventType
+	filteringEnabled bool
 }
 
 func (c *bundledTransformer) Transform(events []*v1.Event) ([]event.Event, []error) {
@@ -45,6 +49,12 @@ func (c *bundledTransformer) Transform(events []*v1.Event) ([]event.Event, []err
 			event.Type,
 			event.Reason,
 		)
+
+		if c.filteringEnabled {
+			if !shouldCollect(event, c.collectedTypes) {
+				continue
+			}
+		}
 
 		id := buildBundleID(event)
 
