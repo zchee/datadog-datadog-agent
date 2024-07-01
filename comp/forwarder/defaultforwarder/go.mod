@@ -67,7 +67,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/atomic v1.11.0
-	go.uber.org/fx v1.18.2
+	go.uber.org/fx v1.22.1
 	golang.org/x/text v0.16.0
 )
 

@@ -47,7 +47,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/version v0.55.0-rc.3
 	github.com/gorilla/mux v1.8.1
 	github.com/stretchr/testify v1.9.0
-	go.uber.org/fx v1.18.2
+	go.uber.org/fx v1.22.1
 	golang.org/x/text v0.16.0
 )
 
