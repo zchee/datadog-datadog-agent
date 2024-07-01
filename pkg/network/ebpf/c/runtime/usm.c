@@ -403,6 +403,13 @@ int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg, struct sock *sk, struct msghdr *m
     log_debug("kprobe/tcp_sendmsg: sk=%lx msghdr=%lx!\n", (unsigned long)sk, (unsigned long)msg);
     log_debug("kprobe/tcp_sendmsg: size=%lu\n", size);
 
+    // map connection tuple during SSL_do_handshake(ctx)
+    map_ssl_ctx_to_sock(sk);
+
+    u8 iter_type;
+    BPF_CORE_READ_INTO(&iter_type, msg, msg_iter.iter_type);
+    log_debug("kprobe/tcp_sendmsg: iter_type=%u", iter_type);
+
     u64 pid_tgid = bpf_get_current_pid_tgid();
     u32 *splicing = bpf_map_lookup_elem(&tcp_splicing, &pid_tgid);
     if (splicing) {
@@ -410,12 +417,6 @@ int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg, struct sock *sk, struct msghdr *m
         return 0;
     }
 
-    // map connection tuple during SSL_do_handshake(ctx)
-    map_ssl_ctx_to_sock(sk);
-
-    u8 iter_type;
-    BPF_CORE_READ_INTO(&iter_type, msg, msg_iter.iter_type);
-    log_debug("kprobe/tcp_sendmsg: iter_type=%u", iter_type);
 
     void *ubuf;
 
