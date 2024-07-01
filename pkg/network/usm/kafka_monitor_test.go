@@ -1120,7 +1120,11 @@ func (s *KafkaProtocolParsingSuite) TestKafkaFetchRaw() {
 
 		for _, version := range versions {
 			t.Run(fmt.Sprintf("api%d", version), func(t *testing.T) {
-				testKafkaFetchRaw(t, true, version)
+				for i := 0; i < 10; i++ {
+					t.Run(fmt.Sprintf("run%d", i), func(t *testing.T) {
+						testKafkaFetchRaw(t, true, version)
+					})
+				}
 			})
 		}
 	})
