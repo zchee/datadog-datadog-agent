@@ -143,7 +143,9 @@ func (c *collector) Pull(ctx context.Context) error {
 	}
 
 	seen := make(map[workloadmeta.EntityID]struct{})
+	startParsePods := time.Now()
 	events, err := c.parsePods(ctx, pods, seen)
+	log.Debugf("parsePods took %s", time.Since(startParsePods))
 	if err != nil {
 		return err
 	}
