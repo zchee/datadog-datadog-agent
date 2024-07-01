@@ -23,6 +23,11 @@ type rdnsQuerierConfig struct {
 	cacheEntryTTL        time.Duration
 	cacheCleanInterval   time.Duration
 	cachePersistInterval time.Duration
+
+	// debug - TODO remove JMWRM
+	fakeResolver                 bool
+	generateFakeQueriesPerSecond int
+	lookupDelayMs                int
 }
 
 const (
@@ -81,10 +86,14 @@ func (c *rdnsQuerierConfig) setDefaults() {
 		if c.cacheEntryTTL <= 0 {
 			c.cacheEntryTTL = defaultCacheEntryTTL
 		}
+		//JMW also make sure cacheEntryTTL is greater than aggregation interval
+
 		if c.cacheCleanInterval <= 0 {
+			//JMWADD
 			c.cacheCleanInterval = defaultCacheCleanInterval
 		}
 		if c.cachePersistInterval <= 0 {
+			//JMWADD
 			c.cachePersistInterval = defaultCachePersistInterval
 		}
 	}

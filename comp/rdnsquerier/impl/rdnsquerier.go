@@ -57,12 +57,13 @@ type rdnsQuerierTelemetry = struct {
 
 type rdnsQuerierImpl struct {
 	logger            log.Component
-	config            *rdnsQuerierConfig
+	config            *rdnsQuerierConfig //JMWNAME
 	internalTelemetry *rdnsQuerierTelemetry
 
 	started     bool
-	resolver    resolver
-	rateLimiter rateLimiter
+	resolver    resolver    //JMWPTR?
+	rateLimiter rateLimiter //JMWPTR?
+	cache       cache       //JMWPTR?
 
 	rdnsQueryChan chan *rdnsQuery
 	wg            sync.WaitGroup
@@ -82,6 +83,11 @@ func NewComponent(reqs Requires) (Provides, error) {
 		config.cacheEntryTTL,
 		config.cacheCleanInterval,
 		config.cachePersistInterval)
+
+	reqs.Logger.Debugf("Reverse DNS Enrichment debug config: (fake_resolver=%t generate_fake_queries_per_second=%d lookup_delay_ms=%d)",
+		config.fakeResolver,
+		config.generateFakeQueriesPerSecond,
+		config.lookupDelayMs)
 
 	if !config.enabled {
 		return Provides{
@@ -103,6 +109,10 @@ func NewComponent(reqs Requires) (Provides, error) {
 		reqs.Telemetry.NewCounter(moduleName, "successful", []string{}, "Counter measuring the number of successful rDNS requests"),
 	}
 
+	//JMWJMW split querier out of rdnsquerierimpl (rename to rdnsenricher?) (or just keep it rdnsquerierimpl and have a querier layer)
+	//JMWFIX
+	rdnsQueryChan := make(chan *rdnsQuery, config.chanSize)
+
 	q := &rdnsQuerierImpl{
 		logger:            reqs.Logger,
 		config:            config,
@@ -111,6 +121,10 @@ func NewComponent(reqs Requires) (Provides, error) {
 		started:     false,
 		resolver:    newResolver(config),
 		rateLimiter: newRateLimiter(config),
+		cache:       newCache(config, reqs.Logger, reqs.Telemetry /*JMWFIX --> querier, rdnsQueryChan*/),
+
+		//JMWFIX
+		//JMWOLDrdnsQueryChan: rdnsQueryChan,
 	}
 
 	reqs.Lifecycle.Append(compdef.Hook{
@@ -132,7 +146,7 @@ func NewComponent(reqs Requires) (Provides, error) {
 func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte, updateHostname func(string)) error {
 	q.internalTelemetry.total.Inc()
 
-	ipaddr, ok := netip.AddrFromSlice(ipAddr)
+	ipaddr, ok := netip.AddrFromSlice(ipAddr) //JMWNAME ipaddr is netip.addr
 	if !ok {
 		q.internalTelemetry.invalidIPAddress.Inc()
 		return fmt.Errorf("invalid IP address %v", ipAddr)
@@ -144,6 +158,17 @@ func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte, updateHostname func(st
 	}
 	q.internalTelemetry.private.Inc()
 
+	hostname, ok := q.cache.get(ipaddr.String(), updateHostname)
+	if ok {
+		//JMWJMW change to synchronously return hostname if cache hit
+		q.logger.Debugf("JMW GetHostnameAsync() Cache hit for %s - calling updateHostname() with hostname %s", ipaddr.String(), hostname)
+		//JMWTUE simply return it?
+		go updateHostname(hostname)
+		return
+	}
+
+	/*JMWJMW
+	// cache miss, the cache will have already done this
 	query := &rdnsQuery{
 		addr:           ipaddr.String(),
 		updateHostname: updateHostname,
@@ -156,6 +181,8 @@ func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte, updateHostname func(st
 		q.internalTelemetry.droppedChanFull.Inc()
 		return fmt.Errorf("channel is full, dropping query for IP address %s", query.addr)
 	}
+	*/
+
 	return nil
 }
 
@@ -176,7 +203,7 @@ func (q *rdnsQuerierImpl) start(_ context.Context) error {
 		q.wg.Add(1)
 		go q.worker(ctx)
 	}
-	q.logger.Infof("Reverse DNS Enrichment started %d rdnsquerier workers", q.config.workers)
+	q.logger.Infof("Reverse DNS Enrichment started with %d workers", q.config.workers)
 	q.started = true
 
 	return nil
@@ -191,7 +218,7 @@ func (q *rdnsQuerierImpl) stop(context.Context) error {
 	q.cancel()
 	q.wg.Wait()
 
-	q.logger.Infof("Reverse DNS Enrichment stopped rdnsquerier workers")
+	q.logger.Infof("Reverse DNS Enrichment stopped")
 	q.started = false
 
 	return nil
@@ -209,6 +236,7 @@ func (q *rdnsQuerierImpl) worker(ctx context.Context) {
 	}
 }
 
+// JMWTUE break out to querier?
 func (q *rdnsQuerierImpl) getHostname(ctx context.Context, query *rdnsQuery) {
 	err := q.rateLimiter.wait(ctx)
 	if err != nil {
@@ -224,7 +252,7 @@ func (q *rdnsQuerierImpl) getHostname(ctx context.Context, query *rdnsQuery) {
 				q.internalTelemetry.lookupErrNotFound.Inc()
 				q.logger.Debugf("Reverse DNS Enrichment net.LookupAddr returned not found error '%v' for IP address %v", err, query.addr)
 				// no match was found for the requested IP address, so call updateHostname() to make the caller aware of that fact
-				query.updateHostname(hostname)
+				query.updateHostname("")
 				return
 			}
 			if dnsErr.IsTimeout {
@@ -244,5 +272,6 @@ func (q *rdnsQuerierImpl) getHostname(ctx context.Context, query *rdnsQuery) {
 	}
 
 	q.internalTelemetry.successful.Inc()
+	q.logger.Tracef("JMW Reverse DNS Enrichment net.LookupAddr successfully returned hostname '%s' for IP address %v - calling updateHostname() callback", hostname, query.addr)
 	query.updateHostname(hostname)
 }
