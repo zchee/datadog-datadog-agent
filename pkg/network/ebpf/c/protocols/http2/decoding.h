@@ -109,7 +109,7 @@ static __always_inline void* get_telemetry(pktbuf_t pkt) {
             .key = (void*)&zero,
         },
         [PKTBUF_CGROUP_SKB_EGRESS] = {
-            .map = &cgroup_skb_http2_telemetry,
+            .map = &http2_telemetry,
             .key = (void*)&zero,
         },
         [PKTBUF_TLS] = {
@@ -117,11 +117,11 @@ static __always_inline void* get_telemetry(pktbuf_t pkt) {
             .key = (void*)&zero,
         },
         [PKTBUF_KPROBE] = {
-            .map = &kprobe_http2_telemetry,
+            .map = &http2_telemetry,
             .key = (void*)&zero,
         },
         [PKTBUF_SK_MSG] = {
-            .map = &sk_msg_http2_telemetry,
+            .map = &http2_telemetry,
             .key = (void*)&zero,
         },
     };
