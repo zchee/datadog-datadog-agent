@@ -26,7 +26,8 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/compliance/utils"
 	"github.com/shirou/gopsutil/v3/process"
-	"gopkg.in/yaml.v3"
+	yamlv2 "gopkg.in/yaml.v2"
+	yamlv3 "gopkg.in/yaml.v3"
 )
 
 const version = "202403"
@@ -258,7 +259,13 @@ func (l *loader) loadConfigFileMeta(name string) (*K8sConfigFileMeta, bool) {
 	var content interface{}
 	erru := json.Unmarshal(b, &content)
 	if erru != nil {
-		erru = yaml.Unmarshal(b, &content)
+		erru = yamlv3.Unmarshal(b, &content)
+	}
+	if erru != nil {
+		// we explicitly try to unmarshal with v2 that is more permissive for
+		// duplicate keys which k8s seem to accept
+		// ref: https://github.com/kubernetes/kubernetes/issues/14791
+		erru = yamlv2.Unmarshal(b, &content)
 	}
 	if erru != nil {
 		content = string(b)
