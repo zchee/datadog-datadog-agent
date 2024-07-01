@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -412,8 +411,6 @@ func (c *DCAClient) GetNodeLabels(nodeName string) (map[string]string, error) {
 
 // GetNamespaceLabels returns the namespace labels from the Cluster Agent.
 func (c *DCAClient) GetNamespaceLabels(nsName string) (map[string]string, error) {
-	start := time.Now()
-	log.Debugf("GetNamespaceLabels took %s: %s", time.Since(start), debug.Stack())
 	var result map[string]string
 	err := c.doJSONQuery(context.TODO(), "api/v1/tags/namespace/"+nsName, "GET", nil, &result, false)
 	return result, err
@@ -421,8 +418,6 @@ func (c *DCAClient) GetNamespaceLabels(nsName string) (map[string]string, error)
 
 // GetNamespaceMetadata returns the namespace metadata from the Cluster Agent.
 func (c *DCAClient) GetNamespaceMetadata(nsName string) (*Metadata, error) {
-	start := time.Now()
-	log.Debugf("GetNamespaceMetadata took %s: %s", time.Since(start), debug.Stack())
 	var result Metadata
 	err := c.doJSONQuery(context.TODO(), "api/v1/metadata/namespace/"+nsName, "GET", nil, &result, false)
 	return &result, err

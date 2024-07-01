@@ -238,6 +238,7 @@ func (c *collector) parsePods(
 
 		var nsLabels, nsAnnotations map[string]string
 
+		metadataCollectionStart := time.Now()
 		if c.isDCAEnabled() && c.dcaClient.SupportsNamespaceMetadataCollection() {
 			// Cluster agent with version 7.55+
 			var nsMetadata *clusteragent.Metadata
@@ -266,6 +267,7 @@ func (c *collector) parsePods(
 				log.Errorf("Could not fetch namespace annotations for pod %s/%s: kubernetes_namespace_annotations_as_tags requires version 7.55 or later of the cluster agent", pod.Metadata.Namespace, pod.Metadata.Name)
 			}
 		}
+		log.Debugf("parsePods metadata collection took %s: dcaClient=%#v", time.Since(metadataCollectionStart), c.dcaClient)
 
 		entityID := workloadmeta.EntityID{
 			Kind: workloadmeta.KindKubernetesPod,
