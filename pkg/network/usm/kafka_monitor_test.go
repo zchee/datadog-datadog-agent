@@ -1202,7 +1202,7 @@ func getAndValidateKafkaStats(t *testing.T, monitor *Monitor, expectedStatsCount
 		if expectedStatsCount != 0 {
 			validateProduceFetchCount(collect, kafkaStats, topicName, validation)
 		}
-	}, time.Second*5, time.Millisecond*100)
+	}, time.Second*5, time.Millisecond*25)
 	return kafkaStats
 }
 
