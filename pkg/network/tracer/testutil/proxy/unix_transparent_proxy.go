@@ -124,6 +124,50 @@ func WaitForConnectionReady(unixSocket string) error {
 	return fmt.Errorf("could not connect %q after %d retries (after %v)", unixSocket, connectionRetries, connectionRetryInterval*connectionRetries)
 }
 
+// Copied from io.copyBuffer with the WriteTo/ReadFrom usage removed and the
+// internal errors replaced.
+func copyWithoutSplice(dst io.Writer, src io.Reader, buf []byte) (written int64, err error) {
+	if buf == nil {
+		size := 32 * 1024
+		if l, ok := src.(*io.LimitedReader); ok && int64(size) > l.N {
+			if l.N < 1 {
+				size = 1
+			} else {
+				size = int(l.N)
+			}
+		}
+		buf = make([]byte, size)
+	}
+	for {
+		nr, er := src.Read(buf)
+		if nr > 0 {
+			nw, ew := dst.Write(buf[0:nr])
+			if nw < 0 || nr < nw {
+				nw = 0
+				if ew == nil {
+					ew = errors.New("invalid write result")
+				}
+			}
+			written += int64(nw)
+			if ew != nil {
+				err = ew
+				break
+			}
+			if nr != nw {
+				err = io.ErrShortWrite
+				break
+			}
+		}
+		if er != nil {
+			if er != io.EOF {
+				err = er
+			}
+			break
+		}
+	}
+	return written, err
+}
+
 // handleConnection handles a new connection, by forwarding all traffic to the remote address.
 func (p *UnixTransparentProxyServer) handleConnection(unixSocketConn net.Conn) {
 	defer unixSocketConn.Close()
@@ -204,7 +248,7 @@ func (p *UnixTransparentProxyServer) handleConnection(unixSocketConn net.Conn) {
 			if cleanup != nil {
 				defer cleanup()
 			}
-			_, _ = io.Copy(dst, src)
+			_, _ = copyWithoutSplice(dst, src, nil)
 		}
 
 		// If the unix socket is closed, we can close the remote as well.
