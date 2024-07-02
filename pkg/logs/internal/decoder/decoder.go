@@ -210,12 +210,22 @@ func (d *Decoder) Stop() {
 }
 
 func (d *Decoder) run() {
+	var receiveOnce bool
+	start := time.Now()
+	inputAt := time.Now()
+	ticker := time.NewTicker(5 * time.Minute)
 	defer func() {
 		// flush any remaining output in component order, and then close the
 		// output channel
 		d.lineParser.flush()
 		d.lineHandler.flush()
 		close(d.OutputChan)
+		if receiveOnce {
+			log.Debugf("Decoder stops. It received input %s ago (at %s), started at %s", time.Since(inputAt), inputAt, start)
+		} else {
+			log.Debugf("Decoder stops. It has not received any input since it started %s ago (at %s)", time.Since(start), start)
+		}
+		ticker.Stop()
 	}()
 	for {
 		select {
@@ -224,8 +234,9 @@ func (d *Decoder) run() {
 				// InputChan has been closed, no more lines are expected
 				return
 			}
-
 			d.framer.Process(msg)
+			receiveOnce = true
+			inputAt = time.Now()
 
 		case <-d.lineParser.flushChan():
 			log.Debug("Flushing line parser because the flush timeout has been reached.")
@@ -234,6 +245,13 @@ func (d *Decoder) run() {
 		case <-d.lineHandler.flushChan():
 			log.Debug("Flushing line handler because the flush timeout has been reached.")
 			d.lineHandler.flush()
+
+		case <-ticker.C:
+			if receiveOnce {
+				log.Debugf("Decoder is running. It received input %s ago (at %s), started %s", time.Since(inputAt), inputAt, start)
+			} else {
+				log.Debugf("Decoder is running. It has not received any input since it started %s ago (at %s)", time.Since(start), start)
+			}
 		}
 	}
 }

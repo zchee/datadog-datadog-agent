@@ -10,9 +10,6 @@ package providers
 import (
 	"context"
 	"fmt"
-	"strings"
-	"sync"
-
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/common/utils"
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/integration"
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/providers/names"
@@ -21,6 +18,8 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+	"strings"
+	"sync"
 )
 
 // ContainerConfigProvider implements the ConfigProvider interface for both pods and containers
@@ -90,7 +89,6 @@ func (k *ContainerConfigProvider) processEvents(evBundle workloadmeta.EventBundl
 	defer k.mu.Unlock()
 
 	changes := integration.ConfigChanges{}
-
 	for _, event := range evBundle.Events {
 		entityName := buildEntityName(event.Entity)
 

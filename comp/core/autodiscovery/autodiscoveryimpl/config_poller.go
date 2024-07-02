@@ -86,6 +86,8 @@ func (cp *configPoller) stream(ch chan struct{}, provider providers.StreamingCon
 
 	cp.isRunning = true
 
+	scheduledCount, unscheduledCount := 0, 0
+
 	for {
 		select {
 		case <-healthHandle.C:
@@ -102,7 +104,29 @@ func (cp *configPoller) stream(ch chan struct{}, provider providers.StreamingCon
 
 		case changes := <-changesCh:
 			if !changes.IsEmpty() {
-				log.Infof("%v provider: collected %d new configurations, removed %d", provider, len(changes.Schedule), len(changes.Unschedule))
+				scheduled := make([]string, 0, len(changes.Schedule))
+				scheduledSet := make(map[string]struct{})
+				for _, c := range changes.Schedule {
+					key := fmt.Sprintf("name:%s,source:%s", c.Name, c.Source)
+					scheduled = append(scheduled, key)
+					scheduledSet[key] = struct{}{}
+					scheduledCount++
+				}
+				var scheduledAndUnscheduled []string
+				unscheduled := make([]string, 0, len(changes.Unschedule))
+				for _, c := range changes.Unschedule {
+					key := fmt.Sprintf("name:%s,source:%s", c.Name, c.Source)
+					unscheduled = append(unscheduled, key)
+					if _, ok := scheduledSet[key]; ok {
+						scheduledAndUnscheduled = append(scheduledAndUnscheduled, key)
+					}
+					unscheduledCount++
+				}
+				if len(scheduledAndUnscheduled) > 0 {
+					log.Infof("%v provider: collected %d new configurations, removed %d and %d to schedule and unschedule both: total scheduled %d, unschedule %d: scheduled: %q, unscheduled: %q, scheduled and unscheduled both: %q", provider, len(changes.Schedule), len(changes.Unschedule), len(scheduledAndUnscheduled), scheduledCount, unscheduledCount, scheduled, unscheduled, scheduledAndUnscheduled)
+				} else {
+					log.Infof("%v provider: collected %d new configurations, removed %d: total scheduled %d, unschedule %d: scheduled: %q, unscheduled: %q", provider, len(changes.Schedule), len(changes.Unschedule), scheduledCount, unscheduledCount, scheduled, unscheduled)
+				}
 
 				ac.processRemovedConfigs(changes.Unschedule)
 

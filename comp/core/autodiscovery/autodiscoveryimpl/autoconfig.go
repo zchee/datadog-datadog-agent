@@ -635,7 +635,7 @@ func (ac *AutoConfig) GetAutodiscoveryErrors() map[string]map[string]providers.E
 func (ac *AutoConfig) applyChanges(changes integration.ConfigChanges) {
 	if len(changes.Unschedule) > 0 {
 		for _, conf := range changes.Unschedule {
-			log.Tracef("Unscheduling %s\n", conf.Dump(false))
+			log.Debugf("Unscheduling %s\n", conf.Dump(false))
 			telemetry.ScheduledConfigs.Dec(conf.Provider, configType(conf))
 		}
 	}
