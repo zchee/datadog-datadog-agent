@@ -257,7 +257,27 @@ SEC("uprobe/kafka_tls_termination")
 int uprobe__kafka_tls_termination(struct pt_regs *ctx) {
     const __u32 zero = 0;
 
+    log_debug("uprobe_kafka_tls_termination");
+
     tls_dispatcher_arguments_t *args = bpf_map_lookup_elem(&tls_dispatcher_arguments, &zero);
+    if (args == NULL) {
+        return 0;
+    }
+
+    // On stack for 4.14
+    conn_tuple_t tup = args->tup;
+    kafka_tcp_termination(&tup);
+
+    return 0;
+}
+
+SEC("kprobe/kafka_tls_termination")
+int kprobe__kafka_tls_termination(struct pt_regs *ctx) {
+    const __u32 zero = 0;
+
+    log_debug("kafka_tls_termination");
+
+    kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
     if (args == NULL) {
         return 0;
     }

@@ -182,6 +182,8 @@ static __always_inline void tls_finish(struct pt_regs *ctx, conn_tuple_t *t, boo
     normalized_tuple.pid = 0;
     normalized_tuple.netns = 0;
 
+    log_debug("tls_finish");
+
     protocol_stack_t *stack = get_protocol_stack(&normalized_tuple);
     if (!stack) {
         return;

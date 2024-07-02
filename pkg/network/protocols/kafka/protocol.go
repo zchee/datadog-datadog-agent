@@ -80,8 +80,9 @@ const (
 	cgroupSkbResponseRecordBatchParserV0TailCall  = "cgroup_skb__kafka_response_record_batch_parser_v0"
 	cgroupSkbResponseRecordBatchParserV12TailCall = "cgroup_skb__kafka_response_record_batch_parser_v12"
 
-	tlsTerminationTailCall = "uprobe__kafka_tls_termination"
-	tlsDispatcherTailCall  = "uprobe__tls_protocol_dispatcher_kafka"
+	tlsTerminationTailCall    = "uprobe__kafka_tls_termination"
+	kprobeTerminationTailCall = "kprobe__kafka_tls_termination"
+	tlsDispatcherTailCall     = "uprobe__tls_protocol_dispatcher_kafka"
 	// eBPFTelemetryMap is the name of the eBPF map used to retrieve metrics from the kernel
 	eBPFTelemetryMap = "kafka_telemetry"
 )
@@ -246,6 +247,13 @@ var Spec = &protocols.ProtocolSpec{
 			Key:           uint32(protocols.ProgramKafkaResponseRecordBatchParserV12),
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFFuncName: kprobeResponseRecordBatchParserV12TailCall,
+			},
+		},
+		{
+			ProgArrayName: protocols.KprobeDispatcherProgramsMap,
+			Key:           uint32(protocols.ProgramKafkaTermination),
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: kprobeTerminationTailCall,
 			},
 		},
 		{

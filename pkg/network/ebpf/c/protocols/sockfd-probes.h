@@ -32,6 +32,7 @@ int BPF_KPROBE(kprobe__tcp_close, struct sock *sk) {
     log_debug("tcp_close tup: netns: %08x pid: %u", t.netns, t.pid);
 
     pid_fd_t *pid_fd = bpf_map_lookup_elem(&pid_fd_by_tuple, &t);
+    log_debug("tcp_close pid_fd:%p", pid_fd);
     if (pid_fd == NULL) {
         return 0;
     }
@@ -46,6 +47,7 @@ int BPF_KPROBE(kprobe__tcp_close, struct sock *sk) {
     // as it does not have access to the PID and NETNS.
     // Therefore, we use tls_finish to clean the connection. While this approach is not ideal, it is the best option available to us for now.
     tls_finish(ctx, &t, true);
+    kprobe_finish(ctx, &t, true);
     return 0;
 }
 
