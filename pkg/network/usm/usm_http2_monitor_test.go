@@ -164,7 +164,7 @@ func (s *usmHTTP2Suite) TestHTTP2DynamicTableCleanup() {
 			}
 		}
 
-		return matches.Load() == usmhttp2.HTTP2TerminatedBatchSize
+		return matches.Load() == fixCount(usmhttp2.HTTP2TerminatedBatchSize, s.isTLS)
 	}, time.Second*10, time.Millisecond*100, "%v != %v", &matches, usmhttp2.HTTP2TerminatedBatchSize)
 
 	for _, client := range clients {
@@ -365,6 +365,14 @@ func (s *usmHTTP2Suite) TestHTTP2KernelTelemetry() {
 	t.Cleanup(cancel)
 	require.NoError(t, proxy.WaitForConnectionReady(unixPath))
 
+	fix := func(val uint64) uint64 {
+		if s.isTLS {
+			return val
+		}
+
+		return val * 2
+	}
+
 	tests := []struct {
 		name              string
 		runClients        func(t *testing.T, clientsCount int)
@@ -383,11 +391,11 @@ func (s *usmHTTP2Suite) TestHTTP2KernelTelemetry() {
 			},
 
 			expectedTelemetry: &usmhttp2.HTTP2Telemetry{
-				Request_seen:      8,
-				Response_seen:     8,
-				End_of_stream:     16,
-				End_of_stream_rst: 0,
-				Path_size_bucket:  [8]uint64{1, 1, 1, 1, 1, 1, 1, 1},
+				Request_seen:      fix(8),
+				Response_seen:     fix(8),
+				End_of_stream:     fix(16),
+				End_of_stream_rst: fix(0),
+				Path_size_bucket:  [8]uint64{fix(1), fix(1), fix(1), fix(1), fix(1), fix(1), fix(1), fix(1)},
 			},
 		},
 	}
@@ -456,9 +464,9 @@ func (s *usmHTTP2Suite) TestHTTP2ManyDifferentPaths() {
 	const (
 		repetitionsPerRequest = 2
 		// Should be bigger than the length of the http2_dynamic_table which is 1024
-		numberOfRequests         = 1
-		expectedNumberOfRequests = numberOfRequests * repetitionsPerRequest
+		numberOfRequests = 1
 	)
+	expectedNumberOfRequests := fixCount(numberOfRequests*repetitionsPerRequest, s.isTLS)
 	clients := getHTTP2UnixClientArray(1, unixPath)
 	for i := 0; i < numberOfRequests; i++ {
 		for j := 0; j < repetitionsPerRequest; j++ {
@@ -493,7 +501,7 @@ func (s *usmHTTP2Suite) TestHTTP2ManyDifferentPaths() {
 	fmt.Println(seenRequests)
 
 	for i := 0; i < numberOfRequests; i++ {
-		if v, ok := seenRequests[fmt.Sprintf("/test-%d", i+1)]; !ok || v != repetitionsPerRequest {
+		if v, ok := seenRequests[fmt.Sprintf("/test-%d", i+1)]; !ok || v != fixCount(repetitionsPerRequest, s.isTLS) {
 			t.Logf("path: /test-%d should have %d occurrences but instead has %d", i+1, repetitionsPerRequest, v)
 		}
 	}
@@ -1329,7 +1337,13 @@ func (s *usmHTTP2Suite) TestDynamicTable() {
 				// validate the stats we get
 				validateStats(usmMonitor, collect, res, tt.expectedEndpoints, s.isTLS)
 
-				validateDynamicTableMap(collect, usmMonitor.ebpfProgram, tt.expectedDynamicTablePathIndexes)
+				expected := tt.expectedDynamicTablePathIndexes
+				if !s.isTLS {
+					expected = append(expected, expected...)
+					sort.Ints(expected)
+				}
+
+				validateDynamicTableMap(collect, usmMonitor.ebpfProgram, expected)
 			}, time.Second*5, time.Millisecond*100, "%v != %v", res, tt.expectedEndpoints)
 			if t.Failed() {
 				for key := range tt.expectedEndpoints {
@@ -1527,6 +1541,14 @@ func TestHTTP2InFlightMapCleaner(t *testing.T) {
 	}, 3*cfg.HTTP2DynamicTableMapCleanerInterval, time.Millisecond*100)
 }
 
+func fixCount(val int, tls bool) int {
+	if tls {
+		return val
+	}
+
+	return val * 2
+}
+
 // validateStats validates that the stats we get from the monitor are as expected.
 func validateStats(usmMonitor *Monitor, collect *assert.CollectT, res, expectedEndpoints map[usmhttp.Key]int, isTLS bool) bool {
 	for key, stat := range getHTTPLikeProtocolStats(usmMonitor, protocols.HTTP2) {
@@ -1560,7 +1582,7 @@ func validateStats(usmMonitor *Monitor, collect *assert.CollectT, res, expectedE
 	for key, endpointCount := range res {
 		_, ok := expectedEndpoints[key]
 		assert.True(collect, ok)
-		assert.Equal(collect, expectedEndpoints[key]*1, endpointCount)
+		assert.Equal(collect, fixCount(expectedEndpoints[key], isTLS), endpointCount)
 	}
 	return true
 }
@@ -1849,7 +1871,7 @@ func getClientsIndex(index, totalCount int) int {
 // validateDynamicTableMap validates that the dynamic table map contains the expected indexes.
 func validateDynamicTableMap(t *assert.CollectT, ebpfProgram *ebpfProgram, expectedDynamicTablePathIndexes []int) {
 	dynamicTableMap, _, err := ebpfProgram.GetMap("http2_dynamic_table")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	resultIndexes := make([]int, 0)
 	var key usmhttp2.HTTP2DynamicTableIndex
 	var value usmhttp2.HTTP2DynamicTableEntry
@@ -1859,7 +1881,7 @@ func validateDynamicTableMap(t *assert.CollectT, ebpfProgram *ebpfProgram, expec
 		resultIndexes = append(resultIndexes, int(key.Index))
 	}
 	sort.Ints(resultIndexes)
-	require.EqualValues(t, expectedDynamicTablePathIndexes, resultIndexes)
+	assert.EqualValues(t, expectedDynamicTablePathIndexes, resultIndexes)
 }
 
 // getRemainderTableMapKeys returns the keys of the remainder table map.
@@ -1880,7 +1902,7 @@ func getRemainderTableMapKeys(t *testing.T, ebpfProgram *ebpfProgram) []usmhttp.
 // validateHuffmanEncoded validates that the dynamic table map contains the expected huffman encoded paths.
 func validateHuffmanEncoded(collect *assert.CollectT, ebpfProgram *ebpfProgram, expectedHuffmanEncoded map[int]bool) {
 	dynamicTableMap, _, err := ebpfProgram.GetMap("http2_dynamic_table")
-	require.NoError(collect, err)
+	assert.NoError(collect, err)
 	resultEncodedPaths := make(map[int]bool, 0)
 
 	var key usmhttp2.HTTP2DynamicTableIndex
