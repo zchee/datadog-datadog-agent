@@ -331,6 +331,15 @@ int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t 
 
     void *ubuf;
 
+#ifdef COMPILE_RUNTIME
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+    struct iovec *iov;
+    bpf_probe_read_kernel(&iov, sizeof(iov), &msg->msg_iter.iov);
+    bpf_probe_read_kernel(&ubuf, sizeof(ubuf), &iov->iov_base);
+#else
+    bpf_probe_read_kernel(&ubuf, sizeof(ubuf), &msg->msg_iter.ubuf);
+#endif
+#else
     if (bpf_core_field_exists(((struct msghdr___new *)msg)->msg_iter.ubuf)) {
         BPF_CORE_READ_INTO(&ubuf, (struct msghdr___new *)msg, msg_iter.ubuf);
     } else {
@@ -340,6 +349,7 @@ int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t 
         BPF_CORE_READ_INTO(&count, msg, msg_iter.count);
         log_debug("kprobe/tcp_recvmsg: count=%zu", count);
     }
+#endif
 
     log_debug("kprobe/tcp_recvmsg: ubuf=%lx", (unsigned long)ubuf);
 
@@ -420,6 +430,15 @@ int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg, struct sock *sk, struct msghdr *m
 
     void *ubuf;
 
+#ifdef COMPILE_RUNTIME
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+    struct iovec *iov;
+    bpf_probe_read_kernel(&iov, sizeof(iov), &msg->msg_iter.iov);
+    bpf_probe_read_kernel(&ubuf, sizeof(ubuf), &iov->iov_base);
+#else
+    bpf_probe_read_kernel(&ubuf, sizeof(ubuf), &msg->msg_iter.ubuf);
+#endif
+#else
     if (bpf_core_field_exists(((struct msghdr___new *)msg)->msg_iter.ubuf)) {
         BPF_CORE_READ_INTO(&ubuf, (struct msghdr___new *)msg, msg_iter.ubuf);
     } else {
@@ -429,6 +448,7 @@ int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg, struct sock *sk, struct msghdr *m
         BPF_CORE_READ_INTO(&count, msg, msg_iter.count);
         log_debug("kprobe/tcp_sendmsg: count=%zu", count);
     }
+#endif
 
     log_debug("kprobe/tcp_sendmsg: ubuf=%lx", (unsigned long)ubuf);
 
