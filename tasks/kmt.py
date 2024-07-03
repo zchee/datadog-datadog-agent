@@ -830,6 +830,8 @@ def kmt_sysprobe_prepare(
 
         _, _, env = get_build_flags(ctx, arch=arch)
         env["DD_SYSTEM_PROBE_BPF_DIR"] = EMBEDDED_SHARE_DIR
+        env["DD_SYSTEM_PROBE_CONFIG_BPF_DEBUG"] = "true"
+        print(env)
 
         env_str = ""
         for key, val in env.items():
@@ -1004,9 +1006,9 @@ def test(
     domains = filter_target_domains(vms, infra)
     used_archs = get_archs_in_domains(domains)
 
-    if not images_matching_ci(ctx, domains):
-        if ask("Some VMs do not match version in CI. Continue anyway [y/N]") != "y":
-            return
+    # if not images_matching_ci(ctx, domains):
+    #     if ask("Some VMs do not match version in CI. Continue anyway [y/N]") != "y":
+    #         return
 
     assert len(domains) > 0, f"no vms found from list {vms}. Run `inv -e kmt.status` to see all VMs in current stack"
 
@@ -1127,9 +1129,9 @@ def build(
     domains = filter_target_domains(vms, infra, arch_obj)
     cc = get_compiler(ctx)
 
-    if not images_matching_ci(ctx, domains):
-        if ask("Some VMs do not match version in CI. Continue anyway [y/N]") != "y":
-            return
+    # if not images_matching_ci(ctx, domains):
+    #     if ask("Some VMs do not match version in CI. Continue anyway [y/N]") != "y":
+    #         return
 
     assert len(domains) > 0, f"no vms found from list {vms}. Run `inv -e kmt.status` to see all VMs in current stack"
 

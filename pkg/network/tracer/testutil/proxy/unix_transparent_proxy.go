@@ -16,14 +16,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"sync"
 	"time"
 
 	"go.uber.org/atomic"
-
-	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 const (
@@ -68,6 +67,11 @@ func (p *UnixTransparentProxyServer) Run() error {
 		return err
 	}
 
+	// if err := unix.Mlockall(syscall.MCL_CURRENT | syscall.MCL_FUTURE); err != nil {
+	// 	log.Println("mlock all failed:", err)
+	// 	return err
+	// }
+
 	ln, err := net.Listen("unix", p.unixPath)
 	if err != nil {
 		return err
@@ -83,7 +87,7 @@ func (p *UnixTransparentProxyServer) Run() error {
 			if err != nil {
 				// We can get this error when the listener is closed, during shutdown.
 				if !errors.Is(err, net.ErrClosed) {
-					log.Errorf("failed accepting connection: %s", err)
+					log.Println("failed accepting connection:", err)
 				}
 				return
 			}
@@ -128,6 +132,8 @@ func WaitForConnectionReady(unixSocket string) error {
 func (p *UnixTransparentProxyServer) handleConnection(unixSocketConn net.Conn) {
 	defer unixSocketConn.Close()
 
+	log.Println("Handling new connection", unixSocketConn)
+
 	var remoteConn net.Conn
 	var err error
 	if p.useTLS {
@@ -139,31 +145,38 @@ func (p *UnixTransparentProxyServer) handleConnection(unixSocketConn net.Conn) {
 		remoteConn, err = net.DialTimeout("tcp", p.remoteAddr, defaultDialTimeout)
 	}
 	if err != nil {
-		log.Errorf("failed to dial remote: %s", err)
+		log.Println("failed to dial remote", err)
 		return
 	}
 	defer remoteConn.Close()
 
+	log.Println("Connected to remote")
+
 	var streamWait sync.WaitGroup
-	streamWait.Add(2)
 
 	if p.useControl {
+		streamWait.Add(1)
 		go func() {
 			defer streamWait.Done()
 
 			unixReader := bufio.NewReader(unixSocketConn)
 			remoteReader := bufio.NewReader(remoteConn)
 
+			big := make([]byte, 1024*1024)
+
 			for {
-				buf := make([]byte, 8)
+				// buf := make([]byte, 8)
+				buf := big[0:8]
 				_, err := io.ReadFull(unixReader, buf)
 				if err != nil {
 					break
 				}
 				readSize := binary.BigEndian.Uint64(buf)
+				// log.Println("write size", readSize)
 
 				if readSize != 0 {
-					buf = make([]byte, readSize)
+					buf := big[0:readSize]
+					// buf = make([]byte, readSize)
 					_, err = io.ReadFull(unixReader, buf)
 					if err != nil {
 						break
@@ -171,22 +184,27 @@ func (p *UnixTransparentProxyServer) handleConnection(unixSocketConn net.Conn) {
 					// Note that the net package sets TCP_NODELAY by default,
 					// so this will send out each write individually, which is
 					// what we want.
+					log.Printf("write buf %p size %d\n", buf, len(buf))
 					_, err = remoteConn.Write(buf)
 					if err != nil {
 						break
 					}
 				}
 
-				buf = make([]byte, 8)
+				// buf = make([]byte, 8)
+				buf = big[0:8]
 				_, err = io.ReadFull(unixReader, buf)
 				if err != nil {
 					break
 				}
 				readSize = binary.BigEndian.Uint64(buf)
+				// log.Println("read bufsize", readSize)
 
 				if readSize != 0 {
-					buf = make([]byte, readSize)
+					buf := big[0:readSize]
+					// buf = make([]byte, readSize)
 					_, err = io.ReadFull(remoteReader, buf)
+					log.Printf("!read buf %p size %d\n", buf, len(buf))
 					if err != nil {
 						break
 					}
@@ -199,6 +217,7 @@ func (p *UnixTransparentProxyServer) handleConnection(unixSocketConn net.Conn) {
 			}
 		}()
 	} else {
+		streamWait.Add(2)
 		streamConn := func(dst io.Writer, src io.Reader, cleanup func()) {
 			defer streamWait.Done()
 			if cleanup != nil {
@@ -213,6 +232,7 @@ func (p *UnixTransparentProxyServer) handleConnection(unixSocketConn net.Conn) {
 	}
 
 	streamWait.Wait()
+	log.Println("Done waiting for streams", unixSocketConn)
 }
 
 // clearOldSocket clears the old socket if it exists.

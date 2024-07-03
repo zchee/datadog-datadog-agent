@@ -55,6 +55,7 @@ const ciVisibility = "/ci-visibility"
 var baseEnv = []string{
 	"GITLAB_CI=true", // force color output support to be detected
 	"GOVERSION=" + runtime.Version(),
+	"DD_SYSTEM_PROBE_CONFIG_BPF_DEBUG=true",
 }
 
 var timeouts = map[*regexp.Regexp]time.Duration{

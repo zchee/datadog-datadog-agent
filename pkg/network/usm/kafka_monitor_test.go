@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -859,13 +860,13 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 
 				partition := makeFetchResponseTopicPartition(batches...)
 				var partitions []kmsg.FetchResponseTopicPartition
-				for i := 0; i < 25; i++ {
+				for i := 0; i < 100; i++ {
 					partitions = append(partitions, partition)
 				}
 
 				return makeFetchResponse(apiVersion, makeFetchResponseTopic(topic, partitions...))
 			},
-			numFetchedRecords: 1 * 1 * 25,
+			numFetchedRecords: 1 * 1 * 100,
 		},
 		{
 			name:  "many topics",
@@ -1054,6 +1055,9 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 
 		name := fmt.Sprintf("split/%s", tt.name)
 		t.Run(name, func(t *testing.T) {
+			os.WriteFile("/sys/kernel/debug/tracing/trace", []byte(""), 0)
+			os.WriteFile("/sys/kernel/debug/tracing/trace_marker", []byte(fmt.Sprintln(t.Name())), fs.ModeAppend)
+
 			t.Cleanup(func() {
 				cleanProtocolMaps(t, "kafka", monitor.ebpfProgram.Manager.Manager)
 			})

@@ -117,6 +117,8 @@ int BPF_BYPASSABLE_UPROBE(uprobe__crypto_tls_Conn_Write) {
         return 0;
     }
 
+    log_debug("go-tls-write entry buf 0x%llx", call_data.b_data);
+
     bpf_map_update_elem(&go_tls_write_args, &call_key, &call_data, BPF_ANY);
     return 0;
 }
@@ -183,7 +185,7 @@ int BPF_BYPASSABLE_UPROBE(uprobe__crypto_tls_Conn_Write__return) {
     }
 
     char *buffer_ptr = (char*)call_data_ptr->b_data;
-    log_debug("[go-tls-write] processing %s", buffer_ptr);
+    // log_debug("[go-tls-write] processing %s", buffer_ptr);
     bpf_map_delete_elem(&go_tls_write_args, &call_key);
     conn_tuple_t copy = {0};
     bpf_memcpy(&copy, t, sizeof(conn_tuple_t));
@@ -192,6 +194,7 @@ int BPF_BYPASSABLE_UPROBE(uprobe__crypto_tls_Conn_Write__return) {
     // to the server <-> client direction.
     normalize_tuple(&copy);
     flip_tuple(&copy);
+    log_debug("go-tls-write return buf 0x%lx bytes %llu", (unsigned long)buffer_ptr, bytes_written);
     tls_process(ctx, &copy, buffer_ptr, bytes_written, GO);
     return 0;
 }
@@ -226,6 +229,8 @@ int BPF_BYPASSABLE_UPROBE(uprobe__crypto_tls_Conn_Read) {
         log_debug("[go-tls-read] failed reading buffer pointer for pid %llu", pid_tgid >> 32);
         return 0;
     }
+
+    log_debug("go-tls-read entry buf 0x%llx", call_data.b_data);
 
     bpf_map_update_elem(&go_tls_read_args, &call_key, &call_data, BPF_ANY);
     return 0;
@@ -295,6 +300,7 @@ int BPF_BYPASSABLE_UPROBE(uprobe__crypto_tls_Conn_Read__return) {
     // We want to guarantee write-TLS hooks generates the same connection tuple, while read-TLS hooks generate
     // the inverse direction, thus we're normalizing the tuples into a client <-> server direction.
     normalize_tuple(&copy);
+    log_debug("go-tls-read return buf 0x%lx bytes %llu", (unsigned long)buffer_ptr, bytes_read);
     tls_process(ctx, &copy, buffer_ptr, bytes_read, GO);
     return 0;
 }

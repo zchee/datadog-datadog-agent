@@ -30,7 +30,9 @@ func newExternalUnixTransparentProxyServer(t *testing.T, unixPath, remoteAddr st
 	serverBin, err := usmtestutil.BuildGoBinaryWrapper(curDir, serverSrcPath)
 	require.NoError(t, err)
 
-	args := []string{serverBin, "-unix", unixPath, "-remote", remoteAddr}
+	args := []string{serverBin, "-unix", unixPath, "-remote", remoteAddr, "-name", t.Name()}
+	// Enable logging for debugging
+	args = append(args, "-log", "/tmp/transparent.log")
 	if useTLS {
 		args = append(args, "-tls")
 	}

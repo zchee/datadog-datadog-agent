@@ -106,7 +106,15 @@ static __always_inline __maybe_unused long pktbuf_load_bytes(pktbuf_t pkt, u32 o
     case PKTBUF_SKB:
         return bpf_skb_load_bytes(pkt.skb, offset, to, len);
     case PKTBUF_TLS:
-        return bpf_probe_read_user(to, len, pkt.tls->buffer_ptr + offset);
+    {
+        long ret = bpf_probe_read_user(to, len, pkt.tls->buffer_ptr + offset);
+        if (ret != 0) {
+            log_debug("bpf_probe_read_user error ret=%ld", ret);
+            // log_debug("bpf_probe_read_user error buffer 0x%lx offset 0x%x", (unsigned long)pkt.tls->buffer_ptr, offset);
+            // log_debug("bpf_probe_read_user error start 0x%lx end 0x%lx", (unsigned long)pkt.tls->buffer_ptr + offset, (unsigned long)pkt.tls->buffer_ptr + offset + len - 1);
+        }
+        return ret;
+    }
     }
 
     pktbuf_invalid_operation();

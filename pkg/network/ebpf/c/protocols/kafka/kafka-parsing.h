@@ -31,6 +31,7 @@ _Pragma( STRINGIFY(unroll(max_buffer_size)) )                                   
         }                                                                                                                                   \
     }                                                                                                                                       \
 
+#define EXTRA_DEBUG
 #ifdef EXTRA_DEBUG
 #define extra_debug(fmt, ...) log_debug("kafka: " fmt, ##__VA_ARGS__)
 #else
@@ -218,7 +219,15 @@ static __always_inline enum parse_result __read_with_remainder(struct read_with_
     if (!remainder) {
         // No remainder, and 4 or more bytes more in the packet, so just
         // do a normal read.
-        pktbuf_load_bytes(pkt, *offset, val, want);
+        long ret = pktbuf_load_bytes(pkt, *offset, val, want);
+        if (ret) {
+            log_debug("pktbuf_load_bytes 1 error len=%u ret=%ld", want, ret);
+            log_debug("pktbuf_load_bytes error buffer 0x%lx offset 0x%x", (unsigned long)pkt.tls->buffer_ptr, *offset);
+            log_debug("pktbuf_load_bytes error start 0x%lx end 0x%lx", (unsigned long)pkt.tls->buffer_ptr + *offset, (unsigned long)pkt.tls->buffer_ptr + *offset + want - 1);
+            ret = pktbuf_load_bytes(pkt, *offset, val, want);
+            log_debug("pktbuf_load_bytes 1 retry ret=%ld", ret);
+            bpf_memset(val, 0, want);
+        }
         *offset += want;
         config.convert(val, val);
         return RET_DONE;
@@ -234,7 +243,15 @@ static __always_inline enum parse_result __read_with_remainder(struct read_with_
     u8 *reconstruct = response->remainder_buf;
     u8 tail[4] = {0};
 
-    pktbuf_load_bytes(pkt, *offset, &tail, want);
+    long ret = pktbuf_load_bytes(pkt, *offset, &tail, want);
+    if (ret) {
+        log_debug("pktbuf_load_bytes 2 error len=%u ret=%ld", want, ret);
+        log_debug("pktbuf_load_bytes error buffer 0x%lx offset 0x%x", (unsigned long)pkt.tls->buffer_ptr, *offset);
+        log_debug("pktbuf_load_bytes error start 0x%lx end 0x%lx", (unsigned long)pkt.tls->buffer_ptr + *offset, (unsigned long)pkt.tls->buffer_ptr + *offset + want - 1);
+        ret = pktbuf_load_bytes(pkt, *offset, &tail, want);
+        log_debug("pktbuf_load_bytes 2 retry ret=%ld", ret);
+        bpf_memset(tail, 0, sizeof(tail));
+    }
 
     switch (remainder) {
     case 1:
