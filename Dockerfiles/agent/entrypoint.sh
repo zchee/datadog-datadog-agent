@@ -3,6 +3,8 @@ set -euo pipefail
 
 readonly ENTRYPOINT_PATH="/opt/entrypoints"
 
+/opt/datadog-agent/embedded/bin/fipsinstall.sh
+
 if [[ -z ${ENTRYPOINT+x} ]]; then
     # Default entrypoint if none is specified
     if [[ -x "$ENTRYPOINT_PATH/_default" ]]; then
