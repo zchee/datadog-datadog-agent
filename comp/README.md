@@ -321,6 +321,12 @@ Package def is the metadata provider for security-agent process
 
 Package def is the metadata provider for system-probe process
 
+### [comp/metadata/telemetry](https://pkg.go.dev/github.com/DataDog/datadog-agent/comp/metadata/telemetry)
+
+*Datadog Team*: DataDog/agent-shared-components
+
+Package telemetry increments a counter when a metadata payload is sent
+
 ## [comp/ndmtmp](https://pkg.go.dev/github.com/DataDog/datadog-agent/comp/ndmtmp) (Component Bundle)
 
 *Datadog Team*: network-device-monitoring

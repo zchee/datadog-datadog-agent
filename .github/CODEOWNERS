@@ -269,6 +269,7 @@
 /comp/core/tagger @DataDog/container-platform
 /comp/core/workloadmeta @DataDog/container-platform
 /comp/metadata/packagesigning @DataDog/agent-delivery
+/comp/metadata/telemetry @DataDog/DataDog/agent-shared-components
 /comp/trace/etwtracer @DataDog/windows-agent
 /comp/etw @DataDog/windows-agent
 /comp/rdnsquerier @DataDog/network-device-monitoring
