@@ -255,10 +255,6 @@ require (
 	github.com/google/pprof v0.0.0-20221118152302-e6195bd50e26 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
-	github.com/pulumi/pulumi-azure-native-sdk/compute/v2 v2.30.0 // indirect
-	github.com/pulumi/pulumi-azure-native-sdk/containerservice/v2 v2.30.0 // indirect
-	github.com/pulumi/pulumi-azure-native-sdk/network/v2 v2.30.0 // indirect
-	github.com/pulumi/pulumi-azure-native-sdk/v2 v2.30.0 // indirect
 	github.com/pulumi/pulumi-docker/sdk/v4 v4.5.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
