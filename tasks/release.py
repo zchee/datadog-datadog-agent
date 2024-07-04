@@ -898,7 +898,7 @@ def create_schedule(_, version, freeze_date):
 def chase_release_managers(_, version):
     url, missing_teams = get_release_page_info(version)
     GITHUB_SLACK_MAP = load_and_validate("github_slack_map.yaml", "DEFAULT_SLACK_CHANNEL", DEFAULT_SLACK_CHANNEL)
-    channels = [GITHUB_SLACK_MAP[f"@datadog/{team}"] for team in missing_teams]
+    channels = [GITHUB_SLACK_MAP[f"@datadog/{team}"] for team in missing_teams if GITHUB_SLACK_MAP.get(f"@datadog/{team}", None) != None]
     message = f"Hello :wave:\n Could you please update the `datadog-agent` [release coordination page]({url}) with the RM for your team?\nThanks in advance"
 
     from slack_sdk import WebClient
