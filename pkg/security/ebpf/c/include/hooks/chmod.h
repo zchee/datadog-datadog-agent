@@ -6,7 +6,7 @@
 #include "helpers/filesystem.h"
 #include "helpers/syscalls.h"
 
-int __attribute__((always_inline)) trace__sys_chmod(const char *path, umode_t mode) {
+int __attribute__((always_inline)) trace__sys_chmod(const char *path, umode_t mode, struct syscall_ctx_collector_t *syscall_ctx) {
     struct policy_t policy = fetch_policy(EVENT_CHMOD);
     if (is_discarded_by_process(policy.mode, EVENT_CHMOD)) {
         return 0;
@@ -19,26 +19,42 @@ int __attribute__((always_inline)) trace__sys_chmod(const char *path, umode_t mo
             .mode = mode & S_IALLUGO,
         }
     };
-    collect_syscall_ctx(&syscall, SYSCALL_CTX_ARG_STR(0) | SYSCALL_CTX_ARG_INT(1), (void *)path, (void *)&mode, NULL);
+
+    syscall_ctx->arg1 = (void *)path;
+    syscall_ctx->arg2 = (void *)&mode;
+    syscall_ctx->types = SYSCALL_CTX_ARG_STR(0) | SYSCALL_CTX_ARG_INT(1);
+    collect_syscall_ctx(&syscall, syscall_ctx);
     cache_syscall(&syscall);
 
     return 0;
 }
 
 HOOK_SYSCALL_ENTRY2(chmod, const char *, filename, umode_t, mode) {
-    return trace__sys_chmod(filename, mode);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chmod(filename, mode, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY2(fchmod, int, fd, umode_t, mode) {
-    return trace__sys_chmod(NULL, mode);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chmod(NULL, mode, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY3(fchmodat, int, dirfd, const char *, filename, umode_t, mode) {
-    return trace__sys_chmod(filename, mode);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chmod(filename, mode, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY4(fchmodat2, int, dirfd, const char *, filename, umode_t, mode, int, flag) {
-    return trace__sys_chmod(filename, mode);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chmod(filename, mode, &syscall_ctx);
 }
 
 int __attribute__((always_inline)) sys_chmod_ret(void *ctx, int retval) {

@@ -118,7 +118,15 @@ HOOK_SYSCALL_COMPAT_ENTRY3(mount, const char *, source, const char *, target, co
         .type = EVENT_MOUNT,
     };
 
-    collect_syscall_ctx(&syscall, SYSCALL_CTX_ARG_STR(0) | SYSCALL_CTX_ARG_STR(1) | SYSCALL_CTX_ARG_STR(2), (void *)source, (void *)target, (void *)fstype);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+        .arg1 = (void *)source,
+        .arg2 = (void *)target,
+        .arg3 = (void *)fstype,
+        .types = SYSCALL_CTX_ARG_STR(0) | SYSCALL_CTX_ARG_STR(1) | SYSCALL_CTX_ARG_STR(2),
+    };
+
+    collect_syscall_ctx(&syscall, &syscall_ctx);
     cache_syscall(&syscall);
 
     return 0;

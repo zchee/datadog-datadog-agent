@@ -8,18 +8,22 @@
 #include "helpers/filesystem.h"
 #include "helpers/syscalls.h"
 
-int __attribute__((always_inline)) trace__sys_unlink(u8 async, int dirfd, const char *filename, int flags) {
+int __attribute__((always_inline)) trace__sys_unlink(int dirfd, const char *filename, int flags, struct syscall_ctx_collector_t *syscall_ctx) {
     struct syscall_cache_t syscall = {
         .type = EVENT_UNLINK,
         .policy = fetch_policy(EVENT_UNLINK),
-        .async = async,
+        .async = syscall_ctx->async,
         .unlink = {
             .flags = flags,
         }
     };
 
-    if (!async) {
-        collect_syscall_ctx(&syscall, SYSCALL_CTX_ARG_INT(0) | SYSCALL_CTX_ARG_STR(1) | SYSCALL_CTX_ARG_INT(2), (void *)&dirfd, (void *)filename, (void *)&flags);
+    if (!syscall_ctx->async) {
+        syscall_ctx->arg1 = (void *)&dirfd;
+        syscall_ctx->arg2 = (void *)filename;
+        syscall_ctx->arg3 = (void *)&flags;
+        syscall_ctx->types = SYSCALL_CTX_ARG_INT(0) | SYSCALL_CTX_ARG_STR(1) | SYSCALL_CTX_ARG_INT(2);
+        collect_syscall_ctx(&syscall, syscall_ctx);
     }
     cache_syscall(&syscall);
 
@@ -29,18 +33,29 @@ int __attribute__((always_inline)) trace__sys_unlink(u8 async, int dirfd, const 
 HOOK_SYSCALL_ENTRY1(unlink, const char *, filename) {
     int dirfd = AT_FDCWD;
     int flags = 0;
-    return trace__sys_unlink(SYNC_SYSCALL, dirfd, filename, flags);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+        .async = SYNC_SYSCALL,
+    };
+    return trace__sys_unlink(dirfd, filename, flags, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY3(unlinkat, int, dirfd, const char *, filename, int, flags) {
-    return trace__sys_unlink(SYNC_SYSCALL, dirfd, filename, flags);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+        .async = SYNC_SYSCALL,
+    };
+    return trace__sys_unlink(dirfd, filename, flags, &syscall_ctx);
 }
 
 HOOK_ENTRY("do_unlinkat")
 int hook_do_unlinkat(ctx_t *ctx) {
     struct syscall_cache_t *syscall = peek_syscall(EVENT_UNLINK);
     if (!syscall) {
-        return trace__sys_unlink(ASYNC_SYSCALL, 0, NULL, 0);
+        struct syscall_ctx_collector_t syscall_ctx = {
+            .async = ASYNC_SYSCALL,
+        };
+        return trace__sys_unlink(0, NULL, 0, &syscall_ctx);
     }
     return 0;
 }

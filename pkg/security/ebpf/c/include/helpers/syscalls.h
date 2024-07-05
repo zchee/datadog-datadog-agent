@@ -20,7 +20,7 @@
 #define IS_SYSCALL_CTX_ARG_STR(types, pos) IS_SYSCALL_CTX_ARG(types, SYSCALL_CTX_STR_TYPE, pos)
 #define IS_SYSCALL_CTX_ARG_INT(types, pos) IS_SYSCALL_CTX_ARG(types, SYSCALL_CTX_INT_TYPE, pos)
 
-void __attribute__((always_inline)) collect_syscall_ctx(struct syscall_cache_t *syscall, u8 types, void *arg1, void *arg2, void *arg3) {
+void __attribute__((always_inline)) collect_syscall_ctx(struct syscall_cache_t *syscall, struct syscall_ctx_collector_t *ctx) {
     u32 key = 0;
     u32 *id = bpf_map_lookup_elem(&syscall_ctx_gen_id, &key);
     if (!id) {
@@ -29,47 +29,47 @@ void __attribute__((always_inline)) collect_syscall_ctx(struct syscall_cache_t *
     __sync_fetch_and_add(id, 1);
 
     key = *id % MAX_SYSCALL_CTX_ENTRIES;
-    char *data = bpf_map_lookup_elem(&syscall_ctx, &key);
-    if (!data) {
+    struct syscall_ctx_entry_t *entry = bpf_map_lookup_elem(&syscall_ctx, &key);
+    if (!entry) {
         return;
     }
 
-    u32 *id_ptr = (u32 *)&data[0];
-    id_ptr[0] = *id;
+    entry->id = *id;
+    entry->syscall_nr = ctx->syscall_nr;
 
     u8 effective_types = 0;
 
-    if (arg1) {
-        effective_types |= (types & SYSCALL_CTX_ARG_MASK(0));
-        if (IS_SYSCALL_CTX_ARG_STR(types, 0)) {
-            bpf_probe_read_str(&data[5], MAX_SYSCALL_ARG_MAX_SIZE, arg1);
+    if (ctx->arg1) {
+        effective_types |= ctx->types & SYSCALL_CTX_ARG_MASK(0);
+        if (IS_SYSCALL_CTX_ARG_STR(ctx->types, 0)) {
+            bpf_probe_read_str(&entry->arg1[0], MAX_SYSCALL_ARG_MAX_SIZE, ctx->arg1);
         } else {
-            s64 *addr = (s64 *)&data[5];
-            addr[0] = *(s64 *)arg1;
+            s64 *addr = (s64 *)&entry->arg1[0];
+            addr[0] = *(s64 *)ctx->arg1;
         }
     }
 
-    if (arg2) {
-        effective_types |= (types & SYSCALL_CTX_ARG_MASK(1));
-        if (IS_SYSCALL_CTX_ARG_STR(types, 1)) {
-            bpf_probe_read_str(&data[5 + MAX_SYSCALL_ARG_MAX_SIZE], MAX_SYSCALL_ARG_MAX_SIZE, arg2);
+    if (ctx->arg2) {
+        effective_types |= ctx->types & SYSCALL_CTX_ARG_MASK(1);
+        if (IS_SYSCALL_CTX_ARG_STR(ctx->types, 1)) {
+            bpf_probe_read_str(&entry->arg2[0], MAX_SYSCALL_ARG_MAX_SIZE, ctx->arg2);
         } else {
-            s64 *addr = (s64 *)&data[5 + MAX_SYSCALL_ARG_MAX_SIZE];
-            addr[0] = *(s64 *)arg2;
+            s64 *addr = (s64 *)&entry->arg2[0];
+            addr[0] = *(s64 *)ctx->arg2;
         }
     }
 
-    if (arg3) {
-        effective_types |= (types & SYSCALL_CTX_ARG_MASK(2));
-        if (IS_SYSCALL_CTX_ARG_STR(types, 2)) {
-            bpf_probe_read_str(&data[5 + MAX_SYSCALL_ARG_MAX_SIZE * 2], MAX_SYSCALL_ARG_MAX_SIZE, arg3);
+    if (ctx->arg3) {
+        effective_types |= ctx->types & SYSCALL_CTX_ARG_MASK(2);
+        if (IS_SYSCALL_CTX_ARG_STR(ctx->types, 2)) {
+            bpf_probe_read_str(&entry->arg3[0], MAX_SYSCALL_ARG_MAX_SIZE, ctx->arg3);
         } else {
-            s64 *addr = (s64 *)&data[5 + MAX_SYSCALL_ARG_MAX_SIZE * 2];
-            addr[0] = *(s64 *)arg3;
+            s64 *addr = (s64 *)&entry->arg3[0];
+            addr[0] = *(s64 *)ctx->arg3;
         }
     }
 
-    data[4] = effective_types;
+    entry->types = effective_types;
 
     syscall->ctx_id = *id;
 }

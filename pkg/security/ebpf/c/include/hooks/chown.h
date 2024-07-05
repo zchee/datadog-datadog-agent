@@ -6,7 +6,7 @@
 #include "helpers/filesystem.h"
 #include "helpers/syscalls.h"
 
-int __attribute__((always_inline)) trace__sys_chown(const char *filename, uid_t user, gid_t group) {
+int __attribute__((always_inline)) trace__sys_chown(const char *filename, uid_t user, gid_t group, struct syscall_ctx_collector_t *syscall_ctx) {
     struct policy_t policy = fetch_policy(EVENT_CHOWN);
     if (is_discarded_by_process(policy.mode, EVENT_CHOWN)) {
         return 0;
@@ -20,38 +20,65 @@ int __attribute__((always_inline)) trace__sys_chown(const char *filename, uid_t 
             .group = group }
     };
 
-    collect_syscall_ctx(&syscall, SYSCALL_CTX_ARG_STR(0) | SYSCALL_CTX_ARG_INT(1) | SYSCALL_CTX_ARG_INT(2), (void *)filename, (void *)&user, (void *)&group);
+    if (!syscall_ctx->async) {
+        syscall_ctx->arg1 = (void *)filename;
+        syscall_ctx->arg2 = (void *)&user;
+        syscall_ctx->arg3 = (void *)&group;
+        syscall_ctx->types = SYSCALL_CTX_ARG_STR(0) | SYSCALL_CTX_ARG_INT(1) | SYSCALL_CTX_ARG_INT(2);
+        collect_syscall_ctx(&syscall, syscall_ctx);
+    }
     cache_syscall(&syscall);
 
     return 0;
 }
 
 HOOK_SYSCALL_ENTRY3(lchown, const char *, filename, uid_t, user, gid_t, group) {
-    return trace__sys_chown(filename, user, group);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chown(filename, user, group, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY3(fchown, int, fd, uid_t, user, gid_t, group) {
-    return trace__sys_chown(NULL, user, group);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chown(NULL, user, group, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY3(chown, const char *, filename, uid_t, user, gid_t, group) {
-    return trace__sys_chown(filename, user, group);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chown(filename, user, group, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY3(lchown16, const char *, filename, uid_t, user, gid_t, group) {
-    return trace__sys_chown(filename, user, group);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chown(filename, user, group, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY3(fchown16, int, fd, uid_t, user, gid_t, group) {
-    return trace__sys_chown(NULL, user, group);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chown(NULL, user, group, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY3(chown16, const char *, filename, uid_t, user, gid_t, group) {
-    return trace__sys_chown(filename, user, group);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chown(filename, user, group, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY4(fchownat, int, dirfd, const char *, filename, uid_t, user, gid_t, group) {
-    return trace__sys_chown(filename, user, group);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chown(filename, user, group, &syscall_ctx);
 }
 
 int __attribute__((always_inline)) sys_chown_ret(void *ctx, int retval) {

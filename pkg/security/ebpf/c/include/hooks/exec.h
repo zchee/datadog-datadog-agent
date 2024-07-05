@@ -7,7 +7,7 @@
 #include "helpers/syscalls.h"
 #include "constants/fentry_macro.h"
 
-int __attribute__((always_inline)) trace__sys_execveat(ctx_t *ctx, const char *path, const char **argv, const char **env) {
+int __attribute__((always_inline)) trace__sys_execveat(const char *path, const char **argv, const char **env, struct syscall_ctx_collector_t *syscall_ctx) {
     // use the fist 56 bits of ktime to simulate a somewhat monotonic id
     // the last 8 bits are the cpu id to avoid collisions between cores
     // increment the id by 1 for the envs to have distinct ids (this assumes a new exec syscall cannot be issued in the next nanosecond)
@@ -23,7 +23,10 @@ int __attribute__((always_inline)) trace__sys_execveat(ctx_t *ctx, const char *p
                 .id = id + 1,
             } }
     };
-    collect_syscall_ctx(&syscall, SYSCALL_CTX_ARG_STR(0), (void *)path, NULL, NULL);
+
+    syscall_ctx->arg1 = (void *)path;
+    syscall_ctx->types = SYSCALL_CTX_ARG_STR(0);
+    collect_syscall_ctx(&syscall, syscall_ctx);
     cache_syscall(&syscall);
 
     u64 pid_tgid = bpf_get_current_pid_tgid();
@@ -42,11 +45,17 @@ int __attribute__((always_inline)) trace__sys_execveat(ctx_t *ctx, const char *p
 }
 
 HOOK_SYSCALL_ENTRY3(execve, const char *, filename, const char **, argv, const char **, env) {
-    return trace__sys_execveat(ctx, filename, argv, env);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_execveat(filename, argv, env, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY4(execveat, int, fd, const char *, filename, const char **, argv, const char **, env) {
-    return trace__sys_execveat(ctx, filename, argv, env);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_execveat(filename, argv, env, &syscall_ctx);
 }
 
 int __attribute__((always_inline)) handle_execve_exit() {

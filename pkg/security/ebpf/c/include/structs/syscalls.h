@@ -217,4 +217,22 @@ struct syscall_cache_t {
     };
 };
 
+struct __attribute__((packed)) syscall_ctx_entry_t {
+    u64 syscall_nr;
+    u32 id;
+    u8 types;
+    char arg1[MAX_SYSCALL_ARG_MAX_SIZE];
+    char arg2[MAX_SYSCALL_ARG_MAX_SIZE];
+    char arg3[MAX_SYSCALL_ARG_MAX_SIZE];
+};
+
+struct syscall_ctx_collector_t {
+    u64 syscall_nr;
+    void *arg1;
+    void *arg2;
+    void *arg3;
+    u8 types;
+    u8 async;
+};
+
 #endif

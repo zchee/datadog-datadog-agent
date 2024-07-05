@@ -7,7 +7,7 @@
 #include "helpers/filesystem.h"
 #include "helpers/syscalls.h"
 
-int __attribute__((always_inline)) trace__sys_link(u8 async, const char *oldpath, const char *newpath) {
+int __attribute__((always_inline)) trace__sys_link(const char *oldpath, const char *newpath, struct syscall_ctx_collector_t *syscall_ctx) {
     struct policy_t policy = fetch_policy(EVENT_LINK);
     if (is_discarded_by_process(policy.mode, EVENT_LINK)) {
         return 0;
@@ -16,11 +16,14 @@ int __attribute__((always_inline)) trace__sys_link(u8 async, const char *oldpath
     struct syscall_cache_t syscall = {
         .type = EVENT_LINK,
         .policy = policy,
-        .async = async,
+        .async = syscall_ctx->async,
     };
 
-    if (!async) {
-        collect_syscall_ctx(&syscall, SYSCALL_CTX_ARG_STR(0) | SYSCALL_CTX_ARG_STR(1), (void *)oldpath, (void *)newpath, NULL);
+    if (!syscall_ctx->async) {
+        syscall_ctx->arg1 = (void *)oldpath;
+        syscall_ctx->arg2 = (void *)newpath;
+        syscall_ctx->types = SYSCALL_CTX_ARG_STR(0) | SYSCALL_CTX_ARG_STR(1);
+        collect_syscall_ctx(&syscall, syscall_ctx);
     }
     cache_syscall(&syscall);
 
@@ -28,18 +31,29 @@ int __attribute__((always_inline)) trace__sys_link(u8 async, const char *oldpath
 }
 
 HOOK_SYSCALL_ENTRY2(link, const char *, oldpath, const char *, newpath) {
-    return trace__sys_link(SYNC_SYSCALL, oldpath, newpath);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_PARMRET(ctx),
+        .async = SYNC_SYSCALL,
+    };
+    return trace__sys_link(oldpath, newpath, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY4(linkat, int, olddirfd, const char *, oldpath, int, newdirfd, const char *, newpath) {
-    return trace__sys_link(SYNC_SYSCALL, oldpath, newpath);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_PARMRET(ctx),
+        .async = SYNC_SYSCALL,
+    };
+    return trace__sys_link(oldpath, newpath, &syscall_ctx);
 }
 
 HOOK_ENTRY("do_linkat")
 int hook_do_linkat(ctx_t *ctx) {
     struct syscall_cache_t *syscall = peek_syscall(EVENT_LINK);
     if (!syscall) {
-        return trace__sys_link(ASYNC_SYSCALL, NULL, NULL);
+        struct syscall_ctx_collector_t syscall_ctx = {
+            .async = ASYNC_SYSCALL,
+        };
+        return trace__sys_link(NULL, NULL, &syscall_ctx);
     }
     return 0;
 }

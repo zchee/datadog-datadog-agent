@@ -93,7 +93,8 @@ type SyscallEvent struct {
 
 // SyscallContext contains syscall context
 type SyscallContext struct {
-	ID uint32 `field:"-"`
+	ID        uint32 `field:"-"`
+	SyscallNr uint64 `field:"-"`
 
 	StrArg1 string `field:"syscall.str1,handler:ResolveSyscallCtxArgsStr1,weight:900,opts:getters_only|skip_ad"`
 	StrArg2 string `field:"syscall.str2,handler:ResolveSyscallCtxArgsStr2,weight:900,opts:getters_only|skip_ad"`

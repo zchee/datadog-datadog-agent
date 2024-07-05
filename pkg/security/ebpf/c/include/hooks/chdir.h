@@ -7,7 +7,7 @@
 #include "helpers/filesystem.h"
 #include "helpers/syscalls.h"
 
-long __attribute__((always_inline)) trace__sys_chdir(const char *path) {
+long __attribute__((always_inline)) trace__sys_chdir(const char *path, struct syscall_ctx_collector_t *syscall_ctx) {
     struct policy_t policy = fetch_policy(EVENT_CHDIR);
     if (is_discarded_by_process(policy.mode, EVENT_CHDIR)) {
         return 0;
@@ -19,18 +19,27 @@ long __attribute__((always_inline)) trace__sys_chdir(const char *path) {
         .chdir = {}
     };
 
-    collect_syscall_ctx(&syscall, SYSCALL_CTX_ARG_STR(0), (void *)path, NULL, NULL);
+    syscall_ctx->arg1 = (void *)path;
+    syscall_ctx->types = SYSCALL_CTX_ARG_STR(0);
+    collect_syscall_ctx(&syscall, syscall_ctx);
+
     cache_syscall(&syscall);
 
     return 0;
 }
 
 HOOK_SYSCALL_ENTRY1(chdir, const char *, path) {
-    return trace__sys_chdir(path);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chdir(path, &syscall_ctx);
 }
 
 HOOK_SYSCALL_ENTRY1(fchdir, unsigned int, fd) {
-    return trace__sys_chdir(NULL);
+    struct syscall_ctx_collector_t syscall_ctx = {
+        .syscall_nr = SYSCALL_NR(ctx),
+    };
+    return trace__sys_chdir(NULL, &syscall_ctx);
 }
 
 HOOK_ENTRY("set_fs_pwd")

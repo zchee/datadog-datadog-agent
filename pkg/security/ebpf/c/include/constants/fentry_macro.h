@@ -36,6 +36,12 @@ typedef unsigned long long ctx_t;
 #define CTX_PARMRET(ctx, argc) (u64)(ctx[argc])
 #define SYSCALL_PARMRET(ctx) CTX_PARMRET(ctx, 1)
 
+#if defined(bpf_target_x86)
+#define SYSCALL_NR(ctx) SYSCALL_PARMRET(ctx)
+#elif defined(bpf_target_arm64)
+#define SYSCALL_NR(ctx) (u64)(ctx[8])
+#endif /* defined(bpf_target_x86) */
+
 #else
 
 typedef struct pt_regs ctx_t;
@@ -70,6 +76,7 @@ typedef struct pt_regs ctx_t;
 
 #define CTX_PARMRET(ctx, _argc) PT_REGS_RC(ctx)
 #define SYSCALL_PARMRET(ctx) CTX_PARMRET(ctx, _)
+#define SYSCALL_NR(ctx) PT_REGS_SYSCALL_NR(ctx)
 
 #endif
 

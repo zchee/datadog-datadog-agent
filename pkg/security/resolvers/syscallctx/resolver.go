@@ -29,13 +29,34 @@ const (
 	intArg = 2
 )
 
-// KernelSyscallCtxStruct maps the kernel structure
-type KernelSyscallCtxStruct struct {
-	ID    uint32
-	Types uint8
-	Arg1  [argMaxSize]byte
-	Arg2  [argMaxSize]byte
-	Arg3  [argMaxSize]byte
+// KernelSyscallCtxEntryStruct maps the `syscall_ctx_entry_t` kernel structure
+type KernelSyscallCtxEntryStruct struct {
+	SyscallNr uint64
+	ID        uint32
+	Types     uint8
+	Arg1      [argMaxSize]byte
+	Arg2      [argMaxSize]byte
+	Arg3      [argMaxSize]byte
+}
+
+// UnmarshalBinary unmarshalls a binary representation of itself
+func (k *KernelSyscallCtxEntryStruct) UnmarshalBinary(data []byte) error {
+	if len(data) < 8+4+1+argMaxSize*3 {
+		return fmt.Errorf("invalid data size")
+	}
+	offset := 0
+	k.SyscallNr = binary.LittleEndian.Uint64(data[offset:])
+	offset += 8
+	k.ID = binary.LittleEndian.Uint32(data[offset:])
+	offset += 4
+	k.Types = data[offset]
+	offset++
+	copy(k.Arg1[:], data[offset:offset+argMaxSize])
+	offset += argMaxSize
+	copy(k.Arg2[:], data[offset:offset+argMaxSize])
+	offset += argMaxSize
+	copy(k.Arg3[:], data[offset:offset+argMaxSize])
+	return nil
 }
 
 // Resolver resolves syscall context
@@ -47,7 +68,7 @@ type Resolver struct {
 func (sr *Resolver) Resolve(ctxID uint32, ctx *model.SyscallContext) error {
 	key := ctxID % maxEntries
 
-	var ks KernelSyscallCtxStruct
+	var ks KernelSyscallCtxEntryStruct
 	if err := sr.ctxMap.Lookup(key, &ks); err != nil {
 		return fmt.Errorf("unable to resolve the syscall context for `%d`: %w", ctxID, err)
 	}
@@ -94,16 +115,18 @@ func (sr *Resolver) Resolve(ctxID uint32, ctx *model.SyscallContext) error {
 		ctx.IntArg3 = int64(binary.NativeEndian.Uint64(ks.Arg3[:]))
 	}
 
+	ctx.SyscallNr = ks.SyscallNr
+
 	return nil
 }
 
 // Start the syscall context resolver
 func (sr *Resolver) Start(manager *manager.Manager) error {
-	pathnames, err := managerhelper.Map(manager, "syscall_ctx")
+	syscallCtx, err := managerhelper.Map(manager, "syscall_ctx")
 	if err != nil {
 		return err
 	}
-	sr.ctxMap = pathnames
+	sr.ctxMap = syscallCtx
 
 	return nil
 }

@@ -15,6 +15,7 @@
 #define PT_REGS_PARM8(x) PT_REGS_STACK_PARM(x,2)
 #define PT_REGS_PARM9(x) PT_REGS_STACK_PARM(x,3)
 #define PT_REGS_PARM10(x) PT_REGS_STACK_PARM(x,4)
+#define PT_REGS_SYSCALL_NR(x) (__PT_REGS_CAST(x)->__PT_RET_REG)
 
 #elif defined(bpf_target_arm64)
 
@@ -32,6 +33,7 @@
 #define PT_REGS_PARM10(x) PT_REGS_STACK_PARM(__PT_REGS_CAST(x),1)
 #define PT_REGS_PARM7_CORE(x) BPF_CORE_READ(__PT_REGS_CAST(x), regs[6])
 #define PT_REGS_PARM8_CORE(x) BPF_CORE_READ(__PT_REGS_CAST(x), regs[7])
+#define PT_REGS_SYSCALL_NR(x) (__PT_REGS_CAST(x)->regs[8])
 
 #endif /* defined(bpf_target_x86) */
 
