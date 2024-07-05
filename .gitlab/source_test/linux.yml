@@ -20,6 +20,7 @@
     - !reference [.fast_on_dev_branch_only]
   variables:
     FLAVORS: '--flavor base'
+    # I am a useless change that will trigger tests !
     KUBERNETES_CPU_REQUEST: 16
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_MEMORY_LIMIT: 16Gi
