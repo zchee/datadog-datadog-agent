@@ -380,61 +380,6 @@ static __always_inline void kprobe_protocol_dispatcher_entrypoint(struct pt_regs
     }
 }
 
-static __always_inline void kprobe_finish(struct pt_regs *ctx, conn_tuple_t *t, bool skip_http) {
-    conn_tuple_t final_tuple = {0};
-    conn_tuple_t normalized_tuple = *t;
-    normalize_tuple(&normalized_tuple);
-    normalized_tuple.pid = 0;
-    normalized_tuple.netns = 0;
-
-    log_debug("kprobe finish: saddr: %08llx %08llx (%u)", t->saddr_h, t->saddr_l, t->sport);
-    log_debug("kprobe finish: daddr: %08llx %08llx (%u)", t->daddr_h, t->daddr_l, t->dport);
-    log_debug("kprobe finish: netns: %08x pid: %u", t->netns, t->pid);
-
-    protocol_stack_t *stack = get_protocol_stack(&normalized_tuple);
-    if (!stack) {
-        return;
-    }
-
-    protocol_prog_t prog;
-    protocol_t protocol = get_protocol_from_stack(stack, LAYER_APPLICATION);
-    switch (protocol) {
-    case PROTOCOL_HTTP:
-        // HTTP is a special case. As of today, regardless of TLS or plaintext traffic, we ignore the PID and NETNS while processing it.
-        // The termination, both for TLS and plaintext, for HTTP traffic is taken care of in the socket filter.
-        // Until we split the TLS and plaintext management for HTTP traffic, there are flows (such as those being called from tcp_close)
-        // in which we don't want to terminate HTTP traffic, but instead leave it to the socket filter.
-        if (skip_http) {return;}
-        prog = PROG_HTTP_TERMINATION;
-        final_tuple = normalized_tuple;
-        break;
-    case PROTOCOL_HTTP2:
-        prog = PROG_HTTP2_TERMINATION;
-        final_tuple = *t;
-        break;
-    case PROTOCOL_KAFKA:
-        prog = PROG_KAFKA_TERMINATION;
-        final_tuple = *t;
-        break;
-    case PROTOCOL_POSTGRES:
-        prog = PROG_POSTGRES_TERMINATION;
-        final_tuple = normalized_tuple;
-        break;
-    default:
-        return;
-    }
-
-    const __u32 zero = 0;
-    kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
-    if (args == NULL) {
-        log_debug("dispatcher failed to save arguments for kprobe tail call");
-        return;
-    }
-    bpf_memset(args, 0, sizeof(kprobe_dispatcher_arguments_t));
-    bpf_memcpy(&args->tup, &final_tuple, sizeof(conn_tuple_t));
-    bpf_tail_call_compat(ctx, &kprobe_protocols_progs, prog);
-}
-
 // A shared implementation for the runtime & prebuilt socket filter that classifies & dispatches the protocols of the connections.
 static __always_inline void protocol_dispatcher_entrypoint(struct __sk_buff *skb) {
     skb_info_t skb_info = {0};
