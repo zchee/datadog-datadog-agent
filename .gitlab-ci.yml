@@ -9,6 +9,87 @@ default:
     - scheduler_failure
     - stale_schedule
     - data_integrity_failure
+go_deps:
+  artifacts:
+    expire_in: 1 day
+    paths:
+    - $CI_PROJECT_DIR/modcache.tar.xz
+  cache:
+  - key:
+      files:
+      - go.mod
+      - ./**/go.mod
+      prefix: go_deps
+    paths:
+    - modcache.tar.xz
+  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  needs:
+  - setup_agent_version
+  retry: 1
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    variables:
+      POLICY: pull-push
+  - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    variables:
+      POLICY: pull
+  script:
+  - if [ -f modcache.tar.xz  ]; then exit 0; fi
+  - source /root/.bashrc
+  - inv -e deps --verbose
+  - cd $GOPATH/pkg/mod/ && tar c -I "pxz -T${KUBERNETES_CPU_REQUEST}" -f $CI_PROJECT_DIR/modcache.tar.xz
+    .
+  stage: deps_fetch
+  tags:
+  - arch:amd64
+  variables:
+    KUBERNETES_CPU_REQUEST: 16
+    KUBERNETES_MEMORY_LIMIT: 16Gi
+    KUBERNETES_MEMORY_REQUEST: 12Gi
+go_tools_deps:
+  artifacts:
+    expire_in: 1 day
+    paths:
+    - $CI_PROJECT_DIR/modcache_tools.tar.xz
+  cache:
+  - key:
+      files:
+      - ./**/go.mod
+      prefix: go_tools_deps
+    paths:
+    - modcache_tools.tar.xz
+  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  needs:
+  - setup_agent_version
+  retry: 1
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    variables:
+      POLICY: pull-push
+  - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    variables:
+      POLICY: pull
+  script:
+  - if [ -f modcache_tools.tar.xz  ]; then exit 0; fi
+  - source /root/.bashrc
+  - inv -e download-tools
+  - cd $GOPATH/pkg/mod/ && tar c -I "pxz -T${KUBERNETES_CPU_REQUEST}" -f $CI_PROJECT_DIR/modcache_tools.tar.xz
+    .
+  stage: deps_fetch
+  tags:
+  - arch:amd64
+  variables:
+    KUBERNETES_CPU_REQUEST: 16
+setup_agent_version:
+  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  needs: []
+  script:
+  - source /root/.bashrc
+  - inv -e agent.version --cache-version
+  - $S3_CP_CMD $CI_PROJECT_DIR/agent-version.cache $S3_ARTIFACTS_URI/agent-version.cache
+  stage: setup
+  tags:
+  - arch:amd64
 stages:
 - .pre
 - setup
@@ -75,9 +156,6 @@ tests_deb-arm64-py3:
   - inv -e rtloader.install
   - inv -e rtloader.format --raise-if-changed
   - inv -e rtloader.test
-  extends:
-  - .rtloader_tests
-  - .linux_tests
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
   needs:
   - go_deps
@@ -156,9 +234,6 @@ tests_rpm-arm64-py3:
   - inv -e rtloader.install
   - inv -e rtloader.format --raise-if-changed
   - inv -e rtloader.test
-  extends:
-  - .rtloader_tests
-  - .linux_tests
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
   needs:
   - go_deps
