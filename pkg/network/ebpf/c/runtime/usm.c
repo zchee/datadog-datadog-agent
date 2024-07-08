@@ -414,7 +414,8 @@ int BPF_KRETPROBE(kretprobe__tcp_recvmsg, int ret) {
         u64 data1 = 0;
         bpf_probe_read_user(&data0, sizeof(data0), state->buffer);
         bpf_probe_read_user(&data1, sizeof(data1), state->buffer + sizeof(data1));
-        log_debug("recvmsg data=%016llx %016llx", bpf_be64_to_cpu(data0), bpf_be64_to_cpu(data1));
+        log_debug("recvmsg data0=%llx", bpf_be64_to_cpu(data0));
+        log_debug("recvmsg data1=%llx", bpf_be64_to_cpu(data1));
 
         kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, ret, true);
     }
@@ -500,7 +501,8 @@ int BPF_KRETPROBE(kretprobe__tcp_sendmsg, int ret) {
         u64 data1 = 0;
         bpf_probe_read_user(&data0, sizeof(data0), state->buffer);
         bpf_probe_read_user(&data1, sizeof(data1), state->buffer + sizeof(data1));
-        log_debug("sendmsg data=%016llx %016llx", bpf_be64_to_cpu(data0), bpf_be64_to_cpu(data1));
+        log_debug("sendmsg data0=%llx", bpf_be64_to_cpu(data0));
+        log_debug("sendmsg data1=%llx", bpf_be64_to_cpu(data1));
 
         kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, ret, false);
     }
