@@ -409,18 +409,19 @@ int BPF_KRETPROBE(kretprobe__tcp_recvmsg, int ret) {
         return 0;
     }
 
+    tcp_kprobe_state_t statecopy = *state;
+    bpf_map_delete_elem(&tcp_kprobe_state, &pid_tgid);
+
     if (ret > 0) {
         u64 data0 = 0;
         u64 data1 = 0;
-        bpf_probe_read_user(&data0, sizeof(data0), state->buffer);
-        bpf_probe_read_user(&data1, sizeof(data1), state->buffer + sizeof(data1));
+        bpf_probe_read_user(&data0, sizeof(data0), statecopy.buffer);
+        bpf_probe_read_user(&data1, sizeof(data1), statecopy.buffer + sizeof(data1));
         log_debug("recvmsg data0=%llx", bpf_be64_to_cpu(data0));
         log_debug("recvmsg data1=%llx", bpf_be64_to_cpu(data1));
 
-        kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, ret, true);
+        kprobe_protocol_dispatcher_entrypoint(ctx, statecopy.sock, statecopy.buffer, ret, true);
     }
-
-    bpf_map_delete_elem(&tcp_kprobe_state, &pid_tgid);
 
     return 0;
 }
@@ -496,18 +497,19 @@ int BPF_KRETPROBE(kretprobe__tcp_sendmsg, int ret) {
         return 0;
     }
 
+    tcp_kprobe_state_t statecopy = *state;
+    bpf_map_delete_elem(&tcp_kprobe_state, &pid_tgid);
+
     if (ret > 0) {
         u64 data0 = 0;
         u64 data1 = 0;
-        bpf_probe_read_user(&data0, sizeof(data0), state->buffer);
-        bpf_probe_read_user(&data1, sizeof(data1), state->buffer + sizeof(data1));
+        bpf_probe_read_user(&data0, sizeof(data0), statecopy.buffer);
+        bpf_probe_read_user(&data1, sizeof(data1), statecopy.buffer + sizeof(data1));
         log_debug("sendmsg data0=%llx", bpf_be64_to_cpu(data0));
         log_debug("sendmsg data1=%llx", bpf_be64_to_cpu(data1));
 
-        kprobe_protocol_dispatcher_entrypoint(ctx, state->sock, state->buffer, ret, false);
+        kprobe_protocol_dispatcher_entrypoint(ctx, statecopy.sock, statecopy.buffer, ret, false);
     }
-
-    bpf_map_delete_elem(&tcp_kprobe_state, &pid_tgid);
 
     return 0;
 }
