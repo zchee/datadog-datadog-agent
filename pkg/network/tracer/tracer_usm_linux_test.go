@@ -501,14 +501,8 @@ func testHTTPSClassification(t *testing.T, tr *Tracer, clientHost, targetHost, s
 		},
 	}
 
-	// makeRequest is a helper that makes a GET request and handle the response.
-	makeRequest := func(t require.TestingT, client *nethttp.Client, url string) {
-		r, err := client.Get(url)
-		assert.NoError(t, err)
-		_, _ = io.Copy(io.Discard, r.Body)
-		_ = r.Body.Close()
-		client.CloseIdleConnections()
-	}
+	logger, err := newTraceMarkerLogger()
+	require.NoError(t, err)
 
 	serverAddress := net.JoinHostPort(serverHost, httpsPort)
 	targetAddress := net.JoinHostPort(targetHost, httpsPort)
@@ -2333,4 +2327,35 @@ func soTLSDetachPID(t *testing.T, pid int) {
 	require.Eventually(t, func() bool {
 		return !utils.IsProgramTraced("shared_libraries", pid)
 	}, 5*time.Second, 100*time.Millisecond, "process %v is still traced by TLS (SO) monitoring after detaching", pid)
+}
+
+type traceMarkerLogger struct {
+	fd *os.File
+}
+
+func newTraceMarkerLogger() (*traceMarkerLogger, error) {
+	fd, err := os.OpenFile("/sys/kernel/tracing/trace_marker", os.O_SYNC|os.O_WRONLY, 0)
+	if err != nil {
+		return nil, fmt.Errorf("could not create traceMarkerLogger: %w", err)
+	}
+
+	return &traceMarkerLogger{
+		fd,
+	}, nil
+}
+
+func (l *traceMarkerLogger) Log(format string, args ...interface{}) {
+	if l == nil {
+		return
+	}
+
+	l.fd.WriteString(fmt.Sprintf(format, args...))
+}
+
+func (l *traceMarkerLogger) Close() {
+	if l == nil {
+		return
+	}
+
+	l.fd.Close()
 }
