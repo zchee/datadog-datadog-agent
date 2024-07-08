@@ -183,30 +183,32 @@ func (s *USMSuite) TestProtocolClassification() {
 	require.NoError(t, err)
 	t.Cleanup(tr.Stop)
 
-	t.Run("with dnat", func(t *testing.T) {
-		// SetupDNAT sets up a NAT translation from 2.2.2.2 to 1.1.1.1
-		netlink.SetupDNAT(t)
-		testProtocolClassificationCrossOS(t, tr, "localhost", "2.2.2.2", "1.1.1.1")
-		testProtocolClassificationLinux(t, tr, "localhost", "2.2.2.2", "1.1.1.1")
-		testTLSClassification(t, tr, "localhost", "2.2.2.2", "1.1.1.1")
-		testProtocolConnectionProtocolMapCleanup(t, tr, "localhost", "2.2.2.2", "1.1.1.1:0")
-	})
+	for i := 0; i < 4; i++ {
+		t.Run("with dnat", func(t *testing.T) {
+			// SetupDNAT sets up a NAT translation from 2.2.2.2 to 1.1.1.1
+			netlink.SetupDNAT(t)
+			testProtocolClassificationCrossOS(t, tr, "localhost", "2.2.2.2", "1.1.1.1")
+			testProtocolClassificationLinux(t, tr, "localhost", "2.2.2.2", "1.1.1.1")
+			testTLSClassification(t, tr, "localhost", "2.2.2.2", "1.1.1.1")
+			testProtocolConnectionProtocolMapCleanup(t, tr, "localhost", "2.2.2.2", "1.1.1.1:0")
+		})
 
-	t.Run("with snat", func(t *testing.T) {
-		// SetupDNAT sets up a NAT translation from 6.6.6.6 to 7.7.7.7
-		netlink.SetupSNAT(t)
-		testProtocolClassificationCrossOS(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1")
-		testProtocolClassificationLinux(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1")
-		testTLSClassification(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1")
-		testProtocolConnectionProtocolMapCleanup(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1:0")
-	})
+		t.Run("with snat", func(t *testing.T) {
+			// SetupDNAT sets up a NAT translation from 6.6.6.6 to 7.7.7.7
+			netlink.SetupSNAT(t)
+			testProtocolClassificationCrossOS(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1")
+			testProtocolClassificationLinux(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1")
+			testTLSClassification(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1")
+			testProtocolConnectionProtocolMapCleanup(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1:0")
+		})
 
-	t.Run("without nat", func(t *testing.T) {
-		testProtocolClassificationCrossOS(t, tr, "localhost", "127.0.0.1", "127.0.0.1")
-		testProtocolClassificationLinux(t, tr, "localhost", "127.0.0.1", "127.0.0.1")
-		testTLSClassification(t, tr, "localhost", "127.0.0.1", "127.0.0.1")
-		testProtocolConnectionProtocolMapCleanup(t, tr, "localhost", "127.0.0.1", "127.0.0.1:0")
-	})
+		t.Run("without nat", func(t *testing.T) {
+			testProtocolClassificationCrossOS(t, tr, "localhost", "127.0.0.1", "127.0.0.1")
+			testProtocolClassificationLinux(t, tr, "localhost", "127.0.0.1", "127.0.0.1")
+			testTLSClassification(t, tr, "localhost", "127.0.0.1", "127.0.0.1")
+			testProtocolConnectionProtocolMapCleanup(t, tr, "localhost", "127.0.0.1", "127.0.0.1:0")
+		})
+	}
 }
 
 func testProtocolConnectionProtocolMapCleanup(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
