@@ -183,11 +183,6 @@ func callInvocationHandler(daemon *daemon.Daemon, arn string, deadlineMs int64, 
 }
 
 func sendSystemEnhancedMetrics(daemon *daemon.Daemon, emitCPUMetrics, emitNetworkMetrics bool, uptimeOffset float64, cpuOffsetData *proc.CPUData, networkOffsetData *proc.NetworkData, sendTmpMetrics chan bool) {
-	if daemon.MetricAgent == nil {
-		log.Debug("Could not send system enhanced metrics")
-		return
-	}
-
 	sendTmpMetrics <- true
 
 	if emitCPUMetrics {
