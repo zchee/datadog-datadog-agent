@@ -102,7 +102,7 @@ AGENT_HEROKU_TAGS = AGENT_TAGS.difference(
     }
 )
 
-FIPS_AGENT_TAGS = {"requirefips", "goexperiment.opensslcrypto"}
+FIPS_AGENT_TAGS = {"goexperiment.opensslcrypto"}
 
 # AGENTLESS_SCANNER_TAGS lists the tags needed when building the agentless-scanner
 AGENTLESS_SCANNER_TAGS = {""}
