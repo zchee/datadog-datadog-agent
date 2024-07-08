@@ -501,7 +501,7 @@ func testHTTPSClassification(t *testing.T, tr *Tracer, clientHost, targetHost, s
 		},
 	}
 
-	logger, err := newTraceMarkerLogger()
+	_, err := newTraceMarkerLogger()
 	require.NoError(t, err)
 
 	serverAddress := net.JoinHostPort(serverHost, httpsPort)
