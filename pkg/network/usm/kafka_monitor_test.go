@@ -1263,9 +1263,13 @@ func (s *KafkaProtocolParsingSuite) TestKafkaFetchRaw() {
 
 	t.Run("without TLS", func(t *testing.T) {
 		for _, version := range versions {
-			t.Run(fmt.Sprintf("api%d", version), func(t *testing.T) {
-				testKafkaFetchRaw(t, false, version)
-			})
+			for i := 0; i < 10; i++ {
+				t.Run(fmt.Sprintf("run%d", i), func(t *testing.T) {
+					t.Run(fmt.Sprintf("api%d", version), func(t *testing.T) {
+						testKafkaFetchRaw(t, false, version)
+					})
+				})
+			}
 		}
 	})
 
