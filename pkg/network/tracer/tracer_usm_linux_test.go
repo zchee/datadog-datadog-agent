@@ -25,7 +25,6 @@ import (
 
 	redis2 "github.com/go-redis/redis/v9"
 	gorilla "github.com/gorilla/mux"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/twmb/franz-go/pkg/kgo"
