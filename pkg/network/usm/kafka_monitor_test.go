@@ -1218,7 +1218,7 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 				info.msgs = make([]Message, 0)
 			}
 
-			info.numSets += 1
+			info.numSets++
 			info.msgs = append(info.msgs, msgs...)
 		}
 
@@ -1236,15 +1236,15 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 				can.runClient(group.msgs)
 
 				if tt.produceFetchValidationWithErrorCode != nil {
-					copy := kafkaParsingValidationWithErrorCodes{
+					tmp := kafkaParsingValidationWithErrorCodes{
 						expectedAPIVersionFetch: tt.produceFetchValidationWithErrorCode.expectedAPIVersionFetch,
 					}
 					tempFetchValidation := make(map[int32]int, len(tt.produceFetchValidationWithErrorCode.expectedNumberOfFetchRequests))
 					for k, v := range tt.produceFetchValidationWithErrorCode.expectedNumberOfFetchRequests {
 						tempFetchValidation[k] = v * group.numSets
 					}
-					copy.expectedNumberOfFetchRequests = tempFetchValidation
-					getAndValidateKafkaStatsWithErrorCodes(t, monitor, 1, tt.topic, copy)
+					tmp.expectedNumberOfFetchRequests = tempFetchValidation
+					getAndValidateKafkaStatsWithErrorCodes(t, monitor, 1, tt.topic, tmp)
 				} else {
 					getAndValidateKafkaStats(t, monitor, 1, tt.topic, kafkaParsingValidation{
 						expectedNumberOfFetchRequests: tt.numFetchedRecords * group.numSets,
