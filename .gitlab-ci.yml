@@ -75,6 +75,7 @@ stages:
   - benchmarks
   - package_build
   - packaging
+  - fips_compliance
   - pkg_metrics
   - kitchen_deploy
   - kitchen_testing
