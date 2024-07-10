@@ -70,7 +70,7 @@ func GetSubprocessOutput(argv **C.char, env **C.char, cStdout **C.char, cStderr 
 		outputErr, _ = io.ReadAll(stderr)
 	}()
 
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		*exception = TrackedCString(fmt.Sprintf("internal error starting subprocess: %v", err))
 		log.Errorf("internal error starting subprocess: %v", err)
