@@ -44,8 +44,6 @@ jobs:
               uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
               with:
                 ref: ${{ env.RELEASE_BRANCH }}
-                fetch-depth: 0
-                sparse-checkout: 'tasks'
             
             - name: Check for changes since last RC
               id: check_for_changes
