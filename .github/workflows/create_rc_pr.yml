@@ -50,7 +50,7 @@ jobs:
             - name: Check for changes since last RC
               id: check_for_changes
               run: |
-                echo "CHANGES=$(inv -e release.check-for-changes -r ${{ env.RELEASE_BRANCH }} ${{ env.WARNING }})" >> $GITHUB_ENV
+                echo "CHANGES=$(inv -e release.check-for-changes -r ${{ env.RELEASE_BRANCH }} ${{ env.WARNING }})" >> $GITHUB_OUTPUT
                   
             - name: Create RC PR
               if: ${{ steps.check_for_changes.outputs.CHANGES == 'true'}}
