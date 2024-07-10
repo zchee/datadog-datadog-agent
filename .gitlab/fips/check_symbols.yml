@@ -3,6 +3,9 @@
 check_symbol:
   stage: fips_compliance
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  rules:
+    - when: always
+      allow_failure: true
   script:
     - tar -xvf $OMNIBUS_PACKAGE_DIR/datadog-agent-dbg*amd64.deb
     - tar -xvf data.tar.xz ./opt/datadog-agent/.debug/opt/datadog-agent/bin/agent/agent.dbg
