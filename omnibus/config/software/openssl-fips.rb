@@ -27,7 +27,7 @@ build do
     command "./Configure --prefix=\"#{DIST_DIR}\" \
                 --libdir=lib \
                 -Wl,-rpath=\"#{DIST_DIR}/lib\" \
-                no-asm no-comp no-ssl2 no-ssl3 \
+                no-asm no-ssl2 no-ssl3 \
                 shared zlib"
     
     command "make depend -j"
