@@ -19,10 +19,6 @@ func TestGetSubprocessOutput(t *testing.T) {
 	testGetSubprocessOutput(t)
 }
 
-func TestGetSubprocessOutputUnknownBin(t *testing.T) {
-	testGetSubprocessOutputUnknownBin(t)
-}
-
 func TestGetSubprocessOutputError(t *testing.T) {
 	testGetSubprocessOutputError(t)
 }

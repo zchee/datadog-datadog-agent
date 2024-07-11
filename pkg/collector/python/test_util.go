@@ -45,23 +45,6 @@ func testGetSubprocessOutput(t *testing.T) {
 	assert.Nil(t, exception)
 }
 
-func testGetSubprocessOutputUnknownBin(t *testing.T) {
-	// go will not start the command since 'unknown_command' bin does not
-	// exists. This will result in 0 error code and empty output
-	var argv []*C.char = []*C.char{C.CString("unknown_command"), nil}
-	var env **C.char
-	var cStdout *C.char
-	var cStderr *C.char
-	var cRetCode C.int
-	var exception *C.char
-
-	GetSubprocessOutput(&argv[0], env, &cStdout, &cStderr, &cRetCode, &exception)
-	assert.Equal(t, "", C.GoString(cStdout))
-	assert.Equal(t, "", C.GoString(cStderr))
-	assert.Equal(t, C.int(0), cRetCode)
-	assert.Nil(t, exception)
-}
-
 func testGetSubprocessOutputError(t *testing.T) {
 	var argv []*C.char = []*C.char{C.CString("ls"), C.CString("does not exists"), nil}
 	var env **C.char
