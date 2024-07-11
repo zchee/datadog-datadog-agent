@@ -8,6 +8,8 @@ check_symbols:
     - when: always
       allow_failure: true
   script:
+    - ls -l $OMNIBUS_PACKAGE_DIR/
+    - ls -l $OMNIBUS_PACKAGE_DIR/datadog-agent-dbg*amd64.deb
     - tar -xvf $OMNIBUS_PACKAGE_DIR/datadog-agent-dbg*amd64.deb
     - tar -xvf data.tar.xz ./opt/datadog-agent/.debug/opt/datadog-agent/bin/agent/agent.dbg
     - $CI_PROJECT_DIR/tools/fips/verify_binary_symbols.sh ./opt/datadog-agent/.debug/opt/datadog-agent/bin/agent/agent.dbg
