@@ -18,6 +18,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
 	securityagent "github.com/DataDog/datadog-agent/comp/metadata/securityagent/fx"
 	systemprobe "github.com/DataDog/datadog-agent/comp/metadata/systemprobe/fx"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/fx"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 )
 
@@ -36,6 +37,7 @@ func Bundle() fxutil.BundleOptions {
 		packagesigningimpl.Module(),
 		systemprobe.Module(),
 		securityagent.Module(),
+		telemetry.Module(),
 	)
 }
 

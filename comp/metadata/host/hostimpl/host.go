@@ -23,6 +23,7 @@ import (
 	hostComp "github.com/DataDog/datadog-agent/comp/metadata/host"
 	"github.com/DataDog/datadog-agent/comp/metadata/resources"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	pkgconfig "github.com/DataDog/datadog-agent/pkg/config"
 	configUtils "github.com/DataDog/datadog-agent/pkg/config/utils"
 	"github.com/DataDog/datadog-agent/pkg/gohai"
@@ -43,9 +44,10 @@ const maxAcceptedInterval = 14400 // 4h
 const providerName = "host"
 
 type host struct {
-	log       log.Component
-	config    config.Component
-	resources resources.Component
+	log               log.Component
+	config            config.Component
+	resources         resources.Component
+	metadataTelemetry telemetry.Component
 
 	hostname        string
 	collectInterval time.Duration
@@ -62,10 +64,11 @@ func Module() fxutil.Module {
 type dependencies struct {
 	fx.In
 
-	Log        log.Component
-	Config     config.Component
-	Resources  resources.Component
-	Serializer serializer.MetricSerializer
+	Log               log.Component
+	Config            config.Component
+	Resources         resources.Component
+	Serializer        serializer.MetricSerializer
+	MetadataTelemetry telemetry.Component
 }
 
 type provides struct {
@@ -101,12 +104,13 @@ func newHostProvider(deps dependencies) provides {
 
 	hname, _ := hostname.Get(context.Background())
 	h := host{
-		log:             deps.Log,
-		config:          deps.Config,
-		resources:       deps.Resources,
-		hostname:        hname,
-		collectInterval: collectInterval,
-		serializer:      deps.Serializer,
+		log:               deps.Log,
+		config:            deps.Config,
+		resources:         deps.Resources,
+		metadataTelemetry: deps.MetadataTelemetry,
+		hostname:          hname,
+		collectInterval:   collectInterval,
+		serializer:        deps.Serializer,
 	}
 	return provides{
 		Comp:             &h,
@@ -124,6 +128,8 @@ func (h *host) collect(ctx context.Context) time.Duration {
 	payload := h.getPayload(ctx)
 	if err := h.serializer.SendHostMetadata(payload); err != nil {
 		h.log.Errorf("unable to submit host metadata payload, %s", err)
+	} else {
+		h.metadataTelemetry.Increment("host")
 	}
 	return h.collectInterval
 }

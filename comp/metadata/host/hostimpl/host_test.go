@@ -7,11 +7,14 @@ package hostimpl
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"go.uber.org/fx"
 	"golang.org/x/exp/maps"
 
@@ -20,8 +23,11 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log/logimpl"
 	"github.com/DataDog/datadog-agent/comp/metadata/resources"
 	"github.com/DataDog/datadog-agent/comp/metadata/resources/resourcesimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
+	telemetrymock "github.com/DataDog/datadog-agent/comp/metadata/telemetry/mock"
 	configUtils "github.com/DataDog/datadog-agent/pkg/config/utils"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
+	serializermock "github.com/DataDog/datadog-agent/pkg/serializer/mocks"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 )
 
@@ -33,6 +39,7 @@ func TestNewHostProviderDefaultInterval(t *testing.T) {
 			config.MockModule(),
 			resourcesimpl.MockModule(),
 			fx.Replace(resources.MockParams{Data: nil}),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 			fx.Provide(func() serializer.MetricSerializer { return nil }),
 		),
 	)
@@ -58,6 +65,7 @@ func TestNewHostProviderCustomInterval(t *testing.T) {
 			resourcesimpl.MockModule(),
 			fx.Replace(resources.MockParams{Data: nil}),
 			fx.Replace(config.MockParams{Overrides: overrides}),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 			fx.Provide(func() serializer.MetricSerializer { return nil }),
 		),
 	)
@@ -83,6 +91,7 @@ func TestNewHostProviderInvalidCustomInterval(t *testing.T) {
 			resourcesimpl.MockModule(),
 			fx.Replace(resources.MockParams{Data: nil}),
 			fx.Replace(config.MockParams{Overrides: overrides}),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 			fx.Provide(func() serializer.MetricSerializer { return nil }),
 		),
 	)
@@ -98,6 +107,7 @@ func TestFlareProvider(t *testing.T) {
 			config.MockModule(),
 			resourcesimpl.MockModule(),
 			fx.Replace(resources.MockParams{Data: nil}),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 			fx.Provide(func() serializer.MetricSerializer { return nil }),
 		),
 	)
@@ -117,6 +127,7 @@ func TestStatusHeaderProvider(t *testing.T) {
 			config.MockModule(),
 			resourcesimpl.MockModule(),
 			fx.Replace(resources.MockParams{Data: nil}),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 			fx.Provide(func() serializer.MetricSerializer { return nil }),
 		),
 	)
@@ -161,4 +172,42 @@ func TestStatusHeaderProvider(t *testing.T) {
 			test.assertFunc(t)
 		})
 	}
+}
+
+func TestCollectTelemetry(t *testing.T) {
+	tm := telemetrymock.Mock(t)
+	serializermock := serializermock.NewMetricSerializer(t)
+
+	ret := newHostProvider(
+		fxutil.Test[dependencies](
+			t,
+			logimpl.MockModule(),
+			config.MockModule(),
+			resourcesimpl.MockModule(),
+			fx.Replace(resources.MockParams{Data: nil}),
+			fx.Provide(func() telemetry.Component { return tm }),
+			fx.Provide(func() serializer.MetricSerializer { return serializermock }),
+		),
+	)
+
+	hostProvider := ret.Comp.(*host)
+
+	t.Run("SuccessTelemetry", func(t *testing.T) {
+		tm.On("Increment", "host").Once()
+		serializermock.On("SendHostMetadata", mock.Anything).Return(nil).Once()
+
+		hostProvider.collect(context.Background())
+
+		tm.AssertExpectations(t)
+		serializermock.AssertExpectations(t)
+	})
+
+	t.Run("ErrorNoTelemetry", func(t *testing.T) {
+		serializermock.On("SendHostMetadata", mock.Anything).Return(errors.New("some error")).Once()
+
+		hostProvider.collect(context.Background())
+
+		tm.AssertExpectations(t)
+		serializermock.AssertExpectations(t)
+	})
 }
