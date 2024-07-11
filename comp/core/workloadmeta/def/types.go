@@ -673,6 +673,7 @@ type KubernetesPod struct {
 	NamespaceAnnotations       map[string]string
 	FinishedAt                 time.Time
 	SecurityContext            *PodSecurityContext
+	Node                       string
 }
 
 // GetID implements Entity#GetID.
@@ -741,6 +742,7 @@ func (p KubernetesPod) String(verbose bool) string {
 		if !p.FinishedAt.IsZero() {
 			_, _ = fmt.Fprintln(&sb, "Finished At:", p.FinishedAt)
 		}
+		_, _ = fmt.Fprintln(&sb, "Nodename:", p.Node)
 	}
 
 	if p.SecurityContext != nil {
