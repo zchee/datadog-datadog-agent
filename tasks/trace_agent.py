@@ -75,7 +75,7 @@ def build(
 
     build_tags = get_build_tags(build_include, build_exclude)
     if fips_mode:
-        build_tags |= set(FIPS_AGENT_TAGS)
+        build_tags.extend(FIPS_AGENT_TAGS)
 
     race_opt = "-race" if race else ""
     build_type = "-a" if rebuild else ""

@@ -101,7 +101,7 @@ def build(
     ldflags += ' '.join([f"-X '{main + key}={value}'" for key, value in ld_vars.items()])
     build_tags += get_default_build_tags(build="security-agent")
     if fips_mode:
-        build_tags |= set(FIPS_AGENT_TAGS)
+        build_tags.extend(FIPS_AGENT_TAGS)
 
     if os.path.exists(BIN_PATH):
         os.remove(BIN_PATH)

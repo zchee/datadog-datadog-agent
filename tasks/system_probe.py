@@ -659,7 +659,7 @@ def build_sysprobe_binary(
         ldflags += ' -s -w'
 
     if fips_mode:
-        build_tags |= set(FIPS_AGENT_TAGS)
+        build_tags.extend(FIPS_AGENT_TAGS)
     if os.path.exists(binary):
         os.remove(binary)
 

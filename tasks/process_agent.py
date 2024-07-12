@@ -81,7 +81,7 @@ def build(
 
     build_tags = get_build_tags(build_include, build_exclude)
     if fips_mode:
-        build_tags |= set(FIPS_AGENT_TAGS)
+        build_tags.extend(FIPS_AGENT_TAGS)
 
     if os.path.exists(BIN_PATH):
         os.remove(BIN_PATH)
