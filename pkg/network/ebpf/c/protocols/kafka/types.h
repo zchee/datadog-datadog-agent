@@ -36,6 +36,7 @@ typedef struct kafka_transaction_t {
     __u8 topic_name_size;
     __u8 tags;
     char topic_name[TOPIC_NAME_MAX_STRING_SIZE];
+    __s8 error_code;
 } kafka_transaction_t;
 
 typedef struct kafka_event_t {
@@ -54,6 +55,7 @@ typedef enum {
     KAFKA_FETCH_RESPONSE_TOPIC_NAME_SIZE,
     KAFKA_FETCH_RESPONSE_NUM_PARTITIONS,
     KAFKA_FETCH_RESPONSE_PARTITION_START,
+    KAFKA_FETCH_RESPONSE_PARTITION_ERROR_CODE_START,
     KAFKA_FETCH_RESPONSE_PARTITION_ABORTED_TRANSACTIONS,
     KAFKA_FETCH_RESPONSE_RECORD_BATCHES_ARRAY_START,
     KAFKA_FETCH_RESPONSE_RECORD_BATCH_START,
@@ -69,6 +71,7 @@ typedef enum {
 typedef struct kafka_fetch_response_record_batches_array_t {
     __u32 num_bytes;
     __u32 offset;
+    __s8 partition_error_code;
 } kafka_fetch_response_record_batches_array_t;
 
 typedef struct kafka_response_context_t {
@@ -81,6 +84,7 @@ typedef struct kafka_response_context_t {
     __u8 remainder;
     // The current byte of the varint where we paused processing.
     __u8 varint_position;
+    __s8 partition_error_code;
     // Where the parition parsing needs to resume from.
     kafka_response_state partition_state;
     char remainder_buf[4];

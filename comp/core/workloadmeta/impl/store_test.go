@@ -131,7 +131,7 @@ func TestSubscribe(t *testing.T) {
 	testNodeMetadata := wmdef.KubernetesMetadata{
 		EntityID: wmdef.EntityID{
 			Kind: wmdef.KindKubernetesMetadata,
-			ID:   string(util.GenerateKubeMetadataEntityID("nodes", "", "test-node")),
+			ID:   string(util.GenerateKubeMetadataEntityID("", "nodes", "", "test-node")),
 		},
 		EntityMeta: wmdef.EntityMeta{
 			Name: "test-node",
@@ -694,7 +694,6 @@ func TestSubscribe(t *testing.T) {
 			s.Unsubscribe(ch)
 
 			<-doneCh
-			assert.Equal(t, tt.expected, actual)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
@@ -1457,7 +1456,7 @@ func TestListKubernetesMetadata(t *testing.T) {
 	nodeMetadata := wmdef.KubernetesMetadata{
 		EntityID: wmdef.EntityID{
 			Kind: wmdef.KindKubernetesMetadata,
-			ID:   string(util.GenerateKubeMetadataEntityID("nodes", "", "node1")),
+			ID:   string(util.GenerateKubeMetadataEntityID("", "nodes", "", "node1")),
 		},
 		EntityMeta: wmdef.EntityMeta{
 			Name:        "node1",
