@@ -175,24 +175,6 @@ int uprobe__kafka_tls_termination(struct pt_regs *ctx) {
     return 0;
 }
 
-SEC("kprobe/kafka_tls_termination")
-int kprobe__kafka_tls_termination(struct pt_regs *ctx) {
-    const __u32 zero = 0;
-
-    log_debug("kafka_tls_termination");
-
-    kprobe_dispatcher_arguments_t *args = bpf_map_lookup_elem(&kprobe_dispatcher_arguments, &zero);
-    if (args == NULL) {
-        return 0;
-    }
-
-    // On stack for 4.14
-    conn_tuple_t tup = args->tup;
-    kafka_tcp_termination(&tup);
-
-    return 0;
-}
-
 PKTBUF_READ_INTO_BUFFER(topic_name_parser, TOPIC_NAME_MAX_STRING_SIZE, BLK_SIZE)
 
 static __always_inline void kafka_batch_enqueue_wrapper(kafka_info_t *kafka, conn_tuple_t *tup, kafka_transaction_t *transaction) {
