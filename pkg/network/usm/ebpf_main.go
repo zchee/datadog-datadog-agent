@@ -68,10 +68,6 @@ const (
 	tupleByPidFDMap                        = "tuple_by_pid_fd"
 	pidFDByTupleMap                        = "pid_fd_by_tuple"
 
-	sockopsFunction         = "sockops__sockops"
-	sockhashMap             = "sockhash"
-	skMsgProtocolDispatcher = "sk_msg__protocol_dispatcher"
-
 	sockFDLookup    = "kprobe__sockfd_lookup_light"
 	sockFDLookupRet = "kretprobe__sockfd_lookup_light"
 
@@ -114,25 +110,8 @@ func newEBPFProgram(c *config.Config, connectionProtocolMap *ebpf.Map) (*ebpfPro
 			{Name: sockFDLookupArgsMap},
 			{Name: tupleByPidFDMap},
 			{Name: pidFDByTupleMap},
-			{Name: sockhashMap},
 		},
 		Probes: []*manager.Probe{
-			{
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: "classifier__egress",
-					UID:          probeUID,
-				},
-				IfName:           "lo",
-				NetworkDirection: manager.Egress,
-			},
-			{
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: "classifier__ingress",
-					UID:          probeUID,
-				},
-				IfName:           "lo",
-				NetworkDirection: manager.Ingress,
-			},
 			{
 				ProbeIdentificationPair: manager.ProbeIdentificationPair{
 					EBPFFuncName: "kprobe__tcp_sendmsg",
@@ -229,24 +208,6 @@ func newEBPFProgram(c *config.Config, connectionProtocolMap *ebpf.Map) (*ebpfPro
 					UID:          probeUID,
 				},
 			},
-			// {
-			// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
-			// 		EBPFFuncName: "cgroup_skb__egress_filter",
-			// 		UID:          probeUID,
-			// 	},
-			// },
-			{
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: skMsgProtocolDispatcher,
-					UID:          probeUID,
-				},
-			},
-			// {
-			// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
-			// 		EBPFFuncName: sockopsFunction,
-			// 		UID:          probeUID,
-			// 	},
-			// },
 		},
 	}
 
@@ -490,9 +451,6 @@ func (e *ebpfProgram) configureManagerWithSupportedProtocols(protocols []*protoc
 
 func fixupProbes(options *manager.Options) error {
 	newDataFunctions := []string{
-		"cgroup_skb__egress_filter",
-		skMsgProtocolDispatcher,
-		sockopsFunction,
 		"kprobe__tcp_splice_data_recv",
 		"kretprobe__tcp_splice_data_recv",
 		"kprobe__tcp_splice_read",
@@ -558,9 +516,6 @@ func fixupProbes(options *manager.Options) error {
 	})
 
 	options.ExcludedFunctions = append(options.ExcludedFunctions, exclude...)
-	if !useNewPacketDataHooks {
-		options.ExcludedMaps = append(options.ExcludedMaps, sockhashMap)
-	}
 
 	return nil
 }

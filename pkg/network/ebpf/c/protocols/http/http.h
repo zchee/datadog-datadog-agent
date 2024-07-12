@@ -260,52 +260,6 @@ int socket__http_filter(struct __sk_buff* skb) {
     return 0;
 }
 
-SEC("cgroup/skb/http_process")
-int cgroup_skb__http_process(struct __sk_buff* skb) {
-    skb_info_t skb_info;
-    http_event_t event;
-    bpf_memset(&event, 0, sizeof(http_event_t));
-
-    if (!fetch_dispatching_arguments(&event.tuple, &skb_info)) {
-        log_debug("http_filter failed to fetch arguments for tail call");
-        return 1;
-    }
-
-    if (!http_allow_packet(&event.tuple, &skb_info)) {
-        return 1;
-    }
-    normalize_tuple(&event.tuple);
-
-    read_into_buffer_skb((char *)event.http.request_fragment, skb, skb_info.data_off);
-    log_debug("cgroup skb filter fragment: [%s]", event.http.request_fragment);
-    http_process(&event, &skb_info, NO_TAGS);
-    return 1;
-}
-
-SEC("sk_msg/http_process")
-int sk_msg__http_process(struct sk_msg_md *msg) {
-    skb_info_t skb_info;
-    http_event_t event;
-    bpf_memset(&event, 0, sizeof(http_event_t));
-
-    log_debug("sk_msg__http_process size=%u", msg->size);
-
-    if (!fetch_dispatching_arguments(&event.tuple, &skb_info)) {
-        log_debug("http_filter failed to fetch arguments for tail call");
-        return SK_PASS;
-    }
-
-    if (!http_allow_packet(&event.tuple, &skb_info)) {
-        return SK_PASS;
-    }
-    normalize_tuple(&event.tuple);
-
-    read_into_buffer_sk_msg_http((char *)event.http.request_fragment, msg, 0);
-    log_debug("sk_msg fragment: [%s]", event.http.request_fragment);
-    http_process(&event, NULL, NO_TAGS);
-    return SK_PASS;
-}
-
 SEC("uprobe/http_process")
 int uprobe__http_process(struct pt_regs *ctx) {
     const __u32 zero = 0;
@@ -361,20 +315,6 @@ int uprobe__http_termination(struct pt_regs *ctx) {
     skb_info.tcp_flags |= TCPHDR_FIN;
     http_process(&event, &skb_info, NO_TAGS);
     http_batch_flush(ctx);
-
-    return 0;
-}
-
-static __always_inline  int sockops_http_termination(conn_tuple_t *tup) {
-    log_debug("sockops_http_termination");
-
-    http_event_t event;
-    bpf_memset(&event, 0, sizeof(http_event_t));
-    bpf_memcpy(&event.tuple, tup, sizeof(conn_tuple_t));
-    skb_info_t skb_info = {0};
-    skb_info.tcp_flags |= TCPHDR_FIN;
-    normalize_tuple(&event.tuple);
-    http_process(&event, &skb_info, NO_TAGS);
 
     return 0;
 }

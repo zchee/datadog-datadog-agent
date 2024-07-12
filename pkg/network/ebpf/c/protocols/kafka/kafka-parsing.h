@@ -93,52 +93,6 @@ int socket__kafka_filter(struct __sk_buff* skb) {
     return 0;
 }
 
-SEC("cgroup/skb/egress/kafka_filter")
-int cgroup_skb__kafka_filter(struct __sk_buff* skb) {
-    const u32 zero = 0;
-    skb_info_t skb_info;
-    kafka_info_t *kafka = bpf_map_lookup_elem(&kafka_heap, &zero);
-    if (kafka == NULL) {
-        log_debug("socket__kafka_filter: kafka_transaction state is NULL");
-        return 1;
-    }
-    bpf_memset(&kafka->event.transaction, 0, sizeof(kafka_transaction_t));
-
-    // Put this on the stack instead of using the one in in kafka_info_t.event
-    // since it's used for map lookups in a few different places and 4.14 complains
-    // if it's not on the stack.
-    conn_tuple_t tup;
-
-    if (!fetch_dispatching_arguments(&tup, &skb_info)) {
-        log_debug("socket__kafka_filter failed to fetch arguments for tail call");
-        return 1;
-    }
-
-    if (!kafka_allow_packet(&skb_info)) {
-        return 1;
-    }
-
-    kafka_telemetry_t *kafka_tel = bpf_map_lookup_elem(&kafka_telemetry, &zero);
-    if (kafka_tel == NULL) {
-        return 1;
-    }
-
-    if (is_tcp_termination(&skb_info)) {
-        kafka_tcp_termination(&tup);
-        return 1;
-    }
-
-    pktbuf_t pkt = pktbuf_from_cgroup_skb_egress(skb, &skb_info);
-
-    kafka->event.transaction.tags = NO_TAGS;
-    if (kafka_process_response(skb, &tup, kafka, pkt, &skb_info)) {
-        return 1;
-    }
-
-    (void)kafka_process(&tup, kafka, pkt, kafka_tel);
-    return 1;
-}
-
 SEC("uprobe/kafka_tls_filter")
 int uprobe__kafka_tls_filter(struct pt_regs *ctx) {
     const __u32 zero = 0;
@@ -200,56 +154,6 @@ int kprobe__kafka_filter(struct pt_regs *ctx) {
     }
 
     kafka_process(&tup, kafka, pkt, kafka_tel);
-    return 0;
-}
-
-SEC("sk_msg/kafka_filter")
-int sk_msg__kafka_filter(struct sk_msg_md *msg) {
-    const u32 zero = 0;
-    skb_info_t skb_info;
-    kafka_info_t *kafka = bpf_map_lookup_elem(&kafka_heap, &zero);
-    if (kafka == NULL) {
-        return SK_PASS;
-    }
-    bpf_memset(&kafka->event.transaction, 0, sizeof(kafka_transaction_t));
-
-    // Put this on the stack instead of using the one in in kafka_info_t.event
-    // since it's used for map lookups in a few different places and 4.14 complains
-    // if it's not on the stack.
-    conn_tuple_t tup;
-
-    if (!fetch_dispatching_arguments(&tup, &skb_info)) {
-        log_debug("sk_msg__kafka_filter failed to fetch arguments for tail call");
-        return SK_PASS;
-    }
-
-    if (!kafka_allow_packet(&skb_info)) {
-        return SK_PASS;
-    }
-
-    kafka_telemetry_t *kafka_tel = bpf_map_lookup_elem(&kafka_telemetry, &zero);
-    if (kafka_tel == NULL) {
-        return SK_PASS;
-    }
-
-    if (is_tcp_termination(&skb_info)) {
-        kafka_tcp_termination(&tup);
-        return SK_PASS;
-    }
-
-    pktbuf_t pkt = pktbuf_from_sk_msg_md(msg, &skb_info);
-
-    // Don't pass in skb_info to avoid TCP sequence number checks
-    if (kafka_process_response(msg, &tup, kafka, pkt, NULL)) {
-        return SK_PASS;
-    }
-
-    (void)kafka_process(&tup, kafka, pkt, kafka_tel);
-    return SK_PASS;
-}
-
-static __always_inline  int sockops_kafka_termination(conn_tuple_t *tup) {
-    kafka_tcp_termination(tup);
     return 0;
 }
 
@@ -1107,26 +1011,6 @@ static __always_inline void kafka_call_response_parser(void *ctx, conn_tuple_t *
     u32 index;
 
     switch (pkt.type) {
-    case PKTBUF_CGROUP_SKB_EGRESS:
-        switch (level) {
-        case PARSER_LEVEL_RECORD_BATCH:
-            if (api_version >= 12) {
-                index = PROG_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V12;
-            } else {
-                index = PROG_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V0;
-            }
-            break;
-        case PARSER_LEVEL_PARTITION:
-        default:
-            if (api_version >= 12) {
-                index = PROG_KAFKA_RESPONSE_PARTITION_PARSER_V12;
-            } else {
-                index = PROG_KAFKA_RESPONSE_PARTITION_PARSER_V0;
-            }
-            break;
-        }
-        bpf_tail_call_compat(ctx, &cgroup_skb_protocols_progs, index);
-        break;
     case PKTBUF_SKB:
         switch (level) {
         case PARSER_LEVEL_RECORD_BATCH:
@@ -1186,26 +1070,6 @@ static __always_inline void kafka_call_response_parser(void *ctx, conn_tuple_t *
             break;
         }
         bpf_tail_call_compat(ctx, &kprobe_protocols_progs, index);
-        break;
-    case PKTBUF_SK_MSG:
-        switch (level) {
-        case PARSER_LEVEL_RECORD_BATCH:
-            if (api_version >= 12) {
-                index = PROG_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V12;
-            } else {
-                index = PROG_KAFKA_RESPONSE_RECORD_BATCH_PARSER_V0;
-            }
-            break;
-        case PARSER_LEVEL_PARTITION:
-        default:
-            if (api_version >= 12) {
-                index = PROG_KAFKA_RESPONSE_PARTITION_PARSER_V12;
-            } else {
-                index = PROG_KAFKA_RESPONSE_PARTITION_PARSER_V0;
-            }
-            break;
-        }
-        bpf_tail_call_compat(ctx, &skmsg_protocols_progs, index);
         break;
     }
 
@@ -1435,44 +1299,6 @@ int socket__kafka_response_record_batch_parser_v12(struct __sk_buff *skb) {
     return __socket__kafka_response_parser(skb, PARSER_LEVEL_RECORD_BATCH, 12, 12);
 }
 
-static __always_inline int __cgroup_skb_kafka_response_parser(struct __sk_buff *skb, enum parser_level level, u32 min_api_version, u32 max_api_version) {
-    const __u32 zero = 0;
-    kafka_info_t *kafka = bpf_map_lookup_elem(&kafka_heap, &zero);
-    if (kafka == NULL) {
-        return 1;
-    }
-
-    skb_info_t skb_info;
-    conn_tuple_t tup;
-    if (!fetch_dispatching_arguments(&tup, &skb_info)) {
-        return 1;
-    }
-
-    kafka_response_parser(kafka, skb, &tup, pktbuf_from_cgroup_skb_egress(skb, &skb_info), level, min_api_version, max_api_version);
-
-    return 1;
-}
-
-SEC("cgroup/skb/egress/kafka_response_partition_parser_v0")
-int cgroup_skb__kafka_response_partition_parser_v0(struct __sk_buff *skb) {
-    return __cgroup_skb_kafka_response_parser(skb, PARSER_LEVEL_PARTITION, 0, 11);
-}
-
-SEC("cgroup/skb/egress/kafka_response_partition_parser_v12")
-int cgroup_skb__kafka_response_partition_parser_v12(struct __sk_buff *skb) {
-    return __cgroup_skb_kafka_response_parser(skb, PARSER_LEVEL_PARTITION, 12, 12);
-}
-
-SEC("cgroup/skb/egress/kafka_response_record_batch_parser_v0")
-int cgroup_skb__kafka_response_record_batch_parser_v0(struct __sk_buff *skb) {
-    return __cgroup_skb_kafka_response_parser(skb, PARSER_LEVEL_RECORD_BATCH, 0, 11);
-}
-
-SEC("cgroup/skb/egress/kafka_response_record_batch_parser_v12")
-int cgroup_skb__kafka_response_record_batch_parser_v12(struct __sk_buff *skb) {
-    return __cgroup_skb_kafka_response_parser(skb, PARSER_LEVEL_RECORD_BATCH, 12, 12);
-}
-
 static __always_inline int __uprobe__kafka_tls_response_parser(struct pt_regs *ctx, enum parser_level level, u32 min_api_version, u32 max_api_version) {
     const __u32 zero = 0;
     kafka_info_t *kafka = bpf_map_lookup_elem(&kafka_heap, &zero);
@@ -1549,44 +1375,6 @@ int kprobe__kafka_response_record_batch_parser_v0(struct pt_regs *ctx) {
 SEC("kprobe/kafka_tls_response_record_batch_parser_v12")
 int kprobe__kafka_response_record_batch_parser_v12(struct pt_regs *ctx) {
     return __kprobe__kafka_response_parser(ctx, PARSER_LEVEL_RECORD_BATCH, 12, 12);
-}
-
-static __always_inline int __sk_msg_kafka_response_parser(struct sk_msg_md *msg, enum parser_level level, u32 min_api_version, u32 max_api_version) {
-    const __u32 zero = 0;
-    kafka_info_t *kafka = bpf_map_lookup_elem(&kafka_heap, &zero);
-    if (kafka == NULL) {
-        return SK_PASS;
-    }
-
-    skb_info_t skb_info;
-    conn_tuple_t tup;
-    if (!fetch_dispatching_arguments(&tup, &skb_info)) {
-        return SK_PASS;
-    }
-
-    kafka_response_parser(kafka, msg, &tup, pktbuf_from_sk_msg_md(msg, &skb_info), level, min_api_version, max_api_version);
-
-    return SK_PASS;
-}
-
-SEC("sk_msg/kafka_response_partition_parser_v0")
-int sk_msg_kafka_response_partition_parser_v0(struct sk_msg_md *msg) {
-    return __sk_msg_kafka_response_parser(msg, PARSER_LEVEL_PARTITION, 0, 11);
-}
-
-SEC("sk_msg/kafka_response_partition_parser_v12")
-int sk_msg_kafka_response_partition_parser_v12(struct sk_msg_md *msg) {
-    return __sk_msg_kafka_response_parser(msg, PARSER_LEVEL_PARTITION, 12, 12);
-}
-
-SEC("sk_msg/kafka_tls_response_record_batch_parser_v0")
-int sk_msg_kafka_response_record_batch_parser_v0(struct sk_msg_md *msg) {
-    return __sk_msg_kafka_response_parser(msg, PARSER_LEVEL_RECORD_BATCH, 0, 11);
-}
-
-SEC("sk_msg/kafka_tls_response_record_batch_parser_v12")
-int sk_msg_kafka_response_record_batch_parser_v12(struct sk_msg_md *msg) {
-    return __sk_msg_kafka_response_parser(msg, PARSER_LEVEL_RECORD_BATCH, 12, 12);
 }
 
 // Gets the next expected TCP sequence in the stream, assuming

@@ -12,8 +12,6 @@
 #include "protocols/http2/decoding.h"
 #include "protocols/http2/decoding-tls.h"
 #include "protocols/http2/decoding-kprobe.h"
-#include "protocols/http2/decoding-skmsg.h"
-#include "protocols/http2/decoding-cgroup-skb.h"
 #include "protocols/kafka/kafka-parsing.h"
 #include "protocols/postgres/decoding.h"
 #include "protocols/sockfd-probes.h"

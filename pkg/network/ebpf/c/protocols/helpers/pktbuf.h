@@ -6,10 +6,8 @@
 
 enum pktbuf_type {
     PKTBUF_SKB,
-    PKTBUF_CGROUP_SKB_EGRESS,
     PKTBUF_TLS,
     PKTBUF_KPROBE,
-    PKTBUF_SK_MSG,
 };
 
 struct pktbuf {
@@ -27,10 +25,6 @@ struct pktbuf {
             struct pt_regs *kctx;
             kprobe_dispatcher_arguments_t *kprobe;
         };
-        struct {
-            struct sk_msg_md *md;
-            skb_info_t *info;
-        } sk_msg;
     };
 };
 
@@ -43,7 +37,6 @@ static __always_inline __maybe_unused void pktbuf_set_offset(pktbuf_t pkt, u32 o
 {
     switch (pkt.type) {
     case PKTBUF_SKB:
-    case PKTBUF_CGROUP_SKB_EGRESS:
         pkt.skb_info->data_off = offset;
         return;
     case PKTBUF_TLS:
@@ -51,9 +44,6 @@ static __always_inline __maybe_unused void pktbuf_set_offset(pktbuf_t pkt, u32 o
         return;
     case PKTBUF_KPROBE:
         pkt.kprobe->data_off = offset;
-        return;
-    case PKTBUF_SK_MSG:
-        pkt.sk_msg.info->data_off = offset;
         return;
     }
 
@@ -64,7 +54,6 @@ static __always_inline __maybe_unused void pktbuf_advance(pktbuf_t pkt, u32 offs
 {
     switch (pkt.type) {
     case PKTBUF_SKB:
-    case PKTBUF_CGROUP_SKB_EGRESS:
         pkt.skb_info->data_off += offset;
         return;
     case PKTBUF_TLS:
@@ -72,9 +61,6 @@ static __always_inline __maybe_unused void pktbuf_advance(pktbuf_t pkt, u32 offs
         return;
     case PKTBUF_KPROBE:
         pkt.kprobe->data_off += offset;
-        return;
-    case PKTBUF_SK_MSG:
-        pkt.sk_msg.info->data_off += offset;
         return;
     }
 
@@ -85,14 +71,11 @@ static __always_inline __maybe_unused u64 pktbuf_data_offset(pktbuf_t pkt)
 {
     switch (pkt.type) {
     case PKTBUF_SKB:
-    case PKTBUF_CGROUP_SKB_EGRESS:
         return pkt.skb_info->data_off;
     case PKTBUF_TLS:
         return pkt.tls->data_off;
     case PKTBUF_KPROBE:
         return pkt.kprobe->data_off;
-    case PKTBUF_SK_MSG:
-        return pkt.sk_msg.info->data_off;
     }
 
     pktbuf_invalid_operation();
@@ -103,14 +86,11 @@ static __always_inline __maybe_unused u32 pktbuf_data_end(pktbuf_t pkt)
 {
     switch (pkt.type) {
     case PKTBUF_SKB:
-    case PKTBUF_CGROUP_SKB_EGRESS:
         return pkt.skb_info->data_end;
     case PKTBUF_TLS:
         return pkt.tls->data_end;
     case PKTBUF_KPROBE:
         return pkt.kprobe->data_end;
-    case PKTBUF_SK_MSG:
-        return pkt.sk_msg.md->size;
     }
 
     pktbuf_invalid_operation();
@@ -121,15 +101,12 @@ static __always_inline long pktbuf_load_bytes_with_telemetry(pktbuf_t pkt, u32 o
 {
     switch (pkt.type) {
     case PKTBUF_SKB:
-    case PKTBUF_CGROUP_SKB_EGRESS:
         return bpf_skb_load_bytes_with_telemetry(pkt.skb, offset, to, len);
     case PKTBUF_TLS:
         return bpf_probe_read_user_with_telemetry(to, len, pkt.tls->buffer_ptr + offset);
     case PKTBUF_KPROBE:
         return bpf_probe_read_user_with_telemetry(to, len, pkt.kprobe->buffer_ptr + offset);
         // return bpf_probe_read_kernel_with_telemetry(to, len, pkt.kprobe->buffer_ptr + offset);
-    case PKTBUF_SK_MSG:
-        return bpf_sk_msg_load_bytes(pkt.sk_msg.md, offset, to, len);
     }
 
     pktbuf_invalid_operation();
@@ -145,15 +122,12 @@ static __always_inline __maybe_unused long pktbuf_load_bytes(pktbuf_t pkt, u32 o
 {
     switch (pkt.type) {
     case PKTBUF_SKB:
-    case PKTBUF_CGROUP_SKB_EGRESS:
         return bpf_skb_load_bytes(pkt.skb, offset, to, len);
     case PKTBUF_TLS:
         return bpf_probe_read_user(to, len, pkt.tls->buffer_ptr + offset);
     case PKTBUF_KPROBE:
         // return bpf_probe_read_kernel(to, len, pkt.kprobe->buffer_ptr + offset);
         return bpf_probe_read_user(to, len, pkt.kprobe->buffer_ptr + offset);
-    case PKTBUF_SK_MSG:
-        return bpf_sk_msg_load_bytes(pkt.sk_msg.md, offset, to, len);
     }
 
     pktbuf_invalid_operation();
@@ -175,14 +149,10 @@ static __always_inline __maybe_unused long pktbuf_tail_call_compact(pktbuf_t pkt
     switch (pkt.type) {
     case PKTBUF_SKB:
         return bpf_tail_call_compat(pkt.skb, options[PKTBUF_SKB].prog_array_map, options[PKTBUF_SKB].index);
-    case PKTBUF_CGROUP_SKB_EGRESS:
-        return bpf_tail_call_compat(pkt.skb, options[PKTBUF_CGROUP_SKB_EGRESS].prog_array_map, options[PKTBUF_CGROUP_SKB_EGRESS].index);
     case PKTBUF_TLS:
         return bpf_tail_call_compat(pkt.ctx, options[PKTBUF_TLS].prog_array_map, options[PKTBUF_TLS].index);
     case PKTBUF_KPROBE:
         return bpf_tail_call_compat(pkt.kctx, options[PKTBUF_KPROBE].prog_array_map, options[PKTBUF_KPROBE].index);
-    case PKTBUF_SK_MSG:
-        return bpf_tail_call_compat(pkt.kctx, options[PKTBUF_SK_MSG].prog_array_map, options[PKTBUF_SK_MSG].index);
     }
 
     pktbuf_invalid_operation();
@@ -218,24 +188,6 @@ static __always_inline __maybe_unused long pktbuf_map_delete(pktbuf_t pkt, pktbu
     return bpf_map_delete_elem(options[pkt.type].map, options[pkt.type].key);
 }
 
-static __always_inline __maybe_unused pktbuf_t pktbuf_from_sk_msg_md(struct sk_msg_md *msg, skb_info_t *skb_info)
-{
-    return (pktbuf_t) {
-        .type = PKTBUF_SK_MSG,
-        .sk_msg.md = msg,
-        .sk_msg.info = skb_info,
-    };
-}
-
-static __always_inline pktbuf_t pktbuf_from_cgroup_skb_egress(struct __sk_buff* skb, skb_info_t *skb_info)
-{
-    return (pktbuf_t) {
-        .type = PKTBUF_CGROUP_SKB_EGRESS,
-        .skb = skb,
-        .skb_info = skb_info,
-    };
-}
-
 static __always_inline pktbuf_t pktbuf_from_skb(struct __sk_buff* skb, skb_info_t *skb_info)
 {
     return (pktbuf_t) {
@@ -269,14 +221,11 @@ static __always_inline __maybe_unused pktbuf_t pktbuf_from_kprobe(struct pt_regs
     static __always_inline __maybe_unused bool pktbuf_read_big_endian_##type_(pktbuf_t pkt, u32 offset, type_ *out) { \
         switch (pkt.type) {                                                                                           \
         case PKTBUF_SKB:                                                                                              \
-        case PKTBUF_CGROUP_SKB_EGRESS:                                                                                \
             return read_big_endian_##type_(pkt.skb, offset, out);                                                     \
         case PKTBUF_TLS:                                                                                              \
             return read_big_endian_user_##type_(pkt.tls->buffer_ptr, pkt.tls->data_end, offset, out);                 \
         case PKTBUF_KPROBE:                                                                                              \
             return read_big_endian_user_##type_(pkt.kprobe->buffer_ptr, pkt.kprobe->data_end, offset, out);                 \
-        case PKTBUF_SK_MSG:                                                                                           \
-            return read_big_endian_sk_msg_##type_(pkt.sk_msg.md, offset, out);                                        \
         }                                                                                                             \
         pktbuf_invalid_operation();                                                                                   \
         return false;                                                                                                 \
@@ -292,7 +241,6 @@ PKTBUF_READ_BIG_ENDIAN(s8)
     static __always_inline void pktbuf_read_into_buffer_##name(char *buffer, pktbuf_t pkt, u32 offset) { \
         switch (pkt.type) {                                                                              \
         case PKTBUF_SKB:                                                                                 \
-        case PKTBUF_CGROUP_SKB_EGRESS:                                                                   \
             read_into_buffer_##name(buffer, pkt.skb, offset);                                            \
             return;                                                                                      \
         case PKTBUF_TLS:                                                                                 \
@@ -300,9 +248,6 @@ PKTBUF_READ_BIG_ENDIAN(s8)
             return;                                                                                      \
         case PKTBUF_KPROBE:                                                                              \
             read_into_user_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                       \
-            return;                                                                                      \
-        case PKTBUF_SK_MSG:                                                                              \
-            read_into_buffer_sk_msg_##name(buffer, pkt.sk_msg.md, offset);                               \
             return;                                                                                      \
         }                                                                                                \
         pktbuf_invalid_operation();                                                                      \
@@ -313,7 +258,6 @@ PKTBUF_READ_BIG_ENDIAN(s8)
 #define PKTBUF_READ_INTO_BUFFER(name, total_size, blk_size)         \
     READ_INTO_USER_BUFFER(name, total_size)                         \
     READ_INTO_BUFFER(name, total_size, blk_size)                    \
-    READ_INTO_BUFFER_SK_MSG(name, total_size, blk_size)                    \
     PKTBUF_READ_INTO_BUFFER_INTERNAL(name, total_size)
 
 
@@ -322,7 +266,6 @@ PKTBUF_READ_BIG_ENDIAN(s8)
 #define PKTBUF_READ_INTO_BUFFER_WITHOUT_TELEMETRY(name, total_size, blk_size)   \
     READ_INTO_USER_BUFFER_WITHOUT_TELEMETRY(name, total_size)                   \
     READ_INTO_BUFFER_WITHOUT_TELEMETRY(name, total_size, blk_size)              \
-    READ_INTO_BUFFER_SK_MSG(name, total_size, blk_size)                    \
     PKTBUF_READ_INTO_BUFFER_INTERNAL(name, total_size)
 
 

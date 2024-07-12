@@ -394,10 +394,4 @@ static __always_inline __maybe_unused bool kprobe_is_kafka(struct pt_regs *ctx, 
     return __is_kafka(pktbuf_from_kprobe(ctx, kprobe), buf, buf_size);
 }
 
-static __always_inline bool skskb_is_kafka(struct sk_msg_md *msg, skb_info_t *skb_info, const char* buf, __u32 buf_size)
-{
-    return __is_kafka(pktbuf_from_sk_msg_md(msg, skb_info), buf, buf_size);
-}
-
-
 #endif

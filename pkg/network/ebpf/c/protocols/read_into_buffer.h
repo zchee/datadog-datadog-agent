@@ -50,42 +50,6 @@
         return;                                                                                                     \
     }
 
-#define READ_INTO_BUFFER_SK_MSG(name, total_size, blk_size)                                                                \
-    static __always_inline void read_into_buffer_sk_msg_##name(char *buffer, struct sk_msg_md *msg, u32 offset) {          \
-        const u32 end = (total_size) < (msg->size - offset) ? offset + (total_size) : msg->size;                      \
-        unsigned i = 0;                                                                                             \
-                                                                                                                    \
-    _Pragma( STRINGIFY(unroll(total_size/blk_size)) )                                                               \
-        for (; i < ((total_size) / (blk_size)); i++) {                                                              \
-            if (offset + (blk_size) - 1 >= end) { break; }                                                          \
-                                                                                                                    \
-            bpf_sk_msg_load_bytes(msg, offset, buffer, (blk_size));                                     \
-            offset += (blk_size);                                                                                   \
-            buffer += (blk_size);                                                                                   \
-        }                                                                                                           \
-        if ((i * (blk_size)) >= total_size) {                                                                       \
-            return;                                                                                                 \
-        }                                                                                                           \
-        /* Calculating the remaining bytes to read. If we have none, then we abort. */                              \
-        const s64 left_payload = (s64)end - (s64)offset;                                                            \
-        if (left_payload < 1) {                                                                                     \
-            return;                                                                                                 \
-        }                                                                                                           \
-                                                                                                                    \
-        /* The maximum that we can read is (blk_size) - 1. Checking (to please the verifier) that we read no more */\
-        /* than the allowed max size. */                                                                            \
-        const s64 read_size = left_payload < (blk_size) - 1 ? left_payload : (blk_size) - 1;                        \
-                                                                                                                    \
-        /* Calculating the absolute size from the allocated buffer, that was left empty, again to please the */     \
-        /* verifier so it can be assured we are not exceeding the memory limits. */                                 \
-        const s64 left_buffer = (s64)(total_size) < (s64)(i*(blk_size)) ? 0 : total_size - i*(blk_size);            \
-        if (read_size <= left_buffer) {                                                                             \
-            bpf_sk_msg_load_bytes(msg, offset, buffer, read_size);                                      \
-        }                                                                                                           \
-        return;                                                                                                     \
-    }
-
-
 #define READ_INTO_BUFFER(name, total_size, blk_size) READ_INTO_BUFFER_INTERNAL(name, total_size, blk_size, bpf_skb_load_bytes_with_telemetry)
 #define READ_INTO_BUFFER_WITHOUT_TELEMETRY(name, total_size, blk_size) READ_INTO_BUFFER_INTERNAL(name, total_size, blk_size, bpf_skb_load_bytes)
 
@@ -110,19 +74,10 @@
 #define READ_INTO_KERNEL_BUFFER_INTERNAL(name, total_size, fn)                                                            \
     __READ_INTO_BUFFER_INTERNAL(kernel, name, total_size, fn)
 
-#define READ_INTO_SK_MSG_BUFFER_INTERNAL(name, total_size)                                                          \
-    static __always_inline void read_into_sk_msg_buffer_##name(struct sk_msg_md *msg, u32 offset, void *dst) {          \
-        bpf_memset(dst, 0, total_size);                                                                                 \
-        bpf_sk_msg_load_bytes(msg, offset, dst, total_size);                                                            \
-        return;                                                                                                         \
-    }
-
 #define READ_INTO_USER_BUFFER(name, total_size) READ_INTO_USER_BUFFER_INTERNAL(name, total_size, bpf_probe_read_user_with_telemetry)
 #define READ_INTO_USER_BUFFER_WITHOUT_TELEMETRY(name, total_size) READ_INTO_USER_BUFFER_INTERNAL(name, total_size, bpf_probe_read_user)
 
 #define READ_INTO_KERNEL_BUFFER(name, total_size) READ_INTO_KERNEL_BUFFER_INTERNAL(name, total_size, bpf_probe_read_kernel_with_telemetry)
 #define READ_INTO_KERNEL_BUFFER_WITHOUT_TELEMETRY(name, total_size) READ_INTO_KERNEL_BUFFER_INTERNAL(name, total_size, bpf_probe_read_kernel)
-
-#define READ_INTO_SK_MSG_BUFFER(name, total_size) READ_INTO_SK_MSG_BUFFER_INTERNAL(name, total_size)
 
 #endif

@@ -64,22 +64,6 @@ const (
 	kprobeResponseRecordBatchParserV12TailCall = "kprobe__kafka_response_record_batch_parser_v12"
 	kprobeDispatcherTailCall                   = "kprobe__protocol_dispatcher_kafka"
 
-	skMsgFilterTailCall                           = "sk_msg__kafka_filter"
-	skMsgResponseParserTailCall                   = "sk_msg__kafka_response_parser"
-	skMsgDispatcherTailCall                       = "sk_msg__protocol_dispatcher_kafka"
-	skMsgResponsePartitionParserV0TailCall        = "sk_msg_kafka_response_partition_parser_v0"
-	skMsgResponsePartitionParserV12TailCall       = "sk_msg_kafka_response_partition_parser_v12"
-	skMsgResponseRecordBatchParserV0TailCall      = "sk_msg_kafka_response_record_batch_parser_v0"
-	skMsgResponseRecordBatchParserV12TailCall     = "sk_msg_kafka_response_record_batch_parser_v12"
-	skMsgProtocolDispatcherClassificationPrograms = "skmsg_dispatcher_classification_progs"
-
-	cgroupSkbTailCall                             = "cgroup_skb__kafka_filter"
-	cgroupSkbDispatcherTailCall                   = "cgroup_skb__protocol_dispatcher_kafka"
-	cgroupSkbResponsePartitionParserV0TailCall    = "cgroup_skb__kafka_response_partition_parser_v0"
-	cgroupSkbResponsePartitionParserV12TailCall   = "cgroup_skb__kafka_response_partition_parser_v12"
-	cgroupSkbResponseRecordBatchParserV0TailCall  = "cgroup_skb__kafka_response_record_batch_parser_v0"
-	cgroupSkbResponseRecordBatchParserV12TailCall = "cgroup_skb__kafka_response_record_batch_parser_v12"
-
 	tlsTerminationTailCall    = "uprobe__kafka_tls_termination"
 	kprobeTerminationTailCall = "kprobe__kafka_tls_termination"
 	tlsDispatcherTailCall     = "uprobe__tls_protocol_dispatcher_kafka"
@@ -91,9 +75,6 @@ const (
 var Spec = &protocols.ProtocolSpec{
 	Factory: newKafkaProtocol,
 	Maps: []*manager.Map{
-		{
-			Name: skMsgProtocolDispatcherClassificationPrograms,
-		},
 		{
 			Name: kafkaHeapMap,
 		},
@@ -261,91 +242,6 @@ var Spec = &protocols.ProtocolSpec{
 			Key:           uint32(protocols.DispatcherKafkaProg),
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFFuncName: kprobeDispatcherTailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafka),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgFilterTailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafkaResponsePartitionParserV0),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgResponsePartitionParserV0TailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafkaResponsePartitionParserV12),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgResponsePartitionParserV12TailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafkaResponseRecordBatchParserV0),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgResponseRecordBatchParserV0TailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.SkMsgProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafkaResponseRecordBatchParserV12),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgResponseRecordBatchParserV12TailCall,
-			},
-		},
-		{
-			ProgArrayName: skMsgProtocolDispatcherClassificationPrograms,
-			Key:           uint32(protocols.DispatcherKafkaProg),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: skMsgDispatcherTailCall,
-			},
-		},
-		//
-		{
-			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafka),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: cgroupSkbTailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafkaResponsePartitionParserV0),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: cgroupSkbResponsePartitionParserV0TailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafkaResponsePartitionParserV12),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: cgroupSkbResponsePartitionParserV12TailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafkaResponseRecordBatchParserV0),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: cgroupSkbResponseRecordBatchParserV0TailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.CgroupSkbDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramKafkaResponseRecordBatchParserV12),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: cgroupSkbResponseRecordBatchParserV12TailCall,
-			},
-		},
-		{
-			ProgArrayName: protocols.CgroupSkbProtocolDispatcherClassificationPrograms,
-			Key:           uint32(protocols.DispatcherKafkaProg),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: cgroupSkbDispatcherTailCall,
 			},
 		},
 	},

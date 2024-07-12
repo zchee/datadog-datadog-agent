@@ -19,15 +19,12 @@ import (
 
 // Programs maps used for tail calls
 const (
-	ProtocolDispatcherProgramsMap                     = "protocols_progs"
-	TLSDispatcherProgramsMap                          = "tls_process_progs"
-	KprobeDispatcherProgramsMap                       = "kprobe_protocols_progs"
-	CgroupSkbDispatcherProgramsMap                    = "cgroup_skb_protocols_progs"
-	SkMsgProtocolDispatcherProgramsMap                = "skmsg_protocols_progs"
-	ProtocolDispatcherClassificationPrograms          = "dispatcher_classification_progs"
-	TLSProtocolDispatcherClassificationPrograms       = "tls_dispatcher_classification_progs"
-	CgroupSkbProtocolDispatcherClassificationPrograms = "cgroup_skb_dispatcher_classification_progs"
-	KprobeProtocolDispatcherClassificationPrograms    = "kprobe_dispatcher_classification_progs"
+	ProtocolDispatcherProgramsMap                  = "protocols_progs"
+	TLSDispatcherProgramsMap                       = "tls_process_progs"
+	KprobeDispatcherProgramsMap                    = "kprobe_protocols_progs"
+	ProtocolDispatcherClassificationPrograms       = "dispatcher_classification_progs"
+	TLSProtocolDispatcherClassificationPrograms    = "tls_dispatcher_classification_progs"
+	KprobeProtocolDispatcherClassificationPrograms = "kprobe_dispatcher_classification_progs"
 )
 
 // Protocol is the interface that represents a protocol supported by USM.
