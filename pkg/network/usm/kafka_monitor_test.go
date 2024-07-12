@@ -211,26 +211,6 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 		return count * 2
 	}
 
-	fixStatsCount := func(count int) int {
-		if tls {
-			return count
-		}
-
-		return count + 1
-	}
-
-	fixFetchCount := func(count int) int {
-		return count
-	}
-
-	fixProduceCount := func(count int) int {
-		if tls {
-			return count
-		}
-
-		return count * 2
-	}
-
 	tmp, found := version.LookupMaxKeyVersion(kafka.ProduceAPIKey)
 	require.True(t, found)
 	expectedAPIVersionProduce := int(tmp)
