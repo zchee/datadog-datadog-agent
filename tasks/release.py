@@ -930,9 +930,7 @@ def check_for_changes(ctx, release_branch, warning_mode=False):
                 if repo_name not in ["datadog-agent", "integrations-core"]:
                     with clone(ctx, repo_name, repo['branch'], options="--filter=blob:none --no-checkout"):
                         # We can add the new commit now to be used by release candidate creation
-                        print(f"Creating new tag {next_version} on {repo_name}", file=sys.stderr)
-                        ctx.run(f"git tag {next_version}")
-                        ctx.run(f"git push origin tag {next_version}")
+                        print(f"Should create new tag {next_version} on {repo_name}", file=sys.stderr)
             # This repo has changes, the next check is not needed
             continue
         if repo_name != "datadog-agent" and last_tag_name != repo['previous_tag']:
