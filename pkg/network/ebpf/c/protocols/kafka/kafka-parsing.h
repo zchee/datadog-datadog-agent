@@ -31,7 +31,7 @@ _Pragma( STRINGIFY(unroll(max_buffer_size)) )                                   
         }                                                                                                                                   \
     }                                                                                                                                       \
 
-#define EXTRA_DEBUG
+// #define EXTRA_DEBUG
 #ifdef EXTRA_DEBUG
 #define extra_debug(fmt, ...) log_debug("kafka: " fmt, ##__VA_ARGS__)
 #else
