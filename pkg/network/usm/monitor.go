@@ -90,9 +90,7 @@ func NewMonitor(c *config.Config, connectionProtocolMap *ebpf.Map) (m *Monitor, 
 
 	closeFilterFn := func() {}
 
-	if useNewPacketDataHooks {
-		fmt.Println("Using new data hooks")
-	} else {
+	if !useNewPacketDataHooks {
 		filter, _ := mgr.GetProbe(manager.ProbeIdentificationPair{EBPFFuncName: protocolDispatcherSocketFilterFunction, UID: probeUID})
 		if filter == nil {
 			return nil, fmt.Errorf("error retrieving socket filter")

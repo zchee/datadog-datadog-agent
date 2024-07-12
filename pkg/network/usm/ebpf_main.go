@@ -39,11 +39,13 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/usm/buildmode"
 	"github.com/DataDog/datadog-agent/pkg/network/usm/utils"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 var (
-	errNoProtocols = errors.New("no protocol monitors were initialised")
+	errNoProtocols        = errors.New("no protocol monitors were initialised")
+	useNewPacketDataHooks = false
 
 	// knownProtocols holds all known protocols supported by USM to initialize.
 	knownProtocols = []*protocols.ProtocolSpec{
@@ -79,8 +81,6 @@ const (
 	// the accept syscall).
 	maxActive = 128
 	probeUID  = "http"
-
-	useNewPacketDataHooks = true
 )
 
 type ebpfProgram struct {
@@ -465,6 +465,21 @@ func fixupProbes(options *manager.Options) error {
 		"kprobe__generic_splice_sendpage",
 		"kretprobe__generic_splice_sendpage",
 	}
+
+	kernelVersion, err := kernel.HostVersion()
+	if err != nil {
+		log.Info("Using old data hooks since unable to determine kernel version", err)
+	} else {
+		if kernelVersion >= kernel.VersionCode(5, 10, 0) {
+			log.Info("Using new data hooks due to supported kernel version", kernelVersion)
+			useNewPacketDataHooks = true
+		} else {
+			log.Info("Using old data hooks due to old kernel version", kernelVersion)
+		}
+	}
+
+	// fmt.Println to always show when running tests
+	fmt.Println("useNewPacketDataHooks", useNewPacketDataHooks)
 
 	var exclude []string
 	if useNewPacketDataHooks {
