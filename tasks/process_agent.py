@@ -7,7 +7,7 @@ from invoke import task
 from invoke.exceptions import Exit
 
 from tasks.agent import build as agent_build
-from tasks.build_tags import filter_incompatible_tags, get_build_tags, get_default_build_tags
+from tasks.build_tags import FIPS_AGENT_TAGS, filter_incompatible_tags, get_build_tags, get_default_build_tags
 from tasks.flavor import AgentFlavor
 from tasks.libs.common.utils import REPO_PATH, bin_name, get_build_flags
 from tasks.system_probe import copy_ebpf_and_related_files
@@ -30,6 +30,7 @@ def build(
     python_runtimes='3',
     go_mod="mod",
     bundle=True,
+    fips_mode=True,
 ):
     """
     Build the process agent
@@ -79,6 +80,8 @@ def build(
     build_exclude = [] if build_exclude is None else build_exclude.split(",")
 
     build_tags = get_build_tags(build_include, build_exclude)
+    if fips_mode:
+        build_tags |= set(FIPS_AGENT_TAGS)
 
     if os.path.exists(BIN_PATH):
         os.remove(BIN_PATH)

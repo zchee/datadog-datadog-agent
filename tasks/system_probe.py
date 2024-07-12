@@ -22,7 +22,7 @@ from invoke.tasks import task
 
 from tasks.agent import BUNDLED_AGENTS
 from tasks.agent import build as agent_build
-from tasks.build_tags import UNIT_TEST_TAGS, get_default_build_tags
+from tasks.build_tags import FIPS_AGENT_TAGS, UNIT_TEST_TAGS, get_default_build_tags
 from tasks.flavor import AgentFlavor
 from tasks.libs.build.ninja import NinjaWriter
 from tasks.libs.common.color import color_message
@@ -579,6 +579,7 @@ def build(
     strip_binary=False,
     with_unit_test=False,
     bundle=True,
+    fips_mode=True,
 ):
     """
     Build the system-probe
@@ -604,6 +605,7 @@ def build(
         strip_binary=strip_binary,
         bundle=bundle,
         arch=arch,
+        fips_mode=fips_mode,
     )
 
 
@@ -631,6 +633,7 @@ def build_sysprobe_binary(
     bundle_ebpf=False,
     strip_binary=False,
     bundle=True,
+    fips_mode=True,
 ) -> None:
     if bundle and not is_windows:
         return agent_build(
@@ -655,6 +658,8 @@ def build_sysprobe_binary(
     if strip_binary:
         ldflags += ' -s -w'
 
+    if fips_mode:
+        build_tags |= set(FIPS_AGENT_TAGS)
     if os.path.exists(binary):
         os.remove(binary)
 

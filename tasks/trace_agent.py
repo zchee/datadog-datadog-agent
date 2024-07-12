@@ -4,7 +4,7 @@ import sys
 from invoke import Exit, task
 
 from tasks.agent import build as agent_build
-from tasks.build_tags import filter_incompatible_tags, get_build_tags, get_default_build_tags
+from tasks.build_tags import FIPS_AGENT_TAGS, filter_incompatible_tags, get_build_tags, get_default_build_tags
 from tasks.flavor import AgentFlavor
 from tasks.go import deps
 from tasks.libs.common.utils import REPO_PATH, bin_name, get_build_flags
@@ -26,6 +26,7 @@ def build(
     python_runtimes='3',
     go_mod="mod",
     bundle=False,
+    fips_mode=True,
 ):
     """
     Build the trace agent.
@@ -73,6 +74,8 @@ def build(
     build_exclude = [] if build_exclude is None else build_exclude.split(",")
 
     build_tags = get_build_tags(build_include, build_exclude)
+    if fips_mode:
+        build_tags |= set(FIPS_AGENT_TAGS)
 
     race_opt = "-race" if race else ""
     build_type = "-a" if rebuild else ""
