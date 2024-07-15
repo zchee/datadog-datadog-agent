@@ -440,7 +440,7 @@ func TestUnbundledEventsTransform(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			transformer := newUnbundledTransformer("test-cluster", taggerInstance, tt.collectedEventTypes, tt.bundleUnspecifiedEvents, ctx)
+			transformer := newUnbundledTransformer(ctx, "test-cluster", taggerInstance, tt.collectedEventTypes, tt.bundleUnspecifiedEvents)
 
 			events, errors := transformer.Transform(incomingEvents)
 
@@ -504,7 +504,7 @@ func TestGetTagsFromTagger(t *testing.T) {
 			collectedTypes := []collectedEventType{
 				{Kind: "Pod", Reasons: []string{}},
 			}
-			transformer := newUnbundledTransformer("test-cluster", taggerInstance, collectedTypes, false, ctx)
+			transformer := newUnbundledTransformer(ctx, "test-cluster", taggerInstance, collectedTypes, false)
 			accumulator := tagset.NewHashlessTagsAccumulator()
 			transformer.(*unbundledTransformer).getTagsFromTagger(tt.obj, accumulator)
 			assert.Equal(t, tt.expectedTags, accumulator)
@@ -587,7 +587,7 @@ func TestUnbundledEventsShouldCollect(t *testing.T) {
 				},
 			}
 
-			transformer := newUnbundledTransformer("test-cluster", taggerInstance, collectedTypes, false, ctx)
+			transformer := newUnbundledTransformer(ctx, "test-cluster", taggerInstance, collectedTypes, false)
 			got := transformer.(*unbundledTransformer).shouldCollect(tt.event)
 			assert.Equal(t, tt.expected, got)
 		})

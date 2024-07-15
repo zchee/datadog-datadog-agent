@@ -20,7 +20,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
-func newUnbundledTransformer(clusterName string, taggerInstance tagger.Component, types []collectedEventType, bundleUnspecifiedEvents bool, ctx context.Context) eventTransformer {
+func newUnbundledTransformer(ctx context.Context, clusterName string, taggerInstance tagger.Component, types []collectedEventType, bundleUnspecifiedEvents bool) eventTransformer {
 	collectedTypes := make([]collectedEventType, 0, len(types))
 	for _, f := range types {
 		if f.Kind == "" && f.Source == "" {
@@ -33,7 +33,7 @@ func newUnbundledTransformer(clusterName string, taggerInstance tagger.Component
 
 	var t eventTransformer = noopEventTransformer{}
 	if bundleUnspecifiedEvents {
-		t = newBundledTransformer(clusterName, taggerInstance, ctx)
+		t = newBundledTransformer(ctx, clusterName, taggerInstance)
 	}
 
 	return &unbundledTransformer{
@@ -78,7 +78,7 @@ func (c *unbundledTransformer) Transform(events []*v1.Event) ([]event.Event, []e
 		}
 
 		involvedObject := ev.InvolvedObject
-		hostInfo := getEventHostInfo(c.clusterName, ev, c.ctx)
+		hostInfo := getEventHostInfo(c.ctx, c.clusterName, ev)
 		readableKey := buildReadableKey(involvedObject)
 
 		tags := c.buildEventTags(ev, involvedObject, hostInfo)

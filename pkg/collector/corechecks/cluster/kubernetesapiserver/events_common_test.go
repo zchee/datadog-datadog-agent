@@ -210,7 +210,7 @@ func Test_getEventHostInfoImpl(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getEventHostInfoImpl(providerIDFunc, tt.args.clusterName, tt.args.ev, ctx); !reflect.DeepEqual(got, tt.want) {
+			if got := getEventHostInfoImpl(ctx, providerIDFunc, tt.args.clusterName, tt.args.ev); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getEventHostInfo() = %v, want %v", got, tt.want)
 			}
 		})

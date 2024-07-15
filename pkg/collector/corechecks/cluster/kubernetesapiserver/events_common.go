@@ -172,8 +172,8 @@ const (
 	nodeKind = "Node"
 )
 
-func getEventHostInfo(clusterName string, ev *v1.Event, ctx context.Context) eventHostInfo {
-	return getEventHostInfoImpl(getHostProviderID, clusterName, ev, ctx)
+func getEventHostInfo(ctx context.Context, clusterName string, ev *v1.Event) eventHostInfo {
+	return getEventHostInfoImpl(ctx, getHostProviderID, clusterName, ev)
 }
 
 // getEventHostInfoImpl get the host information (hostname,nodename) from where the event has been generated.
@@ -181,7 +181,7 @@ func getEventHostInfo(clusterName string, ev *v1.Event, ctx context.Context) eve
 // providers logic
 //
 //nolint:revive // TODO(CINT) Fix revive linter
-func getEventHostInfoImpl(hostProviderIDFunc func(string) string, clusterName string, ev *v1.Event, ctx context.Context) eventHostInfo {
+func getEventHostInfoImpl(ctx context.Context, hostProviderIDFunc func(string) string, clusterName string, ev *v1.Event) eventHostInfo {
 	info := eventHostInfo{}
 
 	switch ev.InvolvedObject.Kind {

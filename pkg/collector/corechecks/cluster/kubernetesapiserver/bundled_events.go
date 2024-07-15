@@ -16,7 +16,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/metrics/event"
 )
 
-func newBundledTransformer(clusterName string, taggerInstance tagger.Component, ctx context.Context) eventTransformer {
+func newBundledTransformer(ctx context.Context, clusterName string, taggerInstance tagger.Component) eventTransformer {
 	return &bundledTransformer{
 		clusterName:    clusterName,
 		taggerInstance: taggerInstance,
@@ -54,7 +54,7 @@ func (c *bundledTransformer) Transform(events []*v1.Event) ([]event.Event, []err
 
 		bundle, found := bundlesByObject[id]
 		if !found {
-			bundle = newKubernetesEventBundler(c.clusterName, event, c.ctx)
+			bundle = newKubernetesEventBundler(c.ctx, c.clusterName, event)
 			bundlesByObject[id] = bundle
 		}
 

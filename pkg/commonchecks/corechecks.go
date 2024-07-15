@@ -55,7 +55,7 @@ import (
 )
 
 // RegisterChecks registers all core checks
-func RegisterChecks(store workloadmeta.Component, cfg config.Component, telemetry telemetry.Component, ctx context.Context) {
+func RegisterChecks(ctx context.Context, store workloadmeta.Component, cfg config.Component, telemetry telemetry.Component) {
 	// Required checks
 	corecheckLoader.RegisterCheck(cpu.CheckName, cpu.Factory())
 	corecheckLoader.RegisterCheck(memory.CheckName, memory.Factory())
