@@ -22,6 +22,8 @@ import (
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/log/logimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
+	telemetrymock "github.com/DataDog/datadog-agent/comp/metadata/telemetry/mock"
 	configUtils "github.com/DataDog/datadog-agent/pkg/config/utils"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
@@ -44,6 +46,7 @@ func TestConfDisabled(t *testing.T) {
 			config.MockModule(),
 			fx.Replace(config.MockParams{Overrides: overrides}),
 			fx.Provide(func() serializer.MetricSerializer { return nil }),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 		),
 	)
 
@@ -68,6 +71,7 @@ func TestConfInterval(t *testing.T) {
 			config.MockModule(),
 			fx.Replace(config.MockParams{Overrides: overrides}),
 			fx.Provide(func() serializer.MetricSerializer { return nil }),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 		),
 	)
 
@@ -92,7 +96,10 @@ func TestCollect(t *testing.T) {
 			assert.Equal(t, expectedPayload, string(jsonPayload))
 			return bytes.Equal(jsonPayload, []byte(expectedPayload))
 		}),
-	).Return(nil)
+	).Return(nil).Once()
+
+	telemetryMetadataMock := telemetrymock.Mock(t)
+	telemetryMetadataMock.On("Increment", "resources").Once()
 
 	ret := newResourcesProvider(
 		fxutil.Test[dependencies](
@@ -100,6 +107,7 @@ func TestCollect(t *testing.T) {
 			logimpl.MockModule(),
 			config.MockModule(),
 			fx.Provide(func() serializer.MetricSerializer { return s }),
+			fx.Provide(func() telemetry.Component { return telemetryMetadataMock }),
 		),
 	)
 
@@ -108,7 +116,9 @@ func TestCollect(t *testing.T) {
 
 	interval := r.collect(context.Background())
 	assert.Equal(t, defaultCollectInterval, interval)
+
 	s.AssertExpectations(t)
+	telemetryMetadataMock.AssertExpectations(t)
 }
 
 func TestCollectError(t *testing.T) {
@@ -117,6 +127,8 @@ func TestCollectError(t *testing.T) {
 		return nil, fmt.Errorf("some error from gohai")
 	}
 
+	telemetryMetadataMock := telemetrymock.Mock(t)
+
 	s := &serializer.MockSerializer{}
 	ret := newResourcesProvider(
 		fxutil.Test[dependencies](
@@ -124,11 +136,14 @@ func TestCollectError(t *testing.T) {
 			logimpl.MockModule(),
 			config.MockModule(),
 			fx.Provide(func() serializer.MetricSerializer { return s }),
+			fx.Provide(func() telemetry.Component { return telemetryMetadataMock }),
 		),
 	)
 
 	r := ret.Comp.(*resourcesImpl)
 	interval := r.collect(context.Background())
 	assert.Equal(t, defaultCollectInterval, interval)
+
 	s.AssertExpectations(t)
+	telemetryMetadataMock.AssertExpectations(t)
 }

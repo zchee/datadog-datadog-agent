@@ -12,15 +12,17 @@ import (
 	"runtime"
 	"time"
 
+	"go.uber.org/fx"
+
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/metadata/resources"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	configUtils "github.com/DataDog/datadog-agent/pkg/config/utils"
 	"github.com/DataDog/datadog-agent/pkg/gohai/processes"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
 	"github.com/DataDog/datadog-agent/pkg/util/hostname"
-	"go.uber.org/fx"
 )
 
 const defaultCollectInterval = 300 * time.Second
@@ -29,9 +31,10 @@ const providerName = "resources"
 type resourcesImpl struct {
 	log log.Component
 
-	hostname        string
-	collectInterval time.Duration
-	serializer      serializer.MetricSerializer
+	hostname          string
+	collectInterval   time.Duration
+	serializer        serializer.MetricSerializer
+	telemetryMetadata telemetry.Component
 }
 
 type dependencies struct {
@@ -46,9 +49,10 @@ type dependencies struct {
 	// supply a Params struct but only need to import the metadata.Bundle.
 	Params *Params `optional:"true"`
 
-	Log        log.Component
-	Config     config.Component
-	Serializer serializer.MetricSerializer
+	Log               log.Component
+	Config            config.Component
+	Serializer        serializer.MetricSerializer
+	TelemetryMetadata telemetry.Component
 }
 
 type provides struct {
@@ -80,10 +84,11 @@ func newResourcesProvider(deps dependencies) provides {
 
 	hname, _ := hostname.Get(context.Background())
 	r := resourcesImpl{
-		log:             deps.Log,
-		hostname:        hname,
-		collectInterval: collectInterval,
-		serializer:      deps.Serializer,
+		log:               deps.Log,
+		hostname:          hname,
+		collectInterval:   collectInterval,
+		serializer:        deps.Serializer,
+		telemetryMetadata: deps.TelemetryMetadata,
 	}
 	res := provides{
 		Comp: &r,
@@ -142,6 +147,8 @@ func (r *resourcesImpl) collect(_ context.Context) time.Duration {
 	if payload != nil {
 		if err := r.serializer.SendProcessesMetadata(payload); err != nil {
 			r.log.Errorf("unable to serialize processes metadata payload, %s", err)
+		} else {
+			r.telemetryMetadata.Increment("resources")
 		}
 	}
 	return r.collectInterval
