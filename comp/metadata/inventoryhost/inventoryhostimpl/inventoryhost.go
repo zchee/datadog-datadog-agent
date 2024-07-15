@@ -24,6 +24,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/metadata/inventoryhost"
 	pkgUtils "github.com/DataDog/datadog-agent/comp/metadata/packagesigning/utils"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	"github.com/DataDog/datadog-agent/pkg/gohai/cpu"
 	"github.com/DataDog/datadog-agent/pkg/gohai/memory"
 	"github.com/DataDog/datadog-agent/pkg/gohai/network"
@@ -136,9 +137,10 @@ type invHost struct {
 type dependencies struct {
 	fx.In
 
-	Log        log.Component
-	Config     config.Component
-	Serializer serializer.MetricSerializer
+	Log               log.Component
+	Config            config.Component
+	Serializer        serializer.MetricSerializer
+	MetadataTelemetry telemetry.Component
 }
 
 type provides struct {
@@ -158,7 +160,7 @@ func newInventoryHostProvider(deps dependencies) provides {
 		hostname: hname,
 		data:     &hostMetadata{},
 	}
-	ih.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, ih.getPayload, "host.json")
+	ih.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, ih.getPayload, "host.json", deps.MetadataTelemetry, "inventory_host")
 
 	return provides{
 		Comp:          ih,

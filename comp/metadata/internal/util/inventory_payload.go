@@ -65,6 +65,7 @@ import (
 	flaretypes "github.com/DataDog/datadog-agent/comp/core/flare/types"
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
 	"github.com/DataDog/datadog-agent/pkg/serializer/marshaler"
 )
@@ -89,12 +90,14 @@ type PayloadGetter func() marshaler.JSONMarshaler
 type InventoryPayload struct {
 	m sync.Mutex
 
-	conf          config.Component
-	log           log.Component
-	serializer    serializer.MetricSerializer
-	getPayload    PayloadGetter
-	createdAt     time.Time
-	firstRunDelay time.Duration
+	conf              config.Component
+	log               log.Component
+	serializer        serializer.MetricSerializer
+	getPayload        PayloadGetter
+	createdAt         time.Time
+	firstRunDelay     time.Duration
+	metadataTelemetry telemetry.Component
+	payloadName       string
 
 	Enabled       bool
 	LastCollect   time.Time
@@ -106,7 +109,7 @@ type InventoryPayload struct {
 
 // CreateInventoryPayload returns an initialized InventoryPayload. 'getPayload' will be called each time a new payload
 // needs to be generated.
-func CreateInventoryPayload(conf config.Component, l log.Component, s serializer.MetricSerializer, getPayload PayloadGetter, flareFileName string) InventoryPayload {
+func CreateInventoryPayload(conf config.Component, l log.Component, s serializer.MetricSerializer, getPayload PayloadGetter, flareFileName string, metadataTelemetry telemetry.Component, payloadName string) InventoryPayload {
 	minInterval := time.Duration(conf.GetInt("inventories_min_interval")) * time.Second
 	if minInterval <= 0 {
 		minInterval = defaultMinInterval
@@ -118,16 +121,18 @@ func CreateInventoryPayload(conf config.Component, l log.Component, s serializer
 	}
 
 	return InventoryPayload{
-		Enabled:       InventoryEnabled(conf),
-		conf:          conf,
-		log:           l,
-		serializer:    s,
-		getPayload:    getPayload,
-		createdAt:     time.Now(),
-		firstRunDelay: conf.GetDuration("inventories_first_run_delay") * time.Second,
-		FlareFileName: flareFileName,
-		MinInterval:   minInterval,
-		MaxInterval:   maxInterval,
+		Enabled:           InventoryEnabled(conf),
+		conf:              conf,
+		log:               l,
+		serializer:        s,
+		getPayload:        getPayload,
+		createdAt:         time.Now(),
+		firstRunDelay:     conf.GetDuration("inventories_first_run_delay") * time.Second,
+		metadataTelemetry: metadataTelemetry,
+		payloadName:       payloadName,
+		FlareFileName:     flareFileName,
+		MinInterval:       minInterval,
+		MaxInterval:       maxInterval,
 	}
 }
 
@@ -172,6 +177,8 @@ func (i *InventoryPayload) collect(_ context.Context) time.Duration {
 	p := i.getPayload()
 	if err := i.serializer.SendMetadata(p); err != nil {
 		i.log.Errorf("unable to submit inventories payload, %s", err)
+	} else {
+		i.metadataTelemetry.Increment(i.payloadName)
 	}
 	return i.MinInterval
 }

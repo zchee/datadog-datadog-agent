@@ -23,6 +23,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/metadata/internal/util"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
 	"github.com/DataDog/datadog-agent/comp/metadata/securityagent/def"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	configFetcher "github.com/DataDog/datadog-agent/pkg/config/fetcher"
 	"github.com/DataDog/datadog-agent/pkg/config/model"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
@@ -72,7 +73,8 @@ type Requires struct {
 	Config     config.Component
 	Serializer serializer.MetricSerializer
 	// We need the authtoken to be created so we requires the comp. It will be used by configFetcher.
-	AuthToken authtoken.Component
+	AuthToken         authtoken.Component
+	TelemetryMetadata telemetry.Component
 }
 
 // Provides defines the output of the securityagent metadata component
@@ -91,7 +93,7 @@ func NewComponent(deps Requires) Provides {
 		conf:     deps.Config,
 		hostname: hname,
 	}
-	sa.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, sa.getPayload, "security-agent.json")
+	sa.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, sa.getPayload, "security-agent.json", deps.TelemetryMetadata, "inventory_config_security_agent")
 
 	return Provides{
 		Comp:             sa,

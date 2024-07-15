@@ -24,6 +24,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/metadata/internal/util"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
 	systemprobemetadata "github.com/DataDog/datadog-agent/comp/metadata/systemprobe/def"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	configFetcher "github.com/DataDog/datadog-agent/pkg/config/fetcher"
 	"github.com/DataDog/datadog-agent/pkg/config/model"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
@@ -75,8 +76,9 @@ type Requires struct {
 	Config     config.Component
 	Serializer serializer.MetricSerializer
 	// We need the authtoken to be created so we requires the comp. It will be used by configFetcher.
-	AuthToken      authtoken.Component
-	SysProbeConfig optional.Option[sysprobeconfig.Component]
+	AuthToken         authtoken.Component
+	SysProbeConfig    optional.Option[sysprobeconfig.Component]
+	TelemetryMetadata telemetry.Component
 }
 
 // Provides defines the output of the systemprobe metadatacomponent
@@ -96,7 +98,7 @@ func NewComponent(deps Requires) Provides {
 		hostname:     hname,
 		sysprobeConf: deps.SysProbeConfig,
 	}
-	sb.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, sb.getPayload, "system-probe.json")
+	sb.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, sb.getPayload, "system-probe.json", deps.TelemetryMetadata, "inventory_config_system_probe")
 
 	return Provides{
 		Comp:             sb,

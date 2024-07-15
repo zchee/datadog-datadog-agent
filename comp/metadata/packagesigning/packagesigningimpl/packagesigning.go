@@ -25,6 +25,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/metadata/packagesigning"
 	pkgUtils "github.com/DataDog/datadog-agent/comp/metadata/packagesigning/utils"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
 	"github.com/DataDog/datadog-agent/pkg/serializer/marshaler"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
@@ -78,9 +79,10 @@ type pkgSigning struct {
 type dependencies struct {
 	fx.In
 
-	Log        log.Component
-	Config     config.Component
-	Serializer serializer.MetricSerializer
+	Log               log.Component
+	Config            config.Component
+	Serializer        serializer.MetricSerializer
+	MetadataTelemetry telemetry.Component
 }
 
 type provides struct {
@@ -111,7 +113,7 @@ func newPackageSigningProvider(deps dependencies) provides {
 		hostname:   hname,
 		pkgManager: getPkgManager(),
 	}
-	is.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, is.getPayload, "signing.json")
+	is.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, is.getPayload, "signing.json", deps.MetadataTelemetry, "inventory_packagesigning")
 	is.InventoryPayload.MaxInterval = defaultCollectInterval
 	is.InventoryPayload.MinInterval = defaultCollectInterval
 	is.InventoryPayload.Enabled = isPackageSigningEnabled(deps.Config, is.log)

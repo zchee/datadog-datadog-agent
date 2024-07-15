@@ -17,6 +17,8 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log/logimpl"
 	"github.com/DataDog/datadog-agent/comp/metadata/host/hostimpl/utils"
 	pkgUtils "github.com/DataDog/datadog-agent/comp/metadata/packagesigning/utils"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
+	telemetrymock "github.com/DataDog/datadog-agent/comp/metadata/telemetry/mock"
 	"github.com/DataDog/datadog-agent/pkg/gohai/cpu"
 	"github.com/DataDog/datadog-agent/pkg/gohai/memory"
 	"github.com/DataDog/datadog-agent/pkg/gohai/network"
@@ -123,6 +125,7 @@ func getTestInventoryHost(t *testing.T) *invHost {
 			logimpl.MockModule(),
 			config.MockModule(),
 			fx.Provide(func() serializer.MetricSerializer { return &serializer.MockSerializer{} }),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 		),
 	)
 	return p.Comp.(*invHost)

@@ -11,17 +11,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"go.uber.org/fx"
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/flare/helpers"
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/core/log/logimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/mock"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
 	"github.com/DataDog/datadog-agent/pkg/serializer/marshaler"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 // Payload handles the JSON unmarshalling of the metadata payload
@@ -42,6 +43,8 @@ func getTestInventoryPayload(t *testing.T, confOverrides map[string]any) *Invent
 		&serializer.MockSerializer{},
 		func() marshaler.JSONMarshaler { return &testPayload{} },
 		"test.json",
+		telemetry.Mock(t),
+		"test",
 	)
 	return &i
 }
@@ -127,43 +130,51 @@ func TestCollectRecentLastCollect(t *testing.T) {
 	assert.Equal(t, defaultMinInterval, interval)
 	// check that no Payload was send since LastCollect is recent
 	i.serializer.(*serializer.MockSerializer).AssertExpectations(t)
+	i.metadataTelemetry.(*telemetry.TelemetryMock).AssertExpectations(t)
 }
 
 func TestCollectStartupTime(t *testing.T) {
-	i := getTestInventoryPayload(t, nil)
+	t.Run("DefaultFirstRunDelay", func(t *testing.T) {
+		i := getTestInventoryPayload(t, nil)
 
-	// testing collect do not send metadata if hasn't elapsed a minute from createdAt time
-	createdAt := time.Now().Add(2 * time.Minute)
-	i.createdAt = createdAt
+		// testing collect do not send metadata if hasn't elapsed a minute from createdAt time
+		createdAt := time.Now().Add(2 * time.Minute)
+		i.createdAt = createdAt
 
-	serializerMock := i.serializer.(*serializer.MockSerializer)
-	duration := 1 * time.Minute
+		serializerMock := i.serializer.(*serializer.MockSerializer)
+		metadataTelemetryMock := i.metadataTelemetry.(*telemetry.TelemetryMock)
 
-	interval := i.collect(context.Background())
-	assert.Equal(t, duration-time.Since(createdAt).Round(duration), interval.Round(duration))
-	assert.Empty(t, serializerMock.Calls)
+		duration := 1 * time.Minute
+		interval := i.collect(context.Background())
+		assert.Equal(t, duration-time.Since(createdAt).Round(duration), interval.Round(duration))
 
-	// testing with custom values from configuration
-	i = getTestInventoryPayload(t, map[string]any{
-		"inventories_first_run_delay": 0,
+		serializerMock.AssertExpectations(t)
+		metadataTelemetryMock.AssertExpectations(t)
 	})
 
-	// reset serializer mock
-	serializerMock = &serializer.MockSerializer{}
+	t.Run("NoFirstRunDelay", func(t *testing.T) {
+		// testing with custom values from configuration
+		i := getTestInventoryPayload(t, map[string]any{
+			"inventories_first_run_delay": 0,
+		})
 
-	serializerMock.On(
-		"SendMetadata",
-		mock.MatchedBy(func(m marshaler.JSONMarshaler) bool {
-			if _, ok := m.(*testPayload); !ok {
-				return false
-			}
-			return true
-		})).Return(nil)
+		serializerMock := i.serializer.(*serializer.MockSerializer)
+		serializerMock.On(
+			"SendMetadata",
+			mock.MatchedBy(func(m marshaler.JSONMarshaler) bool {
+				_, ok := m.(*testPayload)
+				return ok
+			})).Return(nil)
 
-	i.serializer = serializerMock
-	interval = i.collect(context.Background())
-	assert.Equal(t, defaultMinInterval, interval)
-	serializerMock.AssertExpectations(t)
+		metadataTelemetryMock := i.metadataTelemetry.(*telemetry.TelemetryMock)
+		metadataTelemetryMock.On("Increment", "test").Once()
+
+		interval := i.collect(context.Background())
+		assert.Equal(t, defaultMinInterval, interval)
+
+		serializerMock.AssertExpectations(t)
+		metadataTelemetryMock.AssertExpectations(t)
+	})
 }
 
 func TestCollect(t *testing.T) {
@@ -173,6 +184,7 @@ func TestCollect(t *testing.T) {
 	i.createdAt = time.Now().Add(-2 * time.Minute)
 
 	serializerMock := i.serializer.(*serializer.MockSerializer)
+	metadataTelemetryMock := i.metadataTelemetry.(*telemetry.TelemetryMock)
 
 	// testing collect with LastCollect > MaxInterval
 
@@ -183,7 +195,8 @@ func TestCollect(t *testing.T) {
 				return false
 			}
 			return true
-		})).Return(nil)
+		})).Return(nil).Once()
+	metadataTelemetryMock.On("Increment", "test").Once()
 
 	// Make sure the minInterval between two payload has expired
 	i.LastCollect = time.Now().Add(-1 * time.Hour)
@@ -192,17 +205,15 @@ func TestCollect(t *testing.T) {
 	interval := i.collect(context.Background())
 	assert.Equal(t, defaultMinInterval, interval)
 	assert.False(t, i.LastCollect.Before(now))
-	i.serializer.(*serializer.MockSerializer).AssertExpectations(t)
+	serializerMock.AssertExpectations(t)
+	metadataTelemetryMock.AssertExpectations(t)
 
 	// testing collect with LastCollect between MinInterval and MaxInterval
 
-	// reset serializer mock and test that a new call to Collect doesn't trigger a new payload
-	serializerMock = &serializer.MockSerializer{}
-	i.serializer = serializerMock
-
 	i.LastCollect = time.Now().Add(-i.MinInterval + 1*time.Second)
 	i.collect(context.Background())
-	i.serializer.(*serializer.MockSerializer).AssertExpectations(t)
+	serializerMock.AssertExpectations(t)
+	metadataTelemetryMock.AssertExpectations(t)
 
 	// testing collect with LastCollect between MinInterval and MaxInterval with forceRefresh being trigger
 
@@ -216,9 +227,11 @@ func TestCollect(t *testing.T) {
 				return false
 			}
 			return true
-		})).Return(nil)
+		})).Return(nil).Once()
+	metadataTelemetryMock.On("Increment", "test").Once()
 
 	i.collect(context.Background())
-	i.serializer.(*serializer.MockSerializer).AssertExpectations(t)
+	serializerMock.AssertExpectations(t)
+	metadataTelemetryMock.AssertExpectations(t)
 	assert.False(t, i.forceRefresh.Load())
 }

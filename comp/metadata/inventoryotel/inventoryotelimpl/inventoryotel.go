@@ -29,6 +29,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/metadata/internal/util"
 	iointerface "github.com/DataDog/datadog-agent/comp/metadata/inventoryotel"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
 	"github.com/DataDog/datadog-agent/pkg/serializer/marshaler"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
@@ -82,10 +83,11 @@ type inventoryotel struct {
 type dependencies struct {
 	fx.In
 
-	Log        log.Component
-	Config     config.Component
-	Serializer serializer.MetricSerializer
-	AuthToken  authtoken.Component
+	Log               log.Component
+	Config            config.Component
+	Serializer        serializer.MetricSerializer
+	AuthToken         authtoken.Component
+	MetadataTelemetry telemetry.Component
 }
 
 type provides struct {
@@ -129,7 +131,7 @@ func newInventoryOtelProvider(deps dependencies) (provides, error) {
 		return provides{}, err
 	}
 
-	i.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, i.getPayload, "otel.json")
+	i.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, i.getPayload, "otel.json", deps.MetadataTelemetry, "inventory_otel")
 
 	if i.Enabled {
 		// TODO: if there's an update on the OTel side we currently will not be

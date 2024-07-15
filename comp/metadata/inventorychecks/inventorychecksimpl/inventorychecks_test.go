@@ -23,6 +23,8 @@ import (
 	"github.com/DataDog/datadog-agent/comp/logs/agent/agentimpl"
 	logConfig "github.com/DataDog/datadog-agent/comp/logs/agent/config"
 	"github.com/DataDog/datadog-agent/comp/metadata/inventoryagent/inventoryagentimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
+	telemetrymock "github.com/DataDog/datadog-agent/comp/metadata/telemetry/mock"
 	"github.com/DataDog/datadog-agent/pkg/collector/check"
 	checkid "github.com/DataDog/datadog-agent/pkg/collector/check/id"
 	"github.com/DataDog/datadog-agent/pkg/logs/sources"
@@ -45,6 +47,7 @@ func getTestInventoryChecks(t *testing.T, coll optional.Option[collector.Compone
 			fx.Provide(func() optional.Option[logagent.Component] {
 				return logAgent
 			}),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 		),
 	)
 	return p.Comp.(*inventorychecksImpl)

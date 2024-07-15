@@ -10,15 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/fx"
-	"golang.org/x/exp/maps"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/fx"
+	"golang.org/x/exp/maps"
 
 	authtokenimpl "github.com/DataDog/datadog-agent/comp/api/authtoken/fetchonlyimpl"
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/log/logimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
+	telemetrymock "github.com/DataDog/datadog-agent/comp/metadata/telemetry/mock"
 	pkgconfig "github.com/DataDog/datadog-agent/pkg/config"
 	pkgconfigmodel "github.com/DataDog/datadog-agent/pkg/config/model"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
@@ -34,6 +35,7 @@ func getProvides(t *testing.T, confOverrides map[string]any) (provides, error) {
 			fx.Replace(config.MockParams{Overrides: confOverrides}),
 			fx.Provide(func() serializer.MetricSerializer { return &serializer.MockSerializer{} }),
 			authtokenimpl.Module(),
+			fx.Provide(func() telemetry.Component { return telemetrymock.Mock(t) }),
 		),
 	)
 }

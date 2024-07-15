@@ -30,6 +30,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/metadata/internal/util"
 	iainterface "github.com/DataDog/datadog-agent/comp/metadata/inventoryagent"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	"github.com/DataDog/datadog-agent/pkg/config/env"
 	configFetcher "github.com/DataDog/datadog-agent/pkg/config/fetcher"
 	"github.com/DataDog/datadog-agent/pkg/config/model"
@@ -101,11 +102,12 @@ type inventoryagent struct {
 type dependencies struct {
 	fx.In
 
-	Log            log.Component
-	Config         config.Component
-	SysProbeConfig optional.Option[sysprobeconfig.Component]
-	Serializer     serializer.MetricSerializer
-	AuthToken      authtoken.Component
+	Log               log.Component
+	Config            config.Component
+	SysProbeConfig    optional.Option[sysprobeconfig.Component]
+	Serializer        serializer.MetricSerializer
+	AuthToken         authtoken.Component
+	MetadataTelemetry telemetry.Component
 }
 
 type provides struct {
@@ -128,7 +130,7 @@ func newInventoryAgentProvider(deps dependencies) provides {
 		data:         make(agentMetadata),
 		authToken:    deps.AuthToken,
 	}
-	ia.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, ia.getPayload, "agent.json")
+	ia.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, ia.getPayload, "agent.json", deps.MetadataTelemetry, "inventory_agent")
 
 	if ia.Enabled {
 		ia.initData()

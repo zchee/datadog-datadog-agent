@@ -13,12 +13,12 @@ import (
 
 // Requires defines the dependencies for the telemetry component
 type Requires struct {
-	telemetry telemetryComp.Component
+	Telemetry telemetryComp.Component
 }
 
 // NewComponent creates a new metadata telemetry component
 func NewComponent(reqs Requires) telemetry.Component {
-	counter := reqs.telemetry.NewCounter("metadata_payload", "sent_total", []string{"payload_name"}, "Total number of metadata payloads sent")
+	counter := reqs.Telemetry.NewCounter("metadata_payload", "sent_total", []string{"payload_name"}, "Total number of metadata payloads sent")
 	return &metadataCounter{
 		counter,
 	}

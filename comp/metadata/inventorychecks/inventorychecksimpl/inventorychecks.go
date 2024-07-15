@@ -26,6 +26,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/metadata/internal/util"
 	"github.com/DataDog/datadog-agent/comp/metadata/inventorychecks"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner/runnerimpl"
+	telemetry "github.com/DataDog/datadog-agent/comp/metadata/telemetry/def"
 	"github.com/DataDog/datadog-agent/pkg/collector/check"
 	checkid "github.com/DataDog/datadog-agent/pkg/collector/check/id"
 	"github.com/DataDog/datadog-agent/pkg/logs/sources"
@@ -93,11 +94,12 @@ type inventorychecksImpl struct {
 type dependencies struct {
 	fx.In
 
-	Log        log.Component
-	Config     config.Component
-	Serializer serializer.MetricSerializer
-	Coll       optional.Option[collector.Component]
-	LogAgent   optional.Option[logagent.Component]
+	Log               log.Component
+	Config            config.Component
+	Serializer        serializer.MetricSerializer
+	Coll              optional.Option[collector.Component]
+	LogAgent          optional.Option[logagent.Component]
+	MetadataTelemetry telemetry.Component
 }
 
 type provides struct {
@@ -119,7 +121,7 @@ func newInventoryChecksProvider(deps dependencies) provides {
 		hostname: hname,
 		data:     map[string]instanceMetadata{},
 	}
-	ic.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, ic.getPayload, "checks.json")
+	ic.InventoryPayload = util.CreateInventoryPayload(deps.Config, deps.Log, deps.Serializer, ic.getPayload, "checks.json", deps.MetadataTelemetry, "inventory_checks")
 
 	// We want to be notified when the collector add or removed a check.
 	// TODO: (component) - This entire metadata provider should be part of the collector. Once the collector is a
