@@ -144,7 +144,7 @@ func (s *KafkaProtocolParsingSuite) TestKafkaProtocolParsing() {
 	t.Run("without TLS", func(t *testing.T) {
 		for _, version := range versions {
 			t.Run(versionName(version), func(t *testing.T) {
-				s.testKafkaProtocolParsing(t, false, version)
+				s.testKafkaProtocolParsing(t, false, false, version)
 			})
 		}
 	})
@@ -155,13 +155,13 @@ func (s *KafkaProtocolParsingSuite) TestKafkaProtocolParsing() {
 		}
 		for _, version := range versions {
 			t.Run(versionName(version), func(t *testing.T) {
-				s.testKafkaProtocolParsing(t, true, version)
+				s.testKafkaProtocolParsing(t, true, false, version)
 			})
 		}
 	})
 }
 
-func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls bool, version *kversion.Versions) {
+func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls bool, kprobeHooks bool, version *kversion.Versions) {
 	const (
 		targetHost = "127.0.0.1"
 		serverHost = "127.0.0.1"
@@ -185,7 +185,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	// packets are seen twice. This is not needed in the TLS case since there
 	// the data comes from uprobes on the binary.
 	fixCount := func(count int) int {
-		if tls {
+		if tls || !kprobeHooks {
 			return count
 		}
 
@@ -193,7 +193,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	}
 
 	fixStatsCount := func(count int) int {
-		if tls {
+		if tls || !kprobeHooks {
 			return count
 		}
 
@@ -205,7 +205,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	}
 
 	fixProduceCount := func(count int) int {
-		if tls {
+		if tls || !kprobeHooks {
 			return count
 		}
 
@@ -826,11 +826,11 @@ func (can *CannedClientServer) runClient(msgs []Message) {
 	}
 }
 
-func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
+func testKafkaFetchRaw(t *testing.T, tls bool, kprobeHooks bool, apiVersion int) {
 	defaultTopic := "test-topic"
 
 	fixCount := func(count int) int {
-		if tls {
+		if tls || !kprobeHooks {
 			return count
 		}
 
@@ -1287,7 +1287,7 @@ func (s *KafkaProtocolParsingSuite) TestKafkaFetchRaw() {
 	t.Run("without TLS", func(t *testing.T) {
 		for _, version := range versions {
 			t.Run(fmt.Sprintf("api%d", version), func(t *testing.T) {
-				testKafkaFetchRaw(t, false, version)
+				testKafkaFetchRaw(t, false, false, version)
 			})
 		}
 	})
@@ -1299,7 +1299,7 @@ func (s *KafkaProtocolParsingSuite) TestKafkaFetchRaw() {
 
 		for _, version := range versions {
 			t.Run(fmt.Sprintf("api%d", version), func(t *testing.T) {
-				testKafkaFetchRaw(t, true, version)
+				testKafkaFetchRaw(t, true, false, version)
 			})
 		}
 	})
