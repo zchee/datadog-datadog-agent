@@ -39,6 +39,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/protocols"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http/testutil"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/kafka"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/telemetry"
 	gotlsutils "github.com/DataDog/datadog-agent/pkg/network/protocols/tls/gotls/testutil"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer/testutil/proxy"
 	usmconfig "github.com/DataDog/datadog-agent/pkg/network/usm/config"
@@ -845,6 +846,7 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 		buildMessages                       func(kmsg.FetchRequest, kmsg.FetchResponse) []Message
 		onlyTLS                             bool
 		numFetchedRecords                   int
+		numCapturedEvents                   int
 		errorCode                           int32
 		produceFetchValidationWithErrorCode *kafkaParsingValidationWithErrorCodes
 	}{
@@ -1118,6 +1120,7 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 
 				return makeFetchResponse(apiVersion, makeFetchResponseTopic(topic, partitions...))
 			},
+			numCapturedEvents: 4,
 		},
 		{
 			name:  "error code limits",
@@ -1153,6 +1156,7 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 
 				return makeFetchResponse(apiVersion, makeFetchResponseTopic(topic, partitions...))
 			},
+			numCapturedEvents: 2,
 		},
 	}
 
@@ -1184,6 +1188,12 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 				msgs = tt.buildMessages(req, resp)
 			}
 
+			// The NewCounter() API will return the existing counter with the
+			// given name if it exists.
+			counter := telemetry.NewCounter("usm.kafka.events_captured",
+				telemetry.OptStatsd)
+			beforeEvents := counter.Get()
+
 			can.runClient(msgs)
 
 			if tt.produceFetchValidationWithErrorCode != nil {
@@ -1195,6 +1205,15 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 					tlsEnabled:                    tls,
 				}, tt.errorCode)
 			}
+
+			afterEvents := counter.Get()
+			eventsCaptured := afterEvents - beforeEvents
+			expectedCaptured := 1
+			if tt.numCapturedEvents > 0 {
+				expectedCaptured = tt.numCapturedEvents
+			}
+
+			assert.Equal(t, int64(expectedCaptured), eventsCaptured)
 		})
 
 		// Test with buildMessages have custom splitters
