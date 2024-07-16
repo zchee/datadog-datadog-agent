@@ -121,6 +121,7 @@ func (q *querierImpl) getHostname(query *query) { //JMWTUE if error send error t
 	}
 
 	q.internalTelemetry.successful.Inc()
+	q.logger.Tracef("JMW Reverse DNS Enrichment q.resolver.lookup successfully returned hostname for IP address %v - calling updateHostname(%s, nil)", query.addr, hostname, query.addr)
 	query.updateHostname(hostname, nil)
 }
 

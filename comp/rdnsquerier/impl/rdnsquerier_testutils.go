@@ -75,7 +75,9 @@ func testSetup(t *testing.T, overrides map[string]interface{}, start bool) *test
 	// use fake resolver so the test results are deterministic
 	internalRDNSQuerier := provides.Comp.(*rdnsQuerierImpl)
 	assert.NotNil(t, internalRDNSQuerier)
-	internalQuerier := internalRDNSQuerier.querier.(*querierImpl)
+	internalCache := internalRDNSQuerier.cache.(*cacheNone) //JMW --> cacheImpl
+	assert.NotNil(t, internalCache)
+	internalQuerier := internalCache.querier.(*querierImpl)
 	assert.NotNil(t, internalQuerier)
 	internalQuerier.resolver = &fakeResolver{internalRDNSQuerier.config}
 

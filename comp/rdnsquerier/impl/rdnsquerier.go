@@ -56,7 +56,7 @@ type rdnsQuerierImpl struct {
 
 	started bool
 
-	querier querier
+	cache cache
 }
 
 // NewComponent creates a new rdnsquerier component
@@ -106,7 +106,7 @@ func NewComponent(reqs Requires) (Provides, error) {
 		internalTelemetry: internalTelemetry,
 
 		started: false,
-		querier: newQuerier(rdnsQuerierConfig, reqs.Logger, internalTelemetry),
+		cache:   newCache(rdnsQuerierConfig, reqs.Logger, reqs.Telemetry, newQuerier(rdnsQuerierConfig, reqs.Logger, internalTelemetry)),
 	}
 
 	reqs.Lifecycle.Append(compdef.Hook{
@@ -142,12 +142,12 @@ func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte /*JMWTUE updateHostname
 	}
 	q.internalTelemetry.private.Inc()
 
-	//JMWTUE cache.getHostname(netipAddr.String(), updateHostnameSync, updateHostnameAsync)
-
+	//JMWRMerr := q.querier.getHostnameAsync(netipAddr.String(), updateHostnameAsync)
 	//JMWTUE comment, add sync callback, add error to async callback
-	err := q.querier.getHostnameAsync(netipAddr.String(), updateHostnameAsync)
+	//JMWTUE add cache - have it do this
+	err := q.cache.getHostname(netipAddr.String() /*JMWTUE updateHostnameSync,*/, updateHostnameAsync)
 	if err != nil {
-		q.logger.Debugf("Reverse DNS Enrichment GetHostnameAsync() returned error: %v", err) //JMW?
+		q.logger.Debugf("Reverse DNS Enrichment cache.getHostname() returned error: %v", err) //JMW?
 		//JMW add test for this error - and others
 		return err
 	}
@@ -161,7 +161,7 @@ func (q *rdnsQuerierImpl) start(_ context.Context) error {
 		return nil
 	}
 
-	q.querier.start()
+	q.cache.start()
 	q.started = true
 
 	//JMWDEBUG
@@ -178,7 +178,7 @@ func (q *rdnsQuerierImpl) stop(context.Context) error {
 		return nil
 	}
 
-	q.querier.stop()
+	q.cache.stop()
 	q.started = false
 	return nil
 }
