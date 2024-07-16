@@ -43,8 +43,8 @@ import (
 )
 
 var (
-	errNoProtocols        = errors.New("no protocol monitors were initialised")
-	useNewPacketDataHooks = false
+	errNoProtocols     = errors.New("no protocol monitors were initialised")
+	useKprobeDataHooks = false
 
 	// knownProtocols holds all known protocols supported by USM to initialize.
 	knownProtocols = []*protocols.ProtocolSpec{
@@ -448,7 +448,7 @@ func (e *ebpfProgram) configureManagerWithSupportedProtocols(protocols []*protoc
 	}
 }
 
-func fixupProbes(options *manager.Options) error {
+func (e *ebpfProgram) fixupProbes(options *manager.Options) error {
 	newDataFunctions := []string{
 		"kprobe__tcp_splice_data_recv",
 		"kretprobe__tcp_splice_data_recv",
@@ -465,23 +465,25 @@ func fixupProbes(options *manager.Options) error {
 		"kretprobe__generic_splice_sendpage",
 	}
 
-	kernelVersion, err := kernel.HostVersion()
-	if err != nil {
-		log.Info("Using old data hooks since unable to determine kernel version", err)
-	} else {
-		if kernelVersion >= kernel.VersionCode(5, 10, 0) {
-			log.Info("Using new data hooks due to supported kernel version", kernelVersion)
-			useNewPacketDataHooks = true
+	if e.cfg.EnableUSMKprobeDataHooks {
+		kernelVersion, err := kernel.HostVersion()
+		if err != nil {
+			log.Warn("Not using kprobe data hooks since unable to determine kernel version", err)
 		} else {
-			log.Info("Using old data hooks due to old kernel version", kernelVersion)
+			if kernelVersion >= kernel.VersionCode(5, 10, 0) {
+				log.Info("Using kprobe data hooks as requested due to supported kernel version", kernelVersion)
+				useKprobeDataHooks = true
+			} else {
+				log.Info("Not using kprobe data hooks due to old kernel version", kernelVersion)
+			}
 		}
 	}
 
 	// fmt.Println to always show when running tests
-	fmt.Println("useNewPacketDataHooks", useNewPacketDataHooks)
+	fmt.Println("useNewPacketDataHooks", useKprobeDataHooks)
 
 	var exclude []string
-	if useNewPacketDataHooks {
+	if useKprobeDataHooks {
 		exclude = append(exclude, protocolDispatcherSocketFilterFunction)
 
 		missing, err := ddebpf.VerifyKernelFuncs("splice_to_socket")
@@ -507,10 +509,10 @@ func fixupProbes(options *manager.Options) error {
 		name := tc.ProbeIdentificationPair.EBPFFuncName
 
 		if strings.HasPrefix(name, "socket_") {
-			return useNewPacketDataHooks
+			return useKprobeDataHooks
 		}
 
-		if !useNewPacketDataHooks {
+		if !useKprobeDataHooks {
 			if !strings.HasPrefix(name, "sk_msg") && !strings.HasPrefix(name, "kprobe_") {
 				return false
 			}
@@ -626,7 +628,7 @@ func (e *ebpfProgram) init(buf bytecode.AssetReader, options manager.Options) er
 		}
 	}
 
-	err := fixupProbes(&options)
+	err := e.fixupProbes(&options)
 	if err != nil {
 		cleanup()
 		return err
