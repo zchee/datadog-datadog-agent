@@ -164,7 +164,23 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) {
 func (f *flowAccumulator) addRDNSEnrichment(aggHash uint64, srcAddr []byte, dstAddr []byte) {
 	err := f.rdnsQuerier.GetHostnameAsync(
 		srcAddr,
+		/*JMWTUE
+		// Sync callback, lock is already held
+		//JMWTUE will cache only call this if it has a valid hostname cached, or will it also cache errors and send error here, or will it cache errors and not call here unless there is no error?
 		func(hostname string) {
+			aggFlow, ok := f.flows[aggHash]
+			if ok && aggFlow.flow != nil {
+				aggFlow.flow.SrcReverseDNSHostname = hostname
+			}
+		},
+		*/
+		// Async callback will reacquire the lock
+		func(hostname string, err error) {
+			if err != nil {
+				f.logger.Debugf("JMWWHATTODOWITHTHIS Error requesting reverse DNS enrichment for source IP address: %v error: %v", srcAddr, err)
+				return
+			}
+
 			f.flowsMutex.Lock()
 			defer f.flowsMutex.Unlock()
 
@@ -180,7 +196,23 @@ func (f *flowAccumulator) addRDNSEnrichment(aggHash uint64, srcAddr []byte, dstA
 
 	err = f.rdnsQuerier.GetHostnameAsync(
 		dstAddr,
+		/*JMWTUE
+		// Sync callback, lock is already held
+		//JMWTUE will cache only call this if it has a valid hostname cached, or will it also cache errors and send error here, or will it cache errors and not call here unless there is no error?
 		func(hostname string) {
+			aggFlow, ok := f.flows[aggHash]
+			if ok && aggFlow.flow != nil {
+				aggFlow.flow.DstReverseDNSHostname = hostname
+			}
+		}
+		*/
+		// Async callback will reacquire the lock
+		func(hostname string, err error) {
+			if err != nil {
+				f.logger.Debugf("JMWWHATTODOWITHTHIS Error requesting reverse DNS enrichment for destination IP address: %v error: %v", dstAddr, err)
+				return
+			}
+
 			f.flowsMutex.Lock()
 			defer f.flowsMutex.Unlock()
 

@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"time" //JMWDEBUG
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/log"
@@ -49,7 +50,7 @@ type rdnsQuerierTelemetry = struct {
 }
 
 type rdnsQuerierImpl struct {
-	rdnsQuerierConfig *rdnsQuerierConfig
+	config            *rdnsQuerierConfig
 	logger            log.Component
 	internalTelemetry *rdnsQuerierTelemetry
 
@@ -72,6 +73,13 @@ func NewComponent(reqs Requires) (Provides, error) {
 		rdnsQuerierConfig.cacheCleanInterval,
 		rdnsQuerierConfig.cachePersistInterval)
 
+	//JMWDEBUG
+	reqs.Logger.Debugf("JMW Reverse DNS Enrichment debug config: (fake_resolver=%t generate_fake_queries=%t lookup_delay_ms=%d)",
+		rdnsQuerierConfig.fakeResolver,
+		rdnsQuerierConfig.generateFakeQueriesPerSecond,
+		rdnsQuerierConfig.lookupDelayMs)
+	//JMWDEBUG
+
 	if !rdnsQuerierConfig.enabled {
 		return Provides{
 			Comp: rdnsquerierimplnone.NewNone().Comp,
@@ -93,7 +101,7 @@ func NewComponent(reqs Requires) (Provides, error) {
 	}
 
 	q := &rdnsQuerierImpl{
-		rdnsQuerierConfig: rdnsQuerierConfig,
+		config:            rdnsQuerierConfig,
 		logger:            reqs.Logger,
 		internalTelemetry: internalTelemetry,
 
@@ -116,9 +124,10 @@ func NewComponent(reqs Requires) (Provides, error) {
 // If the IP address is not in the private address space then it is ignored - no lookup is performed and no error is returned.
 // If the IP address is in the private address space then a reverse DNS lookup request is sent to a channel to be processed asynchronously.
 // If the channel is full then an error is returned.
+// JMWTUE comment when sync callback is added
 // When the lookup request completes the updateHostname function will be called asynchronously with the results.
 // JMWTUE comment when err is added to callback
-func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte, updateHostname func(string)) error {
+func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte /*JMWTUE updateHostnameSync func (string),*/, updateHostnameAsync func(string, error)) error {
 	q.internalTelemetry.total.Inc()
 
 	netipAddr, ok := netip.AddrFromSlice(ipAddr)
@@ -133,8 +142,10 @@ func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte, updateHostname func(st
 	}
 	q.internalTelemetry.private.Inc()
 
+	//JMWTUE cache.getHostname(netipAddr.String(), updateHostnameSync, updateHostnameAsync)
+
 	//JMWTUE comment, add sync callback, add error to async callback
-	err := q.querier.getHostnameAsync(netipAddr.String(), updateHostname)
+	err := q.querier.getHostnameAsync(netipAddr.String(), updateHostnameAsync)
 	if err != nil {
 		q.logger.Debugf("Reverse DNS Enrichment GetHostnameAsync() returned error: %v", err) //JMW?
 		//JMW add test for this error - and others
@@ -152,6 +163,12 @@ func (q *rdnsQuerierImpl) start(_ context.Context) error {
 
 	q.querier.start()
 	q.started = true
+
+	//JMWDEBUG
+	if q.config.generateFakeQueriesPerSecond > 0 {
+		go q.generateFakeQueries()
+	}
+	//JMWDEBUG
 	return nil
 }
 
@@ -165,3 +182,29 @@ func (q *rdnsQuerierImpl) stop(context.Context) error {
 	q.started = false
 	return nil
 }
+
+// JMWDEBUG
+func (q *rdnsQuerierImpl) generateFakeQueries() {
+	exit := make(chan struct{})
+	for {
+		select {
+		case <-exit:
+			return
+		case <-time.After(time.Second):
+			q.logger.Debugf("Reverse DNS Enrichment generating %d fake queries", q.config.generateFakeQueriesPerSecond)
+			for i := range q.config.generateFakeQueriesPerSecond {
+				err := q.GetHostnameAsync(
+					[]byte{192, 168, 1, byte(i)},
+					func(hostname string, err error) {
+						// noop JMW do something?
+					},
+				)
+				if err != nil {
+					q.logger.Debugf("Reverse DNS Enrichment generateFakeQueries() - GetHostnameAsync() returned error: %v", err)
+				}
+			}
+		}
+	}
+}
+
+//JMWDEBUG

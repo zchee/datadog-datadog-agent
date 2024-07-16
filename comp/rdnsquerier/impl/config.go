@@ -23,6 +23,13 @@ type rdnsQuerierConfig struct {
 	cacheEntryTTL        time.Duration
 	cacheCleanInterval   time.Duration
 	cachePersistInterval time.Duration
+
+	// JMWDEBUG
+	fakeResolver                 bool
+	generateFakeQueriesPerSecond int
+	lookupDelayMs                int
+	//JMWTUE add lookupCauseFakeErrors
+	// JMWDEBUG
 }
 
 const (
@@ -51,6 +58,12 @@ func newConfig(agentConfig config.Component) *rdnsQuerierConfig {
 		cacheEntryTTL:        agentConfig.GetDuration("reverse_dns_enrichment.cache.entry_ttl"),
 		cacheCleanInterval:   agentConfig.GetDuration("reverse_dns_enrichment.cache.clean_interval"),
 		cachePersistInterval: agentConfig.GetDuration("reverse_dns_enrichment.cache.persist_interval"),
+
+		//JMWDEBUG
+		fakeResolver:                 agentConfig.GetBool("reverse_dns_enrichment.fake_resolver"),
+		generateFakeQueriesPerSecond: agentConfig.GetInt("reverse_dns_enrichment.generate_fake_queries_per_second"),
+		lookupDelayMs:                agentConfig.GetInt("reverse_dns_enrichment.lookup_delay_ms"),
+		//JMWDEBUG
 	}
 
 	c.setDefaults()

@@ -10,6 +10,7 @@ package rdnsquerierimpl
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	"go.uber.org/fx"
@@ -32,6 +33,12 @@ type fakeResolver struct {
 }
 
 func (r *fakeResolver) lookup(addr string) (string, error) {
+	//JMWDEBUG
+	if r.config.lookupDelayMs > 0 {
+		time.Sleep(time.Duration(r.config.lookupDelayMs) * time.Millisecond)
+	}
+	//JMWDEBUG
+
 	return "fakehostname-" + addr, nil
 }
 
@@ -70,7 +77,7 @@ func testSetup(t *testing.T, overrides map[string]interface{}, start bool) *test
 	assert.NotNil(t, internalRDNSQuerier)
 	internalQuerier := internalRDNSQuerier.querier.(*querierImpl)
 	assert.NotNil(t, internalQuerier)
-	internalQuerier.resolver = &fakeResolver{internalRDNSQuerier.rdnsQuerierConfig}
+	internalQuerier.resolver = &fakeResolver{internalRDNSQuerier.config}
 
 	ctx := context.Background()
 
