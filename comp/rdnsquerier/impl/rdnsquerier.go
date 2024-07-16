@@ -9,9 +9,7 @@ package rdnsquerierimpl
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/netip"
-	"sync"
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/log"
@@ -34,11 +32,6 @@ type Provides struct {
 	Comp rdnsquerier.Component
 }
 
-type rdnsQuery struct {
-	addr           string
-	updateHostname func(string)
-}
-
 const moduleName = "reverse_dns_enrichment"
 
 type rdnsQuerierTelemetry = struct {
@@ -56,34 +49,30 @@ type rdnsQuerierTelemetry = struct {
 }
 
 type rdnsQuerierImpl struct {
+	rdnsQuerierConfig *rdnsQuerierConfig
 	logger            log.Component
-	config            *rdnsQuerierConfig
 	internalTelemetry *rdnsQuerierTelemetry
 
-	started     bool
-	resolver    resolver
-	rateLimiter rateLimiter
+	started bool
 
-	rdnsQueryChan chan *rdnsQuery
-	wg            sync.WaitGroup
-	cancel        context.CancelFunc
+	querier querier
 }
 
 // NewComponent creates a new rdnsquerier component
 func NewComponent(reqs Requires) (Provides, error) {
-	config := newConfig(reqs.AgentConfig)
+	rdnsQuerierConfig := newConfig(reqs.AgentConfig)
 	reqs.Logger.Infof("Reverse DNS Enrichment config: (enabled=%t workers=%d chan_size=%d rate_limiter.enabled=%t rate_limiter.limit_per_sec=%d cache.enabled=%t cache.entry_ttl=%d cache.clean_interval=%d cache.persist_interval=%d)",
-		config.enabled,
-		config.workers,
-		config.chanSize,
-		config.rateLimiterEnabled,
-		config.rateLimitPerSec,
-		config.cacheEnabled,
-		config.cacheEntryTTL,
-		config.cacheCleanInterval,
-		config.cachePersistInterval)
+		rdnsQuerierConfig.enabled,
+		rdnsQuerierConfig.workers,
+		rdnsQuerierConfig.chanSize,
+		rdnsQuerierConfig.rateLimiterEnabled,
+		rdnsQuerierConfig.rateLimitPerSec,
+		rdnsQuerierConfig.cacheEnabled,
+		rdnsQuerierConfig.cacheEntryTTL,
+		rdnsQuerierConfig.cacheCleanInterval,
+		rdnsQuerierConfig.cachePersistInterval)
 
-	if !config.enabled {
+	if !rdnsQuerierConfig.enabled {
 		return Provides{
 			Comp: rdnsquerierimplnone.NewNone().Comp,
 		}, nil
@@ -104,13 +93,12 @@ func NewComponent(reqs Requires) (Provides, error) {
 	}
 
 	q := &rdnsQuerierImpl{
+		rdnsQuerierConfig: rdnsQuerierConfig,
 		logger:            reqs.Logger,
-		config:            config,
 		internalTelemetry: internalTelemetry,
 
-		started:     false,
-		resolver:    newResolver(config),
-		rateLimiter: newRateLimiter(config),
+		started: false,
+		querier: newQuerier(rdnsQuerierConfig, reqs.Logger, internalTelemetry),
 	}
 
 	reqs.Lifecycle.Append(compdef.Hook{
@@ -129,33 +117,30 @@ func NewComponent(reqs Requires) (Provides, error) {
 // If the IP address is in the private address space then a reverse DNS lookup request is sent to a channel to be processed asynchronously.
 // If the channel is full then an error is returned.
 // When the lookup request completes the updateHostname function will be called asynchronously with the results.
+// JMWTUE comment when err is added to callback
 func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte, updateHostname func(string)) error {
 	q.internalTelemetry.total.Inc()
 
-	ipaddr, ok := netip.AddrFromSlice(ipAddr)
+	netipAddr, ok := netip.AddrFromSlice(ipAddr)
 	if !ok {
 		q.internalTelemetry.invalidIPAddress.Inc()
 		return fmt.Errorf("invalid IP address %v", ipAddr)
 	}
 
-	if !ipaddr.IsPrivate() {
-		q.logger.Tracef("Reverse DNS Enrichment IP address %s is not in the private address space", ipaddr)
+	if !netipAddr.IsPrivate() {
+		q.logger.Tracef("Reverse DNS Enrichment IP address %s is not in the private address space", netipAddr)
 		return nil
 	}
 	q.internalTelemetry.private.Inc()
 
-	query := &rdnsQuery{
-		addr:           ipaddr.String(),
-		updateHostname: updateHostname,
+	//JMWTUE comment, add sync callback, add error to async callback
+	err := q.querier.getHostnameAsync(netipAddr.String(), updateHostname)
+	if err != nil {
+		q.logger.Debugf("Reverse DNS Enrichment GetHostnameAsync() returned error: %v", err) //JMW?
+		//JMW add test for this error - and others
+		return err
 	}
 
-	select {
-	case q.rdnsQueryChan <- query:
-		q.internalTelemetry.chanAdded.Inc()
-	default:
-		q.internalTelemetry.droppedChanFull.Inc()
-		return fmt.Errorf("channel is full, dropping query for IP address %s", query.addr)
-	}
 	return nil
 }
 
@@ -165,20 +150,8 @@ func (q *rdnsQuerierImpl) start(_ context.Context) error {
 		return nil
 	}
 
-	// A context is needed by the rate limiter and we also use its Done() channel for shutting down worker goroutines.
-	// We don't use the context passed in because it has a deadline set, which we don't want.
-	var ctx context.Context
-	ctx, q.cancel = context.WithCancel(context.Background())
-
-	q.rdnsQueryChan = make(chan *rdnsQuery, q.config.chanSize)
-
-	for range q.config.workers {
-		q.wg.Add(1)
-		go q.worker(ctx)
-	}
-	q.logger.Infof("Reverse DNS Enrichment started %d rdnsquerier workers", q.config.workers)
+	q.querier.start()
 	q.started = true
-
 	return nil
 }
 
@@ -188,61 +161,7 @@ func (q *rdnsQuerierImpl) stop(context.Context) error {
 		return nil
 	}
 
-	q.cancel()
-	q.wg.Wait()
-
-	q.logger.Infof("Reverse DNS Enrichment stopped rdnsquerier workers")
+	q.querier.stop()
 	q.started = false
-
 	return nil
-}
-
-func (q *rdnsQuerierImpl) worker(ctx context.Context) {
-	defer q.wg.Done()
-	for {
-		select {
-		case query := <-q.rdnsQueryChan:
-			q.getHostname(ctx, query)
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func (q *rdnsQuerierImpl) getHostname(ctx context.Context, query *rdnsQuery) {
-	err := q.rateLimiter.wait(ctx)
-	if err != nil {
-		q.internalTelemetry.droppedRateLimiter.Inc()
-		q.logger.Debugf("Reverse DNS Enrichment rateLimiter.wait() returned error: %v - dropping query for IP address %s", err, query.addr)
-		return
-	}
-
-	hostname, err := q.resolver.lookup(query.addr)
-	if err != nil {
-		if dnsErr, ok := err.(*net.DNSError); ok {
-			if dnsErr.IsNotFound {
-				q.internalTelemetry.lookupErrNotFound.Inc()
-				q.logger.Debugf("Reverse DNS Enrichment net.LookupAddr returned not found error '%v' for IP address %v", err, query.addr)
-				// no match was found for the requested IP address, so call updateHostname() to make the caller aware of that fact
-				query.updateHostname(hostname)
-				return
-			}
-			if dnsErr.IsTimeout {
-				q.internalTelemetry.lookupErrTimeout.Inc()
-				q.logger.Debugf("Reverse DNS Enrichment net.LookupAddr returned timeout error '%v' for IP address %v", err, query.addr)
-				return
-			}
-			if dnsErr.IsTemporary {
-				q.internalTelemetry.lookupErrTemporary.Inc()
-				q.logger.Debugf("Reverse DNS Enrichment net.LookupAddr returned temporary error '%v' for IP address %v", err, query.addr)
-				return
-			}
-		}
-		q.internalTelemetry.lookupErrOther.Inc()
-		q.logger.Debugf("Reverse DNS Enrichment net.LookupAddr returned error '%v' for IP address %v", err, query.addr)
-		return
-	}
-
-	q.internalTelemetry.successful.Inc()
-	query.updateHostname(hostname)
 }

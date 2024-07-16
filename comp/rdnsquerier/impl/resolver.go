@@ -27,7 +27,6 @@ func (r *resolverImpl) lookup(addr string) (string, error) {
 	// specifying other DNS resolvers is not supported, if we get an error we know that no valid
 	// hostname was returned.
 	hostnames, err := net.LookupAddr(addr)
-
 	if err != nil {
 		return "", err
 	}

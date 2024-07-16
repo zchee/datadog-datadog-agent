@@ -65,12 +65,12 @@ func testSetup(t *testing.T, overrides map[string]interface{}, start bool) *test
 	assert.NoError(t, err)
 	assert.NotNil(t, provides.Comp)
 
-	rdnsQuerier := provides.Comp
+	// use fake resolver so the test results are deterministic
 	internalRDNSQuerier := provides.Comp.(*rdnsQuerierImpl)
 	assert.NotNil(t, internalRDNSQuerier)
-
-	// use fake resolver so the test results are deterministic
-	internalRDNSQuerier.resolver = &fakeResolver{internalRDNSQuerier.config}
+	internalQuerier := internalRDNSQuerier.querier.(*querierImpl)
+	assert.NotNil(t, internalQuerier)
+	internalQuerier.resolver = &fakeResolver{internalRDNSQuerier.rdnsQuerierConfig}
 
 	ctx := context.Background()
 
@@ -81,7 +81,7 @@ func testSetup(t *testing.T, overrides map[string]interface{}, start bool) *test
 		assert.NoError(t, lc.Start(ctx))
 	}
 
-	return &testState{lc, rdnsQuerier, ctx, telemetryMock, logComp}
+	return &testState{lc, provides.Comp, ctx, telemetryMock, logComp}
 }
 
 func (ts *testState) validateExpected(t *testing.T, expectedTelemetry map[string]float64) {

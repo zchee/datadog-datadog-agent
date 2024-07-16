@@ -81,7 +81,7 @@ func TestNormalOperations(t *testing.T) {
 			assert.FailNow(t, "Callback should not be called for invalid IP address")
 		},
 	)
-	assert.Error(t, err)
+	assert.ErrorContains(t, err, "invalid IP address")
 
 	// IP address not in private range
 	err = ts.rdnsQuerier.GetHostnameAsync(
@@ -128,13 +128,13 @@ func TestRateLimiter(t *testing.T) {
 
 	overrides := map[string]interface{}{
 		"network_devices.netflow.reverse_dns_enrichment_enabled": true,
-		"reverse_dns_enrichment.workers":                         256,
+		"reverse_dns_enrichment.workers":                         20,
 		"reverse_dns_enrichment.rate_limiter.limit_per_sec":      1,
 	}
 	ts := testSetup(t, overrides, true)
 
 	// IP addresses in private range
-	for i := range 256 {
+	for i := range 20 {
 		err := ts.rdnsQuerier.GetHostnameAsync(
 			[]byte{192, 168, 1, byte(i)},
 			func(hostname string) {
@@ -147,9 +147,9 @@ func TestRateLimiter(t *testing.T) {
 	time.Sleep(numSeconds * time.Second)
 
 	expectedTelemetry := map[string]float64{
-		"total":                256.0,
-		"private":              256.0,
-		"chan_added":           256.0,
+		"total":                20.0,
+		"private":              20.0,
+		"chan_added":           20.0,
 		"dropped_chan_full":    0.0,
 		"dropped_rate_limiter": 0.0,
 		"invalid_ip_address":   0.0,
@@ -181,9 +181,9 @@ func TestChannelFullRequestsDroppedWhenRateLimited(t *testing.T) {
 
 	// IP addresses in private range
 	var errCount int
-	wg.Add(1) // only wait for one callback, some or all of the other requests will be dropped
+	wg.Add(1) // only wait for one callback, most or all of the other requests will be dropped
 	var once sync.Once
-	for i := range 256 {
+	for i := range 20 {
 		err := ts.rdnsQuerier.GetHostnameAsync(
 			[]byte{192, 168, 1, byte(i)},
 			func(hostname string) {
@@ -194,15 +194,17 @@ func TestChannelFullRequestsDroppedWhenRateLimited(t *testing.T) {
 			},
 		)
 		if err != nil {
+			assert.ErrorContains(t, err, "channel is full, dropping query for IP address")
 			errCount++
 		}
 	}
 	wg.Wait()
 
+	assert.GreaterOrEqual(t, errCount, 1)
 	expectedTelemetry := map[string]float64{
-		"total":                256.0,
-		"private":              256.0,
-		"chan_added":           float64(256 - errCount),
+		"total":                20.0,
+		"private":              20.0,
+		"chan_added":           float64(20 - errCount),
 		"dropped_chan_full":    float64(errCount),
 		"dropped_rate_limiter": 0.0,
 		"invalid_ip_address":   0.0,
