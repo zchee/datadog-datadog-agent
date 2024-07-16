@@ -296,6 +296,9 @@ type Config struct {
 	// of netlink for receiving process events.
 	EnableUSMEventStream bool
 
+	// EnableKprobeDataHooks enables USM to use Kprobes to get packet data.
+	EnableUSMKprobeDataHooks bool
+
 	// BypassEnabled is used in tests only.
 	// It enables a ebpf-manager feature to bypass programs on-demand for controlled visibility.
 	BypassEnabled bool
@@ -407,6 +410,7 @@ func New() *Config {
 		EnableUSMConnectionRollup:   cfg.GetBool(join(smNS, "enable_connection_rollup")),
 		EnableUSMRingBuffers:        cfg.GetBool(join(smNS, "enable_ring_buffers")),
 		EnableUSMEventStream:        cfg.GetBool(join(smNS, "enable_event_stream")),
+		EnableUSMKprobeDataHooks:    cfg.GetBool(join(smNS, "enable_kprobe_data_hooks")),
 	}
 
 	httpRRKey := join(smNS, "http_replace_rules")
