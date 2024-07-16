@@ -1213,7 +1213,7 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 				expectedCaptured = tt.numCapturedEvents
 			}
 
-			assert.Equal(t, int64(expectedCaptured), eventsCaptured)
+			assert.Equal(t, int64(fixCount(expectedCaptured)), eventsCaptured)
 		})
 
 		// Test with buildMessages have custom splitters
