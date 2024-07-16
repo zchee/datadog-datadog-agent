@@ -3,13 +3,14 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2024-present Datadog, Inc.
 
-//go:build test
+//go:JMWDEBUGbuild test
 
 package rdnsquerierimpl
 
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	"go.uber.org/fx"
@@ -32,6 +33,12 @@ type fakeResolver struct {
 }
 
 func (r *fakeResolver) lookup(addr string) (string, error) {
+	//JMWDEBUG
+	if r.config.lookupDelayMs > 0 {
+		time.Sleep(time.Duration(r.config.lookupDelayMs) * time.Millisecond)
+	}
+	//JMWDEBUG
+
 	return "fakehostname-" + addr, nil
 }
 

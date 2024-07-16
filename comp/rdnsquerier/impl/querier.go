@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time" //JMWDEBUG
 
 	"github.com/DataDog/datadog-agent/comp/core/log"
 )
@@ -61,6 +62,13 @@ func (q *querierImpl) start() {
 		go q.worker()
 	}
 	q.logger.Infof("Reverse DNS Enrichment started %d workers", q.config.workers)
+
+	//JMWDEBUG
+	if q.config.generateFakeQueriesPerSecond > 0 {
+		q.wg.Add(1)
+		go q.generateFakeQueries()
+	}
+	//JMWDEBUG
 }
 
 func (q *querierImpl) stop() {
@@ -131,3 +139,26 @@ func (q *querierImpl) getHostnameAsync(addr string, updateHostname func(string))
 		return fmt.Errorf("channel is full, dropping query for IP address %s", addr)
 	}
 }
+
+// JMWDEBUG
+func (q *querierImpl) generateFakeQueries() {
+	defer q.wg.Done()
+	for {
+		select {
+		case <-q.ctx.Done():
+			return
+		case <-time.After(time.Second):
+			q.logger.Debugf("Reverse DNS Enrichment generating %d fake queries", q.config.generateFakeQueriesPerSecond)
+			for i := range q.config.generateFakeQueriesPerSecond {
+				q.getHostnameAsync(
+					fmt.Sprintf("192.168.1.%d", i),
+					func(hostname string) {
+						// noop JMW do something?
+					},
+				)
+			}
+		}
+	}
+}
+
+//JMWDEBUG

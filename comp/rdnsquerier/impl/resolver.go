@@ -14,7 +14,15 @@ type resolver interface {
 	lookup(string) (string, error)
 }
 
-func newResolver(_ *rdnsQuerierConfig) resolver {
+func newResolver(config *rdnsQuerierConfig) resolver {
+	//JMWDEBUG
+	if config.fakeResolver {
+		return &fakeResolver{
+			config: config,
+		}
+	}
+	//JMWDEBUG
+
 	return &resolverImpl{}
 }
 

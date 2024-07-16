@@ -72,6 +72,13 @@ func NewComponent(reqs Requires) (Provides, error) {
 		rdnsQuerierConfig.cacheCleanInterval,
 		rdnsQuerierConfig.cachePersistInterval)
 
+	//JMWDEBUG
+	reqs.Logger.Debugf("JMW Reverse DNS Enrichment debug config: (fake_resolver=%t generate_fake_queries=%t lookup_delay_ms=%d)",
+		rdnsQuerierConfig.fakeResolver,
+		rdnsQuerierConfig.generateFakeQueriesPerSecond,
+		rdnsQuerierConfig.lookupDelayMs)
+	//JMWDEBUG
+
 	if !rdnsQuerierConfig.enabled {
 		return Provides{
 			Comp: rdnsquerierimplnone.NewNone().Comp,
