@@ -441,8 +441,6 @@ static __always_inline void pktbuf_fix_header_frame(pktbuf_t pkt, char *out, fra
 static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_remainder_t *frame_state, http2_frame_t *current_frame, http2_telemetry_t *http2_tel) {
     // Attempting to read the initial frame in the packet, or handling a state where there is no remainder and finishing reading the current frame.
     if (frame_state == NULL) {
-        hextra_debug("pktbuf_get_first_frame: no remainder");
-
         // Checking we have enough bytes in the packet to read a frame header.
         if (pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
             // Not enough bytes, cannot read frame, so we have 0 interesting frames in that packet.
@@ -471,8 +469,6 @@ static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_re
     //  4. We failed reading any frame. Aborting.
 
     // Frame-header-remainder.
-        
-    hextra_debug("pktbuf_get_first_frame: frame_state header_length %u", frame_state->header_length);
 
     if (frame_state->header_length == HTTP2_FRAME_HEADER_SIZE) {
         // A case where we read an interesting valid frame header in the previous call, and now we're trying to read the
@@ -481,7 +477,6 @@ static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_re
         // Copy the cached frame header to the current frame.
         bpf_memcpy((char *)current_frame, frame_state->buf, HTTP2_FRAME_HEADER_SIZE);
         frame_state->remainder = 0;
-        hextra_debug("pktbuf_get_first_frame: reused saved frame");
         return true;
     }
     if (frame_state->header_length > 0) {
@@ -489,16 +484,12 @@ static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_re
         if (format_http2_frame_header(current_frame)) {
             pktbuf_advance(pkt, frame_state->remainder);
             frame_state->remainder = 0;
-            hextra_debug("pktbuf_get_first_frame: read frame using remainder");
             return true;
         }
         frame_state->remainder = 0;
-        hextra_debug("pktbuf_get_first_frame: couldn't read frame using remainder");
         // We couldn't read frame header using the remainder.
         return false;
     }
-
-    hextra_debug("pktbuf_get_first_frame: frame_state remainder %u", frame_state->remainder);
 
     // We failed to read a frame, if we have a remainder trying to consume it and read the following frame.
     if (frame_state->remainder > 0) {
@@ -550,6 +541,7 @@ static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail
     // }
     // However, the compiler generates much more instructions in the code above, so we're using the following code.
     __u32 current_offset = pktbuf_data_offset(pkt);
+    // if we already processed part of the packet, we should start from the last offset we processed.
     if (iteration_value->filter_iterations != 0) {
         current_offset = iteration_value->data_off;
     }
@@ -576,8 +568,6 @@ static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail
             break;
         }
 
-        log_debug("pktbuf_find_relevant_frames: stream id %d", current_frame.stream_id);
-
         // END_STREAM can appear only in Headers and Data frames.
         // Check out https://datatracker.ietf.org/doc/html/rfc7540#section-6.1 for data frame, and
         // https://datatracker.ietf.org/doc/html/rfc7540#section-6.2 for headers frame.
@@ -597,8 +587,6 @@ static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail
         }
     }
 
-    hextra_debug("pktbuf_find_relevant_frames: frames_count %u", iteration_value->frames_count);
-
     if (iteration_value->frames_count == HTTP2_MAX_FRAMES_ITERATIONS) {
         __sync_fetch_and_add(&http2_tel->exceeding_max_interesting_frames, 1);
     }
@@ -613,8 +601,6 @@ static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail
 static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_data_offset, conn_tuple_t *tup) {
     const __u32 zero = 0;
     http2_frame_t current_frame = {};
-
-    hextra_debug("handle_first_frame");
 
     // A single packet can contain multiple HTTP/2 frames, due to instruction limitations we have divided the
     // processing into multiple tail calls, where each tail call process a single frame. We must have context when
@@ -633,7 +619,6 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
     // skip HTTP2 magic, if present
     pktbuf_skip_preface(pkt);
     if (pktbuf_data_offset(pkt) == pktbuf_data_end(pkt)) {
-        hextra_debug("handle_first_frame: early (only HTTP2 magic)");
         // Abort early if we reached to the end of the frame (a.k.a having only the HTTP2 magic in the packet).
         return;
     }
@@ -646,7 +631,6 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
     }
 
     bool has_valid_first_frame = pktbuf_get_first_frame(pkt, frame_state, &current_frame, http2_tel);
-    hextra_debug("has_valid_first_frame: %d", has_valid_first_frame);
     // If we have a state and we consumed it, then delete it.
     if (frame_state != NULL && frame_state->remainder == 0) {
         bpf_map_delete_elem(&http2_remainder, tup);
@@ -664,12 +648,9 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
             }
             new_frame_state.header_length = HTTP2_FRAME_HEADER_SIZE - new_frame_state.remainder;
             bpf_map_update_elem(&http2_remainder, tup, &new_frame_state, BPF_ANY);
-            hextra_debug("handle_first_frame: saved remainder");
         }
         return;
     }
-
-    hextra_debug("current_frame stream_id %u length %u", current_frame.stream_id, current_frame.length);
 
     bool is_headers_or_rst_frame = current_frame.type == kHeadersFrame || current_frame.type == kRSTStreamFrame;
     bool is_data_end_of_stream = ((current_frame.flags & HTTP2_END_OF_STREAM) == HTTP2_END_OF_STREAM) && (current_frame.type == kDataFrame);
@@ -695,14 +676,12 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
 
         iteration_value->frames_count = 0;
         bpf_map_update_elem(&http2_remainder, tup, &new_frame_state, BPF_ANY);
-        hextra_debug("handle_first_frame: saved remainder (exceeding packet boundaries)");
         // Not calling the next tail call as we have nothing to process.
         return;
     }
     // Overriding the data_off field of the cached packet. The next prog will start from the offset of the next valid
     // frame.
     *external_data_offset = pktbuf_data_offset(pkt);
-    hextra_debug("*external_data_offset: %u", *external_data_offset);
 
     pktbuf_tail_call_option_t frame_filter_tail_call_array[] = {
         [PKTBUF_SKB] = {
@@ -711,10 +690,6 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
         },
         [PKTBUF_TLS] = {
             .prog_array_map = &tls_process_progs,
-            .index = PROG_HTTP2_FRAME_FILTER,
-        },
-        [PKTBUF_KPROBE] = {
-            .prog_array_map = &kprobe_protocols_progs,
             .index = PROG_HTTP2_FRAME_FILTER,
         },
     };
@@ -776,10 +751,7 @@ static __always_inline void filter_frame(pktbuf_t pkt, void *map_key, conn_tuple
     // in a map, we cannot allow it to be modified. Thus, storing the original value of the offset.
     __u32 original_off = pktbuf_data_offset(pkt);
 
-    hextra_debug("filter_frame: original_off: %u", original_off);
-
     bool have_more_frames_to_process = pktbuf_find_relevant_frames(pkt, iteration_value, http2_tel);
-    hextra_debug("filter_frame: have_more_frames_to_process: %d", have_more_frames_to_process);
     // We have found there are more frames to filter, so we will call frame_filter again.
     // Max current amount of tail calls would be 2, which will allow us to currently parse
     // HTTP2_MAX_TAIL_CALLS_FOR_FRAMES_FILTER*HTTP2_MAX_FRAMES_ITERATIONS.
@@ -810,27 +782,21 @@ static __always_inline void filter_frame(pktbuf_t pkt, void *map_key, conn_tuple
     }
 
     frame_header_remainder_t new_frame_state = { 0 };
-    hextra_debug("filter_frame: data_offset %llu data_end %u", pktbuf_data_offset(pkt), pktbuf_data_end(pkt));
     if (pktbuf_data_offset(pkt) > pktbuf_data_end(pkt)) {
         // We have a remainder
         new_frame_state.remainder = pktbuf_data_offset(pkt) - pktbuf_data_end(pkt);
-        hextra_debug("filter_frame: remainder %u", new_frame_state.remainder);
         bpf_map_update_elem(&http2_remainder, tup, &new_frame_state, BPF_ANY);
     } else if (pktbuf_data_offset(pkt) < pktbuf_data_end(pkt) && pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
         // We have a frame header remainder
         new_frame_state.remainder = HTTP2_FRAME_HEADER_SIZE - (pktbuf_data_end(pkt) - pktbuf_data_offset(pkt));
-        hextra_debug("filter_frame: frame header remainder %u", new_frame_state.remainder);
         bpf_memset(new_frame_state.buf, 0, HTTP2_FRAME_HEADER_SIZE);
     #pragma unroll(HTTP2_FRAME_HEADER_SIZE)
         for (__u32 iteration = 0; iteration < HTTP2_FRAME_HEADER_SIZE && new_frame_state.remainder + iteration < HTTP2_FRAME_HEADER_SIZE; ++iteration) {
             pktbuf_load_bytes(pkt, pktbuf_data_offset(pkt) + iteration, new_frame_state.buf + iteration, 1);
         }
         new_frame_state.header_length = HTTP2_FRAME_HEADER_SIZE - new_frame_state.remainder;
-        hextra_debug("filter_frame: frame header length %u", new_frame_state.header_length);
         bpf_map_update_elem(&http2_remainder, tup, &new_frame_state, BPF_ANY);
     }
-
-    hextra_debug("filter_frame: frames_count %u", iteration_value->frames_count);
 
     if (iteration_value->frames_count == 0) {
         return;
@@ -898,8 +864,6 @@ static __always_inline void headers_parser(pktbuf_t pkt, void *map_key, conn_tup
     // in a map, we cannot allow it to be modified. Thus, storing the original value of the offset.
     __u32 original_off = pktbuf_data_offset(pkt);
 
-    hextra_debug("headers_parser: original_off %u", original_off);
-
     // A single packet can contain multiple HTTP/2 frames, due to instruction limitations we have divided the
     // processing into multiple tail calls, where each tail call process a single frame. We must have context when
     // we are processing the frames, for example, to know how many bytes have we read in the packet, or it we reached
@@ -921,7 +885,6 @@ static __always_inline void headers_parser(pktbuf_t pkt, void *map_key, conn_tup
     };
     http2_tail_call_state_t *tail_call_state = pktbuf_map_lookup(pkt, http2_iterations_array);
     if (tail_call_state == NULL) {
-        hextra_debug("headers_parser: no tail call state");
         // We didn't find the cached context, aborting.
         return;
     }
@@ -934,7 +897,6 @@ static __always_inline void headers_parser(pktbuf_t pkt, void *map_key, conn_tup
 
     http2_telemetry_t *http2_tel = get_telemetry(pkt);
     if (http2_tel == NULL) {
-        hextra_debug("headers_parser: no telemetry");
         goto delete_iteration;
     }
 
@@ -963,8 +925,6 @@ static __always_inline void headers_parser(pktbuf_t pkt, void *map_key, conn_tup
         goto delete_iteration;
     }
 
-    hextra_debug("headers_parser: iteration %u frames_count %u", tail_call_state->iteration, tail_call_state->frames_count);
-
     #pragma unroll(HTTP2_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL)
     for (__u16 index = 0; index < HTTP2_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL; index++) {
         if (tail_call_state->iteration >= tail_call_state->frames_count) {
@@ -983,7 +943,6 @@ static __always_inline void headers_parser(pktbuf_t pkt, void *map_key, conn_tup
 
         http2_ctx->http2_stream_key.stream_id = current_frame.frame.stream_id;
         current_stream = http2_fetch_stream(&http2_ctx->http2_stream_key);
-        hextra_debug("http2_fetch_stream id %u", current_frame.frame.stream_id);
         if (current_stream == NULL) {
             continue;
         }
@@ -1029,7 +988,6 @@ static __always_inline void headers_parser(pktbuf_t pkt, void *map_key, conn_tup
             .index = PROG_HTTP2_DYNAMIC_TABLE_CLEANER,
         },
     };
-    hextra_debug("call dynamic_table_cleaner");
     pktbuf_tail_call_compact(pkt, tail_call_arr);
 
 delete_iteration:
@@ -1060,8 +1018,6 @@ int socket__http2_headers_parser(struct __sk_buff *skb) {
 }
 
 static __always_inline void dynamic_table_cleaner(pktbuf_t pkt, conn_tuple_t *tup) {
-    hextra_debug("dynamic_table_cleaner");
-
     pktbuf_tail_call_option_t eos_parser_tail_call_array[] = {
         [PKTBUF_SKB] = {
             .prog_array_map = &protocols_progs,
@@ -1131,8 +1087,6 @@ int socket__http2_dynamic_table_cleaner(struct __sk_buff *skb) {
 static __always_inline void eos_parser(pktbuf_t pkt, void *map_key, conn_tuple_t *tup) {
     const __u32 zero = 0;
 
-    hextra_debug("eos_parser");
-
     pktbuf_map_lookup_option_t http2_iterations_array[] = {
         [PKTBUF_SKB] = {
             .map = &http2_iterations,
@@ -1177,9 +1131,6 @@ static __always_inline void eos_parser(pktbuf_t pkt, void *map_key, conn_tuple_t
     bool is_rst = false, is_end_of_stream = false;
     http2_stream_t *current_stream = NULL;
 
-    hextra_debug("eos_parser iteration %u frames_count %u", tail_call_state->iteration,
-                                                            tail_call_state->frames_count);
-
     #pragma unroll(HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL)
     for (__u16 index = 0; index < HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL; index++) {
         if (tail_call_state->iteration >= HTTP2_MAX_FRAMES_ITERATIONS) {
@@ -1193,11 +1144,8 @@ static __always_inline void eos_parser(pktbuf_t pkt, void *map_key, conn_tuple_t
         }
         tail_call_state->iteration += 1;
 
-        hextra_debug("eos_parser index %u stream_id %u", index, current_frame.frame.stream_id);
-
         is_rst = current_frame.frame.type == kRSTStreamFrame;
         is_end_of_stream = (current_frame.frame.flags & HTTP2_END_OF_STREAM) == HTTP2_END_OF_STREAM;
-        hextra_debug("eos_parser index %u is_rst %d is_end_of_stream %d", index, is_rst, is_end_of_stream);
         if (!is_rst && !is_end_of_stream) {
             continue;
         }
@@ -1206,7 +1154,6 @@ static __always_inline void eos_parser(pktbuf_t pkt, void *map_key, conn_tuple_t
         // A new stream must start with a request, so if it does not exist, we should not process it.
         current_stream = bpf_map_lookup_elem(&http2_in_flight, &http2_ctx->http2_stream_key);
         if (current_stream == NULL) {
-            hextra_debug("no stream");
             continue;
         }
 

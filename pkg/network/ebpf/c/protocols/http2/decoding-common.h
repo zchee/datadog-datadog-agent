@@ -12,13 +12,6 @@
 #include "protocols/http2/maps-defs.h"
 #include "protocols/classification/defs.h"
 
-// #define HEXTRA_DEBUG
-#ifdef HEXTRA_DEBUG
-#define hextra_debug(fmt, ...) log_debug("http2: " fmt, ##__VA_ARGS__)
-#else
-#define hextra_debug(fmt, ...)
-#endif
-
 // Returns true if the given index represents a path index.
 static __always_inline bool is_path_index(const __u64 index) {
     return index == kEmptyPath || index == kIndexPath;
@@ -132,7 +125,6 @@ static __always_inline void update_path_size_telemetry(http2_telemetry_t *http2_
 //
 // See RFC 7540 section 5.1: https://datatracker.ietf.org/doc/html/rfc7540#section-5.1
 static __always_inline void handle_end_of_stream(http2_stream_t *current_stream, http2_stream_key_t *http2_stream_key_template, http2_telemetry_t *http2_tel) {
-    hextra_debug("handle_end_of_stream, end_of_stream_seen: %d", current_stream->end_of_stream_seen);
     // We want to see the EOS twice for a given stream: one for the client, one for the server.
     if (!current_stream->end_of_stream_seen) {
         current_stream->end_of_stream_seen = true;
