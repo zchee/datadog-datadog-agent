@@ -299,12 +299,6 @@ type Config struct {
 	// BypassEnabled is used in tests only.
 	// It enables a ebpf-manager feature to bypass programs on-demand for controlled visibility.
 	BypassEnabled bool
-
-	// USM debugger options (experimental)
-	USMFilterSport int
-	USMFilterDport int
-	USMFilterSaddr string
-	USMFilterDaddr string
 }
 
 func join(pieces ...string) string {
