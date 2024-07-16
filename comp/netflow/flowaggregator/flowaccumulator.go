@@ -164,7 +164,12 @@ func (f *flowAccumulator) add(flowToAdd *common.Flow) {
 func (f *flowAccumulator) addRDNSEnrichment(aggHash uint64, srcAddr []byte, dstAddr []byte) {
 	err := f.rdnsQuerier.GetHostnameAsync(
 		srcAddr,
-		func(hostname string) {
+		func(hostname string, err error) {
+			if err != nil {
+				f.logger.Debugf("JMWWHATTODOWITHTHIS Error requesting reverse DNS enrichment for source IP address: %v error: %v", srcAddr, err)
+				return
+			}
+
 			f.flowsMutex.Lock()
 			defer f.flowsMutex.Unlock()
 
@@ -180,7 +185,12 @@ func (f *flowAccumulator) addRDNSEnrichment(aggHash uint64, srcAddr []byte, dstA
 
 	err = f.rdnsQuerier.GetHostnameAsync(
 		dstAddr,
-		func(hostname string) {
+		func(hostname string, err error) {
+			if err != nil {
+				f.logger.Debugf("JMWWHATTODOWITHTHIS Error requesting reverse DNS enrichment for destination IP address: %v error: %v", dstAddr, err)
+				return
+			}
+
 			f.flowsMutex.Lock()
 			defer f.flowsMutex.Unlock()
 

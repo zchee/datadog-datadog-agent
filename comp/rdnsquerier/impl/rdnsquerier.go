@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"time" //JMWDEBUG
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/log"
@@ -49,7 +50,7 @@ type rdnsQuerierTelemetry = struct {
 }
 
 type rdnsQuerierImpl struct {
-	rdnsQuerierConfig *rdnsQuerierConfig
+	config            *rdnsQuerierConfig
 	logger            log.Component
 	internalTelemetry *rdnsQuerierTelemetry
 
@@ -100,7 +101,7 @@ func NewComponent(reqs Requires) (Provides, error) {
 	}
 
 	q := &rdnsQuerierImpl{
-		rdnsQuerierConfig: rdnsQuerierConfig,
+		config:            rdnsQuerierConfig,
 		logger:            reqs.Logger,
 		internalTelemetry: internalTelemetry,
 
@@ -125,7 +126,7 @@ func NewComponent(reqs Requires) (Provides, error) {
 // If the channel is full then an error is returned.
 // When the lookup request completes the updateHostname function will be called asynchronously with the results.
 // JMWTUE comment when err is added to callback
-func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte, updateHostname func(string)) error {
+func (q *rdnsQuerierImpl) GetHostnameAsync(ipAddr []byte, updateHostname func(string, error)) error {
 	q.internalTelemetry.total.Inc()
 
 	netipAddr, ok := netip.AddrFromSlice(ipAddr)
@@ -159,6 +160,12 @@ func (q *rdnsQuerierImpl) start(_ context.Context) error {
 
 	q.querier.start()
 	q.started = true
+
+	//JMWDEBUG
+	if q.config.generateFakeQueriesPerSecond > 0 {
+		go q.generateFakeQueries()
+	}
+	//JMWDEBUG
 	return nil
 }
 
@@ -172,3 +179,25 @@ func (q *rdnsQuerierImpl) stop(context.Context) error {
 	q.started = false
 	return nil
 }
+
+// JMWDEBUG
+func (q *rdnsQuerierImpl) generateFakeQueries() {
+	for {
+		select {
+		//JMWNEEDED? case <-q.ctx.Done():
+		//JMWNEEDED? return
+		case <-time.After(time.Second):
+			q.logger.Debugf("Reverse DNS Enrichment generating %d fake queries", q.config.generateFakeQueriesPerSecond)
+			for i := range q.config.generateFakeQueriesPerSecond {
+				q.GetHostnameAsync(
+					[]byte{192, 168, 1, byte(i)},
+					func(hostname string, err error) {
+						// noop JMW do something?
+					},
+				)
+			}
+		}
+	}
+}
+
+//JMWDEBUG

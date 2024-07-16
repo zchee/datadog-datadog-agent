@@ -8,6 +8,7 @@ package rdnsquerierimpl
 import (
 	"fmt"
 	"net"
+	"time" //JMWDEBUG
 )
 
 type resolver interface {
@@ -17,7 +18,7 @@ type resolver interface {
 func newResolver(config *rdnsQuerierConfig) resolver {
 	//JMWDEBUG
 	if config.fakeResolver {
-		return &fakeResolver{
+		return &resolverFake{
 			config: config,
 		}
 	}
@@ -46,3 +47,19 @@ func (r *resolverImpl) lookup(addr string) (string, error) {
 
 	return hostnames[0], nil
 }
+
+// JMWDEBUG
+// Fake resolver for debug and test purposes
+type resolverFake struct {
+	config *rdnsQuerierConfig
+}
+
+func (r *resolverFake) lookup(addr string) (string, error) {
+	if r.config.lookupDelayMs > 0 {
+		time.Sleep(time.Duration(r.config.lookupDelayMs) * time.Millisecond)
+	}
+
+	return "fakehostname-" + addr, nil
+}
+
+//JMWDEBUG

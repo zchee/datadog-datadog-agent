@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2024-present Datadog, Inc.
 
-//go:JMWDEBUGbuild test
+//go:build test
 
 package rdnsquerierimpl
 
@@ -77,7 +77,7 @@ func testSetup(t *testing.T, overrides map[string]interface{}, start bool) *test
 	assert.NotNil(t, internalRDNSQuerier)
 	internalQuerier := internalRDNSQuerier.querier.(*querierImpl)
 	assert.NotNil(t, internalQuerier)
-	internalQuerier.resolver = &fakeResolver{internalRDNSQuerier.rdnsQuerierConfig}
+	internalQuerier.resolver = &fakeResolver{internalRDNSQuerier.config}
 
 	ctx := context.Background()
 

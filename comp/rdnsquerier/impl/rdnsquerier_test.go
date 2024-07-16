@@ -42,7 +42,7 @@ func TestNotStarted(t *testing.T) {
 	// IP address in private range
 	err := ts.rdnsQuerier.GetHostnameAsync(
 		[]byte{192, 168, 1, 100},
-		func(hostname string) {
+		func(hostname string, _ error) {
 			assert.FailNow(t, "Callback should not be called when rdnsquerier is not started")
 		},
 	)
@@ -77,7 +77,7 @@ func TestNormalOperations(t *testing.T) {
 	// Invalid IP address
 	err := ts.rdnsQuerier.GetHostnameAsync(
 		[]byte{1, 2, 3},
-		func(hostname string) {
+		func(hostname string, _ error) {
 			assert.FailNow(t, "Callback should not be called for invalid IP address")
 		},
 	)
@@ -86,7 +86,7 @@ func TestNormalOperations(t *testing.T) {
 	// IP address not in private range
 	err = ts.rdnsQuerier.GetHostnameAsync(
 		[]byte{8, 8, 8, 8},
-		func(hostname string) {
+		func(hostname string, _ error) {
 			assert.FailNow(t, "Callback should not be called for IP address not in private range")
 		},
 	)
@@ -96,7 +96,8 @@ func TestNormalOperations(t *testing.T) {
 	wg.Add(1)
 	err = ts.rdnsQuerier.GetHostnameAsync(
 		[]byte{192, 168, 1, 100},
-		func(hostname string) {
+		func(hostname string, err error) {
+			assert.NoError(t, err)
 			assert.Equal(t, "fakehostname-192.168.1.100", hostname)
 			wg.Done()
 		},
@@ -137,7 +138,8 @@ func TestRateLimiter(t *testing.T) {
 	for i := range 20 {
 		err := ts.rdnsQuerier.GetHostnameAsync(
 			[]byte{192, 168, 1, byte(i)},
-			func(hostname string) {
+			func(hostname string, err error) {
+				assert.NoError(t, err)
 				assert.Equal(t, fmt.Sprintf("fakehostname-192.168.1.%d", i), hostname)
 			},
 		)
@@ -186,7 +188,8 @@ func TestChannelFullRequestsDroppedWhenRateLimited(t *testing.T) {
 	for i := range 20 {
 		err := ts.rdnsQuerier.GetHostnameAsync(
 			[]byte{192, 168, 1, byte(i)},
-			func(hostname string) {
+			func(hostname string, err error) {
+				assert.NoError(t, err)
 				assert.Equal(t, fmt.Sprintf("fakehostname-192.168.1.%d", i), hostname)
 				once.Do(func() {
 					wg.Done()

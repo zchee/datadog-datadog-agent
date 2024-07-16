@@ -28,6 +28,7 @@ type rdnsQuerierConfig struct {
 	fakeResolver                 bool
 	generateFakeQueriesPerSecond int
 	lookupDelayMs                int
+	//JMWTUE add lookupCauseFakeErrors
 	// JMWDEBUG
 }
 
