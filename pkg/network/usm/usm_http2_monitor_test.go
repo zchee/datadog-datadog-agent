@@ -72,7 +72,8 @@ var (
 
 type usmHTTP2Suite struct {
 	suite.Suite
-	isTLS bool
+	isTLS         bool
+	isKprobeHooks bool
 }
 
 func (s *usmHTTP2Suite) getCfg() *config.Config {
@@ -80,6 +81,7 @@ func (s *usmHTTP2Suite) getCfg() *config.Config {
 	cfg.EnableHTTP2Monitoring = true
 	cfg.EnableGoTLSSupport = s.isTLS
 	cfg.GoTLSExcludeSelf = s.isTLS
+	cfg.EnableUSMKprobeDataHooks = s.isKprobeHooks
 	return cfg
 }
 
@@ -164,7 +166,7 @@ func (s *usmHTTP2Suite) TestHTTP2DynamicTableCleanup() {
 			}
 		}
 
-		return matches.Load() == fixCount(usmhttp2.HTTP2TerminatedBatchSize, s.isTLS)
+		return matches.Load() == s.fixCount(usmhttp2.HTTP2TerminatedBatchSize)
 	}, time.Second*10, time.Millisecond*100, "%v != %v", &matches, usmhttp2.HTTP2TerminatedBatchSize)
 
 	for _, client := range clients {
@@ -370,7 +372,11 @@ func (s *usmHTTP2Suite) TestHTTP2KernelTelemetry() {
 			return val
 		}
 
-		return val * 2
+		if s.isKprobeHooks {
+			return val * 2
+		}
+
+		return val
 	}
 
 	tests := []struct {
@@ -466,7 +472,7 @@ func (s *usmHTTP2Suite) TestHTTP2ManyDifferentPaths() {
 		// Should be bigger than the length of the http2_dynamic_table which is 1024
 		numberOfRequests = 1
 	)
-	expectedNumberOfRequests := fixCount(numberOfRequests*repetitionsPerRequest, s.isTLS)
+	expectedNumberOfRequests := s.fixCount(numberOfRequests * repetitionsPerRequest)
 	clients := getHTTP2UnixClientArray(1, unixPath)
 	for i := 0; i < numberOfRequests; i++ {
 		for j := 0; j < repetitionsPerRequest; j++ {
@@ -501,7 +507,7 @@ func (s *usmHTTP2Suite) TestHTTP2ManyDifferentPaths() {
 	fmt.Println(seenRequests)
 
 	for i := 0; i < numberOfRequests; i++ {
-		if v, ok := seenRequests[fmt.Sprintf("/test-%d", i+1)]; !ok || v != fixCount(repetitionsPerRequest, s.isTLS) {
+		if v, ok := seenRequests[fmt.Sprintf("/test-%d", i+1)]; !ok || v != s.fixCount(repetitionsPerRequest) {
 			t.Logf("path: /test-%d should have %d occurrences but instead has %d", i+1, repetitionsPerRequest, v)
 		}
 	}
@@ -1260,7 +1266,7 @@ func (s *usmHTTP2Suite) TestRawTraffic() {
 
 			res := make(map[usmhttp.Key]int)
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				validateStats(usmMonitor, collect, res, tt.expectedEndpoints, s.isTLS)
+				s.validateStats(usmMonitor, collect, res, tt.expectedEndpoints)
 			}, time.Second*5, time.Millisecond*100, "%v != %v", res, tt.expectedEndpoints)
 			if t.Failed() {
 				for key := range tt.expectedEndpoints {
@@ -1335,10 +1341,10 @@ func (s *usmHTTP2Suite) TestDynamicTable() {
 			res := make(map[usmhttp.Key]int)
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
 				// validate the stats we get
-				validateStats(usmMonitor, collect, res, tt.expectedEndpoints, s.isTLS)
+				s.validateStats(usmMonitor, collect, res, tt.expectedEndpoints)
 
 				expected := tt.expectedDynamicTablePathIndexes
-				if !s.isTLS {
+				if !s.isTLS && s.isKprobeHooks {
 					expected = append(expected, expected...)
 					sort.Ints(expected)
 				}
@@ -1495,7 +1501,7 @@ func (s *usmHTTP2Suite) TestRawHuffmanEncoding() {
 			res := make(map[usmhttp.Key]int)
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
 				// validate the stats we get
-				validateStats(usmMonitor, collect, res, tt.expectedEndpoints, s.isTLS)
+				s.validateStats(usmMonitor, collect, res, tt.expectedEndpoints)
 
 				validateHuffmanEncoded(collect, usmMonitor.ebpfProgram, tt.expectedHuffmanEncoded)
 			}, time.Second*5, time.Millisecond*100, "%v != %v", res, tt.expectedEndpoints)
@@ -1541,16 +1547,20 @@ func TestHTTP2InFlightMapCleaner(t *testing.T) {
 	}, 3*cfg.HTTP2DynamicTableMapCleanerInterval, time.Millisecond*100)
 }
 
-func fixCount(val int, tls bool) int {
-	if tls {
+func (s *usmHTTP2Suite) fixCount(val int) int {
+	if s.isTLS {
 		return val
 	}
 
-	return val * 2
+	if s.isKprobeHooks {
+		return val * 2
+	}
+
+	return val
 }
 
 // validateStats validates that the stats we get from the monitor are as expected.
-func validateStats(usmMonitor *Monitor, collect *assert.CollectT, res, expectedEndpoints map[usmhttp.Key]int, isTLS bool) bool {
+func (s *usmHTTP2Suite) validateStats(usmMonitor *Monitor, collect *assert.CollectT, res, expectedEndpoints map[usmhttp.Key]int) bool {
 	for key, stat := range getHTTPLikeProtocolStats(usmMonitor, protocols.HTTP2) {
 		if key.DstPort == srvPort || key.SrcPort == srvPort {
 			statusCode := testutil.StatusFromPath(key.Path.Content.Get())
@@ -1561,7 +1571,7 @@ func validateStats(usmMonitor *Monitor, collect *assert.CollectT, res, expectedE
 				statusCode = 200
 			}
 			hasTag := stat.Data[statusCode].StaticTags == network.ConnTagGo
-			if hasTag != isTLS {
+			if hasTag != s.isTLS {
 				continue
 			}
 			count := stat.Data[statusCode].Count
@@ -1582,7 +1592,7 @@ func validateStats(usmMonitor *Monitor, collect *assert.CollectT, res, expectedE
 	for key, endpointCount := range res {
 		_, ok := expectedEndpoints[key]
 		assert.True(collect, ok)
-		assert.Equal(collect, fixCount(expectedEndpoints[key], isTLS), endpointCount)
+		assert.Equal(collect, s.fixCount(expectedEndpoints[key]), endpointCount)
 	}
 	return true
 }
