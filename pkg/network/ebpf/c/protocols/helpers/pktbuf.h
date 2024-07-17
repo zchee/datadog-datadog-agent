@@ -106,7 +106,6 @@ static __always_inline long pktbuf_load_bytes_with_telemetry(pktbuf_t pkt, u32 o
         return bpf_probe_read_user_with_telemetry(to, len, pkt.tls->buffer_ptr + offset);
     case PKTBUF_KPROBE:
         return bpf_probe_read_user_with_telemetry(to, len, pkt.kprobe->buffer_ptr + offset);
-        // return bpf_probe_read_kernel_with_telemetry(to, len, pkt.kprobe->buffer_ptr + offset);
     }
 
     pktbuf_invalid_operation();
@@ -126,7 +125,6 @@ static __always_inline __maybe_unused long pktbuf_load_bytes(pktbuf_t pkt, u32 o
     case PKTBUF_TLS:
         return bpf_probe_read_user(to, len, pkt.tls->buffer_ptr + offset);
     case PKTBUF_KPROBE:
-        // return bpf_probe_read_kernel(to, len, pkt.kprobe->buffer_ptr + offset);
         return bpf_probe_read_user(to, len, pkt.kprobe->buffer_ptr + offset);
     }
 
@@ -215,8 +213,6 @@ static __always_inline __maybe_unused pktbuf_t pktbuf_from_kprobe(struct pt_regs
     };
 }
 
-            // return read_big_endian_kernel_##type_(pkt.kprobe->buffer_ptr, pkt.kprobe->data_end, offset, out);                 
-
 #define PKTBUF_READ_BIG_ENDIAN(type_)                                                                                 \
     static __always_inline __maybe_unused bool pktbuf_read_big_endian_##type_(pktbuf_t pkt, u32 offset, type_ *out) { \
         switch (pkt.type) {                                                                                           \
@@ -235,9 +231,9 @@ PKTBUF_READ_BIG_ENDIAN(s32)
 PKTBUF_READ_BIG_ENDIAN(s16)
 PKTBUF_READ_BIG_ENDIAN(s8)
 
-//            read_into_kernel_buffer_##name(buffer, pkt.kprobe->buffer_ptr + offset);                     
-
-#define PKTBUF_READ_INTO_BUFFER_INTERNAL(name, total_size)                                              \
+// Wraps the mechanism of reading `total_size` bytes from the packet (starting from `offset`), into the given buffer.
+// An internal macro to reduce duplication between PKTBUF_READ_INTO_BUFFER and PKTBUF_READ_INTO_BUFFER_WITHOUT_TELEMETRY.
+#define PKTBUF_READ_INTO_BUFFER_INTERNAL(name, total_size)                                               \
     static __always_inline void pktbuf_read_into_buffer_##name(char *buffer, pktbuf_t pkt, u32 offset) { \
         switch (pkt.type) {                                                                              \
         case PKTBUF_SKB:                                                                                 \
