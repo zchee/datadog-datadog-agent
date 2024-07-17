@@ -37,8 +37,8 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/postgres"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer/offsetguess"
 	"github.com/DataDog/datadog-agent/pkg/network/usm/buildmode"
+	usmconfig "github.com/DataDog/datadog-agent/pkg/network/usm/config"
 	"github.com/DataDog/datadog-agent/pkg/network/usm/utils"
-	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
@@ -465,18 +465,18 @@ func (e *ebpfProgram) fixupProbes(options *manager.Options) error {
 		"kretprobe__generic_splice_sendpage",
 	}
 
+	// Reset here since it can get reused in tests
+	useKprobeDataHooks = false
+
 	if e.cfg.EnableUSMKprobeDataHooks {
-		kernelVersion, err := kernel.HostVersion()
-		if err != nil {
-			log.Warn("Not using kprobe data hooks since unable to determine kernel version", err)
+		if usmconfig.KprobeDataHooksSupported(e.buildMode) {
+			log.Info("Using kprobe data hooks")
+			useKprobeDataHooks = true
 		} else {
-			if kernelVersion >= kernel.VersionCode(5, 10, 0) {
-				log.Info("Using kprobe data hooks as requested due to supported kernel version", kernelVersion)
-				useKprobeDataHooks = true
-			} else {
-				log.Info("Not using kprobe data hooks due to old kernel version", kernelVersion)
-			}
+			log.Warn("Not using kprobe data hooks despite being requested")
 		}
+	} else {
+		log.Info("Not using kprobe data hooks")
 	}
 
 	// fmt.Println to always show when running tests

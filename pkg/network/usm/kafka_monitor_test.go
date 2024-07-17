@@ -42,6 +42,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/telemetry"
 	gotlsutils "github.com/DataDog/datadog-agent/pkg/network/protocols/tls/gotls/testutil"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer/testutil/proxy"
+	"github.com/DataDog/datadog-agent/pkg/network/usm/buildmode"
 	usmconfig "github.com/DataDog/datadog-agent/pkg/network/usm/config"
 	"github.com/DataDog/datadog-agent/pkg/network/usm/utils"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
@@ -122,6 +123,19 @@ func TestKafkaProtocolParsing(t *testing.T) {
 	})
 }
 
+func skipIfKprobeHooksNotSupported(t *testing.T, cfg *config.Config) {
+	buildMode := buildmode.Prebuilt
+	if cfg.EnableCORE {
+		buildMode = buildmode.CORE
+	} else if cfg.EnableRuntimeCompiler {
+		buildMode = buildmode.RuntimeCompiled
+	}
+
+	if !usmconfig.KprobeDataHooksSupported(buildMode) {
+		t.Skip("Kprobe data hooks not supported for this setup")
+	}
+}
+
 func (s *KafkaProtocolParsingSuite) TestKafkaProtocolParsing() {
 	t := s.T()
 
@@ -143,8 +157,14 @@ func (s *KafkaProtocolParsingSuite) TestKafkaProtocolParsing() {
 
 	t.Run("without TLS", func(t *testing.T) {
 		for _, version := range versions {
-			t.Run(versionName(version), func(t *testing.T) {
-				s.testKafkaProtocolParsing(t, false, false, version)
+			t.Run(fmt.Sprintf("socketFilter/%s", versionName(version)), func(t *testing.T) {
+				cfg := getTestConfiguration(false, false)
+				s.testKafkaProtocolParsing(t, cfg, version)
+			})
+			t.Run(fmt.Sprintf("kprobe/%s", versionName(version)), func(t *testing.T) {
+				cfg := getTestConfiguration(false, true)
+				skipIfKprobeHooksNotSupported(t, cfg)
+				s.testKafkaProtocolParsing(t, cfg, version)
 			})
 		}
 	})
@@ -155,18 +175,24 @@ func (s *KafkaProtocolParsingSuite) TestKafkaProtocolParsing() {
 		}
 		for _, version := range versions {
 			t.Run(versionName(version), func(t *testing.T) {
-				s.testKafkaProtocolParsing(t, true, false, version)
+				cfg := getTestConfiguration(true, false)
+				s.testKafkaProtocolParsing(t, cfg, version)
 			})
 		}
 	})
 }
 
-func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls bool, kprobeHooks bool, version *kversion.Versions) {
+func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, cfg *config.Config, version *kversion.Versions) {
 	const (
 		targetHost = "127.0.0.1"
 		serverHost = "127.0.0.1"
 		unixPath   = "/tmp/transparent.sock"
 	)
+
+	tls := cfg.EnableGoTLSSupport
+	kprobeHooks := cfg.EnableUSMKprobeDataHooks
+
+	fmt.Println("kprobeHooks", kprobeHooks)
 
 	port := kafkaPort
 	if tls {
@@ -185,7 +211,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	// packets are seen twice. This is not needed in the TLS case since there
 	// the data comes from uprobes on the binary.
 	fixCount := func(count int) int {
-		if tls || !kprobeHooks {
+		if tls {
 			return count
 		}
 
@@ -193,19 +219,31 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	}
 
 	fixStatsCount := func(count int) int {
-		if tls || !kprobeHooks {
+		if tls {
 			return count
 		}
 
-		return count + 1
+		if kprobeHooks {
+			return count + 1
+		}
+
+		return count * 2
 	}
 
 	fixFetchCount := func(count int) int {
-		return count
+		if tls {
+			return count
+		}
+
+		if kprobeHooks {
+			return count
+		}
+
+		return count * 2
 	}
 
 	fixProduceCount := func(count int) int {
-		if tls || !kprobeHooks {
+		if tls {
 			return count
 		}
 
@@ -302,7 +340,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 				require.NoError(t, client.Client.ProduceSync(ctxTimeout, record).FirstErr(), "record had a produce error while synchronously producing")
 
 				getAndValidateKafkaStats(t, monitor, fixCount(1), topicName, kafkaParsingValidation{
-					expectedNumberOfProduceRequests: fixCount(1),
+					expectedNumberOfProduceRequests: fixProduceCount(1),
 					expectedNumberOfFetchRequests:   0,
 					expectedAPIVersionProduce:       5,
 					expectedAPIVersionFetch:         0,
@@ -343,7 +381,7 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 				}
 
 				getAndValidateKafkaStats(t, monitor, fixCount(1), topicName, kafkaParsingValidation{
-					expectedNumberOfProduceRequests: fixCount(numberOfIterations),
+					expectedNumberOfProduceRequests: fixProduceCount(numberOfIterations),
 					expectedNumberOfFetchRequests:   0,
 					expectedAPIVersionProduce:       expectedAPIVersionProduce,
 					expectedAPIVersionFetch:         0,
@@ -392,10 +430,10 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 				_, err = req.RequestWith(ctxTimeout, client.Client)
 				require.NoError(t, err)
 
-				getAndValidateKafkaStats(t, monitor, fixCount(2), topicName, kafkaParsingValidation{
-					expectedNumberOfProduceRequests: fixCount(2),
-					expectedNumberOfFetchRequests:   fixCount(2),
-					expectedAPIVersionProduce:       8,
+				getAndValidateKafkaStats(t, monitor, fixStatsCount(2), topicName, kafkaParsingValidation{
+					expectedNumberOfProduceRequests: fixProduceCount(2),
+					expectedNumberOfFetchRequests:   fixFetchCount(2),
+					expectedAPIVersionProduce:       expectedAPIVersionProduce,
 					expectedAPIVersionFetch:         expectedAPIVersionFetch,
 					tlsEnabled:                      tls,
 				}, kafkaSuccessErrorCode)
@@ -457,10 +495,10 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 				_, err = req.RequestWith(ctxTimeout, client.Client)
 				require.NoError(t, err)
 
-				getAndValidateKafkaStats(t, monitor, fixCount(2), topicName, kafkaParsingValidation{
-					expectedNumberOfProduceRequests: fixCount(5 + 2*2),
-					expectedNumberOfFetchRequests:   fixCount(5 + 2*2),
-					expectedAPIVersionProduce:       8,
+				getAndValidateKafkaStats(t, monitor, fixStatsCount(2), topicName, kafkaParsingValidation{
+					expectedNumberOfProduceRequests: fixProduceCount(5 + 2*2),
+					expectedNumberOfFetchRequests:   fixFetchCount(5 + 2*2),
+					expectedAPIVersionProduce:       expectedAPIVersionProduce,
 					expectedAPIVersionFetch:         expectedAPIVersionFetch,
 					tlsEnabled:                      tls,
 				}, kafkaSuccessErrorCode)
@@ -549,7 +587,6 @@ func (s *KafkaProtocolParsingSuite) testKafkaProtocolParsing(t *testing.T, tls b
 	t.Cleanup(cancel)
 	require.NoError(t, proxy.WaitForConnectionReady(unixPath))
 
-	cfg := getDefaultTestConfiguration(tls)
 	monitor := newKafkaMonitor(t, cfg)
 	if tls && cfg.EnableGoTLSSupport {
 		utils.WaitForProgramsToBeTraced(t, "go-tls", proxyProcess.Process.Pid)
@@ -826,8 +863,11 @@ func (can *CannedClientServer) runClient(msgs []Message) {
 	}
 }
 
-func testKafkaFetchRaw(t *testing.T, tls bool, kprobeHooks bool, apiVersion int) {
+func testKafkaFetchRaw(t *testing.T, cfg *config.Config, apiVersion int) {
 	defaultTopic := "test-topic"
+
+	tls := cfg.EnableGoTLSSupport
+	kprobeHooks := cfg.EnableUSMKprobeDataHooks
 
 	fixCount := func(count int) int {
 		if tls || !kprobeHooks {
@@ -1087,9 +1127,9 @@ func testKafkaFetchRaw(t *testing.T, tls bool, kprobeHooks bool, apiVersion int)
 			topic: defaultTopic,
 			produceFetchValidationWithErrorCode: &kafkaParsingValidationWithErrorCodes{
 				expectedNumberOfFetchRequests: map[int32]int{
-					0: 5 * 4 * 2,
-					1: 5 * 4 * 1,
-					3: 5 * 4 * 1,
+					0: fixCount(5 * 4 * 2),
+					1: fixCount(5 * 4 * 1),
+					3: fixCount(5 * 4 * 1),
 				},
 				expectedAPIVersionFetch: apiVersion,
 			},
@@ -1127,8 +1167,8 @@ func testKafkaFetchRaw(t *testing.T, tls bool, kprobeHooks bool, apiVersion int)
 			topic: defaultTopic,
 			produceFetchValidationWithErrorCode: &kafkaParsingValidationWithErrorCodes{
 				expectedNumberOfFetchRequests: map[int32]int{
-					-1:  5 * 4 * 1,
-					119: 5 * 4 * 1,
+					-1:  fixCount(5 * 4 * 1),
+					119: fixCount(5 * 4 * 1),
 				},
 				expectedAPIVersionFetch: apiVersion,
 			},
@@ -1164,7 +1204,7 @@ func testKafkaFetchRaw(t *testing.T, tls bool, kprobeHooks bool, apiVersion int)
 	can.runServer()
 	proxyPid := can.runProxy()
 
-	monitor := newKafkaMonitor(t, getDefaultTestConfiguration(tls))
+	monitor := newKafkaMonitor(t, cfg)
 	if tls {
 		utils.WaitForProgramsToBeTraced(t, "go-tls", proxyPid)
 	}
@@ -1286,8 +1326,14 @@ func (s *KafkaProtocolParsingSuite) TestKafkaFetchRaw() {
 
 	t.Run("without TLS", func(t *testing.T) {
 		for _, version := range versions {
-			t.Run(fmt.Sprintf("api%d", version), func(t *testing.T) {
-				testKafkaFetchRaw(t, false, false, version)
+			t.Run(fmt.Sprintf("socketFilter/api%d", version), func(t *testing.T) {
+				cfg := getTestConfiguration(false, false)
+				testKafkaFetchRaw(t, cfg, version)
+			})
+			t.Run(fmt.Sprintf("kprobe/api%d", version), func(t *testing.T) {
+				cfg := getTestConfiguration(false, true)
+				skipIfKprobeHooksNotSupported(t, cfg)
+				testKafkaFetchRaw(t, cfg, version)
 			})
 		}
 	})
@@ -1299,13 +1345,25 @@ func (s *KafkaProtocolParsingSuite) TestKafkaFetchRaw() {
 
 		for _, version := range versions {
 			t.Run(fmt.Sprintf("api%d", version), func(t *testing.T) {
-				testKafkaFetchRaw(t, true, false, version)
+				cfg := getTestConfiguration(true, false)
+				testKafkaFetchRaw(t, cfg, version)
 			})
 		}
 	})
 }
 
-func testKafkaProduceRaw(t *testing.T, tls bool, apiVersion int) {
+func testKafkaProduceRaw(t *testing.T, cfg *config.Config, apiVersion int) {
+	tls := cfg.EnableGoTLSSupport
+	kprobeHooks := cfg.EnableUSMKprobeDataHooks
+
+	fixCount := func(count int) int {
+		if tls || !kprobeHooks {
+			return count
+		}
+
+		return count * 2
+	}
+
 	tests := []struct {
 		name               string
 		topic              string
@@ -1337,7 +1395,7 @@ func testKafkaProduceRaw(t *testing.T, tls bool, apiVersion int) {
 
 				return req
 			},
-			numProducedRecords: 2,
+			numProducedRecords: fixCount(2),
 		},
 	}
 
@@ -1345,7 +1403,7 @@ func testKafkaProduceRaw(t *testing.T, tls bool, apiVersion int) {
 	can.runServer()
 	proxyPid := can.runProxy()
 
-	monitor := newKafkaMonitor(t, getDefaultTestConfiguration(tls))
+	monitor := newKafkaMonitor(t, cfg)
 	if tls {
 		utils.WaitForProgramsToBeTraced(t, "go-tls", proxyPid)
 	}
@@ -1377,8 +1435,14 @@ func (s *KafkaProtocolParsingSuite) TestKafkaProduceRaw() {
 
 	t.Run("without TLS", func(t *testing.T) {
 		for _, version := range versions {
-			t.Run(fmt.Sprintf("api%d", version), func(t *testing.T) {
-				testKafkaProduceRaw(t, false, version)
+			t.Run(fmt.Sprintf("socketFilter/api%d", version), func(t *testing.T) {
+				cfg := getTestConfiguration(false, false)
+				testKafkaProduceRaw(t, cfg, version)
+			})
+			t.Run(fmt.Sprintf("kprobe/api%d", version), func(t *testing.T) {
+				cfg := getTestConfiguration(false, true)
+				skipIfKprobeHooksNotSupported(t, cfg)
+				testKafkaProduceRaw(t, cfg, version)
 			})
 		}
 	})
@@ -1390,7 +1454,8 @@ func (s *KafkaProtocolParsingSuite) TestKafkaProduceRaw() {
 
 		for _, version := range versions {
 			t.Run(fmt.Sprintf("api%d", version), func(t *testing.T) {
-				testKafkaProduceRaw(t, true, version)
+				cfg := getTestConfiguration(true, false)
+				testKafkaProduceRaw(t, cfg, version)
 			})
 		}
 	})
@@ -1398,7 +1463,7 @@ func (s *KafkaProtocolParsingSuite) TestKafkaProduceRaw() {
 
 func TestKafkaInFlightMapCleaner(t *testing.T) {
 	skipTestIfKernelNotSupported(t)
-	cfg := getDefaultTestConfiguration(false)
+	cfg := getTestConfiguration(false, false)
 	cfg.HTTPMapCleanerInterval = 5 * time.Second
 	cfg.HTTPIdleConnectionTTL = time.Second
 	monitor := newKafkaMonitor(t, cfg)
@@ -1498,13 +1563,16 @@ func getAndValidateKafkaStatsWithErrorCodes(t *testing.T, monitor *Monitor, expe
 	return kafkaStats
 }
 
-func getDefaultTestConfiguration(tls bool) *config.Config {
+func getTestConfiguration(tls bool, kprobeHooks bool) *config.Config {
 	cfg := config.New()
 	cfg.EnableKafkaMonitoring = true
 	cfg.MaxTrackedConnections = 1000
 	if tls {
 		cfg.EnableGoTLSSupport = true
 		cfg.GoTLSExcludeSelf = true
+	}
+	if kprobeHooks {
+		cfg.EnableUSMKprobeDataHooks = true
 	}
 	return cfg
 }

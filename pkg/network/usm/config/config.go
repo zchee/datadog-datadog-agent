@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/DataDog/datadog-agent/pkg/network/config"
+	"github.com/DataDog/datadog-agent/pkg/network/usm/buildmode"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
@@ -42,6 +43,28 @@ func TLSSupported(c *config.Config) bool {
 	}
 
 	return kversion >= MinimumKernelVersion
+}
+
+// KprobeDataHooksSupported if the kprobe data hooks are supported on the
+// running kernel.
+func KprobeDataHooksSupported(buildMode buildmode.Type) bool {
+	version, err := kernel.HostVersion()
+	if err != nil {
+		log.Warn("could not determine the current kernel version")
+		return false
+	}
+
+	if version < kernel.VersionCode(5, 10, 0) {
+		log.Warn("kernel version too old for kprobe data hooks", version)
+		return false
+	}
+
+	if buildMode != buildmode.CORE {
+		log.Warn("kprobe data hooks only supported for CO-RE")
+		return false
+	}
+
+	return true
 }
 
 // IsUSMSupported We only support http with kernel >= 4.14.0.

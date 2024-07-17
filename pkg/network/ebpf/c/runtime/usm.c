@@ -82,6 +82,7 @@ struct msghdr___new {
 
 SEC("kprobe/tcp_recvmsg")
 int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t len, int flags) {
+#ifdef COMPILE_CORE
     u64 pid_tgid = bpf_get_current_pid_tgid();
 
     log_debug("kprobe/tcp_recvmsg: sk=%lx msghdr=%lx!\n", (unsigned long)sk, (unsigned long)msg);
@@ -144,6 +145,7 @@ int BPF_KPROBE(kprobe__tcp_recvmsg, struct sock *sk, struct msghdr *msg, size_t 
         .buffer = ubuf,
     };
     bpf_map_update_with_telemetry(tcp_kprobe_state, &pid_tgid, &state, BPF_ANY);
+#endif /* COMPILE_CORE */
 
     // map connection tuple during SSL_do_handshake(ctx)
     map_ssl_ctx_to_sock(sk);
@@ -187,6 +189,7 @@ int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg, struct sock *sk, struct msghdr *m
     // map connection tuple during SSL_do_handshake(ctx)
     map_ssl_ctx_to_sock(sk);
 
+#ifdef COMPILE_CORE
     if (bpf_core_field_exists(((struct msghdr___old *)msg)->msg_iter.type)) {
         // 5.10
         unsigned int type;
@@ -235,6 +238,7 @@ int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg, struct sock *sk, struct msghdr *m
         .buffer = ubuf,
     };
     bpf_map_update_with_telemetry(tcp_kprobe_state, &pid_tgid, &state, BPF_ANY);
+#endif /* COMPILE_CORE */
 
     return 0;
 }
@@ -355,6 +359,7 @@ SEC("kprobe/tcp_splice_data_recv")
 int BPF_KPROBE(kprobe__tcp_splice_data_recv, read_descriptor_t *rd_desc, struct sk_buff *skb, unsigned int offset, size_t len) {
     log_debug("kprobe/tcp_splice_data_recv skb=%lx offset=%u len=%lu\n", (unsigned long)skb, offset, len);
 
+#ifdef COMPILE_CORE
     __u32 skb_len;
     BPF_CORE_READ_INTO(&skb_len, skb, len);
     __u32 skb_data_len;
@@ -384,6 +389,7 @@ int BPF_KPROBE(kprobe__tcp_splice_data_recv, read_descriptor_t *rd_desc, struct 
     BPF_CORE_READ_INTO(&frag_offset, shinfo, frags[0].bv_offset);
 
     log_debug("kprobe/tcp_splice_data_recv frag[0] page %lx len %u offset %u\n", (unsigned long)frag_page, frag_len, frag_offset);
+#endif /* COMPILE_CORE */
 
     // u64 pid_tgid = bpf_get_current_pid_tgid();
     // tcp_kprobe_state_t *state = bpf_map_lookup_elem(&tcp_kprobe_state, &pid_tgid);
