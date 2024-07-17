@@ -113,7 +113,13 @@ func newEBPFProgram(c *config.Config, connectionProtocolMap *ebpf.Map) (*ebpfPro
 		Probes: []*manager.Probe{
 			{
 				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: "kprobe__tcp_sendmsg",
+					EBPFFuncName: "kprobe__tcp_sendmsg_socket_filter",
+					UID:          probeUID,
+				},
+			},
+			{
+				ProbeIdentificationPair: manager.ProbeIdentificationPair{
+					EBPFFuncName: "kprobe__tcp_sendmsg_kprobe",
 					UID:          probeUID,
 				},
 			},
@@ -449,11 +455,16 @@ func (e *ebpfProgram) configureManagerWithSupportedProtocols(protocols []*protoc
 }
 
 func (e *ebpfProgram) fixupProbes(options *manager.Options) error {
-	newDataFunctions := []string{
+	socketFilterFunctions := []string{
+		"kprobe__tcp_sendmsg_socket_filter",
+		protocolDispatcherSocketFilterFunction,
+	}
+
+	kprobeDataFunctions := []string{
 		"kprobe__tcp_splice_data_recv",
 		"kretprobe__tcp_splice_data_recv",
 		"kprobe__tcp_splice_read",
-		"kprobe__tcp_sendmsg",
+		"kprobe__tcp_sendmsg_kprobe",
 		"kretprobe__tcp_sendmsg",
 		"kprobe__tcp_recvmsg",
 		"kretprobe__tcp_recvmsg",
@@ -484,7 +495,7 @@ func (e *ebpfProgram) fixupProbes(options *manager.Options) error {
 
 	var exclude []string
 	if useKprobeDataHooks {
-		exclude = append(exclude, protocolDispatcherSocketFilterFunction)
+		exclude = append(exclude, socketFilterFunctions...)
 
 		missing, err := ddebpf.VerifyKernelFuncs("splice_to_socket")
 		if err != nil {
@@ -497,7 +508,7 @@ func (e *ebpfProgram) fixupProbes(options *manager.Options) error {
 			exclude = append(exclude, "kprobe__generic_splice_sendpage", "kretprobe__generic_splice_sendpage")
 		}
 	} else {
-		exclude = append(exclude, newDataFunctions...)
+		exclude = append(exclude, kprobeDataFunctions...)
 	}
 
 	excludeMap := make(map[string]bool)
