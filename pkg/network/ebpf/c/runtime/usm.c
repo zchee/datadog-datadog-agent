@@ -182,7 +182,16 @@ int BPF_KRETPROBE(kretprobe__tcp_recvmsg, int ret) {
 }
 
 SEC("kprobe/tcp_sendmsg")
-int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg, struct sock *sk, struct msghdr *msg, size_t size) {
+int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg_socket_filter, struct sock *sk) {
+    log_debug("kprobe/tcp_sendmsg: sk=%p", sk);
+    // map connection tuple during SSL_do_handshake(ctx)
+    map_ssl_ctx_to_sock(sk);
+
+    return 0;
+}
+
+SEC("kprobe/tcp_sendmsg")
+int BPF_BYPASSABLE_KPROBE(kprobe__tcp_sendmsg_kprobe, struct sock *sk, struct msghdr *msg, size_t size) {
     log_debug("kprobe/tcp_sendmsg: sk=%lx msghdr=%lx!\n", (unsigned long)sk, (unsigned long)msg);
     log_debug("kprobe/tcp_sendmsg: size=%lu\n", size);
 
