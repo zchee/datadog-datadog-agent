@@ -692,6 +692,10 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
             .prog_array_map = &tls_process_progs,
             .index = PROG_HTTP2_FRAME_FILTER,
         },
+        [PKTBUF_KPROBE] = {
+            .prog_array_map = &kprobe_protocols_progs,
+            .index = PROG_HTTP2_FRAME_FILTER,
+        },
     };
     pktbuf_tail_call_compact(pkt, frame_filter_tail_call_array);
 }

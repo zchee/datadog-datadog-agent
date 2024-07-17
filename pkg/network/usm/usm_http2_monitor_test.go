@@ -96,26 +96,21 @@ func skipIfKernelNotSupported(t *testing.T) {
 func TestHTTP2Scenarios(t *testing.T) {
 	skipIfKernelNotSupported(t)
 	ebpftest.TestBuildModes(t, []ebpftest.BuildMode{ebpftest.Prebuilt, ebpftest.RuntimeCompiled, ebpftest.CORE}, "", func(t *testing.T) {
-		for _, tc := range []struct {
-			name  string
-			isTLS bool
-		}{
-			{
-				name:  "without TLS",
-				isTLS: false,
-			},
-			{
-				name:  "with TLS",
-				isTLS: true,
-			},
-		} {
-			t.Run(tc.name, func(t *testing.T) {
-				if tc.isTLS && !gotlsutils.GoTLSSupported(t, config.New()) {
-					t.Skip("GoTLS not supported for this setup")
-				}
-				suite.Run(t, &usmHTTP2Suite{isTLS: tc.isTLS})
+		t.Run("without TLS", func(t *testing.T) {
+			t.Run("socketFilter", func(t *testing.T) {
+				suite.Run(t, &usmHTTP2Suite{})
 			})
-		}
+			t.Run("kprobe", func(t *testing.T) {
+				t.Skip("HTTP/2 kprobe data hooks currently not supported")
+				suite.Run(t, &usmHTTP2Suite{isKprobeHooks: true})
+			})
+		})
+		t.Run("with TLS", func(t *testing.T) {
+			if !gotlsutils.GoTLSSupported(t, config.New()) {
+				t.Skip("GoTLS not supported for this setup")
+			}
+			suite.Run(t, &usmHTTP2Suite{isTLS: true})
+		})
 	})
 }
 
