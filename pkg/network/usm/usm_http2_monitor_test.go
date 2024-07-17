@@ -565,45 +565,45 @@ func (s *usmHTTP2Suite) TestRawTraffic() {
 				}: 1,
 			},
 		},
-		// {
-		// 	name: "validate frames_filter tail calls limit",
-		// 	// The purpose of this test is to validate that when we do not surpass
-		// 	// the tail call limit of HTTP2_MAX_TAIL_CALLS_FOR_FRAMES_FILTER.
-		// 	messageBuilder: func() [][]byte {
-		// 		const settingsFramesCount = 241
-		// 		framer := newFramer()
-		// 		return [][]byte{
-		// 			framer.
-		// 				writeMultiMessage(t, settingsFramesCount, framer.writeSettings).
-		// 				writeHeaders(t, 1, usmhttp2.HeadersFrameOptions{Headers: testHeaders()}).
-		// 				writeData(t, 1, endStream, emptyBody).
-		// 				bytes(),
-		// 		}
-		// 	},
-		// 	expectedEndpoints: nil,
-		// },
-		// {
-		// 	name: "validate max interesting frames limit",
-		// 	// The purpose of this test is to verify our ability to reach the limit set by HTTP2_MAX_FRAMES_ITERATIONS, which
-		// 	// determines the maximum number of "interesting frames" we can process.
-		// 	messageBuilder: func() [][]byte {
-		// 		const iterations = 120
-		// 		framer := newFramer()
-		// 		for i := 0; i < iterations; i++ {
-		// 			streamID := getStreamID(i)
-		// 			framer.
-		// 				writeHeaders(t, streamID, usmhttp2.HeadersFrameOptions{Headers: testHeaders()}).
-		// 				writeData(t, streamID, endStream, emptyBody)
-		// 		}
-		// 		return [][]byte{framer.bytes()}
-		// 	},
-		// 	expectedEndpoints: map[usmhttp.Key]int{
-		// 		{
-		// 			Path:   usmhttp.Path{Content: usmhttp.Interner.GetString(http2DefaultTestPath)},
-		// 			Method: usmhttp.MethodPost,
-		// 		}: 120,
-		// 	},
-		// },
+		{
+			name: "validate frames_filter tail calls limit",
+			// The purpose of this test is to validate that when we do not surpass
+			// the tail call limit of HTTP2_MAX_TAIL_CALLS_FOR_FRAMES_FILTER.
+			messageBuilder: func() [][]byte {
+				const settingsFramesCount = 241
+				framer := newFramer()
+				return [][]byte{
+					framer.
+						writeMultiMessage(t, settingsFramesCount, framer.writeSettings).
+						writeHeaders(t, 1, usmhttp2.HeadersFrameOptions{Headers: testHeaders()}).
+						writeData(t, 1, endStream, emptyBody).
+						bytes(),
+				}
+			},
+			expectedEndpoints: nil,
+		},
+		{
+			name: "validate max interesting frames limit",
+			// The purpose of this test is to verify our ability to reach the limit set by HTTP2_MAX_FRAMES_ITERATIONS, which
+			// determines the maximum number of "interesting frames" we can process.
+			messageBuilder: func() [][]byte {
+				const iterations = 120
+				framer := newFramer()
+				for i := 0; i < iterations; i++ {
+					streamID := getStreamID(i)
+					framer.
+						writeHeaders(t, streamID, usmhttp2.HeadersFrameOptions{Headers: testHeaders()}).
+						writeData(t, streamID, endStream, emptyBody)
+				}
+				return [][]byte{framer.bytes()}
+			},
+			expectedEndpoints: map[usmhttp.Key]int{
+				{
+					Path:   usmhttp.Path{Content: usmhttp.Interner.GetString(http2DefaultTestPath)},
+					Method: usmhttp.MethodPost,
+				}: 120,
+			},
+		},
 		{
 			name: "validate literal header field without indexing",
 			// The purpose of this test is to verify our ability the case:
