@@ -29,6 +29,31 @@ static __always_inline void postgres_batch_enqueue_wrapper(conn_tuple_t *tuple, 
     postgres_batch_enqueue(event);
 }
 
+// Reads a startup header from the given context.
+// Returns true if the header was read succesfully.
+static __always_inline bool read_startup_header(pktbuf_t pkt, struct pg_startup_header* header) {
+    u32 data_off = pktbuf_data_offset(pkt);
+    u32 data_end = pktbuf_data_end(pkt);
+
+    // Ensuring that the header is in the buffer.
+    if (data_off + sizeof(struct pg_startup_header) > data_end) {
+        return false;
+    }
+
+    pktbuf_load_bytes(pkt, data_off, header, sizeof(struct pg_startup_header));
+
+    // Converting the header to host byte order.
+    header->message_len = bpf_ntohl(header->message_len);
+    header->version = bpf_ntohl(header->version);
+
+    // Check the version string
+    if (header->version != PG_STARTUP_VERSION) {
+        return false;
+    }
+
+    return true;
+}
+
 // Reads a message header from the given context. Returns true if the header was read successfully, false otherwise.
 static __always_inline bool read_message_header(pktbuf_t pkt, struct pg_message_header* header) {
     u32 data_off = pktbuf_data_offset(pkt);
@@ -214,8 +239,14 @@ int socket__postgres_process(struct __sk_buff* skb) {
     }
 
     normalize_tuple(&conn_tuple);
-
     pktbuf_t pkt = pktbuf_from_skb(skb, &skb_info);
+
+    struct pg_startup_header startup_hdr;
+    if (read_startup_header(pkt, &startup_hdr)) {
+      log_debug("read startup header successfully");
+      return 0;
+    }
+
     struct pg_message_header header;
     if (!read_message_header(pkt, &header)) {
         return 0;
@@ -263,19 +294,25 @@ int uprobe__postgres_tls_process(struct pt_regs *ctx) {
 
     // Copying the tuple to the stack to handle verifier issues on kernel 4.14.
     conn_tuple_t tup = args->tup;
-
     pktbuf_t pkt = pktbuf_from_tls(ctx, args);
-    struct pg_message_header header;
-    if (!read_message_header(pkt, &header)) {
+
+    struct pg_startup_header startup_hdr;
+    if (read_startup_header(pkt, &startup_hdr)) {
+      log_debug("tls: read startup header successfully");
+      return 0;
+    }
+
+    struct pg_message_header message_hdr;
+    if (!read_message_header(pkt, &message_hdr)) {
         return 0;
     }
 
     // If the message is a parse message, we tail call to the dedicated function to handle it.
-    if (header.message_tag == POSTGRES_PARSE_MAGIC_BYTE) {
+    if (message_hdr.message_tag == POSTGRES_PARSE_MAGIC_BYTE) {
         bpf_tail_call_compat(ctx, &tls_process_progs, PROG_POSTGRES_PROCESS_PARSE_MESSAGE);
         return 0;
     }
-    postgres_entrypoint(pkt, &tup, &header, (__u8)args->tags);
+    postgres_entrypoint(pkt, &tup, &message_hdr, (__u8)args->tags);
     return 0;
 }
 
