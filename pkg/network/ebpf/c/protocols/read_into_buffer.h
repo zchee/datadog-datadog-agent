@@ -56,7 +56,7 @@
 #define PAGESIZE 4096
 
 #define __READ_INTO_BUFFER_INTERNAL(prefix, name, total_size, fn)                                                       \
-    static __always_inline void read_into_##prefix##_buffer_##name(char *dst, const char *src) {                                \
+    static __always_inline __maybe_unused void read_into_##prefix##_buffer_##name(char *dst, const char *src) {         \
         bpf_memset(dst, 0, total_size);                                                                                 \
         long ret = fn(dst, total_size, src);                                                                            \
         if (ret >= 0) {                                                                                                 \
