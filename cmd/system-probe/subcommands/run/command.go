@@ -344,6 +344,9 @@ func startSystemProbe(log log.Component, statsd compstatsd.Component, telemetry 
 			if ec := ebpftelemetry.NewEBPFErrorsCollector(); ec != nil {
 				telemetry.RegisterCollector(ec)
 			}
+			if ns := ebpftelemetry.NewNetStatsCollector(); ns != nil {
+				telemetry.RegisterCollector(ns)
+			}
 		}
 		go func() {
 			common.ExpvarServer = &http.Server{
