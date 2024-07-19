@@ -8,6 +8,7 @@
 package kafka
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/DataDog/datadog-agent/pkg/network/config"
@@ -47,6 +48,7 @@ func (statKeeper *StatKeeper) Process(tx *EbpfTx) {
 		TopicName:      statKeeper.extractTopicName(&tx.Transaction),
 		ConnectionKey:  tx.ConnTuple(),
 	}
+	fmt.Println(key, tx)
 	requestStats, ok := statKeeper.stats[key]
 	if !ok {
 		if len(statKeeper.stats) >= statKeeper.maxEntries {

@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -775,12 +776,12 @@ func (can *CannedClientServer) runProxy() int {
 	return proxyProcess.Process.Pid
 }
 
-func (can *CannedClientServer) runClient(msgs []Message) {
+func (can *CannedClientServer) runClient(t *testing.T, msgs []Message) {
 	can.control <- msgs
 
 	conn, err := net.Dial("unix", can.unixPath)
-	require.NoError(can.t, err)
-	can.t.Cleanup(func() { _ = conn.Close() })
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = conn.Close() })
 
 	reader := bufio.NewReader(conn)
 	for _, msg := range msgs {
@@ -801,7 +802,7 @@ func (can *CannedClientServer) runClient(msgs []Message) {
 
 		if len(msg.response) > 0 {
 			_, err := io.ReadFull(reader, msg.response)
-			require.NoError(can.t, err)
+			require.NoError(t, err)
 		}
 	}
 }
@@ -1139,17 +1140,23 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 		utils.WaitForProgramsToBeTraced(t, "go-tls", proxyPid)
 	}
 
-	for _, tt := range tests {
+	for idx, tt := range tests {
 		if tt.onlyTLS && !tls {
 			continue
 		}
 
+		topic := tt.topic
+		if topic == defaultTopic {
+			topic = fmt.Sprintf("%s-%d", topic, idx)
+		}
+
 		t.Run(tt.name, func(t *testing.T) {
+
 			t.Cleanup(func() {
 				cleanProtocolMaps(t, "kafka", monitor.ebpfProgram.Manager.Manager)
 			})
-			req := generateFetchRequest(apiVersion, tt.topic)
-			resp := tt.buildResponse(tt.topic)
+			req := generateFetchRequest(apiVersion, topic)
+			resp := tt.buildResponse(topic)
 			var msgs []Message
 
 			if tt.buildMessages == nil {
@@ -1164,12 +1171,12 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 				telemetry.OptStatsd)
 			beforeEvents := counter.Get()
 
-			can.runClient(msgs)
+			can.runClient(t, msgs)
 
 			if tt.produceFetchValidationWithErrorCode != nil {
-				getAndValidateKafkaStatsWithErrorCodes(t, monitor, 1, tt.topic, *tt.produceFetchValidationWithErrorCode)
+				getAndValidateKafkaStatsWithErrorCodes(t, monitor, 1, topic, *tt.produceFetchValidationWithErrorCode)
 			} else {
-				getAndValidateKafkaStats(t, monitor, 1, tt.topic, kafkaParsingValidation{
+				getAndValidateKafkaStats(t, monitor, 1, topic, kafkaParsingValidation{
 					expectedNumberOfFetchRequests: tt.numFetchedRecords,
 					expectedAPIVersionFetch:       apiVersion,
 					tlsEnabled:                    tls,
@@ -1191,8 +1198,8 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 			continue
 		}
 
-		req := generateFetchRequest(apiVersion, tt.topic)
-		resp := tt.buildResponse(tt.topic)
+		req := generateFetchRequest(apiVersion, topic)
+		resp := tt.buildResponse(topic)
 
 		formatter := kmsg.NewRequestFormatter(kmsg.FormatterClientID("kgo"))
 
@@ -1248,11 +1255,17 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 		for groupIdx, group := range groups {
 			name := fmt.Sprintf("split/%s/group%d", tt.name, groupIdx)
 			t.Run(name, func(t *testing.T) {
+				os.WriteFile("/sys/kernel/debug/tracing/trace", []byte(""), 0)
+				os.WriteFile("/sys/kernel/debug/tracing/trace_marker", []byte(fmt.Sprintln(t.Name())), fs.ModeAppend)
+
+				fmt.Println("tt.numFetchedRecords", tt.numFetchedRecords)
+				fmt.Println("group.numSets", group.numSets)
+
 				t.Cleanup(func() {
 					cleanProtocolMaps(t, "kafka", monitor.ebpfProgram.Manager.Manager)
 				})
 
-				can.runClient(group.msgs)
+				can.runClient(t, group.msgs)
 
 				if tt.produceFetchValidationWithErrorCode != nil {
 					tmp := kafkaParsingValidationWithErrorCodes{
@@ -1263,9 +1276,9 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 						tempFetchValidation[k] = v * group.numSets
 					}
 					tmp.expectedNumberOfFetchRequests = tempFetchValidation
-					getAndValidateKafkaStatsWithErrorCodes(t, monitor, 1, tt.topic, tmp)
+					getAndValidateKafkaStatsWithErrorCodes(t, monitor, 1, topic, tmp)
 				} else {
-					getAndValidateKafkaStats(t, monitor, 1, tt.topic, kafkaParsingValidation{
+					getAndValidateKafkaStats(t, monitor, 1, topic, kafkaParsingValidation{
 						expectedNumberOfFetchRequests: tt.numFetchedRecords * group.numSets,
 						expectedAPIVersionFetch:       apiVersion,
 						tlsEnabled:                    tls,
@@ -1356,7 +1369,7 @@ func testKafkaProduceRaw(t *testing.T, tls bool, apiVersion int) {
 			data := formatter.AppendRequest(make([]byte, 0), &req, int32(99))
 			msgs := []Message{{request: data}}
 
-			can.runClient(msgs)
+			can.runClient(t, msgs)
 
 			getAndValidateKafkaStats(t, monitor, 1, tt.topic, kafkaParsingValidation{
 				expectedNumberOfProduceRequests: tt.numProducedRecords,
@@ -1452,6 +1465,9 @@ func getAndValidateKafkaStats(t *testing.T, monitor *Monitor, expectedStatsCount
 		if exists {
 			currentStats := kafkaProtocolStats.(map[kafka.Key]*kafka.RequestStats)
 			for key, stats := range currentStats {
+				for k2, v2 := range stats.ErrorCodeToStat {
+					fmt.Println(key, k2, *v2)
+				}
 				prevStats, ok := kafkaStats[key]
 				if ok && prevStats != nil {
 					prevStats.CombineWith(stats)
@@ -1464,7 +1480,7 @@ func getAndValidateKafkaStats(t *testing.T, monitor *Monitor, expectedStatsCount
 		if expectedStatsCount != 0 {
 			validateProduceFetchCount(collect, kafkaStats, topicName, validation, errorCode)
 		}
-	}, time.Second*5, time.Millisecond*10)
+	}, time.Second*5, time.Microsecond*500)
 	return kafkaStats
 }
 
@@ -1477,6 +1493,9 @@ func getAndValidateKafkaStatsWithErrorCodes(t *testing.T, monitor *Monitor, expe
 		if exists {
 			currentStats := kafkaProtocolStats.(map[kafka.Key]*kafka.RequestStats)
 			for key, stats := range currentStats {
+				for k2, v2 := range stats.ErrorCodeToStat {
+					fmt.Println(key, k2, *v2)
+				}
 				prevStats, ok := kafkaStats[key]
 				if ok && prevStats != nil {
 					prevStats.CombineWith(stats)
@@ -1489,7 +1508,7 @@ func getAndValidateKafkaStatsWithErrorCodes(t *testing.T, monitor *Monitor, expe
 		if expectedStatsCount != 0 {
 			validateProduceFetchCountWithErrorCodes(collect, kafkaStats, topicName, validation)
 		}
-	}, time.Second*5, time.Millisecond*10)
+	}, time.Second*5, time.Microsecond*500)
 	return kafkaStats
 }
 
