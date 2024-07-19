@@ -35,7 +35,7 @@ func (m *MockLineHandler) process(msg *message.Message) {
 }
 
 func (m *MockLineHandler) flushChan() <-chan time.Time {
-	return make(<-chan time.Time)
+	return nil
 }
 func (m *MockLineHandler) flush() {}
 

@@ -25,11 +25,11 @@ const whitespace = "\t\n\v\f\r\u0085\u00a0 "
 const contentLenLimit = 100
 
 func getDummyMessage(content string) *message.Message {
-	return NewMessage([]byte(content), "info", len(content), "2018-06-14T18:27:03.246999277Z")
+	return message.NewRawMessage([]byte(content), "info", len(content), "2018-06-14T18:27:03.246999277Z")
 }
 
 func getDummyMessageWithLF(content string) *message.Message {
-	return NewMessage([]byte(content), "info", len(content)+1, "2018-06-14T18:27:03.246999277Z")
+	return message.NewRawMessage([]byte(content), "info", len(content)+1, "2018-06-14T18:27:03.246999277Z")
 }
 
 func lineHandlerChans() (func(*message.Message), chan *message.Message) {
@@ -63,19 +63,19 @@ func TestSingleLineHandler(t *testing.T) {
 	line = strings.Repeat("a", contentLenLimit+10)
 	h.process(getDummyMessage(line))
 	output = <-outputChan
-	assert.Equal(t, len(line)+len(truncatedFlag), len(output.GetContent()))
+	assert.Equal(t, len(line)+len(message.TruncatedFlag), len(output.GetContent()))
 	assert.Equal(t, len(line), output.RawDataLen)
 
 	line = strings.Repeat("a", contentLenLimit+10)
 	h.process(getDummyMessage(line))
 	output = <-outputChan
-	assert.Equal(t, len(truncatedFlag)+len(line)+len(truncatedFlag), len(output.GetContent()))
+	assert.Equal(t, len(message.TruncatedFlag)+len(line)+len(message.TruncatedFlag), len(output.GetContent()))
 	assert.Equal(t, len(line), output.RawDataLen)
 
 	line = strings.Repeat("a", 10)
 	h.process(getDummyMessageWithLF(line))
 	output = <-outputChan
-	assert.Equal(t, string(truncatedFlag)+line, string(output.GetContent()))
+	assert.Equal(t, string(message.TruncatedFlag)+line, string(output.GetContent()))
 	assert.Equal(t, len(line)+1, output.RawDataLen)
 }
 
