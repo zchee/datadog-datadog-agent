@@ -423,7 +423,7 @@ func (t *tracer) GetConnections(buffer *network.ConnectionBuffer, filter func(*n
 	tcp := new(netebpf.TCPStats)
 
 	var tcp4, tcp6, udp4, udp6 float64
-	entries := t.conns.Iterate()
+	entries := t.conns.IterateWithBatchSize(t.config.EbpfMapIterationBatchSize)
 	for entries.Next(key, stats) {
 		if cookie, exists := connsByTuple[*key]; exists && cookie == stats.Cookie {
 			// already seen the connection in current batch processing,

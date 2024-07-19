@@ -51,6 +51,8 @@ const (
 	defaultZypperReposDirSuffix = "/zypp/repos.d"
 
 	defaultOffsetThreshold = 400
+
+	defaultEbpfMapIterationBatchSize = 1000
 )
 
 var (
@@ -378,6 +380,8 @@ func InitSystemProbeConfig(cfg pkgconfigmodel.Config) {
 
 	// CCM config
 	cfg.BindEnvAndSetDefault(join(ccmNS, "enabled"), false)
+
+	cfg.BindEnvAndSetDefault(join(netNS, "ebpf_map_iteration_batch_size"), defaultEbpfMapIterationBatchSize)
 
 	initCWSSystemProbeConfig(cfg)
 }

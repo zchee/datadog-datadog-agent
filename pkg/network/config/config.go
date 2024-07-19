@@ -299,6 +299,8 @@ type Config struct {
 	// BypassEnabled is used in tests only.
 	// It enables a ebpf-manager feature to bypass programs on-demand for controlled visibility.
 	BypassEnabled bool
+
+	EbpfMapIterationBatchSize int
 }
 
 func join(pieces ...string) string {
@@ -348,7 +350,8 @@ func New() *Config {
 
 		ProtocolClassificationEnabled: cfg.GetBool(join(netNS, "enable_protocol_classification")),
 
-		NPMRingbuffersEnabled: cfg.GetBool(join(netNS, "enable_ringbuffers")),
+		NPMRingbuffersEnabled:     cfg.GetBool(join(netNS, "enable_ringbuffers")),
+		EbpfMapIterationBatchSize: cfg.GetInt(join(netNS, "ebpf_map_iteration_batch_size")),
 
 		EnableHTTPMonitoring:      cfg.GetBool(join(smNS, "enable_http_monitoring")),
 		EnableHTTP2Monitoring:     cfg.GetBool(join(smNS, "enable_http2_monitoring")),
