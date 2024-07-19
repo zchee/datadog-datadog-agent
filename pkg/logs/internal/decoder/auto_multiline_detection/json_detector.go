@@ -10,15 +10,16 @@ import "regexp"
 
 var jsonRegexp = regexp.MustCompile(`^\s*\{\s*\"`)
 
-type jsonDetector struct{}
+// JsonDetector is a heuristic to detect JSON messages.
+type JSONDetector struct{}
 
 // NewJSONDetector returns a new JSON detection heuristic.
-func NewJSONDetector() *jsonDetector {
-	return &jsonDetector{}
+func NewJSONDetector() *JSONDetector {
+	return &JSONDetector{}
 }
 
 // Process checks if a message is a JSON message.
-func (j *jsonDetector) Process(context *messageContext) bool {
+func (j *JSONDetector) Process(context *messageContext) bool {
 	if jsonRegexp.Match(context.rawMessage) {
 		context.label = noAggregate
 		return false

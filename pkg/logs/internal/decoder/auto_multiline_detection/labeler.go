@@ -6,7 +6,7 @@
 // Package automultilinedetection contains auto multiline detection and aggregation logic.
 package automultilinedetection
 
-// TODO: (brian) - This will be implemented in a future PR when the tokenizer is added (and moved into it's own package)
+// TODO: (brian) - This will be implemented in a future PR when the tokenizer is added
 type token uint
 
 // Label is a label for a log message.
