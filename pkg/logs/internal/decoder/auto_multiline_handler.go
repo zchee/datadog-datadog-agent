@@ -20,8 +20,14 @@ type AutoMultilineHandler struct {
 
 // NewAutoMultilineHandler creates a new auto multiline handler.
 func NewAutoMultilineHandler(outputFn func(m *message.Message), maxContentSize int) *AutoMultilineHandler {
+
+	// Order is important
+	heuristics := []automultilinedetection.Heuristic{
+		automultilinedetection.NewJSONDetector(),
+	}
+
 	return &AutoMultilineHandler{
-		labler:       automultilinedetection.NewLabler(nil),
+		labler:       automultilinedetection.NewLabler(heuristics),
 		aggreagateor: automultilinedetection.NewAggregator(outputFn, maxContentSize),
 	}
 }
