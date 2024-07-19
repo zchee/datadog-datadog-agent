@@ -128,7 +128,7 @@ func NewDecoderWithFraming(source *sources.ReplaceableSource, parser parsers.Par
 				syncSourceInfo(source, lh)
 				lineHandler = lh
 			} else {
-				lineHandler = buildAutoMultilineHandlerFromConfig(outputFn, lineLimit, source, detectedPattern, tailerInfo)
+				lineHandler = buildLegacyAutoMultilineHandlerFromConfig(outputFn, lineLimit, source, detectedPattern, tailerInfo)
 			}
 		} else {
 			lineHandler = NewSingleLineHandler(outputFn, lineLimit)
@@ -138,9 +138,9 @@ func NewDecoderWithFraming(source *sources.ReplaceableSource, parser parsers.Par
 	// construct the lineParser, wrapping the parser
 	var lineParser LineParser
 	if parser.SupportsPartialLine() {
-		lineParser = NewMultiLineParser(lineHandler.process, config.AggregationTimeout(pkgConfig.Datadog()), parser, lineLimit)
+		lineParser = NewMultiLineParser(lineHandler, config.AggregationTimeout(pkgConfig.Datadog()), parser, lineLimit)
 	} else {
-		lineParser = NewSingleLineParser(lineHandler.process, parser)
+		lineParser = NewSingleLineParser(lineHandler, parser)
 	}
 
 	// construct the framer
@@ -149,7 +149,7 @@ func NewDecoderWithFraming(source *sources.ReplaceableSource, parser parsers.Par
 	return New(inputChan, outputChan, framer, lineParser, lineHandler, detectedPattern)
 }
 
-func buildAutoMultilineHandlerFromConfig(outputFn func(*message.Message), lineLimit int, source *sources.ReplaceableSource, detectedPattern *DetectedPattern, tailerInfo *status.InfoRegistry) *AutoMultilineHandler {
+func buildLegacyAutoMultilineHandlerFromConfig(outputFn func(*message.Message), lineLimit int, source *sources.ReplaceableSource, detectedPattern *DetectedPattern, tailerInfo *status.InfoRegistry) *LegacyAutoMultilineHandler {
 	linesToSample := source.Config().AutoMultiLineSampleSize
 	if linesToSample <= 0 {
 		linesToSample = pkgConfig.Datadog().GetInt("logs_config.auto_multi_line_default_sample_size")
@@ -171,7 +171,7 @@ func buildAutoMultilineHandlerFromConfig(outputFn func(*message.Message), lineLi
 	}
 
 	matchTimeout := time.Second * pkgConfig.Datadog().GetDuration("logs_config.auto_multi_line_default_match_timeout")
-	return NewAutoMultilineHandler(
+	return NewLegacyAutoMultilineHandler(
 		outputFn,
 		lineLimit,
 		linesToSample,
