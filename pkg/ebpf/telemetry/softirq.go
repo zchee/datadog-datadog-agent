@@ -191,4 +191,12 @@ func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
 	n.netTxAggregateRate.WithLabelValues(fmt.Sprintf("%d", len(softirqStats.NetTx))).Set(netTxAggregate / elapsed)
 
 	n.lastRead = now
+
+	n.netRxRate.Collect(metrics)
+	n.netTxRate.Collect(metrics)
+	n.netRxAggregateRate.Collect(metrics)
+	n.netTxAggregateRate.Collect(metrics)
+	n.totalPackets.Collect(metrics)
+	n.packetsPerSecond.Collect(metrics)
+	n.packetsPerSecondAggregate.Collect(metrics)
 }
