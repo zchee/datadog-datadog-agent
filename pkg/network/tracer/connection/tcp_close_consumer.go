@@ -10,6 +10,8 @@ package connection
 import (
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/DataDog/datadog-agent/pkg/ebpf/perf"
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/status/health"
@@ -36,17 +38,31 @@ type tcpCloseConsumer struct {
 	flusher  perf.Flushable
 	dataChan <-chan *network.ConnectionStats
 	releaser ddsync.PoolReleaser[network.ConnectionStats]
+
+	tm prometheus.Collector
 }
 
 func newTCPCloseConsumer(flusher perf.Flushable, callbackCh <-chan *network.ConnectionStats, releaser ddsync.PoolReleaser[network.ConnectionStats]) *tcpCloseConsumer {
-	return &tcpCloseConsumer{
+	cc := &tcpCloseConsumer{
 		requests: make(chan chan struct{}),
 		closed:   make(chan struct{}),
 		ch:       newCookieHasher(),
 		flusher:  flusher,
 		dataChan: callbackCh,
 		releaser: releaser,
+		tm: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
+				Subsystem: closeConsumerModuleName,
+				Name:      "closed_conn_chan_len",
+				Help:      "gauge tracking length of closed connections channel",
+			},
+			func() float64 {
+				return float64(len(callbackCh))
+			},
+		),
 	}
+	telemetry.GetCompatComponent().RegisterCollector(cc.tm)
+	return cc
 }
 
 func (c *tcpCloseConsumer) FlushPending() {
@@ -74,6 +90,7 @@ func (c *tcpCloseConsumer) Stop() {
 	}
 	c.once.Do(func() {
 		close(c.closed)
+		telemetry.GetCompatComponent().UnregisterCollector(c.tm)
 	})
 }
 

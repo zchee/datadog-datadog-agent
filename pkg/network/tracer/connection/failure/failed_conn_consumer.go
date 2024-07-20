@@ -11,6 +11,8 @@ package failure
 import (
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	netebpf "github.com/DataDog/datadog-agent/pkg/network/ebpf"
 	"github.com/DataDog/datadog-agent/pkg/telemetry"
 	ddsync "github.com/DataDog/datadog-agent/pkg/util/sync"
@@ -33,16 +35,30 @@ type TCPFailedConnConsumer struct {
 	once        sync.Once
 	closed      chan struct{}
 	FailedConns *FailedConns
+
+	tm prometheus.Collector
 }
 
 // NewFailedConnConsumer creates a new TCPFailedConnConsumer
 func NewFailedConnConsumer(callbackCh <-chan *netebpf.FailedConn, releaser ddsync.PoolReleaser[netebpf.FailedConn], fc *FailedConns) *TCPFailedConnConsumer {
-	return &TCPFailedConnConsumer{
+	cons := &TCPFailedConnConsumer{
 		releaser:    releaser,
 		dataChan:    callbackCh,
 		closed:      make(chan struct{}),
 		FailedConns: fc,
+		tm: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
+				Subsystem: failedConnConsumerModuleName,
+				Name:      "failed_conn_chan_len",
+				Help:      "gauge tracking length of failed connections channel",
+			},
+			func() float64 {
+				return float64(len(callbackCh))
+			},
+		),
 	}
+	telemetry.GetCompatComponent().RegisterCollector(cons.tm)
+	return cons
 }
 
 // Stop stops the consumer
@@ -52,6 +68,7 @@ func (c *TCPFailedConnConsumer) Stop() {
 	}
 	c.once.Do(func() {
 		close(c.closed)
+		telemetry.GetCompatComponent().UnregisterCollector(c.tm)
 	})
 	c.FailedConns.mapCleaner.Stop()
 }
