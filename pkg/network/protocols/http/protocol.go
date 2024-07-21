@@ -66,13 +66,13 @@ var Spec = &protocols.ProtocolSpec{
 		},
 	},
 	TailCalls: []manager.TailCallRoute{
-		{
-			ProgArrayName: protocols.ProtocolDispatcherProgramsMap,
-			Key:           uint32(protocols.ProgramHTTP),
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: filterTailCall,
-			},
-		},
+		//{
+		//	ProgArrayName: protocols.ProtocolDispatcherProgramsMap,
+		//	Key:           uint32(protocols.ProgramHTTP),
+		//	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		//		EBPFFuncName: filterTailCall,
+		//	},
+		//},
 		{
 			ProgArrayName: protocols.TLSDispatcherProgramsMap,
 			Key:           uint32(protocols.ProgramHTTP),

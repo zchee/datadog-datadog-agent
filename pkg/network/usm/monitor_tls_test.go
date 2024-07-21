@@ -548,8 +548,6 @@ func (s *tlsSuite) TestJavaInjection() {
 }
 
 func TestHTTPGoTLSAttachProbes(t *testing.T) {
-	t.Skip("skipping GoTLS tests while we investigate their flakiness")
-
 	modes := []ebpftest.BuildMode{ebpftest.RuntimeCompiled, ebpftest.CORE}
 	ebpftest.TestBuildModes(t, modes, "", func(t *testing.T) {
 		if !gotlstestutil.GoTLSSupported(t, config.New()) {
@@ -774,7 +772,7 @@ func testHTTPGoTLSCaptureNewProcess(t *testing.T, cfg *config.Config, isHTTP2 bo
 	// This maps will keep track of whether the tracer saw this request already or not
 	reqs := make(requestsMap)
 	for i := 0; i < expectedOccurrences; i++ {
-		req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("https://%s/%d/request-%d", serverAddr, nethttp.StatusOK, i), nil)
+		req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("https://%s/%d/request-%d", serverAddr, nethttp.StatusOK+i, i), nil)
 		require.NoError(t, err)
 		reqs[req] = false
 	}
@@ -813,7 +811,7 @@ func testHTTPGoTLSCaptureAlreadyRunning(t *testing.T, cfg *config.Config, isHTTP
 	// This maps will keep track of whether the tracer saw this request already or not
 	reqs := make(requestsMap)
 	for i := 0; i < expectedOccurrences; i++ {
-		req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("https://%s/%d/request-%d", serverAddr, nethttp.StatusOK, i), nil)
+		req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("https://%s/%d/request-%d", serverAddr, nethttp.StatusOK+i, i), nil)
 		require.NoError(t, err)
 		reqs[req] = false
 	}
@@ -904,6 +902,15 @@ func checkRequests(t *testing.T, usmMonitor *Monitor, expectedOccurrences int, r
 		occurrences += PrintableInt(countRequestsOccurrences(t, stats, reqs))
 		return int(occurrences) == expectedOccurrences
 	}, 3*time.Second, 100*time.Millisecond, "Expected to find the request %v times, got %v captured. Requests not found:\n%v", expectedOccurrences, &occurrences, reqs)
+
+	if t.Failed() {
+		maps := []string{"http_in_flight", "http_batches"}
+		if isHTTP2 {
+			maps = []string{"http2_in_flight", "http2_batches", "http2_dynamic_table", "http2_telemetry"}
+		}
+		ebpftest.DumpMapsTestHelper(t, usmMonitor.DumpMaps, maps...)
+
+	}
 }
 
 func countRequestsOccurrences(t *testing.T, conns map[http.Key]*http.RequestStats, reqs map[*nethttp.Request]bool) (occurrences int) {

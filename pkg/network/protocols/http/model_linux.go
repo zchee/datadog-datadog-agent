@@ -8,7 +8,6 @@
 package http
 
 import (
-	"encoding/hex"
 	"strconv"
 	"strings"
 
@@ -100,10 +99,13 @@ func (e *EbpfEvent) DynamicTags() []string {
 // String returns a string representation of the underlying event
 func (e *EbpfEvent) String() string {
 	var output strings.Builder
+	a := e.ConnTuple()
 	output.WriteString("ebpfTx{")
+	output.WriteString("Tup: '" + a.String() + "', ")
 	output.WriteString("Method: '" + Method(e.Http.Request_method).String() + "', ")
 	output.WriteString("Tags: '0x" + strconv.FormatUint(e.Http.Tags, 16) + "', ")
-	output.WriteString("Fragment: '" + hex.EncodeToString(e.Http.Request_fragment[:]) + "', ")
+	output.WriteString("Fragment: '" + string(e.Http.Request_fragment[:]) + "', ")
+	output.WriteString("CPU: '" + strconv.FormatUint(uint64(e.Http.Cpu), 10) + "', ")
 	output.WriteString("}")
 	return output.String()
 }

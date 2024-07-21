@@ -99,7 +99,7 @@ static __always_inline bool is_uprobe_context(skb_info_t *skb_info) {
 // * A segment with the beginning of a request (packet_type == HTTP_REQUEST);
 // * A segment with the beginning of a response (packet_type == HTTP_RESPONSE);
 // * A segment with a (FIN|RST) flag set;
-static __always_inline bool http_seen_before(http_transaction_t *http, skb_info_t *skb_info, http_packet_t packet_type) {
+static __always_inline bool http_seen_before(http_transaction_t *http, skb_info_t *skb_info, http_packet_t packet_type, u32 cpu, conn_tuple_t *tup) {
     if (is_uprobe_context(skb_info) && !http_closed(skb_info)) {
         // The purpose of setting tcp_seq = 0 in the context of uprobe tracing
         // is innocuous for the most part (as this field will almost aways be 0)
@@ -119,6 +119,7 @@ static __always_inline bool http_seen_before(http_transaction_t *http, skb_info_
         // to true before flushing and deleting the eBPF map data, setting it to
         // 0 here gives a chance for the late response to "cancel" the map
         // deletion.
+        log_debug("guy hey; cpu %d; sport %hu; dport: %hu", cpu, tup->sport, tup->dport);
         http->tcp_seq = 0;
         return false;
     }
@@ -196,9 +197,13 @@ static __always_inline void http_process(http_event_t *event, skb_info_t *skb_in
     http_method_t method = HTTP_METHOD_UNKNOWN;
     http_parse_data(buffer, &packet_type, &method);
 
+    __u32 cpu = http->cpu;
     http = http_fetch_state(tuple, http, packet_type);
-    if (!http || http_seen_before(http, skb_info, packet_type)) {
+    if (!http || http_seen_before(http, skb_info, packet_type, cpu, tuple)) {
         return;
+    }
+    if (http->cpu == 0) {
+        http->cpu = cpu;
     }
 
     if (http_should_flush_previous_state(http, packet_type)) {
@@ -279,6 +284,7 @@ int uprobe__http_process(struct pt_regs *ctx) {
     bpf_memset(&event, 0, sizeof(http_event_t));
     bpf_memcpy(&event.tuple, &args->tup, sizeof(conn_tuple_t));
     read_into_user_buffer_http(event.http.request_fragment, args->buffer_ptr);
+    event.http.cpu = bpf_get_smp_processor_id();
     http_process(&event, NULL, args->tags);
     http_batch_flush(ctx);
 
@@ -298,6 +304,7 @@ int uprobe__http_termination(struct pt_regs *ctx) {
     bpf_memcpy(&event.tuple, &args->tup, sizeof(conn_tuple_t));
     skb_info_t skb_info = {0};
     skb_info.tcp_flags |= TCPHDR_FIN;
+    event.http.cpu = bpf_get_smp_processor_id();
     http_process(&event, &skb_info, NO_TAGS);
     http_batch_flush(ctx);
 

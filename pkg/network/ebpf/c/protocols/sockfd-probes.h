@@ -40,7 +40,7 @@ int BPF_KPROBE(kprobe__tcp_close, struct sock *sk) {
     // TCP termination is managed by the socket filter, thus it cannot clean TLS entries,
     // as it does not have access to the PID and NETNS.
     // Therefore, we use tls_finish to clean the connection. While this approach is not ideal, it is the best option available to us for now.
-    tls_finish(ctx, &t, true);
+    tls_finish(ctx, &t, false);
     return 0;
 }
 

@@ -55,7 +55,7 @@ func main() {
 	}
 
 	for i := 0; i < reqCount; i++ {
-		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://%s/%d/request-%d", serverAddr, http.StatusOK, i), nil)
+		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://%s/%d/request-%d", serverAddr, http.StatusOK+i, i), nil)
 		if err != nil {
 			log.Fatalf("could not generate HTTP request: %s", err)
 		}

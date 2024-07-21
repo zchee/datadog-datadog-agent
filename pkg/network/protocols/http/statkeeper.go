@@ -70,6 +70,7 @@ func (h *StatKeeper) Process(tx Transaction) {
 	defer h.mux.Unlock()
 
 	if tx.Incomplete() {
+		log.Info("incomplete", tx.String())
 		h.incomplete.Add(tx)
 		return
 	}

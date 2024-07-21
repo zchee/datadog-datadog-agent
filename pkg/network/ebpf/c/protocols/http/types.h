@@ -6,7 +6,7 @@
 // This determines the size of the payload fragment that is captured for each HTTP request
 #define HTTP_BUFFER_SIZE (8 * 26)
 // This controls the number of HTTP transactions read from userspace at a time
-#define HTTP_BATCH_SIZE 14
+#define HTTP_BATCH_SIZE 13
 
 // HTTP/1.1 XXX
 // _________^
@@ -48,6 +48,7 @@ typedef struct {
     // this field is used to disambiguate segments in the context of keep-alives
     // we populate it with the TCP seq number of the request and then the response segments
     __u32 tcp_seq;
+    __u32 cpu;
     __u16 response_status_code;
     __u8  request_method;
     char request_fragment[HTTP_BUFFER_SIZE] __attribute__ ((aligned (8)));
