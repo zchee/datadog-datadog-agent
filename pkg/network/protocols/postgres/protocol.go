@@ -8,7 +8,6 @@
 package postgres
 
 import (
-	"fmt"
 	"io"
 	"unsafe"
 
