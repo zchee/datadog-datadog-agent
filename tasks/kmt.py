@@ -1187,7 +1187,7 @@ def build(
     for d in domains:
         if override_agent:
             d.run_cmd(ctx, f"[ -f /opt/datadog-agent/embedded/bin/{component} ]", verbose=False)
-            d.copy(ctx, f"./bin/{component}/{component}", "/opt/datadog-agent/embedded/bin/{component}")
+            d.copy(ctx, f"./bin/{component}/{component}", f"/opt/datadog-agent/embedded/bin/{component}")
         else:
             d.copy(ctx, f"./bin/{component}", "/root/")
 
