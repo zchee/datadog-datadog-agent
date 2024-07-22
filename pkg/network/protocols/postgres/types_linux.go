@@ -15,19 +15,27 @@ type ConnTuple = struct {
 	Metadata uint32
 }
 
-type EbpfEvent struct {
-	Tuple ConnTuple
-	Tx    EbpfTx
-}
-type EbpfTx struct {
-	Request_fragment    [64]byte
-	Request_started     uint64
-	Response_last_seen  uint64
-	Original_query_size uint32
-	Tags                uint8
-	Pad_cgo_0           [3]byte
-}
+type (
+	EbpfEvent struct {
+		Tuple ConnTuple
+		Tx    EbpfTx
+	}
+	EbpfTx struct {
+		Request_fragment    [64]byte
+		Request_started     uint64
+		Response_last_seen  uint64
+		Original_query_size uint32
+		Tags                uint8
+		Startup_flags       uint8
+		Pad_cgo_0           [2]byte
+	}
+)
 
 const (
 	BufferSize = 0x40
+)
+
+const (
+	StartupEvent     = 0x1
+	TerminationEvent = 0x2
 )

@@ -15,9 +15,17 @@ import "C"
 
 type ConnTuple = C.conn_tuple_t
 
-type EbpfEvent C.postgres_event_t
-type EbpfTx C.postgres_transaction_t
+type (
+	EbpfEvent C.postgres_event_t
+	EbpfTx    C.postgres_transaction_t
+)
 
 const (
 	BufferSize = C.POSTGRES_BUFFER_SIZE
+)
+
+// Postgres startup flags
+const (
+	StartupEvent     = C.POSTGRES_STARTUP
+	TerminationEvent = C.POSTGRES_TERMINATION
 )

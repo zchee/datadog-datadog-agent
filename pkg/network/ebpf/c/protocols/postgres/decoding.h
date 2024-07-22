@@ -14,6 +14,7 @@
 #include "protocols/read_into_buffer.h"
 
 PKTBUF_READ_INTO_BUFFER(postgres_query, POSTGRES_BUFFER_SIZE, BLK_SIZE)
+PKTBUF_READ_INTO_BUFFER(postgres_startup_params, POSTGRES_BUFFER_SIZE, BLK_SIZE)
 
 // Enqueues a batch of events to the user-space. To spare stack size, we take a scratch buffer from the map, copy
 // the connection tuple and the transaction to it, and then enqueue the event.
@@ -27,6 +28,22 @@ static __always_inline void postgres_batch_enqueue_wrapper(conn_tuple_t *tuple, 
     bpf_memcpy(&event->tuple, tuple, sizeof(conn_tuple_t));
     bpf_memcpy(&event->tx, tx, sizeof(postgres_transaction_t));
     postgres_batch_enqueue(event);
+}
+
+// Enqueues a batch of events to the user-space. To spare stack size, we take a scratch buffer from the map, copy
+// the connection tuple and the transaction to it, and then enqueue the event.
+static __always_inline void handle_postgres_startup(pktbuf_t pkt, conn_tuple_t *tuple, struct pg_startup_header *hdr) {
+    postgres_transaction_t tx = {};
+
+    u32 data_off = pktbuf_data_offset(pkt);
+    data_off += sizeof(*hdr);
+
+    pktbuf_read_into_buffer_postgres_startup_params((char *)&tx.request_fragment, pkt, data_off);
+    tx.original_query_size = hdr->message_len;
+    tx.startup_flags = POSTGRES_STARTUP;
+
+    postgres_batch_enqueue_wrapper(tuple, &tx);
+    log_debug("postgres startup: batch enqueued");
 }
 
 // Reads a startup header from the given context.
@@ -79,6 +96,7 @@ static __always_inline void handle_new_query(pktbuf_t pkt, conn_tuple_t *conn_tu
     pktbuf_read_into_buffer_postgres_query((char *)new_transaction.request_fragment, pkt, data_off);
     new_transaction.original_query_size = query_len;
     new_transaction.tags = tags;
+    new_transaction.startup_flags = 0;
     bpf_map_update_elem(&postgres_in_flight, conn_tuple, &new_transaction, BPF_ANY);
 }
 
@@ -243,8 +261,8 @@ int socket__postgres_process(struct __sk_buff* skb) {
 
     struct pg_startup_header startup_hdr;
     if (read_startup_header(pkt, &startup_hdr)) {
-      log_debug("read startup header successfully");
-      return 0;
+        handle_postgres_startup(pkt, &conn_tuple, &startup_hdr);
+        return 0;
     }
 
     struct pg_message_header header;
@@ -298,8 +316,8 @@ int uprobe__postgres_tls_process(struct pt_regs *ctx) {
 
     struct pg_startup_header startup_hdr;
     if (read_startup_header(pkt, &startup_hdr)) {
-      log_debug("tls: read startup header successfully");
-      return 0;
+        handle_postgres_startup(pkt, &tup, &startup_hdr);
+        return 0;
     }
 
     struct pg_message_header message_hdr;

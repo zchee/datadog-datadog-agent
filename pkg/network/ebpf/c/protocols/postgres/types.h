@@ -12,6 +12,10 @@
 // Maximum number of Postgres messages we can parse for a single packet.
 #define POSTGRES_MAX_MESSAGES 80
 
+// Startup flags, used to communicate the nature of the transaction content.
+#define POSTGRES_STARTUP (1 << 0)
+#define POSTGRES_TERMINATION (1 << 1)
+
 // Postgres transaction information we store in the kernel.
 typedef struct {
     // The Postgres query we are currently parsing. Stored up to POSTGRES_BUFFER_SIZE bytes.
@@ -21,6 +25,9 @@ typedef struct {
     // The actual size of the query stored in request_fragment.
     __u32 original_query_size;
     __u8 tags;
+
+    // Flags specifying the nature of the data in request_fragment
+    __u8 startup_flags;
 } postgres_transaction_t;
 
 // The struct we send to userspace, containing the connection tuple and the transaction information.
