@@ -9,6 +9,7 @@
 package events
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -46,12 +47,16 @@ func (o *offsetManager) Get(cpu int, batch *batch, syncing bool) (begin, end int
 	state := o.stateByCPU[cpu]
 	batchID := int(batch.Idx)
 
+	fmt.Println("offset Get", "cpu", cpu, "batchID", batchID, "partialBatchID", state.partialBatchID, "partialOffset", state.partialOffset)
+
 	if batchID < state.nextBatchID {
+		fmt.Println("already consumed")
 		// we have already consumed this data
 		return 0, 0
 	}
 
 	if batchComplete(batch) {
+		fmt.Println("batch complete")
 		state.nextBatchID = batchID + 1
 	}
 
@@ -60,12 +65,14 @@ func (o *offsetManager) Get(cpu int, batch *batch, syncing bool) (begin, end int
 	// we need to take that into account
 	if int(batch.Idx) == state.partialBatchID {
 		begin = state.partialOffset
+		fmt.Println("begin set to partialOffset", begin)
 	}
 
 	// determining the end offset
 	// usually this is the full batch size but it can be less
 	// in the context of a forced (partial) read
 	end = int(batch.Len)
+	fmt.Println("end", end)
 
 	// if this is part of a forced read (that is, we're reading a batch before
 	// it's complete) we need to keep track of which entries we're reading
@@ -73,6 +80,8 @@ func (o *offsetManager) Get(cpu int, batch *batch, syncing bool) (begin, end int
 	if syncing {
 		state.partialBatchID = int(batch.Idx)
 		state.partialOffset = end
+
+		fmt.Println("cpu", cpu, "batchID", batchID, "new partialBatchID", state.partialBatchID, "new partialOffset", state.partialOffset)
 	}
 
 	return

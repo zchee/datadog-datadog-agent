@@ -226,6 +226,8 @@ func (c *Consumer[V]) process(b *batch, syncing bool) {
 		return
 	}
 
+	fmt.Println("consumer process", "syncing", syncing, "batch", "cpu", b.Cpu, "idx", b.Idx, "begin", begin, "end", end, "length", length)
+
 	c.eventsCount.Add(int64(end - begin))
 
 	// generate a slice of type []V from the batch

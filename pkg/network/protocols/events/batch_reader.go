@@ -8,10 +8,14 @@
 package events
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/DataDog/datadog-agent/pkg/ebpf/maps"
+	"github.com/DataDog/datadog-agent/pkg/util/kernel"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 	ddsync "github.com/DataDog/datadog-agent/pkg/util/sync"
+	manager "github.com/DataDog/ebpf-manager"
 )
 
 var batchPool = ddsync.NewDefaultTypedPool[batch]()
@@ -25,8 +29,7 @@ type batchReader struct {
 	stopped    bool
 }
 
-func newBatchReader(offsetManager *offsetManager, batchMap *maps.GenericMap[batchKey, batch], numCPUs int) (*batchReader, error) {
-	// initialize eBPF maps
+func initBatchesMap(batchMap *maps.GenericMap[batchKey, batch], numCPUs int) error {
 	batch := new(batch)
 	for i := 0; i < numCPUs; i++ {
 		// Ring buffer events don't have CPU information, so we associate each
@@ -37,9 +40,34 @@ func newBatchReader(offsetManager *offsetManager, batchMap *maps.GenericMap[batc
 			key := &batchKey{Cpu: batch.Cpu, Num: uint16(j)}
 			err := batchMap.Put(key, batch)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func ClearBatchesMap(manager *manager.Manager, name string) error {
+	batchMap, err := maps.GetMap[batchKey, batch](manager, name)
+	if err != nil {
+		return fmt.Errorf("unable to find map %s: %w", name, err)
+	}
+
+	numCPUs, err := kernel.PossibleCPUs()
+	if err != nil {
+		numCPUs = 96
+		log.Errorf("unable to detect number of CPUs. assuming 96 cores: %s", err)
+	}
+
+	return initBatchesMap(batchMap, numCPUs)
+}
+
+func newBatchReader(offsetManager *offsetManager, batchMap *maps.GenericMap[batchKey, batch], numCPUs int) (*batchReader, error) {
+	// initialize eBPF maps
+	err := initBatchesMap(batchMap, numCPUs)
+	if err != nil {
+		return nil, err
 	}
 
 	workerPool, err := newWorkerPool(max(numCPUs, 32))

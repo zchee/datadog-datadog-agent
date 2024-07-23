@@ -682,6 +682,7 @@ func cleanProtocolMaps(t *testing.T, protocolName string, manager *manager.Manag
 		}
 		// Special case for batches, as the values is never "empty", but contain the CPU number.
 		if strings.HasSuffix(mapName, fmt.Sprintf("%s_batches", protocolName)) {
+			// events.ClearBatchesMap(manager, mapName)
 			continue
 		}
 		_, shouldOnlyZero := mapTypesToZero[mapInstance.Type()]

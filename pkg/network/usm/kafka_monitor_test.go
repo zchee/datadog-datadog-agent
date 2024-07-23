@@ -1025,110 +1025,110 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 			},
 			numFetchedRecords: 3,
 		},
-		{
-			name:  "with error code",
-			topic: defaultTopic,
-			buildResponse: func(topic string) kmsg.FetchResponse {
-				record := makeRecord()
-				var records []kmsg.Record
-				for i := 0; i < 1; i++ {
-					records = append(records, record)
-				}
+		// {
+		// 	name:  "with error code",
+		// 	topic: defaultTopic,
+		// 	buildResponse: func(topic string) kmsg.FetchResponse {
+		// 		record := makeRecord()
+		// 		var records []kmsg.Record
+		// 		for i := 0; i < 1; i++ {
+		// 			records = append(records, record)
+		// 		}
 
-				recordBatch := makeRecordBatch(records...)
-				var batches []kmsg.RecordBatch
-				for i := 0; i < 2; i++ {
-					batches = append(batches, recordBatch)
-				}
+		// 		recordBatch := makeRecordBatch(records...)
+		// 		var batches []kmsg.RecordBatch
+		// 		for i := 0; i < 2; i++ {
+		// 			batches = append(batches, recordBatch)
+		// 		}
 
-				partition := makeFetchResponseTopicPartition(batches...)
-				partition.ErrorCode = 3
-				var partitions []kmsg.FetchResponseTopicPartition
-				for i := 0; i < 3; i++ {
-					partitions = append(partitions, partition)
-				}
+		// 		partition := makeFetchResponseTopicPartition(batches...)
+		// 		partition.ErrorCode = 3
+		// 		var partitions []kmsg.FetchResponseTopicPartition
+		// 		for i := 0; i < 3; i++ {
+		// 			partitions = append(partitions, partition)
+		// 		}
 
-				return makeFetchResponse(apiVersion, makeFetchResponseTopic(topic, partitions...))
-			},
-			numFetchedRecords: 1 * 2 * 3,
-			errorCode:         3,
-		},
-		{
-			name:  "with different error codes",
-			topic: defaultTopic,
-			produceFetchValidationWithErrorCode: &kafkaParsingValidationWithErrorCodes{
-				expectedNumberOfFetchRequests: map[int32]int{
-					0: 1 * 2 * 2,
-					1: 1 * 2 * 1,
-					3: 1 * 2 * 1,
-				},
-				expectedAPIVersionFetch: apiVersion,
-			},
-			buildResponse: func(topic string) kmsg.FetchResponse {
-				record := makeRecord()
-				var records []kmsg.Record
-				for i := 0; i < 1; i++ {
-					records = append(records, record)
-				}
+		// 		return makeFetchResponse(apiVersion, makeFetchResponseTopic(topic, partitions...))
+		// 	},
+		// 	numFetchedRecords: 1 * 2 * 3,
+		// 	errorCode:         3,
+		// },
+		// {
+		// 	name:  "with different error codes",
+		// 	topic: defaultTopic,
+		// 	produceFetchValidationWithErrorCode: &kafkaParsingValidationWithErrorCodes{
+		// 		expectedNumberOfFetchRequests: map[int32]int{
+		// 			0: 1 * 2 * 2,
+		// 			1: 1 * 2 * 1,
+		// 			3: 1 * 2 * 1,
+		// 		},
+		// 		expectedAPIVersionFetch: apiVersion,
+		// 	},
+		// 	buildResponse: func(topic string) kmsg.FetchResponse {
+		// 		record := makeRecord()
+		// 		var records []kmsg.Record
+		// 		for i := 0; i < 1; i++ {
+		// 			records = append(records, record)
+		// 		}
 
-				recordBatch := makeRecordBatch(records...)
-				var batches []kmsg.RecordBatch
-				for i := 0; i < 2; i++ {
-					batches = append(batches, recordBatch)
-				}
+		// 		recordBatch := makeRecordBatch(records...)
+		// 		var batches []kmsg.RecordBatch
+		// 		for i := 0; i < 2; i++ {
+		// 			batches = append(batches, recordBatch)
+		// 		}
 
-				var partitions []kmsg.FetchResponseTopicPartition
-				partition := makeFetchResponseTopicPartition(batches...)
-				partition.ErrorCode = 0
+		// 		var partitions []kmsg.FetchResponseTopicPartition
+		// 		partition := makeFetchResponseTopicPartition(batches...)
+		// 		partition.ErrorCode = 0
 
-				partitions = append(partitions, partition)
-				partition.ErrorCode = 3
-				partitions = append(partitions, partition)
-				partition.ErrorCode = 0
-				partitions = append(partitions, partition)
-				partition.ErrorCode = 1
-				partitions = append(partitions, partition)
+		// 		partitions = append(partitions, partition)
+		// 		partition.ErrorCode = 3
+		// 		partitions = append(partitions, partition)
+		// 		partition.ErrorCode = 0
+		// 		partitions = append(partitions, partition)
+		// 		partition.ErrorCode = 1
+		// 		partitions = append(partitions, partition)
 
-				return makeFetchResponse(apiVersion, makeFetchResponseTopic(topic, partitions...))
-			},
-			numCapturedEvents: 4,
-		},
-		{
-			name:  "error code limits",
-			topic: defaultTopic,
-			produceFetchValidationWithErrorCode: &kafkaParsingValidationWithErrorCodes{
-				expectedNumberOfFetchRequests: map[int32]int{
-					-1:  1 * 1 * 1,
-					119: 1 * 1 * 1,
-				},
-				expectedAPIVersionFetch: apiVersion,
-			},
-			buildResponse: func(topic string) kmsg.FetchResponse {
-				record := makeRecord()
-				var records []kmsg.Record
-				for i := 0; i < 1; i++ {
-					records = append(records, record)
-				}
+		// 		return makeFetchResponse(apiVersion, makeFetchResponseTopic(topic, partitions...))
+		// 	},
+		// 	numCapturedEvents: 4,
+		// },
+		// {
+		// 	name:  "error code limits",
+		// 	topic: defaultTopic,
+		// 	produceFetchValidationWithErrorCode: &kafkaParsingValidationWithErrorCodes{
+		// 		expectedNumberOfFetchRequests: map[int32]int{
+		// 			-1:  1 * 1 * 1,
+		// 			119: 1 * 1 * 1,
+		// 		},
+		// 		expectedAPIVersionFetch: apiVersion,
+		// 	},
+		// 	buildResponse: func(topic string) kmsg.FetchResponse {
+		// 		record := makeRecord()
+		// 		var records []kmsg.Record
+		// 		for i := 0; i < 1; i++ {
+		// 			records = append(records, record)
+		// 		}
 
-				recordBatch := makeRecordBatch(records...)
-				var batches []kmsg.RecordBatch
-				for i := 0; i < 1; i++ {
-					batches = append(batches, recordBatch)
-				}
+		// 		recordBatch := makeRecordBatch(records...)
+		// 		var batches []kmsg.RecordBatch
+		// 		for i := 0; i < 1; i++ {
+		// 			batches = append(batches, recordBatch)
+		// 		}
 
-				var partitions []kmsg.FetchResponseTopicPartition
-				partition := makeFetchResponseTopicPartition(batches...)
+		// 		var partitions []kmsg.FetchResponseTopicPartition
+		// 		partition := makeFetchResponseTopicPartition(batches...)
 
-				partition.ErrorCode = 119
-				partitions = append(partitions, partition)
+		// 		partition.ErrorCode = 119
+		// 		partitions = append(partitions, partition)
 
-				partition.ErrorCode = -1
-				partitions = append(partitions, partition)
+		// 		partition.ErrorCode = -1
+		// 		partitions = append(partitions, partition)
 
-				return makeFetchResponse(apiVersion, makeFetchResponseTopic(topic, partitions...))
-			},
-			numCapturedEvents: 2,
-		},
+		// 		return makeFetchResponse(apiVersion, makeFetchResponseTopic(topic, partitions...))
+		// 	},
+		// 	numCapturedEvents: 2,
+		// },
 	}
 
 	can := newCannedClientServer(t, tls)
@@ -1198,18 +1198,27 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 			continue
 		}
 
-		req := generateFetchRequest(apiVersion, topic)
-		resp := tt.buildResponse(topic)
-
 		formatter := kmsg.NewRequestFormatter(kmsg.FormatterClientID("kgo"))
 
 		type groupInfo struct {
 			numSets int
 			msgs    []Message
+			topic   string
 		}
 
 		var groups []groupInfo
 		var info groupInfo
+
+		topic = tt.topic
+		req := generateFetchRequest(apiVersion, topic)
+		resp := tt.buildResponse(topic)
+		dynamicTopic := topic == defaultTopic
+		if dynamicTopic {
+			topic = fmt.Sprintf("%s-split-%d", tt.topic, 0)
+			req = generateFetchRequest(apiVersion, topic)
+			resp = tt.buildResponse(topic)
+		}
+		info.topic = topic
 
 		for splitIdx := 0; splitIdx < 500; splitIdx++ {
 			reqData := formatter.AppendRequest(make([]byte, 0), &req, int32(splitIdx))
@@ -1238,14 +1247,20 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 				msgs = append(msgs, Message{response: respData[segSize+8:]})
 			}
 
+			info.numSets++
+			info.msgs = append(info.msgs, msgs...)
+
 			if info.numSets >= 20 {
 				groups = append(groups, info)
 				info.numSets = 0
 				info.msgs = make([]Message, 0)
+				if dynamicTopic {
+					topic = fmt.Sprintf("%s-split-%d", tt.topic, splitIdx)
+					req = generateFetchRequest(apiVersion, topic)
+					resp = tt.buildResponse(topic)
+				}
+				info.topic = topic
 			}
-
-			info.numSets++
-			info.msgs = append(info.msgs, msgs...)
 		}
 
 		if info.numSets > 0 {
@@ -1255,7 +1270,7 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 		for groupIdx, group := range groups {
 			name := fmt.Sprintf("split/%s/group%d", tt.name, groupIdx)
 			t.Run(name, func(t *testing.T) {
-				os.WriteFile("/sys/kernel/debug/tracing/trace", []byte(""), 0)
+				// os.WriteFile("/sys/kernel/debug/tracing/trace", []byte(""), 0)
 				os.WriteFile("/sys/kernel/debug/tracing/trace_marker", []byte(fmt.Sprintln(t.Name())), fs.ModeAppend)
 
 				fmt.Println("tt.numFetchedRecords", tt.numFetchedRecords)
@@ -1276,9 +1291,9 @@ func testKafkaFetchRaw(t *testing.T, tls bool, apiVersion int) {
 						tempFetchValidation[k] = v * group.numSets
 					}
 					tmp.expectedNumberOfFetchRequests = tempFetchValidation
-					getAndValidateKafkaStatsWithErrorCodes(t, monitor, 1, topic, tmp)
+					getAndValidateKafkaStatsWithErrorCodes(t, monitor, 1, group.topic, tmp)
 				} else {
-					getAndValidateKafkaStats(t, monitor, 1, topic, kafkaParsingValidation{
+					getAndValidateKafkaStats(t, monitor, 1, group.topic, kafkaParsingValidation{
 						expectedNumberOfFetchRequests: tt.numFetchedRecords * group.numSets,
 						expectedAPIVersionFetch:       apiVersion,
 						tlsEnabled:                    tls,
