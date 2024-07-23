@@ -45,7 +45,7 @@ type Message struct {
 	Status             string
 	IngestionTimestamp int64
 	// RawDataLen tracks the original size of the message content before any trimming/transformation.
-	// This is used when caluclating the tailer offset - so this will NOT always be equal to `len(Content)`.
+	// This is used when calculating the tailer offset - so this will NOT always be equal to `len(Content)`.
 	RawDataLen  int
 	IsMultiLine bool
 	// Tags added on processing

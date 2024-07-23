@@ -9,7 +9,7 @@ package automultilinedetection
 import (
 	"testing"
 
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type mockHeuristic struct {
