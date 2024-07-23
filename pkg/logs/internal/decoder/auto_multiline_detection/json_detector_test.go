@@ -15,27 +15,27 @@ import (
 func TestJsonDetector(t *testing.T) {
 	jsonDetector := NewJSONDetector()
 	testCases := []struct {
-		rawMessage    []byte
+		rawMessage    string
 		expectedLabel Label
 	}{
-		{[]byte(`{"key": "value"}`), noAggregate},
-		{[]byte(`             {"key": "value"}`), noAggregate},
-		{[]byte(`    { "key": "value"}`), noAggregate},
-		{[]byte(`    {."key": "value"}`), aggregate},
-		{[]byte(`.{"key": "value"}`), aggregate},
-		{[]byte(`{"another_key": "another_value"}`), noAggregate},
-		{[]byte(`{"key": 12345}`), noAggregate},
-		{[]byte(`{"array": [1,2,3]}`), noAggregate},
-		{[]byte(`not json`), aggregate},
-		{[]byte(`{foo}`), aggregate},
-		{[]byte(`{bar"}`), aggregate},
-		{[]byte(`"FOO"}`), aggregate},
+		{`{"key": "value"}`, noAggregate},
+		{`    {"key": "value"}`, noAggregate},
+		{`    { "key": "value"}`, noAggregate},
+		{`    {."key": "value"}`, aggregate},
+		{`.{"key": "value"}`, aggregate},
+		{`{"another_key": "another_value"}`, noAggregate},
+		{`{"key": 12345}`, noAggregate},
+		{`{"array": [1,2,3]}`, noAggregate},
+		{`not json`, aggregate},
+		{`{foo}`, aggregate},
+		{`{bar"}`, aggregate},
+		{`"FOO"}`, aggregate},
 	}
 
 	for _, tc := range testCases {
 		t.Run(string(tc.rawMessage), func(t *testing.T) {
 			messageContext := &messageContext{
-				rawMessage: tc.rawMessage,
+				rawMessage: []byte(tc.rawMessage),
 				label:      aggregate,
 			}
 			jsonDetector.Process(messageContext)

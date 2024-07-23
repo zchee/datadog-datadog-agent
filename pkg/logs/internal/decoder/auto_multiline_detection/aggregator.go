@@ -8,6 +8,7 @@ package automultilinedetection
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
 )
@@ -30,7 +31,7 @@ func (b *bucket) add(msg *message.Message) {
 }
 
 func (b *bucket) isEmpty() bool {
-	return b.message == nil
+	return b.buffer.Len() == 0
 }
 
 func (b *bucket) flush() *message.Message {
@@ -51,24 +52,30 @@ func (b *bucket) flush() *message.Message {
 	return message.NewRawMessage(content, b.message.Status, originalLen, b.message.ParsingExtra.Timestamp)
 }
 
-// Aggregator aggregates multiline logs.
+// Aggregator aggregates multiline logs with a given label.
 type Aggregator struct {
 	outputFn       func(m *message.Message)
 	bucket         *bucket
 	maxContentSize int
+	flushTimeout   time.Duration
+	flushTimer     *time.Timer
 }
 
 // NewAggregator creates a new aggregator.
-func NewAggregator(outputFn func(m *message.Message), maxContentSize int) *Aggregator {
+func NewAggregator(outputFn func(m *message.Message), maxContentSize int, flushTimeout time.Duration) *Aggregator {
 	return &Aggregator{
 		outputFn:       outputFn,
 		bucket:         &bucket{buffer: bytes.NewBuffer(nil)},
 		maxContentSize: maxContentSize,
+		flushTimeout:   flushTimeout,
 	}
 }
 
 // Aggregate aggregates a multiline log using a label.
 func (a *Aggregator) Aggregate(msg *message.Message, label Label) {
+
+	a.stopFlushTimerIfNeeded()
+	defer a.startFlushTimerIfNeeded()
 
 	// If `noAggregate` - flush the bucket immediately and then flush the next message.
 	if label == noAggregate {
@@ -89,13 +96,43 @@ func (a *Aggregator) Aggregate(msg *message.Message, label Label) {
 	}
 
 	// At this point we either have `startGroup` with an empty bucket or `aggregate` with a non-empty bucket
-	// so we add the message to the bucket
+	// so we add the message to the bucket or flush if the bucket will overflow the max content size.
 
-	if msg.RawDataLen+a.bucket.buffer.Len() >= a.maxContentSize {
+	if msg.RawDataLen+a.bucket.buffer.Len() > a.maxContentSize {
 		a.bucket.flush()
 	}
 
 	a.bucket.add(msg)
+}
+
+func (a *Aggregator) stopFlushTimerIfNeeded() {
+	if a.flushTimer == nil || a.bucket.isEmpty() {
+		return
+	}
+	// stop the flush timer, as we now have data
+	if !a.flushTimer.Stop() {
+		<-a.flushTimer.C
+	}
+}
+
+func (a *Aggregator) startFlushTimerIfNeeded() {
+	if a.bucket.isEmpty() {
+		return
+	}
+	// since there's buffered data, start the flush timer to flush it
+	if a.flushTimer == nil {
+		a.flushTimer = time.NewTimer(a.flushTimeout)
+	} else {
+		a.flushTimer.Reset(a.flushTimeout)
+	}
+}
+
+// FlushChan returns the flush timer channel.
+func (a *Aggregator) FlushChan() <-chan time.Time {
+	if a.flushTimer != nil {
+		return a.flushTimer.C
+	}
+	return nil
 }
 
 // Flush flushes the aggregator.

@@ -14,12 +14,12 @@ import (
 
 // AutoMultilineHandler aggreagates multiline logs.
 type AutoMultilineHandler struct {
-	labler       *automultilinedetection.Labeler
-	aggreagateor *automultilinedetection.Aggregator
+	labler     *automultilinedetection.Labeler
+	aggregator *automultilinedetection.Aggregator
 }
 
 // NewAutoMultilineHandler creates a new auto multiline handler.
-func NewAutoMultilineHandler(outputFn func(m *message.Message), maxContentSize int) *AutoMultilineHandler {
+func NewAutoMultilineHandler(outputFn func(m *message.Message), maxContentSize int, flushTimeout time.Duration) *AutoMultilineHandler {
 
 	// Order is important
 	heuristics := []automultilinedetection.Heuristic{
@@ -27,20 +27,20 @@ func NewAutoMultilineHandler(outputFn func(m *message.Message), maxContentSize i
 	}
 
 	return &AutoMultilineHandler{
-		labler:       automultilinedetection.NewLabler(heuristics),
-		aggreagateor: automultilinedetection.NewAggregator(outputFn, maxContentSize),
+		labler:     automultilinedetection.NewLabler(heuristics),
+		aggregator: automultilinedetection.NewAggregator(outputFn, maxContentSize, flushTimeout),
 	}
 }
 
-func (m *AutoMultilineHandler) process(msg *message.Message) {
-	label := m.labler.Label(msg.GetContent())
-	m.aggreagateor.Aggregate(msg, label)
+func (a *AutoMultilineHandler) process(msg *message.Message) {
+	label := a.labler.Label(msg.GetContent())
+	a.aggregator.Aggregate(msg, label)
 }
 
-func (m *AutoMultilineHandler) flushChan() <-chan time.Time {
-	return nil
+func (a *AutoMultilineHandler) flushChan() <-chan time.Time {
+	return a.aggregator.FlushChan()
 }
 
-func (m *AutoMultilineHandler) flush() {
-	m.aggreagateor.Flush()
+func (a *AutoMultilineHandler) flush() {
+	a.aggregator.Flush()
 }

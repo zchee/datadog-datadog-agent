@@ -21,14 +21,15 @@ const (
 type messageContext struct {
 	rawMessage []byte
 	// NOTE: tokens can be nil if the heuristic runs before the tokenizer.
+	// Heuristic implementations must check if tokens is nil before using it.
 	tokens []token
 	label  Label
 }
 
-// Heuristic is a strategy to label log messages.
+// Heuristic is an interface representing a strategy to label log messages.
 type Heuristic interface {
 	// Process processes a log message and annotates the context with a label. It returns false if the message should be done processing.
-	// Heuristic implementations must not mutate the message context asynchonously.
+	// Heuristic implementations may mutate the message context but must do so synchronously.
 	Process(*messageContext) bool
 }
 
