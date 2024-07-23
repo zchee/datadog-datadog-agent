@@ -17,10 +17,6 @@
 name "systemd"
 default_version "253"
 
-dependency 'nettle'
-dependency 'gmp'
-dependency 'libtasn1'
-
 license "GPLv2"
 license "LGPL-2.1"
 license_file "LICENSE.GPL2"
