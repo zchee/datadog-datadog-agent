@@ -4,6 +4,7 @@ RtLoader namespaced tasks
 
 import errno
 import os
+import platform
 import shutil
 import sys
 
@@ -64,8 +65,12 @@ def make(ctx, install_prefix=None, python_runtimes='3', cmake_options=''):
         cmake_options += " -G \"Unix Makefiles\""
 
     cmake_args = cmake_options + f" -DBUILD_DEMO:BOOL=OFF -DCMAKE_INSTALL_PREFIX:PATH={install_prefix or dev_path}"
-    # TMP HACK
-    cmake_args += ' --toolchain /opt/cmake/x86_64-unknown-linux-gnu.toolchain.cmake'
+    if platform.processor() == 'x86_64':
+        cmake_args += ' --toolchain /opt/cmake/x86_64-unknown-linux-gnu.toolchain.cmake'
+    elif platform.processor() == 'arm64':
+        cmake_args += ' --toolchain /opt/cmake/aarch64-unknown-linux-gnu.toolchain.cmake'
+    else:
+        print(f'Unknown processor {platform.processor()}')
 
     python_runtimes = python_runtimes.split(',')
 
