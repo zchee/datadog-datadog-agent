@@ -10,7 +10,7 @@ import "regexp"
 
 var jsonRegexp = regexp.MustCompile(`^\s*\{\s*\"`)
 
-// JsonDetector is a heuristic to detect JSON messages.
+// JSONDetector is a heuristic to detect JSON messages.
 type JSONDetector struct{}
 
 // NewJSONDetector returns a new JSON detection heuristic.

@@ -47,9 +47,8 @@ func (b *bucket) flush() *message.Message {
 
 	if b.lineCount > 1 {
 		return message.NewRawMultiLineMessage(content, b.message.Status, originalLen, b.message.ParsingExtra.Timestamp)
-	} else {
-		return message.NewRawMessage(content, b.message.Status, originalLen, b.message.ParsingExtra.Timestamp)
 	}
+	return message.NewRawMessage(content, b.message.Status, originalLen, b.message.ParsingExtra.Timestamp)
 }
 
 // Aggregator aggregates multiline logs.
