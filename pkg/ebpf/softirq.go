@@ -188,7 +188,7 @@ func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
 			return
 		}
 	} else {
-		fs, err = procfs.NewFS("/host")
+		fs, err = procfs.NewFS("/host/proc")
 		if err != nil {
 			log.Infof("unable to open procfs mounted at /host: %v", err)
 			return
