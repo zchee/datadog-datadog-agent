@@ -47,6 +47,8 @@ include:
 default:
   retry:
     max: 2
+    exit_codes:
+      - 42  # Custom exit code for "Unable to locate credentials"
     when:
       - runner_system_failure
       - stuck_or_timeout_failure
