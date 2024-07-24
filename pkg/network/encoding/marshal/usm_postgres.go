@@ -62,6 +62,7 @@ func (e *postgresEncoder) encodeData(connectionData *USMConnectionData[postgres.
 		staticTags |= stats.StaticTags
 		e.postgresAggregationsBuilder.AddAggregations(func(builder *model.DatabaseStatsBuilder) {
 			builder.SetPostgres(func(statsBuilder *model.PostgresStatsBuilder) {
+				statsBuilder.SetDatabaseName(key.DatabaseName)
 				statsBuilder.SetTableName(key.TableName)
 				statsBuilder.SetOperation(uint64(toPostgresModelOperation(key.Operation)))
 				if latencies := stats.Latencies; latencies != nil {

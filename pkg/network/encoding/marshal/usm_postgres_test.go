@@ -24,16 +24,15 @@ const (
 	postgresClientPort = uint16(2345)
 	postgresServerPort = uint16(5432)
 	tableName          = "TableName"
+	databaseName       = "DatabaseName"
 )
 
-var (
-	postgresDefaultConnection = network.ConnectionStats{
-		Source: localhost,
-		Dest:   localhost,
-		SPort:  postgresClientPort,
-		DPort:  postgresServerPort,
-	}
-)
+var postgresDefaultConnection = network.ConnectionStats{
+	Source: localhost,
+	Dest:   localhost,
+	SPort:  postgresClientPort,
+	DPort:  postgresServerPort,
+}
 
 type PostgresSuite struct {
 	suite.Suite
@@ -53,6 +52,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.SelectOP,
+		databaseName,
 		tableName,
 	)
 	insertKey := postgres.NewKey(
@@ -61,6 +61,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.InsertOP,
+		databaseName,
 		tableName,
 	)
 	updateKey := postgres.NewKey(
@@ -69,6 +70,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.UpdateOP,
+		databaseName,
 		tableName,
 	)
 	createKey := postgres.NewKey(
@@ -77,6 +79,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.CreateTableOP,
+		databaseName,
 		tableName,
 	)
 	dropKey := postgres.NewKey(
@@ -85,6 +88,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.DropTableOP,
+		databaseName,
 		tableName,
 	)
 	deleteKey := postgres.NewKey(
@@ -93,6 +97,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.DeleteTableOP,
+		databaseName,
 		tableName,
 	)
 	alterKey := postgres.NewKey(
@@ -101,6 +106,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.AlterTableOP,
+		databaseName,
 		tableName,
 	)
 	truncateKey := postgres.NewKey(
@@ -109,6 +115,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.TruncateTableOP,
+		databaseName,
 		tableName,
 	)
 
@@ -162,6 +169,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 						Operation:          model.PostgresOperation_PostgresSelectOp,
 						FirstLatencySample: 5,
 						Count:              10,
+						DatabaseName:       databaseName,
 					},
 				},
 			},
@@ -172,6 +180,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 						Operation:          model.PostgresOperation_PostgresInsertOp,
 						FirstLatencySample: 5,
 						Count:              10,
+						DatabaseName:       databaseName,
 					},
 				},
 			},
@@ -182,6 +191,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 						Operation:          model.PostgresOperation_PostgresUpdateOp,
 						FirstLatencySample: 5,
 						Count:              10,
+						DatabaseName:       databaseName,
 					},
 				},
 			},
@@ -192,6 +202,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 						Operation:          model.PostgresOperation_PostgresCreateOp,
 						FirstLatencySample: 5,
 						Count:              10,
+						DatabaseName:       databaseName,
 					},
 				},
 			},
@@ -202,6 +213,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 						Operation:          model.PostgresOperation_PostgresDropOp,
 						FirstLatencySample: 5,
 						Count:              10,
+						DatabaseName:       databaseName,
 					},
 				},
 			},
@@ -212,6 +224,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 						Operation:          model.PostgresOperation_PostgresDeleteOp,
 						FirstLatencySample: 5,
 						Count:              10,
+						DatabaseName:       databaseName,
 					},
 				},
 			},
@@ -222,6 +235,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 						Operation:          model.PostgresOperation_PostgresAlterOp,
 						FirstLatencySample: 5,
 						Count:              10,
+						DatabaseName:       databaseName,
 					},
 				},
 			},
@@ -232,6 +246,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 						Operation:          model.PostgresOperation_PostgresTruncateOp,
 						FirstLatencySample: 5,
 						Count:              10,
+						DatabaseName:       databaseName,
 					},
 				},
 			},
@@ -273,6 +288,7 @@ func (s *PostgresSuite) TestPostgresIDCollisionRegression() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.SelectOP,
+		databaseName,
 		tableName,
 	)
 
@@ -333,6 +349,7 @@ func (s *PostgresSuite) TestPostgresLocalhostScenario() {
 		postgresClientPort,
 		postgresServerPort,
 		postgres.InsertOP,
+		databaseName,
 		tableName,
 	)
 
@@ -409,6 +426,7 @@ func generateBenchMarkPayloadPostgres(sourcePortsMax, destPortsMax uint16) netwo
 				dport+1,
 				postgres.SelectOP,
 				tableName,
+				databaseName,
 			)] = &postgres.RequestStat{
 				Count:              10,
 				FirstLatencySample: 5,
