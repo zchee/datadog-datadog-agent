@@ -8,7 +8,6 @@ package automultilinedetection
 
 import (
 	"bytes"
-	"strings"
 	"unicode"
 )
 
@@ -202,7 +201,7 @@ func tokenize(input []byte) []Token {
 
 	run := 0
 	lastToken := getToken(input[0])
-	strBuf := bytes.NewBuffer([]byte{input[0]})
+	strBuf := bytes.NewBuffer([]byte{byte(unicode.ToUpper(rune(input[0])))})
 
 	insertToken := func() {
 		defer func() {
@@ -216,14 +215,10 @@ func tokenize(input []byte) []Token {
 				return
 			}
 		} else if strBuf.Len() > 1 {
-			if specialToken := getSpecialLongToken(strings.ToUpper(strBuf.String())); specialToken != END {
+			if specialToken := getSpecialLongToken(strBuf.String()); specialToken != END {
 				tokens = append(tokens, specialToken)
 				return
 			}
-			// if specialToken, ok := specialMap[strings.ToUpper(strBuf.String())]; ok {
-			// 	tokens = append(tokens, specialToken)
-			// 	return
-			// }
 		}
 
 		// Check for char or digit runs
@@ -245,7 +240,11 @@ func tokenize(input []byte) []Token {
 		} else {
 			run++
 		}
-		strBuf.WriteByte(char)
+		if currentToken == C1 {
+			strBuf.WriteByte(byte(unicode.ToUpper(rune(char))))
+		} else {
+			strBuf.WriteByte(char)
+		}
 		lastToken = currentToken
 	}
 
