@@ -75,11 +75,6 @@ def check_local_branch(ctx, branch):
 
 
 def get_commit_sha(ctx, commit="HEAD", short=False) -> str:
-    if commit == "HEAD":
-        key = 'CI_COMMIT_SHORT_SHA' if short else 'CI_COMMIT_SHA'
-        commit = os.environ.get(key)
-        if commit:
-            return commit
     return ctx.run(f"git rev-parse {'--short ' if short else ''}{commit}", hide=True).stdout.strip()
 
 

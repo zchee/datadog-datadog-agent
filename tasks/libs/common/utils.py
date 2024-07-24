@@ -382,7 +382,9 @@ def get_version_ldflags(ctx, major_version='7', install_path=None):
     flags
     """
     payload_v = get_payload_version()
-    commit = get_commit_sha(ctx, short=True)
+    commit = os.environ.get('CI_COMMIT_SHORT_SHA')
+    if not commit:
+        commit = get_commit_sha(ctx, short=True)
 
     ldflags = f"-X {REPO_PATH}/pkg/version.Commit={commit} "
     ldflags += (
