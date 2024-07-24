@@ -173,6 +173,7 @@ func getSpecialShortToken(char byte) Token {
 	return END
 }
 
+// getSpecialLongToken returns a special token that is > 1 character
 func getSpecialLongToken(input string) Token {
 	switch input {
 	case "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL",
@@ -202,22 +203,26 @@ func tokenize(input []byte) []Token {
 	run := 0
 	lastToken := getToken(input[0])
 	strBuf := bytes.NewBuffer([]byte{byte(unicode.ToUpper(rune(input[0])))})
+	strBuf.Grow(maxRun - 1) // Pre-allocate buffer for max run size. This ensures tokenization has a constant number of allocations.
 
 	insertToken := func() {
 		defer func() {
 			run = 0
 			strBuf.Reset()
 		}()
-		// If the buffer is not empty, check if it is a special token
-		if strBuf.Len() == 1 {
-			if specialToken := getSpecialShortToken(strBuf.Bytes()[0]); specialToken != END {
-				tokens = append(tokens, specialToken)
-				return
-			}
-		} else if strBuf.Len() > 1 {
-			if specialToken := getSpecialLongToken(strBuf.String()); specialToken != END {
-				tokens = append(tokens, specialToken)
-				return
+
+		// Only test for special tokens if the last token was a charcater (Special tokens are currently only A-Z).
+		if lastToken == C1 {
+			if strBuf.Len() == 1 {
+				if specialToken := getSpecialShortToken(strBuf.Bytes()[0]); specialToken != END {
+					tokens = append(tokens, specialToken)
+					return
+				}
+			} else if strBuf.Len() > 1 { // Only test special long tokens if buffer is > 1 token
+				if specialToken := getSpecialLongToken(strBuf.String()); specialToken != END {
+					tokens = append(tokens, specialToken)
+					return
+				}
 			}
 		}
 
@@ -241,6 +246,7 @@ func tokenize(input []byte) []Token {
 			run++
 		}
 		if currentToken == C1 {
+			// Store upper case A-Z characters for matching special tokens
 			strBuf.WriteByte(byte(unicode.ToUpper(rune(char))))
 		} else {
 			strBuf.WriteByte(char)
