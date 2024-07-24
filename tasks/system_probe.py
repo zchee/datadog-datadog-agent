@@ -273,6 +273,7 @@ def ninja_telemetry_ebpf_programs(nw, build_dir, co_re_build_dir):
     telemetry_co_re_programs = [
         "lock_contention",
         "ksyms_iter",
+        "softirq",
     ]
     for prog in telemetry_co_re_programs:
         infile = os.path.join(src_dir, f"{prog}.c")
