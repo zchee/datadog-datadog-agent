@@ -18,15 +18,17 @@ import (
 
 // Key is an identifier for a group of Postgres transactions
 type Key struct {
-	Operation Operation
-	TableName string
+	DatabaseName string
+	Operation    Operation
+	TableName    string
 	types.ConnectionKey
 }
 
 // NewKey creates a new postgres key
-func NewKey(saddr, daddr util.Address, sport, dport uint16, operation Operation, tableName string) Key {
+func NewKey(saddr, daddr util.Address, sport, dport uint16, operation Operation, databaseName, tableName string) Key {
 	return Key{
 		ConnectionKey: types.NewConnectionKey(saddr, daddr, sport, dport),
+		DatabaseName:  databaseName,
 		Operation:     operation,
 		TableName:     tableName,
 	}

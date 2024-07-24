@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/DataDog/datadog-agent/pkg/network/config"
+	netebpf "github.com/DataDog/datadog-agent/pkg/network/ebpf"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
@@ -19,12 +20,15 @@ type StatKeeper struct {
 	stats      map[Key]*RequestStat
 	statsMutex sync.RWMutex
 	maxEntries int
+
+	databaseNamesCache map[netebpf.ConnTuple]string
 }
 
 // NewStatkeeper creates a new StatKeeper
 func NewStatkeeper(c *config.Config) *StatKeeper {
 	newStatKeeper := &StatKeeper{
-		maxEntries: c.MaxPostgresStatsBuffered,
+		maxEntries:         c.MaxPostgresStatsBuffered,
+		databaseNamesCache: make(map[netebpf.ConnTuple]string),
 	}
 	newStatKeeper.resetNoLock()
 	return newStatKeeper
@@ -35,7 +39,14 @@ func (s *StatKeeper) Process(tx *EventWrapper) {
 	s.statsMutex.Lock()
 	defer s.statsMutex.Unlock()
 
+	if tx.Tx.Startup_flags == StartupEvent {
+		parameters := parsePostgresParameters(tx.Tx.getFragment())
+		s.registerDatabaseName(tx.Tuple, parameters.getDatabaseName())
+		return
+	}
+
 	key := Key{
+		DatabaseName:  s.getDatabaseName(tx.Tuple),
 		Operation:     tx.Operation(),
 		TableName:     tx.TableName(),
 		ConnectionKey: tx.ConnTuple(),
@@ -78,4 +89,21 @@ func (s *StatKeeper) GetAndResetAllStats() map[Key]*RequestStat {
 
 func (s *StatKeeper) resetNoLock() {
 	s.stats = make(map[Key]*RequestStat)
+}
+
+// getDatabaseName wraps access to the database name cache, return an
+// empty name if there is no entry for the given tuple.
+func (s *StatKeeper) getDatabaseName(tuple netebpf.ConnTuple) string {
+	if name, ok := s.databaseNamesCache[tuple]; ok {
+		return name
+	}
+
+	return ""
+}
+
+// registerDatabaseName wraps the insertion of database name in the
+// database name cache.
+func (s *StatKeeper) registerDatabaseName(tuple netebpf.ConnTuple, name string) {
+	s.databaseNamesCache[tuple] = name
+	log.Debugf("Postgres statskeeper: registering db name: %v; cache size: %v", name, len(s.databaseNamesCache))
 }

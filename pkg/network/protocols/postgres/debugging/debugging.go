@@ -22,9 +22,10 @@ type address struct {
 
 // key represents a (client, server, table name) tuple.
 type key struct {
-	Client    address
-	Server    address
-	TableName string
+	Client       address
+	Server       address
+	TableName    string
+	DatabaseName string
 }
 
 // Stats consolidates request count and latency information for a certain status code
@@ -58,7 +59,8 @@ func Postgres(stats map[postgres.Key]*postgres.RequestStat) []RequestSummary {
 				IP:   serverAddr.String(),
 				Port: k.DstPort,
 			},
-			TableName: k.TableName,
+			TableName:    k.TableName,
+			DatabaseName: k.DatabaseName,
 		}
 		if _, ok := resMap[tempKey]; !ok {
 			resMap[tempKey] = make(map[string]Stats)

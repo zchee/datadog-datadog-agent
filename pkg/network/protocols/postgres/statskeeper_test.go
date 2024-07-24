@@ -18,10 +18,16 @@ import (
 func TestStatKeeperProcess(t *testing.T) {
 	cfg := config.New()
 	cfg.MaxPostgresStatsBuffered = 100
+
+	tuple := getTestTuple()
+
 	s := NewStatkeeper(cfg)
+	s.registerDatabaseName(tuple, "testdb")
+
 	for i := 0; i < 20; i++ {
 		s.Process(&EventWrapper{
 			EbpfEvent: &EbpfEvent{
+				Tuple: tuple,
 				Tx: EbpfTx{
 					Request_started:    1,
 					Response_last_seen: 10,
@@ -36,9 +42,17 @@ func TestStatKeeperProcess(t *testing.T) {
 
 	require.Equal(t, 1, len(s.stats))
 	for k, stat := range s.stats {
+		require.Equal(t, "testdb", k.DatabaseName)
 		require.Equal(t, "dummy", k.TableName)
 		require.Equal(t, SelectOP, k.Operation)
 		require.Equal(t, 20, stat.Count)
 		require.Equal(t, float64(20), stat.Latencies.GetCount())
+	}
+}
+
+func getTestTuple() ConnTuple {
+	return ConnTuple{
+		Sport: 53602,
+		Dport: 5432,
 	}
 }
