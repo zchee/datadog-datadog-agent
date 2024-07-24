@@ -39,19 +39,20 @@ func TestTokenizer(t *testing.T) {
 		{input: "Z0NE", expectedToken: "ZDCC"},
 	}
 
+	tokenizer := NewTokenizer(0)
 	for _, tc := range testCases {
-		actualToken := tokensToString(tokenize([]byte(tc.input)))
+		actualToken := tokensToString(tokenizer.tokenize([]byte(tc.input)))
 		assert.Equal(t, tc.expectedToken, actualToken)
 	}
 }
 
 func TestTokenizerMaxCharRun(t *testing.T) {
-	tokens := tokensToString(tokenize([]byte("ABCDEFGHIJKLMNOP")))
+	tokens := tokensToString(NewTokenizer(0).tokenize([]byte("ABCDEFGHIJKLMNOP")))
 	assert.Equal(t, "CCCCCCCCCC", tokens)
 }
 
 func TestTokenizerMaxDigitRun(t *testing.T) {
-	tokens := tokensToString(tokenize([]byte("0123456789012345")))
+	tokens := tokensToString(NewTokenizer(0).tokenize([]byte("0123456789012345")))
 	assert.Equal(t, "DDDDDDDDDD", tokens)
 }
 

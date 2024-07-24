@@ -11,10 +11,6 @@ import (
 	"unicode"
 )
 
-// The tokenizer is used to convert a log message (string of bytes) into a list of tokens that
-// represents the underlying structure of the log. The string of tokens is a compact slice of bytes
-// that can be used to compare log messages for similarity.
-
 // Token is the type that represents a single token.
 type Token byte
 
@@ -88,10 +84,103 @@ const (
 	T
 	Z
 
-	END // Not used as a token. Used to mark the end of the token list
+	END // Not a valid token. Used to mark the end of the token list or as a terminator.
 )
 
 //revive:enable
+
+// Tokenizer is a heuristic to compute tokens from a log message.
+// The tokenizer is used to convert a log message (string of bytes) into a list of tokens that
+// represents the underlying structure of the log. The string of tokens is a compact slice of bytes
+// that can be used to compare log messages for similarity. A tokenizer instance is not thread safe
+// as bufferes are reused to avoid allocations.
+type Tokenizer struct {
+	maxEvalBytes int
+	strBuf       *bytes.Buffer
+}
+
+// NewTokenizer returns a new Tokenizer detection heuristic.
+func NewTokenizer(maxEvalBytes int) *Tokenizer {
+	return &Tokenizer{
+		maxEvalBytes: maxEvalBytes,
+		strBuf:       bytes.NewBuffer(make([]byte, 0, maxRun)),
+	}
+}
+
+// Process enriches the message context with tokens.
+// This implements the Herustic interface - this heuristic does not stop processing.
+func (t *Tokenizer) Process(context *messageContext) bool {
+	maxBytes := len(context.rawMessage)
+	if maxBytes > t.maxEvalBytes {
+		maxBytes = t.maxEvalBytes
+	}
+	context.tokens = t.tokenize(context.rawMessage[:maxBytes])
+	return true
+}
+
+// tokenize converts a byte slice to a list of tokens.
+func (t *Tokenizer) tokenize(input []byte) []Token {
+	// len(tokens) will always be <= len(input)
+	tokens := make([]Token, 0, len(input))
+
+	run := 0
+	lastToken := getToken(input[0])
+	t.strBuf.Reset()
+	t.strBuf.WriteRune(unicode.ToUpper(rune(input[0])))
+
+	insertToken := func() {
+		defer func() {
+			run = 0
+			t.strBuf.Reset()
+		}()
+
+		// Only test for special tokens if the last token was a charcater (Special tokens are currently only A-Z).
+		if lastToken == C1 {
+			if t.strBuf.Len() == 1 {
+				if specialToken := getSpecialShortToken(t.strBuf.Bytes()[0]); specialToken != END {
+					tokens = append(tokens, specialToken)
+					return
+				}
+			} else if t.strBuf.Len() > 1 { // Only test special long tokens if buffer is > 1 token
+				if specialToken := getSpecialLongToken(t.strBuf.String()); specialToken != END {
+					tokens = append(tokens, specialToken)
+					return
+				}
+			}
+		}
+
+		// Check for char or digit runs
+		if lastToken == C1 || lastToken == D1 {
+			// Limit max run size
+			if run >= maxRun {
+				run = maxRun - 1
+			}
+			tokens = append(tokens, lastToken+Token(run))
+		} else {
+			tokens = append(tokens, lastToken)
+		}
+	}
+
+	for _, char := range input[1:] {
+		currentToken := getToken(char)
+		if currentToken != lastToken {
+			insertToken()
+		} else {
+			run++
+		}
+		if currentToken == C1 {
+			// Store upper case A-Z characters for matching special tokens
+			t.strBuf.WriteRune(unicode.ToUpper(rune(char)))
+		} else {
+			t.strBuf.WriteByte(char)
+		}
+		lastToken = currentToken
+	}
+
+	insertToken()
+
+	return tokens
+}
 
 // getToken returns a single token from a single byte.
 func getToken(char byte) Token {
@@ -195,70 +284,6 @@ func getSpecialLongToken(input string) Token {
 	return END
 }
 
-// tokenize converts a byte slice to a list of tokens.
-func tokenize(input []byte) []Token {
-	// len(tokens) will always be <= len(input)
-	tokens := make([]Token, 0, len(input))
-
-	run := 0
-	lastToken := getToken(input[0])
-	strBuf := bytes.NewBuffer([]byte{byte(unicode.ToUpper(rune(input[0])))})
-	strBuf.Grow(maxRun - 1) // Pre-allocate buffer for max run size. This ensures tokenization has a constant number of allocations.
-
-	insertToken := func() {
-		defer func() {
-			run = 0
-			strBuf.Reset()
-		}()
-
-		// Only test for special tokens if the last token was a charcater (Special tokens are currently only A-Z).
-		if lastToken == C1 {
-			if strBuf.Len() == 1 {
-				if specialToken := getSpecialShortToken(strBuf.Bytes()[0]); specialToken != END {
-					tokens = append(tokens, specialToken)
-					return
-				}
-			} else if strBuf.Len() > 1 { // Only test special long tokens if buffer is > 1 token
-				if specialToken := getSpecialLongToken(strBuf.String()); specialToken != END {
-					tokens = append(tokens, specialToken)
-					return
-				}
-			}
-		}
-
-		// Check for char or digit runs
-		if lastToken == C1 || lastToken == D1 {
-			// Limit max run size
-			if run >= maxRun {
-				run = maxRun - 1
-			}
-			tokens = append(tokens, lastToken+Token(run))
-		} else {
-			tokens = append(tokens, lastToken)
-		}
-	}
-
-	for _, char := range input[1:] {
-		currentToken := getToken(char)
-		if currentToken != lastToken {
-			insertToken()
-		} else {
-			run++
-		}
-		if currentToken == C1 {
-			// Store upper case A-Z characters for matching special tokens
-			strBuf.WriteByte(byte(unicode.ToUpper(rune(char))))
-		} else {
-			strBuf.WriteByte(char)
-		}
-		lastToken = currentToken
-	}
-
-	insertToken()
-
-	return tokens
-}
-
 // tokenToString converts a single token to a debug string.
 func tokenToString(token Token) string {
 	if token >= D1 && token <= D10 {
@@ -358,27 +383,4 @@ func tokensToString(tokens []Token) string {
 		str += tokenToString(t)
 	}
 	return str
-}
-
-// Tokenizer is a heuristic to compute tokens from a log message.
-type Tokenizer struct {
-	maxEvalBytes int
-}
-
-// NewTokenizer returns a new Tokenizer detection heuristic.
-func NewTokenizer(maxEvalBytes int) *Tokenizer {
-	return &Tokenizer{
-		maxEvalBytes: maxEvalBytes,
-	}
-}
-
-// Process enriches the message context with tokens.
-// This implements the Herustic interface - this heuristic does not stop processing.
-func (t *Tokenizer) Process(context *messageContext) bool {
-	maxBytes := len(context.rawMessage)
-	if maxBytes > t.maxEvalBytes {
-		maxBytes = t.maxEvalBytes
-	}
-	context.tokens = tokenize(context.rawMessage[:maxBytes])
-	return true
 }
