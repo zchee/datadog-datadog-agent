@@ -16,3 +16,8 @@ type ContentionData struct {
 	Flags      uint32
 }
 type LockType uint32
+
+type PPIRQ struct {
+	Max_packets_processed uint64
+	Entry_packets_count   uint64
+}

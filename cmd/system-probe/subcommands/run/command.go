@@ -344,7 +344,7 @@ func startSystemProbe(log log.Component, statsd compstatsd.Component, telemetry 
 			if ec := ebpftelemetry.NewEBPFErrorsCollector(); ec != nil {
 				telemetry.RegisterCollector(ec)
 			}
-			if ns := ebpftelemetry.NewNetStatsCollector(); ns != nil {
+			if ns := ddebpf.NewNetStatsCollector(); ns != nil {
 				telemetry.RegisterCollector(ns)
 			}
 		}

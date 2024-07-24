@@ -9,9 +9,12 @@ package ebpf
 
 /*
 #include "./c/lock_contention.h"
+#include "./c/softirq.h"
 */
 import "C"
 
 type LockRange C.lock_range_t
 type ContentionData C.contention_data_t
 type LockType C.lock_type_t
+
+type PPIRQ C.ppirq_t

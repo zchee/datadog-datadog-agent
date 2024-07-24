@@ -38,6 +38,10 @@ func postRegister(cfg *sysconfigtypes.Config, moduleFactories []Factory) error {
 			// do not prevent system-probe from starting if lock contention collector fails
 			log.Errorf("failed to initialize ebpf lock contention collector: %v", err)
 		}
+		if err := ebpf.StatsCollector.Initialize(); err != nil {
+			// do not prevent system-probe from starting if net stats collector fails
+			log.Errorf("failed to initialize ebpf net stats collector: %v", err)
+		}
 	}
 	return nil
 }

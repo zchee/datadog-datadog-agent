@@ -1,18 +1,24 @@
-package telemetry
+package ebpf
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/DataDog/datadog-agent/pkg/ebpf/bytecode"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+	manager "github.com/DataDog/ebpf-manager"
+	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/link"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/procfs"
 )
 
 type NetStatsCollector struct {
-	mtx sync.Mutex
+	mtx         sync.Mutex
+	initialized bool
 
 	netRxRate          *prometheus.GaugeVec
 	netRxDelta         map[int]uint64
@@ -26,10 +32,31 @@ type NetStatsCollector struct {
 	packetsPerSecondDelta     map[int]uint32
 	packetsPerSecondAggregate *prometheus.GaugeVec
 
+	objects *netStatsBpfObjects
+	links   []link.Link
+
 	lastRead time.Time
 }
 
+type netStatsBpfPrograms struct {
+	RawTpSoftirqEntry *ebpf.Program `ebpf:"raw_tracepoint__irq__softirq_entry"`
+	RawTpSoftirqExit  *ebpf.Program `ebpf:"raw_tracepoint__irq__softirq_exit"`
+}
+
+type netStatsBpfMaps struct {
+	PacketsPerIrq *ebpf.Map `ebpf:"packets_per_irq"`
+}
+
+type netStatsBpfObjects struct {
+	netStatsBpfPrograms
+	netStatsBpfMaps
+}
+
 var StatsCollector *NetStatsCollector
+
+const (
+	softIrqBpfObjectFile = "bytecode/build/co-re/softirq.o"
+)
 
 func NewNetStatsCollector() *NetStatsCollector {
 	StatsCollector = &NetStatsCollector{
@@ -101,6 +128,9 @@ func (s *NetStatsCollector) Describe(descs chan<- *prometheus.Desc) {
 	if s == nil {
 		return
 	}
+	if !s.initialized {
+		return
+	}
 
 	s.netRxRate.Describe(descs)
 	s.netRxAggregateRate.Describe(descs)
@@ -113,6 +143,10 @@ func (s *NetStatsCollector) Describe(descs chan<- *prometheus.Desc) {
 
 func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
 	if n == nil {
+		return
+	}
+
+	if !n.initialized {
 		return
 	}
 
@@ -199,4 +233,85 @@ func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
 	n.totalPackets.Collect(metrics)
 	n.packetsPerSecond.Collect(metrics)
 	n.packetsPerSecondAggregate.Collect(metrics)
+
+}
+
+func (n *NetStatsCollector) Initialize() error {
+	if n == nil {
+		return nil
+	}
+
+	n.mtx.Lock()
+	defer n.mtx.Unlock()
+
+	kaddrs, err := getKernelSymbolsAddressesWithKallsymsIterator("softnet_data", "__per_cpu_offset")
+	if err != nil {
+		return fmt.Errorf("unable to fetch kernel symbol addresses: %w", err)
+	}
+
+	n.objects = new(netStatsBpfObjects)
+	if err := LoadCOREAsset(softIrqBpfObjectFile, func(bc bytecode.AssetReader, managerOptions manager.Options) error {
+		collectionSpec, err := ebpf.LoadCollectionSpecFromReader(bc)
+		if err != nil {
+			return fmt.Errorf("failed to load collection spec: %w", err)
+		}
+
+		constants := map[string]interface{}{
+			"softnet_stats_pcpu": kaddrs["softnet_data"],
+			"__per_cpu_offset":   kaddrs["__per_cpu_offset"],
+		}
+		if err := collectionSpec.RewriteConstants(constants); err != nil {
+			return fmt.Errorf("failed to rewrite contant: %w", err)
+		}
+
+		opts := ebpf.CollectionOptions{
+			Programs: ebpf.ProgramOptions{
+				LogLevel:    ebpf.LogLevelBranch,
+				KernelTypes: managerOptions.VerifierOptions.Programs.KernelTypes,
+			},
+		}
+
+		if err := collectionSpec.LoadAndAssign(n.objects, &opts); err != nil {
+			var ve *ebpf.VerifierError
+			if errors.As(err, &ve) {
+				return fmt.Errorf("verfier error loading collection: %s\n%+v", err, ve)
+			}
+			return fmt.Errorf("failed to load objects: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	rawtpSoftirqEntry, err := link.AttachRawTracepoint(link.RawTracepointOptions{
+		Name:    "softirq_entry",
+		Program: n.objects.RawTpSoftirqEntry,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to attach raw tracepoint: %w", err)
+	}
+	n.links = append(n.links, rawtpSoftirqEntry)
+
+	rawtpSoftirqExit, err := link.AttachRawTracepoint(link.RawTracepointOptions{
+		Name:    "softirq_exit",
+		Program: n.objects.RawTpSoftirqExit,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to attach raw tracepoint: %w", err)
+	}
+	n.links = append(n.links, rawtpSoftirqExit)
+
+	log.Info("net stats collector initialized")
+	n.initialized = true
+	return nil
+}
+
+func (n *NetStatsCollector) Close() {
+	for _, ebpfLink := range n.links {
+		ebpfLink.Close()
+	}
+
+	n.objects.RawTpSoftirqEntry.Close()
+	n.objects.RawTpSoftirqExit.Close()
 }
