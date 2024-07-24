@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/ebpf/bytecode"
+	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	manager "github.com/DataDog/ebpf-manager"
 	"github.com/cilium/ebpf"
@@ -31,9 +32,12 @@ type NetStatsCollector struct {
 	packetsPerSecond          *prometheus.GaugeVec
 	packetsPerSecondDelta     map[int]uint32
 	packetsPerSecondAggregate *prometheus.GaugeVec
+	packetsPerIRQ             *prometheus.GaugeVec
+	maxPacketsProcessedPerIrq []uint64
 
-	objects *netStatsBpfObjects
-	links   []link.Link
+	objects                *netStatsBpfObjects
+	links                  []link.Link
+	packetsProcessedPerIrq []PPIRQ
 
 	lastRead time.Time
 }
@@ -116,6 +120,14 @@ func NewNetStatsCollector() *NetStatsCollector {
 			},
 			[]string{"num_cpus"},
 		),
+		packetsPerIRQ: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Subsystem: "ebpf__netstats",
+				Name:      "_max_ppirq",
+				Help:      "gauge tracking the maximum packets processed per irq",
+			},
+			[]string{"cpu"},
+		),
 		netRxDelta:            make(map[int]uint64),
 		netTxDelta:            make(map[int]uint64),
 		packetsPerSecondDelta: make(map[int]uint32),
@@ -139,6 +151,7 @@ func (s *NetStatsCollector) Describe(descs chan<- *prometheus.Desc) {
 	s.totalPackets.Describe(descs)
 	s.packetsPerSecond.Describe(descs)
 	s.packetsPerSecondAggregate.Describe(descs)
+	s.packetsPerIRQ.Describe(descs)
 }
 
 func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
@@ -226,6 +239,20 @@ func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
 
 	n.lastRead = now
 
+	var key uint32
+	key = 0
+	if err := n.objects.PacketsPerIrq.Lookup(&key, n.packetsProcessedPerIrq); err != nil {
+		log.Errorf("failed to lookup packets processed per irq: %v", err)
+		return
+	}
+
+	for i, m := range n.packetsProcessedPerIrq {
+		if m.Max_packets_processed > n.maxPacketsProcessedPerIrq[i] {
+			n.maxPacketsProcessedPerIrq[i] = m.Max_packets_processed
+			n.packetsPerIRQ.WithLabelValues(fmt.Sprintf("%d", i)).Set(float64(m.Max_packets_processed))
+		}
+	}
+
 	n.netRxRate.Collect(metrics)
 	n.netTxRate.Collect(metrics)
 	n.netRxAggregateRate.Collect(metrics)
@@ -233,7 +260,7 @@ func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
 	n.totalPackets.Collect(metrics)
 	n.packetsPerSecond.Collect(metrics)
 	n.packetsPerSecondAggregate.Collect(metrics)
-
+	n.packetsPerIRQ.Collect(metrics)
 }
 
 func (n *NetStatsCollector) Initialize() error {
@@ -243,6 +270,13 @@ func (n *NetStatsCollector) Initialize() error {
 
 	n.mtx.Lock()
 	defer n.mtx.Unlock()
+
+	cpus, err := kernel.PossibleCPUs()
+	if err != nil {
+		return fmt.Errorf("unable to get possible cpus: %w", err)
+	}
+	n.packetsProcessedPerIrq = make([]PPIRQ, cpus)
+	n.maxPacketsProcessedPerIrq = make([]uint64, cpus)
 
 	kaddrs, err := getKernelSymbolsAddressesWithKallsymsIterator("softnet_data", "__per_cpu_offset")
 	if err != nil {
