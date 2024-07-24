@@ -46,6 +46,19 @@ static __always_inline void handle_postgres_startup(pktbuf_t pkt, conn_tuple_t *
     log_debug("postgres startup: batch enqueued");
 }
 
+// Enqueues a batch of events to the user-space. To spare stack size, we take a scratch buffer from the map, copy
+// the connection tuple and the transaction to it, and then enqueue the event.
+static __always_inline void handle_postgres_termination(conn_tuple_t *tuple) {
+    postgres_transaction_t tx;
+    tx.startup_flags = POSTGRES_TERMINATION;
+
+    conn_tuple_t copy = *tuple;
+    normalize_tuple(&copy);
+
+    postgres_batch_enqueue_wrapper(tuple, &tx);
+    log_debug("postgres termination: batch enqueued");
+}
+
 // Reads a startup header from the given context.
 // Returns true if the header was read succesfully.
 static __always_inline bool read_startup_header(pktbuf_t pkt, struct pg_startup_header* header) {
@@ -109,6 +122,7 @@ static __always_inline void handle_command_complete(conn_tuple_t *conn_tuple, po
 }
 
 static void __always_inline postgres_tcp_termination(conn_tuple_t *tup) {
+    handle_postgres_termination(tup);
     bpf_map_delete_elem(&postgres_in_flight, tup);
     flip_tuple(tup);
     bpf_map_delete_elem(&postgres_in_flight, tup);

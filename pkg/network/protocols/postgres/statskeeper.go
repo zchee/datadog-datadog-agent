@@ -45,6 +45,11 @@ func (s *StatKeeper) Process(tx *EventWrapper) {
 		return
 	}
 
+	if tx.Tx.Startup_flags == TerminationEvent {
+		s.unregisterDatabaseName(tx.Tuple)
+		return
+	}
+
 	key := Key{
 		DatabaseName:  s.getDatabaseName(tx.Tuple),
 		Operation:     tx.Operation(),
@@ -106,4 +111,13 @@ func (s *StatKeeper) getDatabaseName(tuple netebpf.ConnTuple) string {
 func (s *StatKeeper) registerDatabaseName(tuple netebpf.ConnTuple, name string) {
 	s.databaseNamesCache[tuple] = name
 	log.Debugf("Postgres statskeeper: registering db name: %v; cache size: %v", name, len(s.databaseNamesCache))
+}
+
+// unregisterDatabaseName wraps the eviction of database name from the
+// database name cache.
+func (s *StatKeeper) unregisterDatabaseName(tuple netebpf.ConnTuple) {
+	if name, ok := s.databaseNamesCache[tuple]; ok {
+		log.Debugf("Postgres statskeeper: unregistering db name: %v; cache size: %v", name, len(s.databaseNamesCache)-1)
+	}
+	delete(s.databaseNamesCache, tuple)
 }
