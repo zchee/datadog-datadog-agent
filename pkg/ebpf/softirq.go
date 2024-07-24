@@ -65,6 +65,7 @@ type netStatsBpfObjects struct {
 	netStatsBpfMaps
 }
 
+// StatsCollector is the global NetStatsCollector
 var StatsCollector *NetStatsCollector
 
 const (
@@ -118,7 +119,7 @@ func NewNetStatsCollector() *NetStatsCollector {
 			prometheus.GaugeOpts{
 				Subsystem: "ebpf__netstats",
 				Name:      "_pps",
-				Help:      "gauge tracking packets per second recieved on each cpu",
+				Help:      "gauge tracking packets per second received on each cpu",
 			},
 			[]string{"cpu"},
 		),
@@ -126,7 +127,7 @@ func NewNetStatsCollector() *NetStatsCollector {
 			prometheus.GaugeOpts{
 				Subsystem: "ebpf__netstats",
 				Name:      "_pps_aggregate",
-				Help:      "gauge tracking packets per second recieved on each cpu",
+				Help:      "gauge tracking packets per second received on each cpu",
 			},
 			[]string{"num_cpus"},
 		),
@@ -147,22 +148,22 @@ func NewNetStatsCollector() *NetStatsCollector {
 }
 
 // Describe implements prometheus.Collector.Describe
-func (s *NetStatsCollector) Describe(descs chan<- *prometheus.Desc) {
-	if s == nil {
+func (n *NetStatsCollector) Describe(descs chan<- *prometheus.Desc) {
+	if n == nil {
 		return
 	}
-	if !s.initialized {
+	if !n.initialized {
 		return
 	}
 
-	s.netRxRate.Describe(descs)
-	s.netRxAggregateRate.Describe(descs)
-	s.netTxRate.Describe(descs)
-	s.netTxAggregateRate.Describe(descs)
-	s.totalPackets.Describe(descs)
-	s.packetsPerSecond.Describe(descs)
-	s.packetsPerSecondAggregate.Describe(descs)
-	s.packetsPerIRQ.Describe(descs)
+	n.netRxRate.Describe(descs)
+	n.netRxAggregateRate.Describe(descs)
+	n.netTxRate.Describe(descs)
+	n.netTxAggregateRate.Describe(descs)
+	n.totalPackets.Describe(descs)
+	n.packetsPerSecond.Describe(descs)
+	n.packetsPerSecondAggregate.Describe(descs)
+	n.packetsPerIRQ.Describe(descs)
 }
 
 // Collect implements prometheus.Collector.Collect
@@ -251,8 +252,7 @@ func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
 
 	n.lastRead = now
 
-	var key uint32
-	key = 0
+	key := uint32(0)
 	if err := n.objects.PacketsPerIrq.Lookup(&key, n.packetsProcessedPerIrq); err != nil {
 		log.Errorf("failed to lookup packets processed per irq: %v", err)
 		return
