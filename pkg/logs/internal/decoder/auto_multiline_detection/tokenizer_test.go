@@ -19,7 +19,11 @@ type testCase struct {
 
 func TestTokenizer(t *testing.T) {
 	testCases := []testCase{
+		{input: "", expectedToken: ""},
+		{input: " ", expectedToken: " "},
 		{input: "a", expectedToken: "C"},
+		{input: "a       b", expectedToken: "C C"},
+		{input: "a  \t \t b", expectedToken: "C C"},
 		{input: "aaa", expectedToken: "CCC"},
 		{input: "0", expectedToken: "D"},
 		{input: "000", expectedToken: "DDD"},
@@ -37,6 +41,7 @@ func TestTokenizer(t *testing.T) {
 		{input: "T123", expectedToken: "TDDD"},
 		{input: "ZONE", expectedToken: "CCCC"},
 		{input: "Z0NE", expectedToken: "ZDCC"},
+		{input: "abc!📀🐶📊123", expectedToken: "CCC!CCCCCCCCCCDDD"},
 	}
 
 	tokenizer := NewTokenizer(0)

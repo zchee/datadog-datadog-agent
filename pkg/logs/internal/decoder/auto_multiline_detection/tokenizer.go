@@ -92,7 +92,7 @@ const (
 // Tokenizer is a heuristic to compute tokens from a log message.
 // The tokenizer is used to convert a log message (string of bytes) into a list of tokens that
 // represents the underlying structure of the log. The string of tokens is a compact slice of bytes
-// that can be used to compare log messages for similarity. A tokenizer instance is not thread safe
+// that can be used to compare log messages structure. A tokenizer instance is not thread safe
 // as bufferes are reused to avoid allocations.
 type Tokenizer struct {
 	maxEvalBytes int
@@ -122,6 +122,9 @@ func (t *Tokenizer) Process(context *messageContext) bool {
 func (t *Tokenizer) tokenize(input []byte) []Token {
 	// len(tokens) will always be <= len(input)
 	tokens := make([]Token, 0, len(input))
+	if len(input) == 0 {
+		return tokens
+	}
 
 	run := 0
 	lastToken := getToken(input[0])
