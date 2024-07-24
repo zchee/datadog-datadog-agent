@@ -71,6 +71,7 @@ const (
 	softIrqBpfObjectFile = "bytecode/build/co-re/softirq.o"
 )
 
+// NewNetStatsCollector create a new NetStatsCollector
 func NewNetStatsCollector() *NetStatsCollector {
 	StatsCollector = &NetStatsCollector{
 		netRxRate: prometheus.NewGaugeVec(
@@ -145,6 +146,7 @@ func NewNetStatsCollector() *NetStatsCollector {
 	return StatsCollector
 }
 
+// Describe implements prometheus.Collector.Describe
 func (s *NetStatsCollector) Describe(descs chan<- *prometheus.Desc) {
 	if s == nil {
 		return
@@ -163,6 +165,7 @@ func (s *NetStatsCollector) Describe(descs chan<- *prometheus.Desc) {
 	s.packetsPerIRQ.Describe(descs)
 }
 
+// Collect implements prometheus.Collector.Collect
 func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
 	if n == nil {
 		return
@@ -272,6 +275,7 @@ func (n *NetStatsCollector) Collect(metrics chan<- prometheus.Metric) {
 	n.packetsPerIRQ.Collect(metrics)
 }
 
+// Initialize initializes the ebpf program to collect packets per irq
 func (n *NetStatsCollector) Initialize() error {
 	if n == nil {
 		return nil
@@ -350,6 +354,7 @@ func (n *NetStatsCollector) Initialize() error {
 	return nil
 }
 
+// Close all resources
 func (n *NetStatsCollector) Close() {
 	for _, ebpfLink := range n.links {
 		ebpfLink.Close()
