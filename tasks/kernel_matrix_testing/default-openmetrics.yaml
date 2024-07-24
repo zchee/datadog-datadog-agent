@@ -3,6 +3,7 @@ instances:
   -
     openmetrics_endpoint: http://localhost:6666/telemetry
     namespace: datadog.system-probe
-    metrics: [".*"]
+    metrics:
+      - .*
     tags:
       - "image_tag:kernel-matrix-testing"
