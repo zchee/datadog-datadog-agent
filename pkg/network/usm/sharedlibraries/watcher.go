@@ -53,8 +53,8 @@ type Watcher struct {
 	wg             sync.WaitGroup
 	done           chan struct{}
 	procRoot       string
+	thisPID        int
 	rules          []Rule
-	loadEvents     <-chan *LibPath
 	processMonitor *monitor.ProcessMonitor
 	registry       *utils.FileRegistry
 	ebpfProgram    *EbpfProgram
@@ -69,25 +69,29 @@ var _ utils.Attacher = &Watcher{}
 
 // NewWatcher creates a new Watcher instance
 func NewWatcher(cfg *config.Config, rules ...Rule) (*Watcher, error) {
-	ebpfProgram := NewEBPFProgram(&cfg.Config)
-	err := ebpfProgram.Init()
+	w := &Watcher{
+		wg:       sync.WaitGroup{},
+		done:     make(chan struct{}),
+		procRoot: kernel.ProcFSRoot(),
+		rules:    rules,
+	}
+
+	w.ebpfProgram = NewEBPFProgram(&cfg.Config, w.callback)
+	err := w.ebpfProgram.Init()
 	if err != nil {
 		return nil, fmt.Errorf("error initializing shared library program: %w", err)
 	}
 
-	return &Watcher{
-		wg:             sync.WaitGroup{},
-		done:           make(chan struct{}),
-		procRoot:       kernel.ProcFSRoot(),
-		rules:          rules,
-		loadEvents:     ebpfProgram.GetPerfHandler(),
-		processMonitor: monitor.GetProcessMonitor(),
-		ebpfProgram:    ebpfProgram,
-		registry:       utils.NewFileRegistry("shared_libraries"),
+	w.thisPID, err = kernel.RootNSPID()
+	if err != nil {
+		log.Warnf("Watcher Start can't get root namespace pid %s", err)
+	}
 
-		libHits:    telemetry.NewCounter("usm.so_watcher.hits", telemetry.OptPrometheus),
-		libMatches: telemetry.NewCounter("usm.so_watcher.matches", telemetry.OptPrometheus),
-	}, nil
+	w.processMonitor = monitor.GetProcessMonitor()
+	w.registry = utils.NewFileRegistry("shared_libraries")
+	w.libHits = telemetry.NewCounter("usm.so_watcher.hits", telemetry.OptPrometheus)
+	w.libMatches = telemetry.NewCounter("usm.so_watcher.matches", telemetry.OptPrometheus)
+	return w, nil
 }
 
 // Stop the Watcher
@@ -99,6 +103,25 @@ func (w *Watcher) Stop() {
 	w.ebpfProgram.Stop()
 	close(w.done)
 	w.wg.Wait()
+}
+
+func (w *Watcher) callback(lib *LibPath) {
+	defer libPathPool.Put(lib)
+
+	if int(lib.Pid) == w.thisPID {
+		// don't scan ourself
+		return
+	}
+
+	w.libHits.Add(1)
+	path := ToBytes(lib)
+	for _, r := range w.rules {
+		if r.Re.Match(path) {
+			w.libMatches.Add(1)
+			_ = w.registry.Register(string(path), lib.Pid, r.RegisterCB, r.UnregisterCB, utils.IgnoreCB)
+			break
+		}
+	}
 }
 
 type parseMapsFileCB func(path string)
@@ -187,13 +210,8 @@ func (w *Watcher) Start() {
 		return
 	}
 
-	thisPID, err := kernel.RootNSPID()
-	if err != nil {
-		log.Warnf("Watcher Start can't get root namespace pid %s", err)
-	}
-
 	_ = kernel.WithAllProcs(w.procRoot, func(pid int) error {
-		if pid == thisPID { // don't scan ourself
+		if pid == w.thisPID { // don't scan ourself
 			return nil
 		}
 
@@ -249,32 +267,11 @@ func (w *Watcher) Start() {
 				for deletedPid := range deletedPids {
 					_ = w.registry.Unregister(deletedPid)
 				}
-			case lib, ok := <-w.loadEvents:
-				if !ok {
-					return
-				}
-
-				if int(lib.Pid) == thisPID {
-					libPathPool.Put(lib)
-					// don't scan ourself
-					continue
-				}
-
-				w.libHits.Add(1)
-				path := ToBytes(lib)
-				for _, r := range w.rules {
-					if r.Re.Match(path) {
-						w.libMatches.Add(1)
-						_ = w.registry.Register(string(path), lib.Pid, r.RegisterCB, r.UnregisterCB, utils.IgnoreCB)
-						break
-					}
-				}
-				libPathPool.Put(lib)
 			}
 		}
 	}()
 
-	err = w.ebpfProgram.Start()
+	err := w.ebpfProgram.Start()
 	if err != nil {
 		log.Errorf("error starting shared library detection eBPF program: %s", err)
 	}
