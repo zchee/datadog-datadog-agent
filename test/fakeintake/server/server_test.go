@@ -15,15 +15,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/DataDog/datadog-agent/test/fakeintake/api"
 	"github.com/benbjohnson/clock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/DataDog/datadog-agent/test/fakeintake/api"
 )
 
 func TestServer(t *testing.T) {
@@ -604,6 +606,27 @@ func testServer(t *testing.T, opts ...Option) {
 		assert.NotEmpty(t, response.Header.Get("Fakeintake-ID"), "Fakeintake-ID header is empty")
 		assert.Equal(t, http.StatusOK, response.StatusCode, "unexpected code")
 	})
+	t.Run("should forward payload to dddev", func(t *testing.T) {
+		testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			t.Logf("Received request in test %+v", r)
+			responseBody, err := io.ReadAll(r.Body)
+			require.NoError(t, err, "Error reading request body")
+			assert.Equal(t, "totoro|5|tag:valid,owner:toto", string(responseBody))
+			assert.Equal(t, r.Header.Get("DD-API-KEY"), "thisisatestapikey")
+			w.WriteHeader(http.StatusAccepted)
+		}))
+
+		defer testServer.Close()
+		testOpts := append(opts, withForwardEndpoint(testServer.URL), withDDDevAPIKey("thisisatestapikey"), WithDDDevForward())
+		fi, _ := InitialiseForTests(t, testOpts...)
+		defer fi.Stop()
+		res, err := http.Post(fi.URL()+"/totoro", "text/plain", strings.NewReader("totoro|5|tag:valid,owner:toto"))
+		require.NoError(t, err, "Error on POST request")
+		defer res.Body.Close()
+		t.Logf("Response: %v", res)
+		assert.Equal(t, http.StatusOK, res.StatusCode, "unexpected code")
+
+	})
 }
 
 type TestTextPayload struct {
@@ -630,4 +653,33 @@ func PostSomeRealisticLogs(t *testing.T, url string) {
 	response, err := http.Post(url+"/api/v2/logs", "gzip", bytes.NewBuffer(logBytes))
 	require.NoError(t, err, "Error on POST request")
 	defer response.Body.Close()
+}
+
+func TestRedactHeader(t *testing.T) {
+	header := http.Header{
+		"Foo":       []string{"bar"},
+		"Key":       []string{"AAAAAAA"},
+		"appkEy":    []string{"BBBBBBB"},
+		"other-KeY": []string{"CCCCCCC", "DDDDDDD"},
+	}
+	redactedHeader := redactHeader(header)
+	expectedHeader := http.Header{
+		"Foo":       []string{"bar"},
+		"Key":       []string{"<redacted>"},
+		"Appkey":    []string{"<redacted>"},
+		"Other-Key": []string{"<redacted>"},
+	}
+	expectedKeys := []string{}
+	for key, expectedValues := range expectedHeader {
+		redactedValues := redactedHeader[key]
+		assert.Equal(t, expectedValues, redactedValues, "unexpected value at key %s", key)
+		expectedKeys = append(expectedKeys, key)
+	}
+	redactedKeys := []string{}
+	for key, redactedValues := range redactedHeader {
+		expectedValues := expectedHeader[key]
+		assert.Equal(t, expectedValues, redactedValues, "unexpected value at key %s", key)
+		redactedKeys = append(redactedKeys, key)
+	}
+	assert.Equal(t, len(expectedKeys), len(redactedKeys), "unexpected length in keys")
 }
