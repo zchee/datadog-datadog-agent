@@ -22,8 +22,8 @@ func TestTokenizer(t *testing.T) {
 		{input: "", expectedToken: ""},
 		{input: " ", expectedToken: " "},
 		{input: "a", expectedToken: "C"},
-		{input: "a       b", expectedToken: "C C"},
-		{input: "a  \t \t b", expectedToken: "C C"},
+		{input: "a       b", expectedToken: "C C"},  // Spaces get truncated
+		{input: "a  \t \t b", expectedToken: "C C"}, // Any spaces get truncated
 		{input: "aaa", expectedToken: "CCC"},
 		{input: "0", expectedToken: "D"},
 		{input: "000", expectedToken: "DDD"},
@@ -42,6 +42,7 @@ func TestTokenizer(t *testing.T) {
 		{input: "ZONE", expectedToken: "CCCC"},
 		{input: "Z0NE", expectedToken: "ZDCC"},
 		{input: "abc!📀🐶📊123", expectedToken: "CCC!CCCCCCCCCCDDD"},
+		{input: "!!!$$$###", expectedToken: "!$#"}, // Symobl runs get truncated
 	}
 
 	tokenizer := NewTokenizer(0)
@@ -62,10 +63,10 @@ func TestTokenizerMaxDigitRun(t *testing.T) {
 }
 
 func TestAllSymbolsAreHandled(t *testing.T) {
-	for i := Space; i < D1; i++ {
+	for i := space; i < d1; i++ {
 		str := tokenToString(i)
 		assert.NotEmpty(t, str, "Token %d is not converted to a debug string", i)
-		assert.NotEqual(t, getToken(byte(str[0])), C1, "Token %v is not tokenizable", str)
+		assert.NotEqual(t, getToken(byte(str[0])), c1, "Token %v is not tokenizable", str)
 	}
 }
 

@@ -18,76 +18,73 @@ type Token byte
 // Note: This must not exceed D10 or C10 below.
 const maxRun = 10
 
-//revive:disable
 const (
-	Space Token = iota
+	space Token = iota
 
 	// Special Characters
-	Colon        // :
-	Semicolon    // ;
-	Dash         // -
-	Underscore   // _
-	FSlash       // /
-	BSlash       // \
-	Period       // .
-	Comma        // ,
-	SingleQuote  // '
-	DoubleQuote  // "
-	Backtick     // `
-	Tilda        // ~
-	Star         // *
-	Plus         // +
-	Equal        // =
-	ParenOpen    // (
-	ParenClose   // )
-	BraceOpen    // {
-	BraceClose   // }
-	BracketOpen  // [
-	BracketClose // ]
-	Ampersand    // &
-	Exclamation  // !
-	At           // @
-	Pound        // #
-	Dollar       // $
-	Percent      // %
-	UpArrow      // ^
+	colon        // :
+	semicolon    // ;
+	dash         // -
+	underscore   // _
+	fslash       // /
+	bslash       // \
+	period       // .
+	comma        // ,
+	singlequote  // '
+	doublequote  // "
+	backtick     // `
+	tilda        // ~
+	star         // *
+	plus         // +
+	equal        // =
+	parenopen    // (
+	parenclose   // )
+	braceopen    // {
+	braceclose   // }
+	bracketopen  // [
+	bracketclose // ]
+	ampersand    // &
+	exclamation  // !
+	at           // @
+	pound        // #
+	dollar       // $
+	percent      // %
+	uparrow      // ^
 
 	// Digit runs
-	D1
-	D2
-	D3
-	D4
-	D5
-	D6
-	D7
-	D8
-	D9
-	D10
+	d1
+	d2
+	d3
+	d4
+	d5
+	d6
+	d7
+	d8
+	d9
+	d10
 
 	// Char runs
-	C1
-	C2
-	C3
-	C4
-	C5
-	C6
-	C7
-	C8
-	C9
-	C10
+	c1
+	c2
+	c3
+	c4
+	c5
+	c6
+	c7
+	c8
+	c9
+	c10
 
 	// Special tokens
-	Month
-	Day
-	APM // AM or PM
-	Zone
-	T
-	Z
+	month
+	day
+	apm // am or pm
+	zone
+	t
+	z
 
-	END // Not a valid token. Used to mark the end of the token list or as a terminator.
+	end // Not a valid token. Used to mark the end of the token list or as a terminator.
 )
-
-//revive:enable
 
 // Tokenizer is a heuristic to compute tokens from a log message.
 // The tokenizer is used to convert a log message (string of bytes) into a list of tokens that
@@ -138,14 +135,14 @@ func (t *Tokenizer) tokenize(input []byte) []Token {
 		}()
 
 		// Only test for special tokens if the last token was a charcater (Special tokens are currently only A-Z).
-		if lastToken == C1 {
+		if lastToken == c1 {
 			if t.strBuf.Len() == 1 {
-				if specialToken := getSpecialShortToken(t.strBuf.Bytes()[0]); specialToken != END {
+				if specialToken := getSpecialShortToken(t.strBuf.Bytes()[0]); specialToken != end {
 					tokens = append(tokens, specialToken)
 					return
 				}
 			} else if t.strBuf.Len() > 1 { // Only test special long tokens if buffer is > 1 token
-				if specialToken := getSpecialLongToken(t.strBuf.String()); specialToken != END {
+				if specialToken := getSpecialLongToken(t.strBuf.String()); specialToken != end {
 					tokens = append(tokens, specialToken)
 					return
 				}
@@ -153,7 +150,7 @@ func (t *Tokenizer) tokenize(input []byte) []Token {
 		}
 
 		// Check for char or digit runs
-		if lastToken == C1 || lastToken == D1 {
+		if lastToken == c1 || lastToken == d1 {
 			// Limit max run size
 			if run >= maxRun {
 				run = maxRun - 1
@@ -171,7 +168,7 @@ func (t *Tokenizer) tokenize(input []byte) []Token {
 		} else {
 			run++
 		}
-		if currentToken == C1 {
+		if currentToken == c1 {
 			// Store upper case A-Z characters for matching special tokens
 			t.strBuf.WriteRune(unicode.ToUpper(rune(char)))
 		} else {
@@ -180,6 +177,7 @@ func (t *Tokenizer) tokenize(input []byte) []Token {
 		lastToken = currentToken
 	}
 
+	// Flush any remaining buffered tokens
 	insertToken()
 
 	return tokens
@@ -188,81 +186,81 @@ func (t *Tokenizer) tokenize(input []byte) []Token {
 // getToken returns a single token from a single byte.
 func getToken(char byte) Token {
 	if unicode.IsDigit(rune(char)) {
-		return D1
+		return d1
 	} else if unicode.IsSpace(rune(char)) {
-		return Space
+		return space
 	}
 
 	switch char {
 	case ':':
-		return Colon
+		return colon
 	case ';':
-		return Semicolon
+		return semicolon
 	case '-':
-		return Dash
+		return dash
 	case '_':
-		return Underscore
+		return underscore
 	case '/':
-		return FSlash
+		return fslash
 	case '\\':
-		return BSlash
+		return bslash
 	case '.':
-		return Period
+		return period
 	case ',':
-		return Comma
+		return comma
 	case '\'':
-		return SingleQuote
+		return singlequote
 	case '"':
-		return DoubleQuote
+		return doublequote
 	case '`':
-		return Backtick
+		return backtick
 	case '~':
-		return Tilda
+		return tilda
 	case '*':
-		return Star
+		return star
 	case '+':
-		return Plus
+		return plus
 	case '=':
-		return Equal
+		return equal
 	case '(':
-		return ParenOpen
+		return parenopen
 	case ')':
-		return ParenClose
+		return parenclose
 	case '{':
-		return BraceOpen
+		return braceopen
 	case '}':
-		return BraceClose
+		return braceclose
 	case '[':
-		return BracketOpen
+		return bracketopen
 	case ']':
-		return BracketClose
+		return bracketclose
 	case '&':
-		return Ampersand
+		return ampersand
 	case '!':
-		return Exclamation
+		return exclamation
 	case '@':
-		return At
+		return at
 	case '#':
-		return Pound
+		return pound
 	case '$':
-		return Dollar
+		return dollar
 	case '%':
-		return Percent
+		return percent
 	case '^':
-		return UpArrow
+		return uparrow
 	}
 
-	return C1
+	return c1
 }
 
 func getSpecialShortToken(char byte) Token {
 	switch char {
 	case 'T':
-		return T
+		return t
 	case 'Z':
-		return Z
+		return z
 	}
-	return END
+	return end
 }
 
 // getSpecialLongToken returns a special token that is > 1 character
@@ -270,109 +268,109 @@ func getSpecialLongToken(input string) Token {
 	switch input {
 	case "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL",
 		"AUG", "SEP", "OCT", "NOV", "DEC":
-		return Month
+		return month
 	case "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN":
-		return Day
+		return day
 	case "AM", "PM":
-		return APM
+		return apm
 	case "UTC", "GMT", "EST", "EDT", "CST", "CDT",
 		"MST", "MDT", "PST", "PDT", "JST", "KST",
 		"IST", "MSK", "CEST", "CET", "BST", "NZST",
 		"NZDT", "ACST", "ACDT", "AEST", "AEDT",
 		"AWST", "AWDT", "AKST", "AKDT", "HST",
 		"HDT", "CHST", "CHDT", "NST", "NDT":
-		return Zone
+		return zone
 	}
 
-	return END
+	return end
 }
 
 // tokenToString converts a single token to a debug string.
 func tokenToString(token Token) string {
-	if token >= D1 && token <= D10 {
+	if token >= d1 && token <= d10 {
 		t := ""
-		for i := 0; i <= int(token-D1); i++ {
+		for i := 0; i <= int(token-d1); i++ {
 			t += "D"
 		}
 		return t
-	} else if token >= C1 && token <= C10 {
+	} else if token >= c1 && token <= c10 {
 		t := ""
-		for i := 0; i <= int(token-C1); i++ {
+		for i := 0; i <= int(token-c1); i++ {
 			t += "C"
 		}
 		return t
 	}
 
 	switch token {
-	case Space:
+	case space:
 		return " "
-	case Colon:
+	case colon:
 		return ":"
-	case Semicolon:
+	case semicolon:
 		return ";"
-	case Dash:
+	case dash:
 		return "-"
-	case Underscore:
+	case underscore:
 		return "_"
-	case FSlash:
+	case fslash:
 		return "/"
-	case BSlash:
+	case bslash:
 		return "\\"
-	case Period:
+	case period:
 		return "."
-	case Comma:
+	case comma:
 		return ","
-	case SingleQuote:
+	case singlequote:
 		return "'"
-	case DoubleQuote:
+	case doublequote:
 		return "\""
-	case Backtick:
+	case backtick:
 		return "`"
-	case Tilda:
+	case tilda:
 		return "~"
-	case Star:
+	case star:
 		return "*"
-	case Plus:
+	case plus:
 		return "+"
-	case Equal:
+	case equal:
 		return "="
-	case ParenOpen:
+	case parenopen:
 		return "("
-	case ParenClose:
+	case parenclose:
 		return ")"
-	case BraceOpen:
+	case braceopen:
 		return "{"
-	case BraceClose:
+	case braceclose:
 		return "}"
-	case BracketOpen:
+	case bracketopen:
 		return "["
-	case BracketClose:
+	case bracketclose:
 		return "]"
-	case Ampersand:
+	case ampersand:
 		return "&"
-	case Exclamation:
+	case exclamation:
 		return "!"
-	case At:
+	case at:
 		return "@"
-	case Pound:
+	case pound:
 		return "#"
-	case Dollar:
+	case dollar:
 		return "$"
-	case Percent:
+	case percent:
 		return "%"
-	case UpArrow:
+	case uparrow:
 		return "^"
-	case Month:
+	case month:
 		return "MTH"
-	case Day:
+	case day:
 		return "DAY"
-	case APM:
+	case apm:
 		return "PM"
-	case T:
+	case t:
 		return "T"
-	case Z:
+	case z:
 		return "Z"
-	case Zone:
+	case zone:
 		return "ZONE"
 	}
 
