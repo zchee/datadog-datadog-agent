@@ -33,6 +33,8 @@ replace (
 	github.com/DataDog/datadog-agent/pkg/config/env => ../../../../../../pkg/config/env
 	github.com/DataDog/datadog-agent/pkg/config/logs => ../../../../../../pkg/config/logs
 	github.com/DataDog/datadog-agent/pkg/config/model => ../../../../../../pkg/config/model
+	github.com/DataDog/datadog-agent/pkg/util/optional => ../../../../../../pkg/util/optional
+	github.com/DataDog/datadog-agent/pkg/util/containers/metrics/provider => ../../../../../../pkg/util/containers/metrics/provider
 	github.com/DataDog/datadog-agent/pkg/config/setup => ../../../../../../pkg/config/setup
 	github.com/DataDog/datadog-agent/pkg/config/utils => ../../../../../../pkg/config/utils
 	github.com/DataDog/datadog-agent/pkg/logs/auditor => ../../../../../../pkg/logs/auditor

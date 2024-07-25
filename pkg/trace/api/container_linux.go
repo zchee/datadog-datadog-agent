@@ -10,6 +10,7 @@ package api
 import (
 	"context"
 	"fmt"
+
 	"net"
 	"net/http"
 	"strconv"
@@ -20,7 +21,9 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/trace/api/internal/header"
 	"github.com/DataDog/datadog-agent/pkg/util/cgroups"
+	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics/provider"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+	"github.com/DataDog/datadog-agent/pkg/util/optional"
 )
 
 // cgroupV1BaseController is the name of the cgroup controller used to parse /proc/<pid>/cgroup
@@ -35,6 +38,13 @@ const (
 	legacyContainerIDPrefix = "cid-"
 	containerIDPrefix       = "ci-"
 	inodePrefix             = "in-"
+
+	// External Data Prefixes
+	// These prefixes are used to build the External Data Environment Variable.
+	// This variable is then used for Origin Detection.
+	externalDataInitPrefix          = "it-"
+	externalDataContainerNamePrefix = "cn-"
+	externalDataPodUIDPrefix        = "pu-"
 )
 
 type ucredKey struct{}
@@ -136,27 +146,32 @@ type cgroupIDProvider struct {
 }
 
 // GetContainerID returns the container ID.
-// The Container ID can come from either http headers or the context:
+// The Container ID can come from either HTTP headers or the context, in the following order:
 // * Local Data header
-// * Datadog-Container-ID header
-// * Looks for a PID in the ctx which is used to search cgroups for a container ID.
+// * Deprecated Datadog-Container-ID header
+// * Container ID from the PID
+// * External Data header
 func (c *cgroupIDProvider) GetContainerID(ctx context.Context, h http.Header) string {
-	// Retrieve container ID from Local Data header
+	// Retrieve container ID from Local Data header.
 	if localData := h.Get(header.LocalData); localData != "" {
 		return c.resolveContainerIDFromLocalData(localData)
 	}
 
 	// Retrieve container ID from Datadog-Container-ID header.
-	// Deprecated in favor of Local Data header. This is kept for backward compatibility with older libraries.
+	// Deprecated in favor of Local Data header, this is kept for backward compatibility with older libraries.
 	if containerIDFromHeader := h.Get(header.ContainerID); containerIDFromHeader != "" {
 		return containerIDFromHeader
 	}
 
-	// Retrieve the container-id from the pid in its context
-	if containerID := c.resolveContainerIDFromContext(ctx); containerID != "" {
-		return containerID
+	// Retrieve container ID from PID.
+	if containerIDFromPID := c.resolveContainerIDFromContext(ctx); containerIDFromPID != "" {
+		return containerIDFromPID
 	}
 
+	// Retrieve container ID from External Data header.
+	if externalData := h.Get(header.ExternalData); externalData != "" {
+		return c.resolveContainerIDFromExternalData(externalData)
+	}
 	return ""
 }
 
@@ -271,6 +286,45 @@ func (c *cgroupIDProvider) resolveContainerIDFromContext(ctx context.Context) st
 		return ""
 	}
 	return cid
+}
+
+// resolveContainerIDFromExternalData
+func (c *cgroupIDProvider) resolveContainerIDFromExternalData(externalData string) string {
+	var (
+		init             bool
+		initParsingError error
+		containerName    string
+		podUID           string
+	)
+
+	// Parse the external data and get the tags for the entity
+	for _, item := range strings.Split(externalData, ",") {
+		switch {
+		case strings.HasPrefix(item, externalDataInitPrefix):
+			init, initParsingError = strconv.ParseBool(item[len(externalDataInitPrefix):])
+			if initParsingError != nil {
+				log.Tracef("Cannot parse bool from %s: %s", item[len(externalDataInitPrefix):], initParsingError)
+			}
+		case strings.HasPrefix(item, externalDataContainerNamePrefix):
+			containerName = item[len(externalDataContainerNamePrefix):]
+		case strings.HasPrefix(item, externalDataPodUIDPrefix):
+			podUID = item[len(externalDataPodUIDPrefix):]
+		}
+	}
+
+	// Generate container ID from External Data
+	generatedContainerID := ""
+	fmt.Printf("init: %v, containerName: %s, podUID: %s, externalData: %s\n", init, containerName, podUID, externalData)
+
+	option := optional.Option[string]
+	tt := provider.ContainerMemStats{}
+	/*metricsProvider := metrics.GetProvider(optional.Option[workloadmeta.Component])
+	generatedContainerID, err := metricsProvider.ContainerIDForPodUIDAndContName(podUID, containerName, init, time.Second)
+	if err != nil {
+		log.Tracef("Failed to generate container ID from %s: %s", externalData, err)
+	}
+	*/
+	return generatedContainerID
 }
 
 // getCachedContainerID returns the container ID for the given key, using a cache.
