@@ -74,6 +74,9 @@ func NewEBPFProgram(c *ddebpf.Config, callback func(*LibPath)) *EbpfProgram {
 		UseRingBuffer:    false,
 		Handler: encoding.BinaryUnmarshalCallback(libPathPool.Get, func(b *LibPath, err error) {
 			if err != nil {
+				if b != nil {
+					libPathPool.Put(b)
+				}
 				log.Debug(err.Error())
 				return
 			}
