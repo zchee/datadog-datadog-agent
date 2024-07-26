@@ -578,6 +578,58 @@ func (s *postgresProtocolParsingSuite) TestCleanupEBPFEntriesOnTermination() {
 	require.Len(t, entries, 0)
 }
 
+func (s *postgresProtocolParsingSuite) TestDBNameParsing() {
+	t := s.T()
+
+	log.SetupLogger(seelog.Default, "debug")
+
+	serverHost := "127.0.0.1"
+	isTLS := protocolsUtils.TLSDisabled
+
+	monitor := setupUSMTLSMonitor(t, getPostgresDefaultTestConfiguration(isTLS))
+
+	serverAddress := net.JoinHostPort(serverHost, postgresPort)
+	require.NoError(t, postgres.RunServer(t, serverHost, postgresPort, isTLS))
+
+	// Verifies that the postgres server is up and running.
+	// It tries to connect to the server until it succeeds or the timeout is reached.
+	// We need that function (and cannot relay on the RunServer method) as the target regex is being logged a couple os
+	// milliseconds before the server is actually ready to accept connections.
+	waitForPostgresServer(t, serverAddress, isTLS)
+
+	pg, err := postgres.NewPGXClient(postgres.ConnectionOptions{
+		ServerAddress: fmt.Sprintf("%v:%v", serverHost, postgresPort),
+		EnableTLS:     isTLS,
+	})
+	require.NoError(t, err)
+	require.NoError(t, pg.Ping())
+	require.NoError(t, pg.RunQuery(createTableQuery))
+
+	require.Eventually(t, func() bool {
+		found := make(map[string]map[postgres.Operation]int)
+		postgresProtocolStats, exists := monitor.GetProtocolStats()[protocols.Postgres]
+		if !exists {
+			return false
+		}
+
+		// We might not have postgres stats, and it might be the expected case (to capture 0).
+		currentStats := postgresProtocolStats.(map[postgres.Key]*postgres.RequestStat)
+		for key, stats := range currentStats {
+			hasTLSTag := stats.StaticTags&network.ConnTagGo != 0
+			if hasTLSTag != isTLS {
+				continue
+			}
+
+			if _, ok := found[key.TableName]; !ok {
+				t.Logf("found key: %v", key.String())
+				found[key.TableName] = make(map[postgres.Operation]int)
+			}
+			found[key.TableName][key.Operation] += stats.Count
+		}
+		return true
+	}, time.Second*5, time.Millisecond*100)
+}
+
 func getPostgresDefaultTestConfiguration(enableTLS bool) *config.Config {
 	cfg := config.New()
 	cfg.EnablePostgresMonitoring = true
