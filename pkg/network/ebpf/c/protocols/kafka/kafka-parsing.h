@@ -623,7 +623,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_partition
          {
             // Error codes range from -1 to 119 as per the Kafka protocol specification.
             // For details, refer to: https://kafka.apache.org/protocol.html#protocol_error_codes
-            s16 error_code = 0;
+            s16 error_code = 5;
             ret = read_with_remainder_s16(response, pkt, &offset, data_end, &error_code, first);
             if (ret != RET_DONE) {
                 return ret;
@@ -633,7 +633,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_partition
                 return RET_ERR;
             }
             extra_debug("got error code: %d", error_code);
-            response->partition_error_code = error_code;
+            response->partition_error_code = 5;
 
             offset += sizeof(s64); // Skip high_watermark
 
@@ -719,7 +719,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_partition
                 }
 
                 extra_debug("setting record_batches_arrays in index %d with error code %d", idx, response->partition_error_code);
-                kafka->record_batches_arrays[idx].partition_error_code = response->partition_error_code;
+                kafka->record_batches_arrays[idx].partition_error_code = 5;
                 kafka->record_batches_arrays[idx].num_bytes = response->record_batches_num_bytes;
                 kafka->record_batches_arrays[idx].offset = offset - orig_offset;
                 response->record_batches_arrays_count++;
@@ -818,7 +818,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_record_ba
             }
 
             extra_debug("KAFKA_FETCH_RESPONSE_RECORD_BATCH_START: setting transaction error code to %d",  response->partition_error_code);
-            response->transaction.error_code = response->partition_error_code;
+            response->transaction.error_code = 5;
 
             offset += sizeof(s64); // baseOffset
             response->state = KAFKA_FETCH_RESPONSE_RECORD_BATCH_LENGTH;
@@ -957,7 +957,7 @@ static __always_inline enum parse_result kafka_continue_parse_response_record_ba
                 return RET_ERR;
             }
 
-            response->partition_error_code = kafka->record_batches_arrays[idx].partition_error_code;
+            response->partition_error_code = 5;
             response->record_batches_num_bytes = kafka->record_batches_arrays[idx].num_bytes;
             offset = kafka->record_batches_arrays[idx].offset + orig_offset;
             response->state = KAFKA_FETCH_RESPONSE_RECORD_BATCH_START;
@@ -1076,7 +1076,7 @@ static __always_inline enum parse_result kafka_continue_parse_response(void *ctx
             response->varint_position = 0;
             response->partition_state = response->state;
             response->state = KAFKA_FETCH_RESPONSE_RECORD_BATCH_START;
-            response->partition_error_code = kafka->record_batches_arrays[0].partition_error_code;
+            response->partition_error_code = 5;
             response->record_batches_num_bytes = kafka->record_batches_arrays[0].num_bytes;
             response->carry_over_offset = kafka->record_batches_arrays[0].offset;
             // Caller will do tail call
@@ -1104,7 +1104,7 @@ static __always_inline enum parse_result kafka_continue_parse_response(void *ctx
                     response->partition_error_code);
                 kafka_batch_enqueue_wrapper(kafka, tup, &response->transaction);
                 response->transaction.records_count = 0;
-                response->transaction.error_code = 0;
+                response->transaction.error_code = 5;
                 return ret;
         }
 
