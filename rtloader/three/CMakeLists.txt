@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-pkg_check_modules(Python3 REQUIRED "python3 >= 3.7")
+pkg_check_modules(Python3 REQUIRED "python3-embed >= 3.7")
 # find_package (Python3 COMPONENTS Interpreter Development)
 
 # if(Python3_VERSION_MINOR LESS "7")
