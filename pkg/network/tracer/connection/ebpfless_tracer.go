@@ -11,6 +11,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"net"
+	"os"
+	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -18,6 +23,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"golang.org/x/sys/unix"
 
@@ -28,6 +34,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/tracer/connection/failure"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/telemetry"
+	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
@@ -69,6 +76,13 @@ type ebpfLessTracer struct {
 	cookieHasher *cookieHasher
 
 	ns netns.NsHandle
+
+	inodeCache map[uint32]struct {
+		eta int64
+		pid int
+	}
+
+	nh *netlink.Handle
 }
 
 // NewEbpfLessTracer creates a new ebpfLessTracer instance
@@ -94,12 +108,22 @@ func newEbpfLessTracer(cfg *config.Config) (*ebpfLessTracer, error) {
 		conns:        make(map[string]*network.ConnectionStats, cfg.MaxTrackedConnections),
 		boundPorts:   ebpfless.NewBoundPorts(cfg),
 		cookieHasher: newCookieHasher(),
+		inodeCache: make(map[uint32]struct {
+			eta int64
+			pid int
+		}),
+	}
+	tr.nh, err = netlink.NewHandle(unix.NETLINK_SOCK_DIAG)
+	if err != nil {
+		return nil, fmt.Errorf("could not allocate netlink handle")
 	}
 
 	tr.ns, err = netns.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting current net ns: %w", err)
 	}
+
+	tr.refreshInodeCache()
 
 	return tr, nil
 }
@@ -158,6 +182,7 @@ func (t *ebpfLessTracer) processConnection(
 ) error {
 	t.keyConn.Source, t.keyConn.Dest = util.Address{}, util.Address{}
 	t.keyConn.SPort, t.keyConn.DPort = 0, 0
+	t.keyConn.Pid = 0
 	keyConn := &t.keyConn
 	var udpPresent, tcpPresent bool
 	for _, layerType := range decoded {
@@ -196,6 +221,10 @@ func (t *ebpfLessTracer) processConnection(
 	t.m.Lock()
 	defer t.m.Unlock()
 
+	if err := t.lookupPid(keyConn); err != nil {
+		log.Warnf("could not lookup pid for connection: %s", err)
+	}
+
 	key := string(keyConn.ByteKey(t.keyBuf))
 	conn := t.conns[key]
 	if conn == nil {
@@ -226,6 +255,96 @@ func (t *ebpfLessTracer) processConnection(
 	log.TraceFunc(func() string {
 		return fmt.Sprintf("connection: %s", conn)
 	})
+	return nil
+}
+
+func (t *ebpfLessTracer) refreshInodeCache() error {
+	log.Infof("refreshing inode cache")
+	return kernel.WithAllProcs(t.config.ProcRoot, func(pid int) error {
+		f, err := os.Open(filepath.Join(t.config.ProcRoot, strconv.Itoa(pid), "fd"))
+		if err != nil {
+			return err
+		}
+
+		defer f.Close()
+
+		infos, err := f.Readdir(-1)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+
+			return nil
+		}
+
+		for _, info := range infos {
+			if info.Mode()&os.ModeSymlink == 0 {
+				continue
+			}
+
+			if _, err := strconv.ParseUint(info.Name(), 10, 16); err != nil {
+				continue
+			}
+
+			l, err := os.Readlink(filepath.Join(f.Name(), info.Name()))
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+
+				continue
+			}
+
+			var ino uint32
+			items, err := fmt.Sscanf(l, "socket:[%d]", &ino)
+			if err == nil && items == 1 {
+				t.inodeCache[uint32(ino)] = struct {
+					eta int64
+					pid int
+				}{
+					eta: time.Now().Add(2 * time.Minute).Unix(),
+					pid: pid,
+				}
+			}
+		}
+
+		return nil
+	})
+}
+
+func (t *ebpfLessTracer) lookupPid(conn *network.ConnectionStats) error {
+	var local, remote net.Addr
+	bufSource, bufDest := util.IPBufferPool.Get(), util.IPBufferPool.Get()
+	sourceIP := util.NetIPFromAddress(conn.Source, *bufSource)
+	destIP := util.NetIPFromAddress(conn.Dest, *bufDest)
+	log.Trace(conn.Type)
+	switch conn.Type {
+	case network.UDP:
+		local = &net.UDPAddr{IP: sourceIP, Port: int(conn.SPort)}
+		remote = &net.UDPAddr{IP: destIP, Port: int(conn.DPort)}
+	case network.TCP:
+		local = &net.TCPAddr{IP: sourceIP, Port: int(conn.SPort)}
+		remote = &net.TCPAddr{IP: destIP, Port: int(conn.DPort)}
+	}
+
+	sock, err := t.nh.SocketGet(local, remote)
+	if err != nil {
+		return fmt.Errorf("error looking up socket for local=%+v remote=%+v: %w", local, remote, err)
+	}
+
+	if v, ok := t.inodeCache[sock.INode]; ok {
+		conn.Pid = uint32(v.pid)
+		return nil
+	}
+
+	if err = t.refreshInodeCache(); err != nil {
+		return err
+	}
+
+	if v, ok := t.inodeCache[sock.INode]; ok {
+		conn.Pid = uint32(v.pid)
+	}
+
 	return nil
 }
 
@@ -266,6 +385,7 @@ func (t *ebpfLessTracer) Stop() {
 	close(t.exit)
 	t.ns.Close()
 	t.boundPorts.Stop()
+	t.nh.Close()
 }
 
 // GetConnections returns the list of currently active connections, using the buffer provided.
