@@ -222,6 +222,7 @@ def get_build_flags(
     python_runtimes='3',
     headless_mode=False,
     arch: Arch | None = None,
+    cc: str = None,
 ):
     """
     Build the common value for both ldflags and gcflags, and return an env accordingly.
@@ -328,6 +329,8 @@ def get_build_flags(
                 ),
                 file=sys.stderr,
             )
+    if cc:
+        env['CC'] = cc
 
     if arch and arch.is_cross_compiling():
         # For cross-compilation we need to be explicit about certain Go settings
