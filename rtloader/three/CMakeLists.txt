@@ -64,8 +64,7 @@ target_include_directories(datadog-agent-three PUBLIC
     ${CMAKE_SOURCE_DIR}/common/builtins
     ${Python3_INCLUDE_DIRS}
 )
-target_link_directories(datadog-agent-three PRIVATE ${Python3_LIBRARY_DIRS})
-list(APPEND CMAKE_INSTALL_RPATH ${Python3_LIBRARY_DIRS})
+target_link_directories(datadog-agent-three PUBLIC ${Python3_LIBRARY_DIRS})
 target_link_libraries(datadog-agent-three ${Python3_LIBRARIES} datadog-agent-rtloader)
 
 if(WIN32)
