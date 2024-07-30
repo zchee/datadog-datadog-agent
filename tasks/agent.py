@@ -132,6 +132,7 @@ def build(
     bundle_ebpf=False,
     agent_bin=None,
     run_on=None,  # noqa: U100, F841. Used by the run_on_devcontainer decorator
+    cc: str = None,
 ):
     """
     Build the agent. If the bits to include in the build are not specified,
@@ -164,6 +165,7 @@ def build(
         python_home_3=python_home_3,
         major_version=major_version,
         python_runtimes=python_runtimes,
+        cc=cc,
     )
 
     bundled_agents = ["agent"]
