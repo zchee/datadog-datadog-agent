@@ -8,12 +8,15 @@
 package servicediscovery
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/prometheus/procfs"
 
-	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/portlist"
+	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/model"
+	ddconfig "github.com/DataDog/datadog-agent/pkg/config"
+	processnet "github.com/DataDog/datadog-agent/pkg/process/net"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
@@ -35,10 +38,10 @@ var ignoreCfgLinux = []string{
 }
 
 type linuxImpl struct {
-	procfs     procFS
-	portPoller portPoller
-	time       timer
-	bootTime   uint64
+	procfs            procFS
+	getSysProbeClient func() (systemProbeClient, error)
+	time              timer
+	bootTime          uint64
 
 	serviceDetector *serviceDetector
 	ignoreCfg       map[string]bool
@@ -56,10 +59,6 @@ func newLinuxImpl(ignoreCfg map[string]bool) (osImpl, error) {
 	if err != nil {
 		return nil, err
 	}
-	poller, err := portlist.NewPoller()
-	if err != nil {
-		return nil, err
-	}
 	stat, err := pfs.Stat()
 	if err != nil {
 		return nil, err
@@ -67,7 +66,7 @@ func newLinuxImpl(ignoreCfg map[string]bool) (osImpl, error) {
 	return &linuxImpl{
 		procfs:            wProcFS{pfs},
 		bootTime:          stat.BootTime,
-		portPoller:        poller,
+		getSysProbeClient: getSysProbeClient,
 		time:              realTime{},
 		serviceDetector:   newServiceDetector(),
 		ignoreCfg:         ignoreCfg,
@@ -87,17 +86,34 @@ func (li *linuxImpl) DiscoverServices() (*discoveredServices, error) {
 		}
 	}
 
-	ports, err := li.portPoller.OpenPorts()
+	sysProbe, err := li.getSysProbeClient()
 	if err != nil {
 		return nil, errWithCode{
 			err:  err,
-			code: errorCodePortPoller,
+			code: errorCodeSystemProbeConn,
 			svc:  nil,
 		}
 	}
-	portsByPID := map[int]portlist.List{}
-	for _, p := range ports {
-		portsByPID[p.Pid] = append(portsByPID[p.Pid], p)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ports, err := sysProbe.GetDiscoveryOpenPorts(ctx)
+	if err != nil {
+		return nil, errWithCode{
+			err:  err,
+			code: errorCodeSystemProbeOpenPorts,
+			svc:  nil,
+		}
+	}
+
+	portsByPID := map[int][]*model.Port{}
+	for _, p := range ports.Ports {
+		if p.PID == 0 {
+			log.Debugf("port:%s:%d | could not find port pid, skipping (insufficient permissions?)", p.Proto, p.Port)
+			continue
+		}
+		portsByPID[p.PID] = append(portsByPID[p.PID], p)
 	}
 
 	events := serviceEvents{}
@@ -170,7 +186,7 @@ func (li *linuxImpl) DiscoverServices() (*discoveredServices, error) {
 
 	return &discoveredServices{
 		aliveProcsCount: len(procs),
-		openPorts:       ports,
+		openPorts:       ports.Ports,
 		ignoreProcs:     li.ignoreProcs,
 		potentials:      li.potentialServices,
 		runningServices: li.aliveServices,
@@ -190,7 +206,7 @@ func (li *linuxImpl) aliveProcs() (map[int]proc, error) {
 	return procMap, nil
 }
 
-func (li *linuxImpl) getServiceInfo(p proc, openPorts map[int]portlist.List) (*serviceInfo, error) {
+func (li *linuxImpl) getServiceInfo(p proc, openPorts map[int][]*model.Port) (*serviceInfo, error) {
 	cmdline, err := p.CmdLine()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read /proc/{pid}/cmdline: %w", err)
@@ -265,10 +281,6 @@ type procFS interface {
 	AllProcs() ([]proc, error)
 }
 
-type portPoller interface {
-	OpenPorts() (portlist.List, error)
-}
-
 type wProcFS struct {
 	procfs.FS
 }
@@ -283,4 +295,14 @@ func (w wProcFS) AllProcs() ([]proc, error) {
 		res = append(res, wProc{p})
 	}
 	return res, nil
+}
+
+type systemProbeClient interface {
+	GetDiscoveryOpenPorts(ctx context.Context) (*model.OpenPortsResponse, error)
+}
+
+func getSysProbeClient() (systemProbeClient, error) {
+	return processnet.GetRemoteSystemProbeUtil(
+		ddconfig.SystemProbe.GetString("system_probe_config.sysprobe_socket"),
+	)
 }

@@ -22,7 +22,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/integration"
 	"github.com/DataDog/datadog-agent/comp/core/hostname/hostnameinterface"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/mocksender"
-	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/portlist"
+	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/model"
 )
 
 type testProc struct {
@@ -89,35 +89,35 @@ var (
 )
 
 var (
-	portTCP22 = portlist.Port{
-		Proto:   "tcp",
-		Port:    22,
-		Process: "sshd",
-		Pid:     procSSHD.pid,
+	portTCP22 = &model.Port{
+		Proto:       "tcp",
+		Port:        22,
+		ProcessName: "sshd",
+		PID:         procSSHD.pid,
 	}
-	portTCP8080 = portlist.Port{
-		Proto:   "tcp",
-		Port:    8080,
-		Process: "test-service-1",
-		Pid:     procTestService1.pid,
+	portTCP8080 = &model.Port{
+		Proto:       "tcp",
+		Port:        8080,
+		ProcessName: "test-service-1",
+		PID:         procTestService1.pid,
 	}
-	portTCP8080DifferentPID = portlist.Port{
-		Proto:   "tcp",
-		Port:    8080,
-		Process: "test-service-1",
-		Pid:     procTestService1DifferentPID.pid,
+	portTCP8080DifferentPID = &model.Port{
+		Proto:       "tcp",
+		Port:        8080,
+		ProcessName: "test-service-1",
+		PID:         procTestService1DifferentPID.pid,
 	}
-	portTCP8081 = portlist.Port{
-		Proto:   "tcp",
-		Port:    8081,
-		Process: "ignore-1",
-		Pid:     procIgnoreService1.pid,
+	portTCP8081 = &model.Port{
+		Proto:       "tcp",
+		Port:        8081,
+		ProcessName: "ignore-1",
+		PID:         procIgnoreService1.pid,
 	}
-	portTCP5432 = portlist.Port{
-		Proto:   "tcp",
-		Port:    5432,
-		Process: "test-service-1",
-		Pid:     procTestService1Repeat.pid,
+	portTCP5432 = &model.Port{
+		Proto:       "tcp",
+		Port:        5432,
+		ProcessName: "test-service-1",
+		PID:         procTestService1Repeat.pid,
 	}
 )
 
@@ -171,9 +171,9 @@ func Test_linuxImpl(t *testing.T) {
 	t.Setenv("DD_SERVICE_DISCOVERY_ENABLED", "true")
 
 	type checkRun struct {
-		aliveProcs []testProc
-		openPorts  []portlist.Port
-		time       time.Time
+		aliveProcs    []testProc
+		openPortsResp *model.OpenPortsResponse
+		time          time.Time
 	}
 
 	tests := []struct {
@@ -190,11 +190,11 @@ func Test_linuxImpl(t *testing.T) {
 						procIgnoreService1,
 						procTestService1,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080,
 						portTCP8081,
-					},
+					}},
 					time: calcTime(0),
 				},
 				{
@@ -203,11 +203,11 @@ func Test_linuxImpl(t *testing.T) {
 						procIgnoreService1,
 						procTestService1,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080,
 						portTCP8081,
-					},
+					}},
 					time: calcTime(1 * time.Minute),
 				},
 				{
@@ -216,20 +216,20 @@ func Test_linuxImpl(t *testing.T) {
 						procIgnoreService1,
 						procTestService1,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080,
 						portTCP8081,
-					},
+					}},
 					time: calcTime(20 * time.Minute),
 				},
 				{
 					aliveProcs: []testProc{
 						procSSHD,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
-					},
+					}},
 					time: calcTime(21 * time.Minute),
 				},
 			},
@@ -294,12 +294,12 @@ func Test_linuxImpl(t *testing.T) {
 						procTestService1,
 						procTestService1Repeat,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080,
 						portTCP8081,
 						portTCP5432,
-					},
+					}},
 					time: calcTime(0),
 				},
 				{
@@ -309,12 +309,12 @@ func Test_linuxImpl(t *testing.T) {
 						procTestService1,
 						procTestService1Repeat,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080,
 						portTCP8081,
 						portTCP5432,
-					},
+					}},
 					time: calcTime(1 * time.Minute),
 				},
 				{
@@ -324,12 +324,12 @@ func Test_linuxImpl(t *testing.T) {
 						procTestService1,
 						procTestService1Repeat,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080,
 						portTCP8081,
 						portTCP5432,
-					},
+					}},
 					time: calcTime(20 * time.Minute),
 				},
 				{
@@ -337,10 +337,10 @@ func Test_linuxImpl(t *testing.T) {
 						procSSHD,
 						procTestService1,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080,
-					},
+					}},
 					time: calcTime(21 * time.Minute),
 				},
 			},
@@ -438,11 +438,11 @@ func Test_linuxImpl(t *testing.T) {
 						procIgnoreService1,
 						procTestService1,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080,
 						portTCP8081,
-					},
+					}},
 					time: calcTime(0),
 				},
 				{
@@ -451,11 +451,11 @@ func Test_linuxImpl(t *testing.T) {
 						procIgnoreService1,
 						procTestService1,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080,
 						portTCP8081,
-					},
+					}},
 					time: calcTime(1 * time.Minute),
 				},
 				{
@@ -463,10 +463,10 @@ func Test_linuxImpl(t *testing.T) {
 						procSSHD,
 						procTestService1DifferentPID,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080DifferentPID,
-					},
+					}},
 					time: calcTime(21 * time.Minute),
 				},
 				{
@@ -474,10 +474,10 @@ func Test_linuxImpl(t *testing.T) {
 						procSSHD,
 						procTestService1DifferentPID,
 					},
-					openPorts: []portlist.Port{
+					openPortsResp: &model.OpenPortsResponse{Ports: []*model.Port{
 						portTCP22,
 						portTCP8080DifferentPID,
-					},
+					}},
 					time: calcTime(22 * time.Minute),
 				},
 			},
@@ -540,15 +540,17 @@ func Test_linuxImpl(t *testing.T) {
 			require.NotNil(t, check.os)
 
 			for _, cr := range tc.checkRun {
+				mSysProbe := NewMocksystemProbeClient(ctrl)
+				mSysProbe.EXPECT().GetDiscoveryOpenPorts(gomock.Any()).
+					Return(cr.openPortsResp, nil).
+					Times(1)
+
 				var procs []proc
 				for _, p := range cr.aliveProcs {
 					procs = append(procs, mockProc(ctrl, p))
 				}
 
 				_, mHostname := hostnameinterface.NewMock(hostnameinterface.MockHostname(host))
-
-				mPortPoller := NewMockportPoller(ctrl)
-				mPortPoller.EXPECT().OpenPorts().Return(cr.openPorts, nil).Times(1)
 
 				mProcFS := NewMockprocFS(ctrl)
 				mProcFS.EXPECT().AllProcs().Return(procs, nil).Times(1)
@@ -558,7 +560,9 @@ func Test_linuxImpl(t *testing.T) {
 
 				// set mocks
 				check.os.(*linuxImpl).procfs = mProcFS
-				check.os.(*linuxImpl).portPoller = mPortPoller
+				check.os.(*linuxImpl).getSysProbeClient = func() (systemProbeClient, error) {
+					return mSysProbe, nil
+				}
 				check.os.(*linuxImpl).time = mTimer
 				check.os.(*linuxImpl).bootTime = bootTimeSeconds
 				check.sender.hostname = mHostname
@@ -585,18 +589,6 @@ func (errorProcFS) AllProcs() ([]proc, error) {
 	return nil, errors.New("procFS failure")
 }
 
-type emptyProcFS struct{}
-
-func (emptyProcFS) AllProcs() ([]proc, error) {
-	return []proc{}, nil
-}
-
-type errorPortPoller struct{}
-
-func (errorPortPoller) OpenPorts() (portlist.List, error) {
-	return nil, errors.New("portPoller failure")
-}
-
 func Test_linuxImpl_errors(t *testing.T) {
 	t.Setenv("DD_SERVICE_DISCOVERY_ENABLED", "true")
 
@@ -613,25 +605,6 @@ func Test_linuxImpl_errors(t *testing.T) {
 		if errors.As(err, &expected) {
 			if expected.Code() != errorCodeProcfs {
 				t.Errorf("expected error code procfs: %#v", expected)
-			}
-		} else {
-			t.Error("expected errWithCode, got", err)
-		}
-	}
-	// bad portPoller
-	{
-		li := linuxImpl{
-			procfs:     emptyProcFS{},
-			portPoller: errorPortPoller{},
-		}
-		ds, err := li.DiscoverServices()
-		if ds != nil {
-			t.Error("expected nil discovery service")
-		}
-		var expected errWithCode
-		if errors.As(err, &expected) {
-			if expected.Code() != errorCodePortPoller {
-				t.Errorf("expected error code portPoller: %#v", expected)
 			}
 		} else {
 			t.Error("expected errWithCode, got", err)

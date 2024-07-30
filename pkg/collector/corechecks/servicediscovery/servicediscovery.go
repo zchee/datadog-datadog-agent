@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -18,7 +19,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 	"github.com/DataDog/datadog-agent/pkg/collector/check"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks"
-	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/portlist"
+	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/model"
 	pkgconfig "github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
@@ -61,7 +62,7 @@ type serviceEvents struct {
 
 type discoveredServices struct {
 	aliveProcsCount int
-	openPorts       portlist.List
+	openPorts       []*model.Port
 
 	ignoreProcs     map[int]bool
 	potentials      map[int]*serviceInfo
@@ -170,7 +171,7 @@ func (c *Check) Run() error {
 		len(disc.ignoreProcs),
 		len(disc.runningServices),
 		len(disc.potentials),
-		disc.openPorts.String(),
+		portsStr(disc.openPorts),
 	)
 	metricDiscoveredServices.Set(float64(len(disc.runningServices)))
 
@@ -276,6 +277,18 @@ func (m eventsByNameMap) addStop(svc serviceInfo) {
 // Interval returns how often the check should run.
 func (c *Check) Interval() time.Duration {
 	return refreshInterval
+}
+
+func portsStr(ports []*model.Port) string {
+	out := make([]string, len(ports))
+	for i, v := range ports {
+		val := fmt.Sprintf("%s:%d", v.Proto, v.Port)
+		if v.PID != 0 {
+			val += fmt.Sprintf("(pid:%d)", v.PID)
+		}
+		out[i] = val
+	}
+	return strings.Join(out, ",")
 }
 
 type timer interface {

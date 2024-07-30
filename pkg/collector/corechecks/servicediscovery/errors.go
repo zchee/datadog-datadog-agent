@@ -12,9 +12,11 @@ import (
 type errCode string
 
 const (
-	errorCodeProcfs              errCode = "procfs"
-	errorCodePortPoller          errCode = "port_poller"
-	errorCodeRepeatedServiceName errCode = "repeated_service_name"
+	errorCodeProcfs               errCode = "procfs"
+	errorCodePortPoller           errCode = "port_poller"
+	errorCodeRepeatedServiceName  errCode = "repeated_service_name"
+	errorCodeSystemProbeConn      errCode = "system_probe_conn"
+	errorCodeSystemProbeOpenPorts errCode = "system_probe_ports"
 )
 
 type errWithCode struct {

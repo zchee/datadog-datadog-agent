@@ -21,6 +21,7 @@ import (
 	model "github.com/DataDog/agent-payload/v5/process"
 	"google.golang.org/protobuf/proto"
 
+	discoverymodel "github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/model"
 	"github.com/DataDog/datadog-agent/pkg/languagedetection/languagemodels"
 	netEncoding "github.com/DataDog/datadog-agent/pkg/network/encoding/unmarshal"
 	nppayload "github.com/DataDog/datadog-agent/pkg/networkpath/payload"
@@ -377,6 +378,30 @@ func (r *RemoteSysProbeUtil) GetPprof(path string) ([]byte, error) {
 	defer res.Body.Close()
 
 	return io.ReadAll(res.Body)
+}
+
+// GetDiscoveryOpenPorts returns open ports from system-probe.
+func (r *RemoteSysProbeUtil) GetDiscoveryOpenPorts(ctx context.Context) (*discoverymodel.OpenPortsResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryOpenPortsURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("got non-success status code: path %s, url: %s, status_code: %d", r.path, discoveryOpenPortsURL, resp.StatusCode)
+	}
+
+	res := &discoverymodel.OpenPortsResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(res); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (r *RemoteSysProbeUtil) init() error {
