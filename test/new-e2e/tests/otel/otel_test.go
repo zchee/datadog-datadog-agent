@@ -12,11 +12,12 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"github.com/cenkalti/backoff"
-	"k8s.io/apimachinery/pkg/fields"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/cenkalti/backoff"
+	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/DataDog/test-infra-definitions/components/datadog/kubernetesagentparams"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +41,7 @@ var collectorConfig string
 
 func TestOtel(t *testing.T) {
 	fmt.Println("config", collectorConfig)
-	e2e.Run(t, &linuxTestSuite{}, e2e.WithProvisioner(localkubernetes.Provisioner(localkubernetes.WithAgentOptions(kubernetesagentparams.WithOTelAgent(), kubernetesagentparams.WithOTelConfig(collectorConfig)))))
+	e2e.Run(t, &linuxTestSuite{}, e2e.WithProvisioner(localkubernetes.Provisioner(localkubernetes.WithAgentOptions(kubernetesagentparams.WithoutDualShipping(), kubernetesagentparams.WithOTelAgent(), kubernetesagentparams.WithOTelConfig(collectorConfig)))))
 }
 
 func (s *linuxTestSuite) TestOtelAgentInstalled() {
@@ -95,6 +96,7 @@ func (s *linuxTestSuite) TestOTelPipelines() {
 		traces, err := s.Env().FakeIntake.Client().GetTraces()
 		assert.NoError(c, err, "Error starting job")
 		fmt.Println(traces)
+		assert.NotEmpty(c, traces, "No traces received")
 	}, 1*time.Minute, 10*time.Second)
 
 }
