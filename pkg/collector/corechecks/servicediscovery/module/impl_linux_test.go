@@ -8,11 +8,14 @@
 package module
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
-	"strconv"
+	"os/exec"
 	"testing"
+	"time"
 
 	"net/http/httptest"
 
@@ -100,11 +103,20 @@ func TestDiscoveryModule_OpenPorts(t *testing.T) {
 
 func TestDiscoveryModule_GetProc(t *testing.T) {
 	url := setupDiscoveryModule(t)
-	port := startServerAndGetPort(t, url)
-	require.NotNil(t, port, "could not find http server port")
-	require.NotEmpty(t, port.PID, "could not get port pid")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	cmd := exec.CommandContext(ctx, "sleep", "1000")
+	cmd.Dir = "/tmp/"
+	cmd.Env = append(cmd.Env, "DD_SERVICE=foobar")
+	cmd.Env = append(cmd.Env, "JAVA_OPTIONS=quux")
+	err := cmd.Start()
+	assert.NoError(t, err)
+	t.Cleanup(func() {
+		cancel()
+		cmd.Wait()
+	})
 
-	req, err := http.NewRequest("GET", url+"/discovery/procs/"+strconv.Itoa(port.PID), nil)
+	pid := cmd.Process.Pid
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/discovery/procs/%d", url, pid), nil)
 	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -116,7 +128,7 @@ func TestDiscoveryModule_GetProc(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	assert.Equal(t, res.Proc.PID, port.PID)
-	assert.NotEmpty(t, res.Proc.Environ)
-	assert.NotEmpty(t, res.Proc.CWD)
+	assert.Equal(t, res.Proc.CWD, "/tmp")
+	assert.Contains(t, res.Proc.Environ, "DD_SERVICE=foobar")
+	assert.Contains(t, res.Proc.Environ, "JAVA_OPTIONS=quux")
 }
