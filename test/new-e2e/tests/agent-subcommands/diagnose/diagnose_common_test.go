@@ -17,11 +17,55 @@ import (
 	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/environments"
 	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/utils/e2e/client/agentclient"
 
-	"github.com/DataDog/datadog-agent/pkg/diagnose/diagnosis"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Diagnosis contains the results of the diagnosis
+type Diagnosis struct {
+	// --------------------------
+	// required fields
+
+	// run-time (pass, fail etc)
+	Result int `json:"result"`
+	// static-time (meta typically)
+	Name string `json:"name"`
+	// run-time (actual diagnosis consumable by a user)
+	Diagnosis string `json:"diagnosis"`
+
+	// --------------------------
+	// optional fields
+
+	// static-time (meta typically)
+	Category string `json:"category,omitempty"`
+	// static-time (meta typically, description of what being tested)
+	Description string `json:"description,omitempty"`
+	// run-time (what can be done of what docs need to be consulted to address the issue)
+	Remediation string `json:"remediation,omitempty"`
+	// run-time
+	RawError string `json:"rawerror,omitempty"`
+}
+
+// DiagnoseResult contains the results of the diagnose command
+type DiagnoseResult struct {
+	Diagnoses []Diagnoses `json:"diagnoses"`
+	Summary   Counters    `json:"summary"`
+}
+
+// Diagnoses is a collection of Diagnosis
+type Diagnoses struct {
+	SuiteName      string      `json:"suite_name"`
+	SuiteDiagnoses []Diagnosis `json:"diagnoses"`
+}
+
+// Counters contains the count of the diagnosis results
+type Counters struct {
+	Total         int `json:"total,omitempty"`
+	Success       int `json:"success,omitempty"`
+	Fail          int `json:"fail,omitempty"`
+	Warnings      int `json:"warnings,omitempty"`
+	UnexpectedErr int `json:"unexpected_error,omitempty"`
+}
 
 type baseDiagnoseSuite struct {
 	e2e.BaseSuite[environments.Host]
@@ -250,8 +294,8 @@ func getRegexGroupValue(re *regexp.Regexp, matches []string, groupName string) i
 }
 
 // stringToJSON converts a diagnose string to a DiagnoseResult struct
-func stringToJSON(s string) *diagnosis.DiagnoseResult {
-	result := &diagnosis.DiagnoseResult{}
+func stringToJSON(s string) *DiagnoseResult {
+	result := &DiagnoseResult{}
 	err := json.Unmarshal([]byte(s), result)
 	if err != nil {
 		return nil
