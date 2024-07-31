@@ -128,8 +128,6 @@ func mockProc(
 	m := NewMockproc(ctrl)
 	m.EXPECT().PID().Return(p.pid).AnyTimes()
 	m.EXPECT().CmdLine().Return(p.cmdline, nil).AnyTimes()
-	m.EXPECT().Environ().Return(p.env, nil).AnyTimes()
-	m.EXPECT().Cwd().Return(p.cwd, nil).AnyTimes()
 	m.EXPECT().Stat().Return(p.stat, nil).AnyTimes()
 	return m
 }
@@ -547,7 +545,19 @@ func Test_linuxImpl(t *testing.T) {
 
 				var procs []proc
 				for _, p := range cr.aliveProcs {
+					mSysProbe.EXPECT().GetDiscoveryProc(gomock.Any(), gomock.Eq(p.pid)).
+						Return(
+							&model.GetProcResponse{Proc: &model.Proc{
+								PID:     p.pid,
+								Environ: p.env,
+								CWD:     p.cwd,
+							}},
+							nil,
+						).
+						AnyTimes()
+
 					procs = append(procs, mockProc(ctrl, p))
+
 				}
 
 				_, mHostname := hostnameinterface.NewMock(hostnameinterface.MockHostname(host))

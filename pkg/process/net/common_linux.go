@@ -24,6 +24,7 @@ const (
 	pprofURL              = "http://unix/debug/pprof"
 	languageDetectionURL  = "http://unix/" + string(sysconfig.LanguageDetectionModule) + "/detect"
 	discoveryOpenPortsURL = "http://unix/" + string(sysconfig.DiscoveryModule) + "/open_ports"
+	discoveryGetProcURL   = "http://unix/" + string(sysconfig.DiscoveryModule) + "/procs/%d"
 	netType               = "unix"
 )
 

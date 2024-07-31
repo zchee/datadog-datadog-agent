@@ -58,36 +58,6 @@ func (mr *MockprocMockRecorder) CmdLine() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CmdLine", reflect.TypeOf((*Mockproc)(nil).CmdLine))
 }
 
-// Cwd mocks base method.
-func (m *Mockproc) Cwd() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Cwd")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Cwd indicates an expected call of Cwd.
-func (mr *MockprocMockRecorder) Cwd() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cwd", reflect.TypeOf((*Mockproc)(nil).Cwd))
-}
-
-// Environ mocks base method.
-func (m *Mockproc) Environ() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Environ")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Environ indicates an expected call of Environ.
-func (mr *MockprocMockRecorder) Environ() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environ", reflect.TypeOf((*Mockproc)(nil).Environ))
-}
-
 // PID mocks base method.
 func (m *Mockproc) PID() int {
 	m.ctrl.T.Helper()
@@ -191,4 +161,19 @@ func (m *MocksystemProbeClient) GetDiscoveryOpenPorts(ctx context.Context) (*mod
 func (mr *MocksystemProbeClientMockRecorder) GetDiscoveryOpenPorts(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiscoveryOpenPorts", reflect.TypeOf((*MocksystemProbeClient)(nil).GetDiscoveryOpenPorts), ctx)
+}
+
+// GetDiscoveryProc mocks base method.
+func (m *MocksystemProbeClient) GetDiscoveryProc(ctx context.Context, pid int) (*model.GetProcResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDiscoveryProc", ctx, pid)
+	ret0, _ := ret[0].(*model.GetProcResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDiscoveryProc indicates an expected call of GetDiscoveryProc.
+func (mr *MocksystemProbeClientMockRecorder) GetDiscoveryProc(ctx, pid interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiscoveryProc", reflect.TypeOf((*MocksystemProbeClient)(nil).GetDiscoveryProc), ctx, pid)
 }

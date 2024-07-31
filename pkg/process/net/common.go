@@ -404,6 +404,31 @@ func (r *RemoteSysProbeUtil) GetDiscoveryOpenPorts(ctx context.Context) (*discov
 	return res, nil
 }
 
+// GetServiceDiscoveryProc returns proc information from system-probe.
+func (r *RemoteSysProbeUtil) GetDiscoveryProc(ctx context.Context, pid int) (*discoverymodel.GetProcResponse, error) {
+	url := fmt.Sprintf(discoveryGetProcURL, pid)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("got non-success status code: path %s, url: %s, status_code: %d", r.path, url, resp.StatusCode)
+	}
+
+	res := &discoverymodel.GetProcResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 func (r *RemoteSysProbeUtil) init() error {
 	resp, err := r.httpClient.Get(statsURL)
 	if err != nil {

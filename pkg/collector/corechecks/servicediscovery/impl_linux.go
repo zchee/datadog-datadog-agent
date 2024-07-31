@@ -145,7 +145,7 @@ func (li *linuxImpl) DiscoverServices() (*discoveredServices, error) {
 				continue
 			}
 
-			svc, err := li.getServiceInfo(p, portsByPID)
+			svc, err := li.getServiceInfo(p, sysProbe, portsByPID)
 			if err != nil {
 				telemetryFromError(errWithCode{
 					err:  err,
@@ -206,25 +206,27 @@ func (li *linuxImpl) aliveProcs() (map[int]proc, error) {
 	return procMap, nil
 }
 
-func (li *linuxImpl) getServiceInfo(p proc, openPorts map[int][]*model.Port) (*serviceInfo, error) {
+func (li *linuxImpl) getServiceInfo(p proc, sysProbe systemProbeClient, openPorts map[int][]*model.Port) (*serviceInfo, error) {
 	cmdline, err := p.CmdLine()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read /proc/{pid}/cmdline: %w", err)
 	}
 
-	env, err := p.Environ()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read /proc/{pid}/environ: %w", err)
-	}
-
-	cwd, err := p.Cwd()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read /proc/{pid}/cwd: %w", err)
-	}
-
 	stat, err := p.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read /proc/{pid}/stat: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	procResp, err := sysProbe.GetDiscoveryProc(ctx, p.PID())
+	if err != nil {
+		return nil, errWithCode{
+			err:  fmt.Errorf("failed to get proc from system-probe: %w", err),
+			code: errorCodeSystemProbeGetProc,
+			svc:  nil,
+		}
 	}
 
 	var ports []int
@@ -244,8 +246,8 @@ func (li *linuxImpl) getServiceInfo(p proc, openPorts map[int][]*model.Port) (*s
 	pInfo := processInfo{
 		PID:     p.PID(),
 		CmdLine: cmdline,
-		Env:     env,
-		Cwd:     cwd,
+		Env:     procResp.Proc.Environ,
+		Cwd:     procResp.Proc.CWD,
 		Stat: procStat{
 			StartTime: startTimeSecs,
 		},
@@ -264,8 +266,6 @@ func (li *linuxImpl) getServiceInfo(p proc, openPorts map[int][]*model.Port) (*s
 type proc interface {
 	PID() int
 	CmdLine() ([]string, error)
-	Environ() ([]string, error)
-	Cwd() (string, error)
 	Stat() (procfs.ProcStat, error)
 }
 
@@ -299,6 +299,7 @@ func (w wProcFS) AllProcs() ([]proc, error) {
 
 type systemProbeClient interface {
 	GetDiscoveryOpenPorts(ctx context.Context) (*model.OpenPortsResponse, error)
+	GetDiscoveryProc(ctx context.Context, pid int) (*model.GetProcResponse, error)
 }
 
 func getSysProbeClient() (systemProbeClient, error) {
