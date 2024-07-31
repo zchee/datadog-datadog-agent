@@ -6,6 +6,10 @@
 // Package version defines the version of the agent
 package version
 
+// AgentBuild contains the name of the binary.
+// It is populated at build time using build flags, see get_version_ldflags in tasks/utils.py
+var AgentBuild string
+
 // AgentVersion contains the version of the Agent.
 // It is populated at build time using build flags, see get_version_ldflags in tasks/utils.py
 var AgentVersion string
