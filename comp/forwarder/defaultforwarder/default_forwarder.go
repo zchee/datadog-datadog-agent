@@ -478,7 +478,7 @@ func (f *DefaultForwarder) createAdvancedHTTPTransactions(endpoint transaction.E
 				t.Destination = payload.Destination
 				t.Headers.Set(apiHTTPHeaderKey, apiKey)
 				t.Headers.Set(versionHTTPHeaderKey, version.AgentVersion)
-				t.Headers.Set(useragentHTTPHeaderKey, fmt.Sprintf("datadog-agent/%s", version.AgentVersion))
+				t.Headers.Set(useragentHTTPHeaderKey, fmt.Sprintf("datadog-%s/%s", version.AgentBuild, version.AgentVersion))
 				if allowArbitraryTags {
 					t.Headers.Set(arbitraryTagHTTPHeaderKey, "true")
 				}
