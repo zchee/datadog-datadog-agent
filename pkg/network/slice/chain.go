@@ -40,6 +40,22 @@ func (c Chain[T]) Iterate(f func(i int, v *T)) {
 	}
 }
 
+// Any iterates over the chained slices in order calling function `f` on each item,
+// early returning on first true return value.
+func (c Chain[T]) Any(f func(i int, v *T) bool) bool {
+	o := 0
+	for i := 0; i < len(c.slices); i++ {
+		for j := 0; j < len(c.slices[i]); j++ {
+			if f(o+j, &c.slices[i][j]) {
+				return true
+			}
+		}
+
+		o += len(c.slices[i])
+	}
+	return false
+}
+
 // Get returns a slice item at index `i`, where 0 <= `i` < c.Len()
 func (c Chain[T]) Get(i int) T {
 	for _, s := range c.slices {

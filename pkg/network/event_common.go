@@ -22,6 +22,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/kafka"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/postgres"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/redis"
+	"github.com/DataDog/datadog-agent/pkg/network/slice"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
@@ -104,7 +105,7 @@ const (
 
 // BufferedData encapsulates data whose underlying memory can be recycled
 type BufferedData struct {
-	Conns  []ConnectionStats
+	Conns  slice.Chain[ConnectionStats]
 	buffer *ClientBuffer
 }
 
@@ -125,10 +126,10 @@ type Connections struct {
 }
 
 // NewConnections create a new Connections object
-func NewConnections(buffer *ClientBuffer) *Connections {
+func NewConnections(buffer *ClientBuffer, active []ConnectionStats, closed []ConnectionStats) *Connections {
 	return &Connections{
 		BufferedData: BufferedData{
-			Conns:  buffer.Connections(),
+			Conns:  slice.NewChain(active, closed),
 			buffer: buffer,
 		},
 	}

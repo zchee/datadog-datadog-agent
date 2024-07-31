@@ -124,9 +124,33 @@ type State interface {
 	DumpState(clientID string) map[string]interface{}
 }
 
+// DeltaConns is a wrapper around the active and closed connections in Delta struct
+type DeltaConns struct {
+	Active []ConnectionStats
+	Closed []ConnectionStats
+}
+
+// Len is the total number of connections
+func (d DeltaConns) Len() int {
+	return len(d.Active) + len(d.Closed)
+}
+
+// Iterate calls f for each connection in DeltaConns
+func (d DeltaConns) Iterate(f func(i int, v *ConnectionStats)) {
+	slices := [][]ConnectionStats{d.Active, d.Closed}
+	o := 0
+	for i := 0; i < len(slices); i++ {
+		for j := 0; j < len(slices[i]); j++ {
+			f(o+j, &slices[i][j])
+		}
+
+		o += len(slices[i])
+	}
+}
+
 // Delta represents a delta of network data compared to the last call to State.
 type Delta struct {
-	Conns    []ConnectionStats
+	Conns    DeltaConns
 	HTTP     map[http.Key]*http.RequestStats
 	HTTP2    map[http.Key]*http.RequestStats
 	Kafka    map[kafka.Key]*kafka.RequestStats
@@ -427,11 +451,20 @@ func (ns *networkState) GetDelta(
 		case protocols.Redis:
 			stats := protocolStats.(map[redis.Key]*redis.RequestStat)
 			ns.storeRedisStats(stats)
+		case protocols.Unknown:
+		case protocols.TLS:
+		case protocols.Mongo:
+		case protocols.AMQP:
+		case protocols.MySQL:
+		case protocols.GRPC:
 		}
 	}
 
 	return Delta{
-		Conns:    append(active, closed...),
+		Conns: DeltaConns{
+			Active: active,
+			Closed: closed,
+		},
 		HTTP:     client.httpStatsDelta,
 		HTTP2:    client.http2StatsDelta,
 		Kafka:    client.kafkaStatsDelta,

@@ -36,21 +36,21 @@ func TestStatsOverflow(t *testing.T) {
 	state.RegisterClient(client)
 
 	// Get the connections once to register stats
-	conns := state.GetDelta(client, latestEpochTime(), []ConnectionStats{conn}, nil, nil).Conns
-	require.Len(t, conns, 1)
+	delta := state.GetDelta(client, latestEpochTime(), []ConnectionStats{conn}, nil, nil)
+	require.Equal(t, 1, delta.Conns.Len())
 
 	// Expect Last.SentPackets to be math.MaxUint32-1
 	conn.Last.SentPackets = math.MaxUint32 - 1
 	// expect Last.RecvPackets to be math.MaxUint32-2
 	conn.Last.RecvPackets = math.MaxUint32 - 2
-	assert.Equal(t, conn, conns[0])
+	assert.Equal(t, conn, delta.Conns.Active[0])
 
 	// Get the connections again but by simulating an overflow
 	conn.Monotonic.SentPackets = 10
 	conn.Monotonic.RecvPackets = 11
 
-	conns = state.GetDelta(client, latestEpochTime(), []ConnectionStats{conn}, nil, nil).Conns
-	require.Len(t, conns, 1)
-	assert.Equal(t, uint64(12), conns[0].Last.SentPackets)
-	assert.Equal(t, uint64(14), conns[0].Last.RecvPackets)
+	delta = state.GetDelta(client, latestEpochTime(), []ConnectionStats{conn}, nil, nil)
+	require.Equal(t, 1, delta.Conns.Len())
+	assert.Equal(t, uint64(12), delta.Conns.Active[0].Last.SentPackets)
+	assert.Equal(t, uint64(14), delta.Conns.Active[0].Last.RecvPackets)
 }

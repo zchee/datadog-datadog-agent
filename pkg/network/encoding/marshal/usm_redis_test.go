@@ -17,6 +17,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/redis"
+	"github.com/DataDog/datadog-agent/pkg/network/slice"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
@@ -55,9 +56,9 @@ func (s *RedisSuite) TestFormatRedisStats() {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				redisDefaultConnection,
-			},
+			}),
 		},
 		Redis: map[redis.Key]*redis.RequestStat{
 			dummyKey: {},
@@ -77,7 +78,7 @@ func (s *RedisSuite) TestFormatRedisStats() {
 	encoder := newRedisEncoder(in.Redis)
 	t.Cleanup(encoder.Close)
 
-	aggregations := getRedisAggregations(t, encoder, in.Conns[0])
+	aggregations := getRedisAggregations(t, encoder, in.Conns.Get(0))
 
 	require.NotNil(t, aggregations)
 	assert.ElementsMatch(t, out.Aggregations, aggregations.Aggregations)
@@ -112,7 +113,7 @@ func (s *RedisSuite) TestRedisIDCollisionRegression() {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		Redis: map[redis.Key]*redis.RequestStat{
 			redisKey: {},
@@ -121,14 +122,14 @@ func (s *RedisSuite) TestRedisIDCollisionRegression() {
 
 	encoder := newRedisEncoder(in.Redis)
 	t.Cleanup(encoder.Close)
-	aggregations := getRedisAggregations(t, encoder, in.Conns[0])
+	aggregations := getRedisAggregations(t, encoder, in.Conns.Get(0))
 	assert.NotNil(aggregations)
 
 	// assert that the other connections sharing the same (source,destination)
 	// addresses but different PIDs *won't* be associated with the Redis stats
 	// object
 	streamer := NewProtoTestStreamer[*model.Connection]()
-	encoder.WriteRedisAggregations(in.Conns[1], model.NewConnectionBuilder(streamer))
+	encoder.WriteRedisAggregations(in.Conns.Get(1), model.NewConnectionBuilder(streamer))
 	var conn model.Connection
 	streamer.Unwrap(t, &conn)
 	assert.Empty(conn.DataStreamsAggregations)
@@ -163,7 +164,7 @@ func (s *RedisSuite) TestRedisLocalhostScenario() {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		Redis: map[redis.Key]*redis.RequestStat{
 			redisKey: {},
@@ -175,10 +176,10 @@ func (s *RedisSuite) TestRedisLocalhostScenario() {
 
 	// assert that both ends (client:server, server:client) of the connection
 	// will have Redis stats
-	for _, conn := range in.Conns {
-		aggregations := getRedisAggregations(t, encoder, conn)
+	in.Conns.Iterate(func(i int, conn *network.ConnectionStats) {
+		aggregations := getRedisAggregations(t, encoder, *conn)
 		assert.NotNil(aggregations.Aggregations[0].GetRedis())
-	}
+	})
 }
 
 func getRedisAggregations(t *testing.T, encoder *redisEncoder, c network.ConnectionStats) *model.DatabaseAggregations {
@@ -198,9 +199,10 @@ func getRedisAggregations(t *testing.T, encoder *redisEncoder, c network.Connect
 func generateBenchMarkPayloadRedis(sourcePortsMax, destPortsMax uint16) network.Connections {
 	localhost := util.AddressFromString("127.0.0.1")
 
+	conns := make([]network.ConnectionStats, sourcePortsMax*destPortsMax)
 	payload := network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: make([]network.ConnectionStats, sourcePortsMax*destPortsMax),
+			Conns: slice.NewChain(conns),
 		},
 		Redis: make(map[redis.Key]*redis.RequestStat),
 	}
@@ -209,12 +211,12 @@ func generateBenchMarkPayloadRedis(sourcePortsMax, destPortsMax uint16) network.
 		for dport := uint16(0); dport < destPortsMax; dport++ {
 			index := sport*sourcePortsMax + dport
 
-			payload.Conns[index].Dest = localhost
-			payload.Conns[index].Source = localhost
-			payload.Conns[index].DPort = dport + 1
-			payload.Conns[index].SPort = sport + 1
+			conns[index].Dest = localhost
+			conns[index].Source = localhost
+			conns[index].DPort = dport + 1
+			conns[index].SPort = sport + 1
 			if index%2 == 0 {
-				payload.Conns[index].IPTranslation = &network.IPTranslation{
+				conns[index].IPTranslation = &network.IPTranslation{
 					ReplSrcIP:   localhost,
 					ReplDstIP:   localhost,
 					ReplSrcPort: dport + 1,
@@ -244,9 +246,9 @@ func commonBenchmarkRedisEncoder(b *testing.B, numberOfPorts uint16) {
 	for i := 0; i < b.N; i++ {
 		h = newRedisEncoder(payload.Redis)
 		streamer.Reset()
-		for _, conn := range payload.Conns {
-			h.WriteRedisAggregations(conn, a)
-		}
+		payload.Conns.Iterate(func(i int, conn *network.ConnectionStats) {
+			h.WriteRedisAggregations(*conn, a)
+		})
 		h.Close()
 	}
 }

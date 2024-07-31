@@ -33,6 +33,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/ebpf/probes"
 	"github.com/DataDog/datadog-agent/pkg/network/events"
 	"github.com/DataDog/datadog-agent/pkg/network/netlink"
+	"github.com/DataDog/datadog-agent/pkg/network/slice"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer/connection"
 	"github.com/DataDog/datadog-agent/pkg/network/usm"
 	usmconfig "github.com/DataDog/datadog-agent/pkg/network/usm/config"
@@ -410,10 +411,9 @@ func (t *Tracer) GetActiveConnections(clientID string) (*network.Connections, er
 
 	delta := t.state.GetDelta(clientID, latestTime, active, t.reverseDNS.GetDNSStats(), t.usmMonitor.GetProtocolStats())
 
-	ips := make(map[util.Address]struct{}, len(delta.Conns)/2)
+	ips := make(map[util.Address]struct{}, delta.Conns.Len()/2)
 	var udpConns, tcpConns int
-	for i := range delta.Conns {
-		conn := &delta.Conns[i]
+	delta.Conns.Iterate(func(_ int, conn *network.ConnectionStats) {
 		ips[conn.Source] = struct{}{}
 		ips[conn.Dest] = struct{}{}
 		switch conn.Type {
@@ -422,13 +422,12 @@ func (t *Tracer) GetActiveConnections(clientID string) (*network.Connections, er
 		case network.TCP:
 			tcpConns++
 		}
-	}
+	})
 
 	tracerTelemetry.payloadSizePerClient.Set(float64(udpConns), clientID, network.UDP.String())
 	tracerTelemetry.payloadSizePerClient.Set(float64(tcpConns), clientID, network.TCP.String())
 
-	buffer.ConnectionBuffer.Assign(delta.Conns)
-	conns := network.NewConnections(buffer)
+	conns := network.NewConnections(buffer, delta.Conns.Active, delta.Conns.Closed)
 	conns.DNS = t.reverseDNS.Resolve(ips)
 	conns.HTTP = delta.HTTP
 	conns.HTTP2 = delta.HTTP2
@@ -701,7 +700,7 @@ func (t *Tracer) DebugNetworkMaps() (*network.Connections, error) {
 	}
 	return &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 	}, nil
 

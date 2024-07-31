@@ -19,6 +19,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/kafka"
+	"github.com/DataDog/datadog-agent/pkg/network/slice"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
@@ -79,9 +80,9 @@ func (s *KafkaSuite) TestFormatKafkaStats() {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				defaultConnection,
-			},
+			}),
 		},
 		Kafka: map[kafka.Key]*kafka.RequestStats{
 			kafkaKey1: {
@@ -122,7 +123,7 @@ func (s *KafkaSuite) TestFormatKafkaStats() {
 	encoder := newKafkaEncoder(in.Kafka)
 	t.Cleanup(encoder.Close)
 
-	aggregations := getKafkaAggregations(t, encoder, in.Conns[0])
+	aggregations := getKafkaAggregations(t, encoder, in.Conns.Get(0))
 
 	require.NotNil(t, aggregations)
 	assert.ElementsMatch(t, out.KafkaAggregations, aggregations.KafkaAggregations)
@@ -160,7 +161,7 @@ func (s *KafkaSuite) TestKafkaIDCollisionRegression() {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		Kafka: map[kafka.Key]*kafka.RequestStats{
 			kafkaKey: {
@@ -173,7 +174,7 @@ func (s *KafkaSuite) TestKafkaIDCollisionRegression() {
 
 	encoder := newKafkaEncoder(in.Kafka)
 	t.Cleanup(encoder.Close)
-	aggregations := getKafkaAggregations(t, encoder, in.Conns[0])
+	aggregations := getKafkaAggregations(t, encoder, in.Conns.Get(0))
 
 	// assert that the first connection matching the Kafka data will get back a non-nil result
 	assert.Equal(topicName, aggregations.KafkaAggregations[0].Topic)
@@ -183,7 +184,7 @@ func (s *KafkaSuite) TestKafkaIDCollisionRegression() {
 	// addresses but different PIDs *won't* be associated with the Kafka stats
 	// object
 	streamer := NewProtoTestStreamer[*model.Connection]()
-	encoder.WriteKafkaAggregations(in.Conns[1], model.NewConnectionBuilder(streamer))
+	encoder.WriteKafkaAggregations(in.Conns.Get(1), model.NewConnectionBuilder(streamer))
 	var conn model.Connection
 	streamer.Unwrap(t, &conn)
 	assert.Empty(conn.DataStreamsAggregations)
@@ -221,7 +222,7 @@ func (s *KafkaSuite) TestKafkaLocalhostScenario() {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		Kafka: map[kafka.Key]*kafka.RequestStats{
 			kafkaKey: {
@@ -237,11 +238,11 @@ func (s *KafkaSuite) TestKafkaLocalhostScenario() {
 
 	// assert that both ends (client:server, server:client) of the connection
 	// will have Kafka stats
-	for _, conn := range in.Conns {
-		aggregations := getKafkaAggregations(t, encoder, conn)
+	in.Conns.Iterate(func(i int, conn *network.ConnectionStats) {
+		aggregations := getKafkaAggregations(t, encoder, *conn)
 		assert.Equal(topicName, aggregations.KafkaAggregations[0].Topic)
 		assert.Equal(uint32(10), aggregations.KafkaAggregations[0].StatsByErrorCode[0].Count)
-	}
+	})
 }
 
 func getKafkaAggregations(t *testing.T, encoder *kafkaEncoder, c network.ConnectionStats) *model.DataStreamsAggregations {
@@ -261,17 +262,18 @@ func getKafkaAggregations(t *testing.T, encoder *kafkaEncoder, c network.Connect
 func generateBenchMarkPayloadKafka(entries uint16) network.Connections {
 	localhost := util.AddressFromString("127.0.0.1")
 
+	conns := make([]network.ConnectionStats, 1)
 	payload := network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: make([]network.ConnectionStats, 1),
+			Conns: slice.NewChain(conns),
 		},
 		Kafka: map[kafka.Key]*kafka.RequestStats{},
 	}
 
-	payload.Conns[0].Dest = localhost
-	payload.Conns[0].Source = localhost
-	payload.Conns[0].DPort = 1111
-	payload.Conns[0].SPort = 1112
+	conns[0].Dest = localhost
+	conns[0].Source = localhost
+	conns[0].DPort = 1111
+	conns[0].SPort = 1112
 
 	for index := uint16(0); index < entries; index++ {
 		payload.Kafka[kafka.NewKey(
@@ -300,7 +302,7 @@ func commonBenchmarkKafkaEncoder(b *testing.B, entries uint16) {
 	for i := 0; i < b.N; i++ {
 		h = newKafkaEncoder(payload.Kafka)
 		streamer.Reset()
-		h.WriteKafkaAggregations(payload.Conns[0], a)
+		h.WriteKafkaAggregations(payload.Conns.Get(0), a)
 		h.Close()
 	}
 }

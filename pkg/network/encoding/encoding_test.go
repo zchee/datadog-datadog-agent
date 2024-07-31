@@ -29,6 +29,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/kafka"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/telemetry"
+	"github.com/DataDog/datadog-agent/pkg/network/slice"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
@@ -206,71 +207,72 @@ func TestSerialization(t *testing.T) {
 
 func testSerialization(t *testing.T, aggregateByStatusCode bool) {
 	httpReqStats := http.NewRequestStats(aggregateByStatusCode)
-	in := &network.Connections{
-		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
-				{
-					Source: util.AddressFromString("10.1.1.1"),
-					Dest:   util.AddressFromString("10.2.2.2"),
-					Monotonic: network.StatCounters{
-						SentBytes:   1,
-						RecvBytes:   100,
-						Retransmits: 201,
-					},
-					Last: network.StatCounters{
-						SentBytes:      2,
-						RecvBytes:      101,
-						TCPEstablished: 1,
-						TCPClosed:      1,
-						Retransmits:    201,
-					},
-					LastUpdateEpoch: 50,
-					Pid:             6000,
-					NetNS:           7,
-					SPort:           1000,
-					DPort:           9000,
-					IPTranslation: &network.IPTranslation{
-						ReplSrcIP:   util.AddressFromString("20.1.1.1"),
-						ReplDstIP:   util.AddressFromString("20.1.1.1"),
-						ReplSrcPort: 40000,
-						ReplDstPort: 80,
-					},
+	conns := []network.ConnectionStats{
+		{
+			Source: util.AddressFromString("10.1.1.1"),
+			Dest:   util.AddressFromString("10.2.2.2"),
+			Monotonic: network.StatCounters{
+				SentBytes:   1,
+				RecvBytes:   100,
+				Retransmits: 201,
+			},
+			Last: network.StatCounters{
+				SentBytes:      2,
+				RecvBytes:      101,
+				TCPEstablished: 1,
+				TCPClosed:      1,
+				Retransmits:    201,
+			},
+			LastUpdateEpoch: 50,
+			Pid:             6000,
+			NetNS:           7,
+			SPort:           1000,
+			DPort:           9000,
+			IPTranslation: &network.IPTranslation{
+				ReplSrcIP:   util.AddressFromString("20.1.1.1"),
+				ReplDstIP:   util.AddressFromString("20.1.1.1"),
+				ReplSrcPort: 40000,
+				ReplDstPort: 80,
+			},
 
-					Type:      network.TCP,
-					Family:    network.AFINET6,
-					Direction: network.LOCAL,
-					Via: &network.Via{
-						Subnet: network.Subnet{
-							Alias: "subnet-foo",
-						},
-					},
-					ProtocolStack: protocols.Stack{Application: protocols.HTTP},
+			Type:      network.TCP,
+			Family:    network.AFINET6,
+			Direction: network.LOCAL,
+			Via: &network.Via{
+				Subnet: network.Subnet{
+					Alias: "subnet-foo",
 				},
-				{
-					Source:        util.AddressFromString("10.1.1.1"),
-					Dest:          util.AddressFromString("8.8.8.8"),
-					SPort:         1000,
-					DPort:         53,
-					Type:          network.UDP,
-					Family:        network.AFINET6,
-					Direction:     network.LOCAL,
-					StaticTags:    tagOpenSSL | tagTLS,
-					ProtocolStack: protocols.Stack{Application: protocols.HTTP2},
-					DNSStats: map[dns.Hostname]map[dns.QueryType]dns.Stats{
-						dns.ToHostname("foo.com"): {
-							dns.TypeA: {
-								Timeouts:          0,
-								SuccessLatencySum: 0,
-								FailureLatencySum: 0,
-								CountByRcode:      map[uint32]uint32{0: 1},
-							},
-						},
-					},
-					TCPFailures: map[uint32]uint32{
-						110: 1,
+			},
+			ProtocolStack: protocols.Stack{Application: protocols.HTTP},
+		},
+		{
+			Source:        util.AddressFromString("10.1.1.1"),
+			Dest:          util.AddressFromString("8.8.8.8"),
+			SPort:         1000,
+			DPort:         53,
+			Type:          network.UDP,
+			Family:        network.AFINET6,
+			Direction:     network.LOCAL,
+			StaticTags:    tagOpenSSL | tagTLS,
+			ProtocolStack: protocols.Stack{Application: protocols.HTTP2},
+			DNSStats: map[dns.Hostname]map[dns.QueryType]dns.Stats{
+				dns.ToHostname("foo.com"): {
+					dns.TypeA: {
+						Timeouts:          0,
+						SuccessLatencySum: 0,
+						FailureLatencySum: 0,
+						CountByRcode:      map[uint32]uint32{0: 1},
 					},
 				},
 			},
+			TCPFailures: map[uint32]uint32{
+				110: 1,
+			},
+		},
+	}
+	in := &network.Connections{
+		BufferedData: network.BufferedData{
+			Conns: slice.NewChain(conns),
 		},
 		DNS: map[util.Address][]dns.Hostname{
 			util.AddressFromString("172.217.12.145"): {dns.ToHostname("golang.org")},
@@ -304,7 +306,7 @@ func testSerialization(t *testing.T, aggregateByStatusCode bool) {
 		 * there is a corresponding change in the above helper function
 		 * getExpectedConnections()
 		 */
-		in.BufferedData.Conns[0].IPTranslation = nil
+		conns[0].IPTranslation = nil
 		in.HTTP = map[http.Key]*http.RequestStats{
 			http.NewKey(
 				util.AddressFromString("10.1.1.1"),
@@ -446,7 +448,7 @@ func testSerialization(t *testing.T, aggregateByStatusCode bool) {
 		// Empty connection batch
 		blobWriter := getBlobWriter(t, assert, &network.Connections{
 			BufferedData: network.BufferedData{
-				Conns: []network.ConnectionStats{{}},
+				Conns: slice.NewChain([]network.ConnectionStats{{}}),
 			}}, "application/json")
 
 		res := struct {
@@ -517,7 +519,7 @@ func testHTTPSerializationWithLocalhostTraffic(t *testing.T, aggregateByStatusCo
 	httpReqStats := http.NewRequestStats(aggregateByStatusCode)
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				{
 					Source: localhost,
 					Dest:   localhost,
@@ -530,7 +532,7 @@ func testHTTPSerializationWithLocalhostTraffic(t *testing.T, aggregateByStatusCo
 					SPort:  serverPort,
 					DPort:  clientPort,
 				},
-			},
+			}),
 		},
 		HTTP: map[http.Key]*http.RequestStats{
 			http.NewKey(
@@ -687,7 +689,7 @@ func testHTTP2SerializationWithLocalhostTraffic(t *testing.T, aggregateByStatusC
 	http2ReqStats := http.NewRequestStats(aggregateByStatusCode)
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				{
 					Source: localhost,
 					Dest:   localhost,
@@ -700,7 +702,7 @@ func testHTTP2SerializationWithLocalhostTraffic(t *testing.T, aggregateByStatusC
 					SPort:  serverPort,
 					DPort:  clientPort,
 				},
-			},
+			}),
 		},
 		HTTP2: map[http.Key]*http.RequestStats{
 			http.NewKey(
@@ -794,14 +796,14 @@ func TestPooledObjectGarbageRegression(t *testing.T) {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				{
 					Source: util.AddressFromString("10.0.15.1"),
 					SPort:  uint16(60000),
 					Dest:   util.AddressFromString("172.217.10.45"),
 					DPort:  uint16(8080),
 				},
-			},
+			}),
 		},
 	}
 
@@ -860,14 +862,14 @@ func TestPooledHTTP2ObjectGarbageRegression(t *testing.T) {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				{
 					Source: util.AddressFromString("10.0.15.1"),
 					SPort:  uint16(60000),
 					Dest:   util.AddressFromString("172.217.10.45"),
 					DPort:  uint16(8080),
 				},
-			},
+			}),
 		},
 	}
 
@@ -980,7 +982,7 @@ func TestKafkaSerializationWithLocalhostTraffic(t *testing.T) {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		Kafka: map[kafka.Key]*kafka.RequestStats{
 			kafkaKey: {

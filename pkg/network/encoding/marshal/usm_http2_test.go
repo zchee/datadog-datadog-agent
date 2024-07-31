@@ -18,6 +18,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
+	"github.com/DataDog/datadog-agent/pkg/network/slice"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
@@ -85,14 +86,14 @@ func testFormatHTTP2Stats(t *testing.T, aggregateByStatusCode bool) {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				{
 					Source: localhost,
 					Dest:   localhost,
 					SPort:  clientPort,
 					DPort:  serverPort,
 				},
-			},
+			}),
 		},
 		HTTP2: map[http.Key]*http.RequestStats{
 			httpKey1: http2Stats1,
@@ -123,7 +124,7 @@ func testFormatHTTP2Stats(t *testing.T, aggregateByStatusCode bool) {
 	}
 
 	http2Encoder := newHTTP2Encoder(in.HTTP2)
-	aggregations, tags, _ := getHTTP2Aggregations(t, http2Encoder, in.Conns[0])
+	aggregations, tags, _ := getHTTP2Aggregations(t, http2Encoder, in.Conns.Get(0))
 
 	require.NotNil(t, aggregations)
 	assert.ElementsMatch(t, out.EndpointAggregations, aggregations.EndpointAggregations)
@@ -171,21 +172,21 @@ func testFormatHTTP2StatsByPath(t *testing.T, aggregateByStatusCode bool) {
 
 	payload := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				{
 					Source: util.AddressFromString("10.1.1.1"),
 					Dest:   util.AddressFromString("10.2.2.2"),
 					SPort:  60000,
 					DPort:  80,
 				},
-			},
+			}),
 		},
 		HTTP2: map[http.Key]*http.RequestStats{
 			key: http2ReqStats,
 		},
 	}
 	http2Encoder := newHTTP2Encoder(payload.HTTP2)
-	http2Aggregations, tags, _ := getHTTP2Aggregations(t, http2Encoder, payload.Conns[0])
+	http2Aggregations, tags, _ := getHTTP2Aggregations(t, http2Encoder, payload.Conns.Get(0))
 
 	require.NotNil(t, http2Aggregations)
 	endpointAggregations := http2Aggregations.EndpointAggregations
@@ -256,7 +257,7 @@ func testHTTP2IDCollisionRegression(t *testing.T, aggregateByStatusCode bool) {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		HTTP2: map[http.Key]*http.RequestStats{
 			httpKey: http2Stats,
@@ -327,7 +328,7 @@ func testHTTP2LocalhostScenario(t *testing.T, aggregateByStatusCode bool) {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		HTTP2: map[http.Key]*http.RequestStats{
 			httpKey: http2Stats,
@@ -356,11 +357,11 @@ func testHTTP2LocalhostScenario(t *testing.T, aggregateByStatusCode bool) {
 
 	// assert that both ends (client:server, server:client) of the connection
 	// will have HTTP2 stats
-	aggregations, _, _ := getHTTP2Aggregations(t, http2Encoder, in.Conns[0])
+	aggregations, _, _ := getHTTP2Aggregations(t, http2Encoder, in.Conns.Get(0))
 	assert.Equal("/", aggregations.EndpointAggregations[0].Path)
 	assert.Equal(uint32(1), aggregations.EndpointAggregations[0].StatsByStatusCode[int32(http2Stats.NormalizeStatusCode(103))].Count)
 
-	aggregations, _, _ = getHTTP2Aggregations(t, http2Encoder, in.Conns[1])
+	aggregations, _, _ = getHTTP2Aggregations(t, http2Encoder, in.Conns.Get(1))
 	assert.Equal("/", aggregations.EndpointAggregations[0].Path)
 	assert.Equal(uint32(1), aggregations.EndpointAggregations[0].StatsByStatusCode[int32(http2Stats.NormalizeStatusCode(103))].Count)
 }

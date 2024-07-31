@@ -1359,9 +1359,9 @@ func testUDPReusePort(t *testing.T, udpnet string, ip string) {
 	// Iterate through active connections until we find connection created above, and confirm send + recv counts
 	t.Logf("port: %d", assignedPort)
 	connections := getConnections(t, tr)
-	for _, c := range connections.Conns {
+	connections.Conns.Iterate(func(i int, c *network.ConnectionStats) {
 		t.Log(c)
-	}
+	})
 
 	incoming, ok := findConnection(c.RemoteAddr(), c.LocalAddr(), connections)
 	if assert.True(t, ok, "unable to find incoming connection") {

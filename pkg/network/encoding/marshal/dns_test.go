@@ -17,6 +17,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/dns"
+	"github.com/DataDog/datadog-agent/pkg/network/slice"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 
 	model "github.com/DataDog/agent-payload/v5/process"
@@ -25,7 +26,7 @@ import (
 func TestFormatConnectionDNS(t *testing.T) {
 	payload := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				{
 					Source:    util.AddressFromString("10.1.1.1"),
 					Dest:      util.AddressFromString("8.8.8.8"),
@@ -45,7 +46,7 @@ func TestFormatConnectionDNS(t *testing.T) {
 						},
 					},
 				},
-			},
+			}),
 		},
 	}
 
@@ -55,7 +56,7 @@ func TestFormatConnectionDNS(t *testing.T) {
 
 		ipc := make(ipCache)
 		formatter := newDNSFormatter(payload, ipc)
-		in := payload.Conns[0]
+		in := payload.Conns.Get(0)
 
 		streamer := NewProtoTestStreamer[*model.Connection]()
 		builder := model.NewConnectionBuilder(streamer)
@@ -85,7 +86,7 @@ func TestFormatConnectionDNS(t *testing.T) {
 
 		ipc := make(ipCache)
 		formatter := newDNSFormatter(payload, ipc)
-		in := payload.Conns[0]
+		in := payload.Conns.Get(0)
 
 		streamer := NewProtoTestStreamer[*model.Connection]()
 		builder := model.NewConnectionBuilder(streamer)

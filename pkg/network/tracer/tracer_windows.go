@@ -211,14 +211,13 @@ func (t *Tracer) GetActiveConnections(clientID string) (*network.Connections, er
 		delta = t.state.GetDelta(clientID, uint64(time.Now().Nanosecond()), activeConnStats, t.reverseDNS.GetDNSStats(), nil)
 	}
 
-	ips := make(map[util.Address]struct{}, len(delta.Conns)/2)
-	for _, conn := range delta.Conns {
+	ips := make(map[util.Address]struct{}, delta.Conns.Len()/2)
+	delta.Conns.Iterate(func(_ int, conn *network.ConnectionStats) {
 		ips[conn.Source] = struct{}{}
 		ips[conn.Dest] = struct{}{}
-	}
+	})
 
-	buffer.Assign(delta.Conns)
-	conns := network.NewConnections(buffer)
+	conns := network.NewConnections(buffer, delta.Conns.Active, delta.Conns.Closed)
 	conns.DNS = t.reverseDNS.Resolve(ips)
 	conns.ConnTelemetry = t.state.GetTelemetryDelta(clientID, t.getConnTelemetry())
 	conns.HTTP = delta.HTTP

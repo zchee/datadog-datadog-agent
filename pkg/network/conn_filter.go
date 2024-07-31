@@ -61,15 +61,14 @@ func FirstConnection(c *Connections, filters ...ConnectionFilterFunc) *Connectio
 // FilterConnections returns connections which match all filters
 func FilterConnections(c *Connections, filters ...ConnectionFilterFunc) []ConnectionStats {
 	var results []ConnectionStats
-ConnLoop:
-	for _, conn := range c.Conns {
+	c.Conns.Iterate(func(i int, conn *ConnectionStats) {
 		for _, f := range filters {
-			if !f(conn) {
-				continue ConnLoop
+			if !f(*conn) {
+				return
 			}
 		}
-		results = append(results, conn)
-	}
+		results = append(results, *conn)
+	})
 	return results
 }
 

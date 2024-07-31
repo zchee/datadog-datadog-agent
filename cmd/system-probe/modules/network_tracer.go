@@ -108,7 +108,7 @@ func (nt *networkTracer) Register(httpMux *module.Router) error {
 			nt.restartTimer.Reset(inactivityRestartDuration)
 		}
 		count := runCounter.Inc()
-		logRequests(id, count, len(cs.Conns), start)
+		logRequests(id, count, cs.Conns.Len(), start)
 	}))
 
 	httpMux.HandleFunc("/register", utils.WithConcurrencyLimit(utils.DefaultMaxConcurrentRequests, func(w http.ResponseWriter, req *http.Request) {
@@ -348,7 +348,7 @@ func writeConnections(w http.ResponseWriter, marshaler marshal.Marshaler, cs *ne
 		return
 	}
 
-	log.Tracef("/connections: %d connections", len(cs.Conns))
+	log.Tracef("/connections: %d connections", cs.Conns.Len())
 }
 
 func startTelemetryReporter(_ *sysconfigtypes.Config, done <-chan struct{}) {

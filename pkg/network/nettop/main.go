@@ -55,9 +55,9 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		for _, c := range cs.Conns {
-			fmt.Println(network.ConnectionSummary(&c, cs.DNS))
-		}
+		cs.Conns.Iterate(func(i int, conn *network.ConnectionStats) {
+			fmt.Println(network.ConnectionSummary(conn, cs.DNS))
+		})
 	}
 
 	stopChan := make(chan struct{})

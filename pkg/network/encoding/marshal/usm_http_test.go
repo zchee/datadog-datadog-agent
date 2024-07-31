@@ -19,6 +19,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
+	"github.com/DataDog/datadog-agent/pkg/network/slice"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
@@ -65,14 +66,14 @@ func testFormatHTTPStats(t *testing.T, aggregateByStatusCode bool) {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				{
 					Source: localhost,
 					Dest:   localhost,
 					SPort:  clientPort,
 					DPort:  serverPort,
 				},
-			},
+			}),
 		},
 		HTTP: map[http.Key]*http.RequestStats{
 			httpKey1: httpStats1,
@@ -103,7 +104,7 @@ func testFormatHTTPStats(t *testing.T, aggregateByStatusCode bool) {
 	}
 
 	httpEncoder := newHTTPEncoder(in.HTTP)
-	aggregations, tags, _ := getHTTPAggregations(t, httpEncoder, in.Conns[0])
+	aggregations, tags, _ := getHTTPAggregations(t, httpEncoder, in.Conns.Get(0))
 
 	require.NotNil(t, aggregations)
 	assert.ElementsMatch(t, out.EndpointAggregations, aggregations.EndpointAggregations)
@@ -153,21 +154,21 @@ func testFormatHTTPStatsByPath(t *testing.T, aggregateByStatusCode bool) {
 
 	payload := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				{
 					Source: util.AddressFromString("10.1.1.1"),
 					Dest:   util.AddressFromString("10.2.2.2"),
 					SPort:  60000,
 					DPort:  80,
 				},
-			},
+			}),
 		},
 		HTTP: map[http.Key]*http.RequestStats{
 			key: httpReqStats,
 		},
 	}
 	httpEncoder := newHTTPEncoder(payload.HTTP)
-	httpAggregations, tags, _ := getHTTPAggregations(t, httpEncoder, payload.Conns[0])
+	httpAggregations, tags, _ := getHTTPAggregations(t, httpEncoder, payload.Conns.Get(0))
 
 	require.NotNil(t, httpAggregations)
 	endpointAggregations := httpAggregations.EndpointAggregations
@@ -237,7 +238,7 @@ func testIDCollisionRegression(t *testing.T, aggregateByStatusCode bool) {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		HTTP: map[http.Key]*http.RequestStats{
 			httpKey: httpStats,
@@ -248,7 +249,7 @@ func testIDCollisionRegression(t *testing.T, aggregateByStatusCode bool) {
 
 	// assert that the first connection matching the HTTP data will get
 	// back a non-nil result
-	aggregations, _, _ := getHTTPAggregations(t, httpEncoder, in.Conns[0])
+	aggregations, _, _ := getHTTPAggregations(t, httpEncoder, in.Conns.Get(0))
 	assert.Equal("/", aggregations.EndpointAggregations[0].Path)
 	assert.Equal(uint32(1), aggregations.EndpointAggregations[0].StatsByStatusCode[int32(httpStats.NormalizeStatusCode(104))].Count)
 
@@ -305,7 +306,7 @@ func testLocalhostScenario(t *testing.T, aggregateByStatusCode bool) {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		HTTP: map[http.Key]*http.RequestStats{
 			httpKey: httpStats,
@@ -335,11 +336,11 @@ func testLocalhostScenario(t *testing.T, aggregateByStatusCode bool) {
 
 	// assert that both ends (client:server, server:client) of the connection
 	// will have HTTP stats
-	aggregations, _, _ := getHTTPAggregations(t, httpEncoder, in.Conns[0])
+	aggregations, _, _ := getHTTPAggregations(t, httpEncoder, in.Conns.Get(0))
 	assert.Equal("/", aggregations.EndpointAggregations[0].Path)
 	assert.Equal(uint32(1), aggregations.EndpointAggregations[0].StatsByStatusCode[int32(httpStats.NormalizeStatusCode(103))].Count)
 
-	aggregations, _, _ = getHTTPAggregations(t, httpEncoder, in.Conns[1])
+	aggregations, _, _ = getHTTPAggregations(t, httpEncoder, in.Conns.Get(1))
 	assert.Equal("/", aggregations.EndpointAggregations[0].Path)
 	assert.Equal(uint32(1), aggregations.EndpointAggregations[0].StatsByStatusCode[int32(httpStats.NormalizeStatusCode(103))].Count)
 }
@@ -381,9 +382,10 @@ func verifyQuantile(t *testing.T, sketch *ddsketch.DDSketch, q float64, expected
 func generateBenchMarkPayload(sourcePortsMax, destPortsMax uint16) network.Connections {
 	localhost := util.AddressFromString("127.0.0.1")
 
+	conns := make([]network.ConnectionStats, sourcePortsMax*destPortsMax)
 	payload := network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: make([]network.ConnectionStats, sourcePortsMax*destPortsMax),
+			Conns: slice.NewChain(conns),
 		},
 		HTTP: make(map[http.Key]*http.RequestStats),
 	}
@@ -399,12 +401,12 @@ func generateBenchMarkPayload(sourcePortsMax, destPortsMax uint16) network.Conne
 		for dport := uint16(0); dport < destPortsMax; dport++ {
 			index := sport*sourcePortsMax + dport
 
-			payload.Conns[index].Dest = localhost
-			payload.Conns[index].Source = localhost
-			payload.Conns[index].DPort = dport + 1
-			payload.Conns[index].SPort = sport + 1
+			conns[index].Dest = localhost
+			conns[index].Source = localhost
+			conns[index].DPort = dport + 1
+			conns[index].SPort = sport + 1
 			if index%2 == 0 {
-				payload.Conns[index].IPTranslation = &network.IPTranslation{
+				conns[index].IPTranslation = &network.IPTranslation{
 					ReplSrcIP:   localhost,
 					ReplDstIP:   localhost,
 					ReplSrcPort: dport + 1,

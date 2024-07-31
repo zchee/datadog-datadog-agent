@@ -17,6 +17,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/postgres"
+	"github.com/DataDog/datadog-agent/pkg/network/slice"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
@@ -114,9 +115,9 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: []network.ConnectionStats{
+			Conns: slice.NewChain([]network.ConnectionStats{
 				postgresDefaultConnection,
-			},
+			}),
 		},
 		Postgres: map[postgres.Key]*postgres.RequestStat{
 			selectKey: {
@@ -241,7 +242,7 @@ func (s *PostgresSuite) TestFormatPostgresStats() {
 	encoder := newPostgresEncoder(in.Postgres)
 	t.Cleanup(encoder.Close)
 
-	aggregations := getPostgresAggregations(t, encoder, in.Conns[0])
+	aggregations := getPostgresAggregations(t, encoder, in.Conns.Get(0))
 
 	require.NotNil(t, aggregations)
 	assert.ElementsMatch(t, out.Aggregations, aggregations.Aggregations)
@@ -278,7 +279,7 @@ func (s *PostgresSuite) TestPostgresIDCollisionRegression() {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		Postgres: map[postgres.Key]*postgres.RequestStat{
 			postgresKey: {
@@ -290,7 +291,7 @@ func (s *PostgresSuite) TestPostgresIDCollisionRegression() {
 
 	encoder := newPostgresEncoder(in.Postgres)
 	t.Cleanup(encoder.Close)
-	aggregations := getPostgresAggregations(t, encoder, in.Conns[0])
+	aggregations := getPostgresAggregations(t, encoder, in.Conns.Get(0))
 
 	// assert that the first connection matching the Postgres data will get back a non-nil result
 	assert.Equal(tableName, aggregations.Aggregations[0].GetPostgres().GetTableName())
@@ -301,7 +302,7 @@ func (s *PostgresSuite) TestPostgresIDCollisionRegression() {
 	// addresses but different PIDs *won't* be associated with the Postgres stats
 	// object
 	streamer := NewProtoTestStreamer[*model.Connection]()
-	encoder.WritePostgresAggregations(in.Conns[1], model.NewConnectionBuilder(streamer))
+	encoder.WritePostgresAggregations(in.Conns.Get(1), model.NewConnectionBuilder(streamer))
 	var conn model.Connection
 	streamer.Unwrap(t, &conn)
 	assert.Empty(conn.DataStreamsAggregations)
@@ -338,7 +339,7 @@ func (s *PostgresSuite) TestPostgresLocalhostScenario() {
 
 	in := &network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: connections,
+			Conns: slice.NewChain(connections),
 		},
 		Postgres: map[postgres.Key]*postgres.RequestStat{
 			postgresKey: {
@@ -353,12 +354,12 @@ func (s *PostgresSuite) TestPostgresLocalhostScenario() {
 
 	// assert that both ends (client:server, server:client) of the connection
 	// will have Postgres stats
-	for _, conn := range in.Conns {
-		aggregations := getPostgresAggregations(t, encoder, conn)
+	in.Conns.Iterate(func(i int, conn *network.ConnectionStats) {
+		aggregations := getPostgresAggregations(t, encoder, *conn)
 		assert.Equal(tableName, aggregations.Aggregations[0].GetPostgres().GetTableName())
 		assert.Equal(uint32(10), aggregations.Aggregations[0].GetPostgres().GetCount())
 		assert.Equal(float64(2), aggregations.Aggregations[0].GetPostgres().GetFirstLatencySample())
-	}
+	})
 }
 
 func getPostgresAggregations(t *testing.T, encoder *postgresEncoder, c network.ConnectionStats) *model.DatabaseAggregations {
@@ -378,9 +379,10 @@ func getPostgresAggregations(t *testing.T, encoder *postgresEncoder, c network.C
 func generateBenchMarkPayloadPostgres(sourcePortsMax, destPortsMax uint16) network.Connections {
 	localhost := util.AddressFromString("127.0.0.1")
 
+	conns := make([]network.ConnectionStats, sourcePortsMax*destPortsMax)
 	payload := network.Connections{
 		BufferedData: network.BufferedData{
-			Conns: make([]network.ConnectionStats, sourcePortsMax*destPortsMax),
+			Conns: slice.NewChain(conns),
 		},
 		Postgres: make(map[postgres.Key]*postgres.RequestStat),
 	}
@@ -389,12 +391,12 @@ func generateBenchMarkPayloadPostgres(sourcePortsMax, destPortsMax uint16) netwo
 		for dport := uint16(0); dport < destPortsMax; dport++ {
 			index := sport*sourcePortsMax + dport
 
-			payload.Conns[index].Dest = localhost
-			payload.Conns[index].Source = localhost
-			payload.Conns[index].DPort = dport + 1
-			payload.Conns[index].SPort = sport + 1
+			conns[index].Dest = localhost
+			conns[index].Source = localhost
+			conns[index].DPort = dport + 1
+			conns[index].SPort = sport + 1
 			if index%2 == 0 {
-				payload.Conns[index].IPTranslation = &network.IPTranslation{
+				conns[index].IPTranslation = &network.IPTranslation{
 					ReplSrcIP:   localhost,
 					ReplDstIP:   localhost,
 					ReplSrcPort: dport + 1,
@@ -429,9 +431,9 @@ func commonBenchmarkPostgresEncoder(b *testing.B, numberOfPorts uint16) {
 	for i := 0; i < b.N; i++ {
 		h = newPostgresEncoder(payload.Postgres)
 		streamer.Reset()
-		for _, conn := range payload.Conns {
-			h.WritePostgresAggregations(conn, a)
-		}
+		payload.Conns.Iterate(func(i int, conn *network.ConnectionStats) {
+			h.WritePostgresAggregations(*conn, a)
+		})
 		h.Close()
 	}
 }

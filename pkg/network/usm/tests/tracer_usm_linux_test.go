@@ -38,6 +38,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/DataDog/datadog-agent/pkg/ebpf/ebpftest"
+	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/config"
 	netlink "github.com/DataDog/datadog-agent/pkg/network/netlink/testutil"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols"
@@ -379,13 +380,9 @@ func (s *USMSuite) TestTLSClassification() {
 			validation: func(t *testing.T, tr *tracer.Tracer) {
 				// Iterate through active connections until we find connection created above
 				require.Eventuallyf(t, func() bool {
-					payload := getConnections(t, tr)
-					for _, c := range payload.Conns {
-						if c.DPort == port && c.ProtocolStack.Contains(protocols.TLS) {
-							return true
-						}
-					}
-					return false
+					return getConnections(t, tr).Conns.Any(func(i int, c *network.ConnectionStats) bool {
+						return c.DPort == port && c.ProtocolStack.Contains(protocols.TLS)
+					})
 				}, 4*time.Second, 100*time.Millisecond, "couldn't find TLS connection matching: dst port %v", portAsString)
 			},
 		})
@@ -452,8 +449,7 @@ func (s *USMSuite) TestTLSClassificationAlreadyRunning() {
 	var foundIncoming, foundOutgoing bool
 	require.Eventuallyf(t, func() bool {
 		payload := getConnections(t, tr)
-
-		for _, c := range payload.Conns {
+		payload.Conns.Iterate(func(i int, c *network.ConnectionStats) {
 			if !foundIncoming && c.DPort == uint16(portAsValue) && c.ProtocolStack.Contains(protocols.TLS) {
 				foundIncoming = true
 			}
@@ -461,7 +457,7 @@ func (s *USMSuite) TestTLSClassificationAlreadyRunning() {
 			if !foundOutgoing && c.SPort == uint16(portAsValue) && c.ProtocolStack.Contains(protocols.TLS) {
 				foundOutgoing = true
 			}
-		}
+		})
 		return foundIncoming && foundOutgoing
 	}, 4*time.Second, 100*time.Millisecond, "couldn't find matching TLS connection")
 }

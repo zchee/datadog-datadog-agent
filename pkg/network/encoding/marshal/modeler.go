@@ -38,7 +38,7 @@ type ConnectionsModeler struct {
 // Furthermore, it stores the current agent configuration which applies to all instances related to the entire set of connections,
 // rather than just individual batches.
 func NewConnectionsModeler(conns *network.Connections) *ConnectionsModeler {
-	ipc := make(ipCache, len(conns.Conns)/2)
+	ipc := make(ipCache, conns.Conns.Len()/2)
 	return &ConnectionsModeler{
 		httpEncoder:     newHTTPEncoder(conns.HTTP),
 		http2Encoder:    newHTTP2Encoder(conns.HTTP2),
@@ -70,11 +70,11 @@ func (c *ConnectionsModeler) modelConnections(builder *model.ConnectionsBuilder,
 		}
 	})
 
-	for _, conn := range conns.Conns {
+	conns.Conns.Iterate(func(i int, conn *network.ConnectionStats) {
 		builder.AddConns(func(builder *model.ConnectionBuilder) {
-			FormatConnection(builder, conn, c.routeIndex, c.httpEncoder, c.http2Encoder, c.kafkaEncoder, c.postgresEncoder, c.redisEncoder, c.dnsFormatter, c.ipc, c.tagsSet)
+			FormatConnection(builder, *conn, c.routeIndex, c.httpEncoder, c.http2Encoder, c.kafkaEncoder, c.postgresEncoder, c.redisEncoder, c.dnsFormatter, c.ipc, c.tagsSet)
 		})
-	}
+	})
 
 	routes := make([]*model.Route, len(c.routeIndex))
 	for _, v := range c.routeIndex {
