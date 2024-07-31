@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/DataDog/datadog-agent/cmd/system-probe/api/module"
 	sysconfigtypes "github.com/DataDog/datadog-agent/cmd/system-probe/config/types"
@@ -97,6 +98,44 @@ func (s *discovery) handleOpenPorts(w http.ResponseWriter, _ *http.Request) {
 	utils.WriteAsJSON(w, resp)
 }
 
+var allowedEnvironmentVariables = map[string]struct{}{
+	"PATH":                     {},
+	"PWD":                      {},
+	"GUNICORN_CMD_ARGS":        {},
+	"WSGI_APP":                 {},
+	"DD_SERVICE":               {},
+	"DD_TAGS":                  {},
+	"DD_INJECTION_ENABLED":     {},
+	"SPRING_APPLICATION_NAME":  {},
+	"SPRING_CONFIG_LOCATIONS":  {},
+	"SPRING_CONFIG_NAME":       {},
+	"SPRING_PROFILES_ACTIVE":   {},
+	"CORECLR_PROFILER_PATH":    {},
+	"CORECLR_ENABLE_PROFILING": {},
+	"JAVA_TOOL_OPTIONS":        {},
+	"_JAVA_OPTIONS":            {},
+	"JDK_JAVA_OPTIONS":         {},
+	"JAVA_OPTIONS":             {},
+	"CATALINA_OPTS":            {},
+	"JDPA_OPTS":                {},
+	"VIRTUAL_ENV":              {},
+}
+
+func filterEnv(in []string) (out []string) {
+	for _, env := range in {
+		split := strings.SplitN(env, "=", 2)
+		if len(split) != 2 {
+			continue
+		}
+
+		name := split[0]
+		if _, ok := allowedEnvironmentVariables[name]; ok {
+			out = append(out, env)
+		}
+	}
+	return
+}
+
 func (s *discovery) handleGetProc(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	pidStr := vars["pid"]
@@ -129,7 +168,7 @@ func (s *discovery) handleGetProc(w http.ResponseWriter, req *http.Request) {
 	resp := &model.GetProcResponse{
 		Proc: &model.Proc{
 			PID:     int(pid),
-			Environ: env,
+			Environ: filterEnv(env),
 			CWD:     cwd,
 		},
 	}

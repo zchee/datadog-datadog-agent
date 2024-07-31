@@ -107,6 +107,8 @@ func TestDiscoveryModule_GetProc(t *testing.T) {
 	cmd := exec.CommandContext(ctx, "sleep", "1000")
 	cmd.Dir = "/tmp/"
 	cmd.Env = append(cmd.Env, "DD_SERVICE=foobar")
+	cmd.Env = append(cmd.Env, "DD_SERVICE_INVALID=ignored")
+	cmd.Env = append(cmd.Env, "OTHER_VARIABLE=other")
 	cmd.Env = append(cmd.Env, "JAVA_OPTIONS=quux")
 	err := cmd.Start()
 	assert.NoError(t, err)
@@ -130,5 +132,7 @@ func TestDiscoveryModule_GetProc(t *testing.T) {
 
 	assert.Equal(t, res.Proc.CWD, "/tmp")
 	assert.Contains(t, res.Proc.Environ, "DD_SERVICE=foobar")
+	assert.NotContains(t, res.Proc.Environ, "DD_SERVICE_INVALID=ignored")
+	assert.NotContains(t, res.Proc.Environ, "OTHER_VARIABLE=other")
 	assert.Contains(t, res.Proc.Environ, "JAVA_OPTIONS=quux")
 }
