@@ -8,6 +8,9 @@ package module
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"path"
+	"strconv"
 
 	"github.com/DataDog/datadog-agent/cmd/system-probe/api/module"
 	sysconfigtypes "github.com/DataDog/datadog-agent/cmd/system-probe/config/types"
@@ -18,10 +21,13 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/portlist"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
+	"github.com/gorilla/mux"
+	"github.com/prometheus/procfs"
 )
 
 const (
 	pathOpenPorts = "/open_ports"
+	pathGetProc   = "/procs/{pid}"
 )
 
 // Ensure discovery implements the module.Module interface.
@@ -50,6 +56,7 @@ func (s *discovery) GetStats() map[string]interface{} {
 func (s *discovery) Register(httpMux *module.Router) error {
 	httpMux.HandleFunc("/status", s.handleStatusEndpoint)
 	httpMux.HandleFunc(pathOpenPorts, s.handleOpenPorts)
+	httpMux.HandleFunc(pathGetProc, s.handleGetProc)
 	return nil
 }
 
@@ -86,6 +93,45 @@ func (s *discovery) handleOpenPorts(w http.ResponseWriter, _ *http.Request) {
 	}
 	resp := &model.OpenPortsResponse{
 		Ports: portsResp,
+	}
+	utils.WriteAsJSON(w, resp)
+}
+
+func (s *discovery) handleGetProc(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	pidStr := vars["pid"]
+	pid, err := strconv.ParseUint(pidStr, 10, 32)
+	if err != nil {
+		s.handleError(w, pathGetProc, http.StatusBadRequest, fmt.Errorf("failed to convert pid to integer: %v", err))
+		return
+	}
+
+	if _, err := os.Stat(path.Join(procfs.DefaultMountPoint, pidStr)); os.IsNotExist(err) {
+		s.handleError(w, pathGetProc, http.StatusNotFound, fmt.Errorf("/proc/{pid} does not exist: %v", err))
+		return
+	}
+	proc, err := procfs.NewProc(int(pid))
+	if err != nil {
+		s.handleError(w, pathGetProc, http.StatusInternalServerError, fmt.Errorf("failed to read procfs: %v", err))
+		return
+	}
+	env, err := proc.Environ()
+	if err != nil {
+		s.handleError(w, pathGetProc, http.StatusInternalServerError, fmt.Errorf("failed to read /proc/{pid}/environ: %v", err))
+		return
+	}
+	cwd, err := proc.Cwd()
+	if err != nil {
+		s.handleError(w, pathGetProc, http.StatusInternalServerError, fmt.Errorf("failed to read /proc/{pid}/cwd: %v", err))
+		return
+	}
+
+	resp := &model.GetProcResponse{
+		Proc: &model.Proc{
+			PID:     int(pid),
+			Environ: env,
+			CWD:     cwd,
+		},
 	}
 	utils.WriteAsJSON(w, resp)
 }

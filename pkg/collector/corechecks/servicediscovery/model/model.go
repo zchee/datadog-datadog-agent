@@ -18,3 +18,15 @@ type Port struct {
 type OpenPortsResponse struct {
 	Ports []*Port `json:"ports"`
 }
+
+// Proc represents a system process.
+type Proc struct {
+	PID     int      `json:"pid"`
+	Environ []string `json:"environ"`
+	CWD     string   `json:"cwd"`
+}
+
+// GetProcResponse is the response for the system-probe /discovery/procs/{pid} endpoint.
+type GetProcResponse struct {
+	Proc *Proc `json:"proc"`
+}

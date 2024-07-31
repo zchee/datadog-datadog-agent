@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"net/http/httptest"
@@ -95,4 +96,27 @@ func TestDiscoveryModule_OpenPorts(t *testing.T) {
 	// should be able to get this info since it's a child process, and it will be owned by the current user
 	assert.NotEmpty(t, port.ProcessName)
 	assert.NotEmpty(t, port.PID)
+}
+
+func TestDiscoveryModule_GetProc(t *testing.T) {
+	url := setupDiscoveryModule(t)
+	port := startServerAndGetPort(t, url)
+	require.NotNil(t, port, "could not find http server port")
+	require.NotEmpty(t, port.PID, "could not get port pid")
+
+	req, err := http.NewRequest("GET", url+"/discovery/procs/"+strconv.Itoa(port.PID), nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	res := &model.GetProcResponse{}
+	err = json.NewDecoder(resp.Body).Decode(res)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	assert.Equal(t, res.Proc.PID, port.PID)
+	assert.NotEmpty(t, res.Proc.Environ)
+	assert.NotEmpty(t, res.Proc.CWD)
 }
