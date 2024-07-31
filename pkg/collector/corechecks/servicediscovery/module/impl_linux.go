@@ -463,6 +463,8 @@ func getListeners() (*[]model.Listener, error) {
 		}
 
 		if len(newPorts) == 0 {
+			// no proxy, hope for the best
+			finalListeners = append(finalListeners, listener)
 			continue
 		}
 
