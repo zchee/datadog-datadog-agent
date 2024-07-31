@@ -30,3 +30,11 @@ type Proc struct {
 type GetProcResponse struct {
 	Proc *Proc `json:"proc"`
 }
+
+type Listener struct {
+	Pid       int    `json:"pid"`
+	Namespace int    `json:"namespace"`
+	Name      string `json:"name"`
+	Cmdline   string `json:"cmdline"`
+	Ports     []int  `json:"ports"`
+}
