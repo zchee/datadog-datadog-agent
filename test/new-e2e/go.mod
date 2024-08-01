@@ -24,7 +24,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.56.0-rc.3
 	github.com/DataDog/datadog-agent/pkg/util/testutil v0.56.0-rc.3
 	github.com/DataDog/datadog-agent/pkg/version v0.56.0-rc.3
-	github.com/DataDog/datadog-agent/test/fakeintake v0.56.0-rc.3
+	github.com/DataDog/datadog-agent/test/fakeintake v0.57.0-devel.0.20240801084154-a6fe1f2cb4c0
 	github.com/DataDog/datadog-api-client-go v1.16.0
 	github.com/DataDog/datadog-api-client-go/v2 v2.27.0
 	// Are you bumping github.com/DataDog/test-infra-definitions ?
