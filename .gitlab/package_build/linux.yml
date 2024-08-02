@@ -43,7 +43,6 @@
     ]
   variables:
     PACKAGE_ARCH: amd64
-    CC: x86_64-unknown-linux-gnu-gcc
 
 .agent_build_arm64:
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/linux-glibc-2-23-arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
@@ -57,7 +56,6 @@
     ]
   variables:
     PACKAGE_ARCH: arm64
-    CC: aarch64-unknown-linux-gnu-gcc
 
 .agent_6_build:
   variables:
