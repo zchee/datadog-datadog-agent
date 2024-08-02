@@ -23,3 +23,11 @@ test_gitlab_compare_to:
     - !reference [.setup_agent_github_app]
     - pip install -r tasks/requirements.txt
     - inv pipeline.compare-to-itself
+
+ugly_early_debug:
+  stage: .pre
+  tags: ["arch:arm64"]
+  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/linux-glibc-2-23-arm64_test_only:v40686155-8be96841
+  script:
+    - objdump -x /usr/local/rvm/rubies/ruby-2.7.2/lib/libruby.so.2.7.2
+    - aarch64-unknown-linux-gnu-objdump -x /usr/local/rvm/rubies/ruby-2.7.2/lib/libruby.so.2.7.2
