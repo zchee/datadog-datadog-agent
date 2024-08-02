@@ -29,4 +29,4 @@ ugly_early_debug:
   tags: ["arch:arm64"]
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/linux-glibc-2-23-arm64_test_only:v40686155-8be96841
   script:
-    - file /usr/local/rvm/rubies/ruby-2.7.2/lib/libruby.so
+    - file /usr/local/rvm/rubies/ruby-2.7.2/lib/libruby.so.2.7.2
