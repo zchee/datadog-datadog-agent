@@ -58,11 +58,6 @@ static __always_inline bool is_valid_tls_version(__u16 version) {
 // - the payload length + the size of the record header is less than the size
 //   of the skb
 static __always_inline bool is_valid_tls_app_data(tls_record_header_t *hdr, __u32 buf_size, __u32 skb_len) {
-    if (!is_valid_tls_version(hdr->version)) {
-        return false;
-    }
-
-    __u16 payload_len = bpf_ntohs(hdr->length);
     if (payload_len > TLS_MAX_PAYLOAD_LENGTH) {
         return false;
     }
@@ -78,7 +73,7 @@ static __always_inline bool is_tls_handshake(tls_hello_message_t *msg) {
     switch (msg->handshake_type) {
     case TLS_HANDSHAKE_CLIENT_HELLO:
     case TLS_HANDSHAKE_SERVER_HELLO:
-        return is_valid_tls_version(msg->version);
+        return true;
     }
 
     return false;
@@ -93,10 +88,32 @@ static __always_inline bool is_tls(const char *buf, __u32 buf_size, __u32 skb_le
         return false;
     }
 
+    // Getting TLS record header.
     tls_record_header_t *tls_record_header = (tls_record_header_t *)buf;
+    // Converting the fields to host byte order.
+    tls_record_header->version = bpf_ntohs(tls_record_header->version);
+    tls_record_header->length = bpf_ntohs(tls_record_header->length);
+
+    // Checking the version in the record header.
+    if (!is_valid_tls_version(bpf_ntohs(hdr->version))) {
+        return false;
+    }
     switch (tls_record_header->content_type) {
     case TLS_HANDSHAKE:
-        return is_tls_handshake((tls_hello_message_t *)(buf + sizeof(tls_record_header_t)));
+        // Checking if the buffer is large enough to contain the handshake.
+        if (buf_size < (sizeof(tls_record_header_t) + sizeof(tls_hello_message_t))) {
+            return false;
+        }
+        tls_hello_message_t *tls_hello_message = (tls_hello_message_t *)(buf + sizeof(tls_record_header_t));
+        if (!is_tls_handshake(tls_hello_message)) {
+            return false;
+        }
+        tls_hello_message->length = bpf_ntohl(tls_hello_message->length);
+        tls_hello_message->version = bpf_ntohs(tls_hello_message->version);
+        // The version in the handshake message should be greater than or equal to the version in the record header.
+        // The version in the handshake message should be a valid TLS version.
+        return is_valid_tls_version(tls_hello_message->version) &&
+            tls_hello_message->version >= tls_record_header->version;
     case TLS_APPLICATION_DATA:
         return is_valid_tls_app_data(tls_record_header, buf_size, skb_len);
     }
