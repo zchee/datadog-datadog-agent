@@ -90,13 +90,11 @@ static __always_inline bool is_tls_handshake(tls_record_header_t *hdr, const cha
         return false;
     }
 
-    switch (msg->handshake_type) {
-    case TLS_HANDSHAKE_CLIENT_HELLO:
-    case TLS_HANDSHAKE_SERVER_HELLO:
-        return is_valid_tls_version(msg->version);
+    if (msg->handshake_type != TLS_HANDSHAKE_CLIENT_HELLO && msg->handshake_type != TLS_HANDSHAKE_SERVER_HELLO) {
+        return false;
     }
 
-    return false;
+    return is_valid_tls_version(msg->version) && msg->version >= hdr->version;
 }
 
 // is_tls checks if the given buffer is a valid TLS record header. We are
