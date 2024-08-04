@@ -69,7 +69,27 @@ static __always_inline bool is_valid_tls_app_data(tls_record_header_t *hdr, __u3
 // handshake message. The message is considered valid if:
 // - The type matches CLIENT_HELLO or SERVER_HELLO
 // - The version is a known SSL/TLS version
-static __always_inline bool is_tls_handshake(tls_hello_message_t *msg) {
+static __always_inline bool is_tls_handshake(tls_record_header_t *hdr, const char *buf, __u32 buf_size) {
+    // Checking the buffer size contains at least the size of the tls record header and the tls hello message header.
+    if (sizeof(tls_hello_message_t) + sizeof(tls_hello_message_t) < buf_size) {
+        return false;
+    }
+    // Checking the tls record header length is greater than the tls hello message header length.
+    if (hdr->length < sizeof(tls_hello_message_t)) {
+        return false;
+    }
+
+    // Getting the tls hello message header.
+    tls_hello_message_t *msg = (tls_hello_message_t *)(buf + sizeof(tls_record_header_t));
+    // Converting the fields to host byte order.
+    msg->version = bpf_ntohs(msg->version);
+    msg->length = bpf_ntohs(msg->length);
+    // TLS handshake message length should be equal to the record header length minus the size of the hello message
+    // header.
+    if (msg->length + sizeof(tls_hello_message_t) != hdr->length) {
+        return false;
+    }
+
     switch (msg->handshake_type) {
     case TLS_HANDSHAKE_CLIENT_HELLO:
     case TLS_HANDSHAKE_SERVER_HELLO:
@@ -84,7 +104,7 @@ static __always_inline bool is_tls_handshake(tls_hello_message_t *msg) {
 // - TLS Handshake record headers
 // - TLS Application Data record headers
 static __always_inline bool is_tls(const char *buf, __u32 buf_size, __u32 skb_len) {
-    if (buf_size < (sizeof(tls_record_header_t) + sizeof(tls_hello_message_t))) {
+    if (buf_size < sizeof(tls_record_header_t)) {
         return false;
     }
 
@@ -101,7 +121,7 @@ static __always_inline bool is_tls(const char *buf, __u32 buf_size, __u32 skb_le
 
     switch (tls_record_header->content_type) {
     case TLS_HANDSHAKE:
-        return is_tls_handshake((tls_hello_message_t *)(buf + sizeof(tls_record_header_t)));
+        return is_tls_handshake(tls_record_header, buf, buf_size);
     case TLS_APPLICATION_DATA:
         return is_valid_tls_app_data(tls_record_header, buf_size, skb_len);
     }
