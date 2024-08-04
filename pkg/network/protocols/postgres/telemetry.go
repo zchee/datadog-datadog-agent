@@ -37,6 +37,11 @@ type Telemetry struct {
 	failedOperationExtraction *libtelemetry.Counter
 }
 
+// CountOptions holds the options for the Count function.
+type CountOptions struct {
+	TelemetryBufferSize int
+}
+
 // createQueryLengthBuckets initializes the query length buckets
 // The buckets are defined relative to a `BufferSize` and a `bucketLength` as follows:
 // Bucket 0: 0 to BufferSize - 2*bucketLength
