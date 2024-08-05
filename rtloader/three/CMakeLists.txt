@@ -68,7 +68,4 @@ else()
   install(TARGETS datadog-agent-three
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
-  set_target_properties(datadog-agent-three
-    PROPERTIES
-        INSTALL_RPATH "${Python3_LIBRARY_DIRS}")
 endif()
