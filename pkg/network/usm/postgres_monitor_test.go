@@ -523,7 +523,7 @@ func getTruncatedTableName(query string, tableNameIndex int) string {
 }
 
 // getPostgresInFlightEntries returns the entries in the in-flight map.
-func getPostgresInFlightEntries(t *testing.T, monitor *Monitor) map[ebpfpostgres.ConnTuple]postgrestypes.EbpfTx {
+func getPostgresInFlightEntries(t *testing.T, monitor *Monitor) map[ebpfpostgres.ConnTuple]ebpfpostgres.EbpfTx {
 	postgresInFlightMap, _, err := monitor.ebpfProgram.GetMap(postgres.InFlightMap)
 	require.NoError(t, err)
 
