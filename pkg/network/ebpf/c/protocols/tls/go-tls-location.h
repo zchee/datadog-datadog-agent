@@ -109,7 +109,7 @@ static __always_inline int read_register(struct pt_regs* ctx, int64_t regnum, vo
         }
 
         volatile u64 tmp = 0;
-    #pragma unroll
+    #pragma unroll(NUM_REGISTERS)
         for (int i = 0; i < NUM_REGISTERS; i++) {
             if (i == regnum) {
                 tmp = ctx->regs[i];

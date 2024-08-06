@@ -7,7 +7,7 @@
 #include "shared-libraries/types.h"
 
 static __always_inline void fill_path_safe(lib_path_t *path, const char *path_argument) {
-#pragma unroll
+#pragma unroll(LIB_PATH_MAX_SIZE)
     for (int i = 0; i < LIB_PATH_MAX_SIZE; i++) {
         bpf_probe_read_user(&path->buf[i], 1, &path_argument[i]);
         if (path->buf[i] == 0) {
@@ -21,7 +21,7 @@ static __always_inline void do_sys_open_helper_enter(const char *filename) {
     lib_path_t path = {0};
     if (bpf_probe_read_user_with_telemetry(path.buf, sizeof(path.buf), filename) >= 0) {
 // Find the null character and clean up the garbage following it
-#pragma unroll
+#pragma unroll(LIB_PATH_MAX_SIZE)
         for (int i = 0; i < LIB_PATH_MAX_SIZE; i++) {
             if (path.len) {
                 path.buf[i] = 0;
@@ -71,7 +71,7 @@ static __always_inline void do_sys_open_helper_exit(exit_sys_ctx *args) {
 #define match3chars(_base, _a,_b,_c) (path->buf[_base+i] == _a && path->buf[_base+i+1] == _b && path->buf[_base+i+2] == _c)
 #define match6chars(_base, _a,_b,_c,_d,_e,_f) (match3chars(_base,_a,_b,_c) && match3chars(_base+3,_d,_e,_f))
     int i = 0;
-#pragma unroll
+#pragma unroll(LIB_PATH_MAX_SIZE - LIB_SO_SUFFIX_SIZE)
     for (i = 0; i < LIB_PATH_MAX_SIZE - (LIB_SO_SUFFIX_SIZE); i++) {
         if(match3chars(6, '.','s','o')) {
             is_shared_library = true;
