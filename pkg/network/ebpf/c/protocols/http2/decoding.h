@@ -551,7 +551,7 @@ static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail
    }
 
     __u32 iteration = 0;
-#pragma unroll(HTTP2_MAX_FRAMES_TO_FILTER)
+#pragma unroll(80) // overridden to prevent program with jump offset larger than field size
     for (; iteration < HTTP2_MAX_FRAMES_TO_FILTER; ++iteration) {
         // Checking we can read HTTP2_FRAME_HEADER_SIZE from the skb.
         if (pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
@@ -903,7 +903,7 @@ static __always_inline void headers_parser(pktbuf_t pkt, void *map_key, conn_tup
         goto delete_iteration;
     }
 
-    #pragma unroll(HTTP2_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL)
+    #pragma unroll(2) // overridden to prevent program with jump offset larger than field size
     for (__u16 index = 0; index < HTTP2_MAX_FRAMES_FOR_HEADERS_PARSER_PER_TAIL_CALL; index++) {
         if (tail_call_state->iteration >= tail_call_state->frames_count) {
             break;
@@ -1093,7 +1093,7 @@ static __always_inline void eos_parser(pktbuf_t pkt, void *map_key, conn_tuple_t
     bool is_rst = false, is_end_of_stream = false;
     http2_stream_t *current_stream = NULL;
 
-    #pragma unroll(HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL)
+    #pragma unroll(50) // overridden to prevent program with jump offset larger than field size
     for (__u16 index = 0; index < HTTP2_MAX_FRAMES_FOR_EOS_PARSER_PER_TAIL_CALL; index++) {
         if (tail_call_state->iteration >= HTTP2_MAX_FRAMES_ITERATIONS) {
             break;
