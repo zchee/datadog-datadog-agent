@@ -9,6 +9,7 @@ package postgres
 
 import (
 	"fmt"
+
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/ebpfpostgres"
 	libtelemetry "github.com/DataDog/datadog-agent/pkg/network/protocols/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
