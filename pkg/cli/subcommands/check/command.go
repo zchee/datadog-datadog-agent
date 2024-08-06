@@ -63,6 +63,7 @@ import (
 	orchestratorForwarderImpl "github.com/DataDog/datadog-agent/comp/forwarder/orchestrator/orchestratorimpl"
 	logagent "github.com/DataDog/datadog-agent/comp/logs/agent"
 	integrations "github.com/DataDog/datadog-agent/comp/logs/integrations/def"
+	integrationsfx "github.com/DataDog/datadog-agent/comp/logs/integrations/fx"
 	"github.com/DataDog/datadog-agent/comp/metadata/inventorychecks"
 	"github.com/DataDog/datadog-agent/comp/metadata/inventorychecks/inventorychecksimpl"
 	"github.com/DataDog/datadog-agent/comp/remote-config/rcservice"
@@ -160,6 +161,9 @@ func MakeCommand(globalParamsGetter func() GlobalParams) *cobra.Command {
 					SysprobeConfigParams: sysprobeconfigimpl.NewParams(sysprobeconfigimpl.WithSysProbeConfFilePath(globalParams.SysProbeConfFilePath)),
 					LogParams:            log.ForOneShot(globalParams.LoggerName, "off", true)}),
 				core.Bundle(),
+
+				// logs integrations (logsReceiver)
+				integrationsfx.Module(),
 
 				// workloadmeta setup
 				collectors.GetCatalog(),
