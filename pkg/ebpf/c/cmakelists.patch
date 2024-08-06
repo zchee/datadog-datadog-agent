@@ -1,11 +1,10 @@
 --- CMakeLists.txt	2020-12-18 19:57:38.000000000 +0000
-+++ CMakeLists.txt	2022-02-09 22:07:27.926584000 +0000
-@@ -68,6 +68,9 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (default Debug)" FORCE)
++++ CMakeLists.txt	2024-08-08 00:00:00.000000000 +0000
+@@ -119,6 +119,8 @@ else()
+   endif()
  endif()
 
-+add_compile_options("-Wl,--wrap=exp -Wl,--wrap=log -Wl,--wrap=log2 -Wl,--wrap=log2f")
-+link_libraries("-Wl,--wrap=exp -Wl,--wrap=log -Wl,--wrap=log2 -Wl,--wrap=log2f")
++add_compile_options(-include glibc_wrap.h)
 +
  # Side-by-side subprojects layout: automatically set the
  # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
