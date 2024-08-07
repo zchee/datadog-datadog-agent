@@ -32,13 +32,6 @@ type Point struct {
 	Value float64
 }
 
-// MarshalJSON return a Point as an array of value (to be compatible with v1 API)
-// FIXME(maxime): to be removed when v2 endpoints are available
-// Note: it is not used with jsoniter, encodePoints takes over
-func (p *Point) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("[%v, %v]", int64(p.Ts), p.Value)), nil
-}
-
 // Resource holds a resource name and type
 type Resource struct {
 	Name string
