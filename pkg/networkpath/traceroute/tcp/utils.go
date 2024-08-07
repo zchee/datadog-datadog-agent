@@ -7,6 +7,7 @@ package tcp
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"strconv"
@@ -221,7 +222,7 @@ func handlePackets(ctx context.Context, conn rawConnWrapper, listener string, lo
 		// TODO: remove listener constraint and parse all packets
 		// in the same function return a succinct struct here
 		if listener == "icmp" {
-			icmpResponse, err := parseICMP(header, packet)
+			icmpResponse, err := bareParseICMP(header, packet)
 			if err != nil {
 				log.Tracef("failed to parse ICMP packet: %s", err.Error())
 				continue
@@ -247,7 +248,7 @@ func handlePackets(ctx context.Context, conn rawConnWrapper, listener string, lo
 // parseICMP takes in an IPv4 header and payload and tries to convert to an ICMP
 // message, it returns all the fields from the packet we need to validate it's the response
 // we're looking for
-func parseICMP(header *ipv4.Header, payload []byte) (*icmpResponse, error) {
+func parseICMP(header *ipv4.Header, payload []byte) (icmpResponse, error) {
 	// in addition to parsing, it is probably not a bad idea to do some validation
 	// so we can ignore the ICMP packets we don't care about
 	icmpResponse := icmpResponse{}
@@ -255,33 +256,35 @@ func parseICMP(header *ipv4.Header, payload []byte) (*icmpResponse, error) {
 	if header.Protocol != unix.IPPROTO_ICMP || header.Version != 4 ||
 		header.Src == nil || header.Dst == nil {
 		log.Errorf("invalid IP header for ICMP packet")
-		return nil, fmt.Errorf("invalid IP header for ICMP packet: %+v", header)
+		return icmpResponse, fmt.Errorf("invalid IP header for ICMP packet: %+v", header)
 	}
 	icmpResponse.SrcIP = header.Src
 	icmpResponse.DstIP = header.Dst
 
 	var icmpv4Layer layers.ICMPv4
-	decoded := []gopacket.LayerType{}
+	decoded := make([]gopacket.LayerType, 0, 2)
 	icmpParser := gopacket.NewDecodingLayerParser(layers.LayerTypeICMPv4, &icmpv4Layer)
 	icmpParser.IgnoreUnsupported = true // ignore unsupported layers, we will decode them in the next step
 	if err := icmpParser.DecodeLayers(payload, &decoded); err != nil {
-		return nil, fmt.Errorf("failed to decode ICMP packet: %w", err)
+		return icmpResponse, fmt.Errorf("failed to decode ICMP packet: %w", err)
 	}
 	// since we ignore unsupported layers, we need to check if we actually decoded
 	// anything
 	if len(decoded) < 1 {
-		return nil, fmt.Errorf("failed to decode ICMP packet, no layers decoded")
+		return icmpResponse, fmt.Errorf("failed to decode ICMP packet, no layers decoded")
 	}
 	icmpResponse.TypeCode = icmpv4Layer.TypeCode
 
+	shouldExtendPayload := len(icmpv4Layer.Payload) < 40
 	var icmpPayload []byte
-	if len(icmpv4Layer.Payload) < 40 {
+	if shouldExtendPayload {
+		var extendedPayload [40]byte
 		log.Tracef("Payload length %d is less than 40, extending...\n", len(icmpv4Layer.Payload))
-		icmpPayload = make([]byte, 40)
-		copy(icmpPayload, icmpv4Layer.Payload)
+		copy(extendedPayload[:], icmpv4Layer.Payload)
 		// we have to set this in order for the TCP
 		// parser to work
-		icmpPayload[32] = 5 << 4 // set data offset
+		extendedPayload[32] = 5 << 4 // set data offset
+		icmpPayload = extendedPayload[:]
 	} else {
 		icmpPayload = icmpv4Layer.Payload
 	}
@@ -292,7 +295,7 @@ func parseICMP(header *ipv4.Header, payload []byte) (*icmpResponse, error) {
 	var innerTCPLayer layers.TCP
 	innerIPParser := gopacket.NewDecodingLayerParser(layers.LayerTypeIPv4, &innerIPLayer, &innerTCPLayer)
 	if err := innerIPParser.DecodeLayers(icmpPayload, &decoded); err != nil {
-		return nil, fmt.Errorf("failed to decode inner ICMP payload: %w", err)
+		return icmpResponse, fmt.Errorf("failed to decode inner ICMP payload: %w", err)
 	}
 	icmpResponse.InnerSrcIP = innerIPLayer.SrcIP
 	icmpResponse.InnerDstIP = innerIPLayer.DstIP
@@ -300,7 +303,33 @@ func parseICMP(header *ipv4.Header, payload []byte) (*icmpResponse, error) {
 	icmpResponse.InnerDstPort = uint16(innerTCPLayer.DstPort)
 	icmpResponse.InnerSeqNum = innerTCPLayer.Seq
 
-	return &icmpResponse, nil
+	return icmpResponse, nil
+}
+
+func bareParseICMP(header *ipv4.Header, payload []byte) (icmpResponse, error) {
+	icmpResponse := icmpResponse{}
+	if header.Protocol != 1 || header.Version != 4 ||
+		header.Src == nil || header.Dst == nil {
+		log.Errorf("invalid IP header for ICMP packet")
+		return icmpResponse, fmt.Errorf("invalid IP header for ICMP packet: %+v", header)
+	}
+	icmpResponse.SrcIP = header.Src
+	icmpResponse.DstIP = header.Dst
+
+	if len(payload) < 28+8 {
+		return icmpResponse, fmt.Errorf("invalid ICMP payload length: %d", len(payload))
+	}
+
+	// add 8 bits to get to the start of the inner IP header
+	icmpResponse.InnerSrcIP = payload[20:24]
+	icmpResponse.InnerDstIP = payload[24:28]
+
+	// TODO: use IPv4 header length to find last 8 bytes of the inner TCP header
+	icmpResponse.InnerSrcPort = binary.BigEndian.Uint16(payload[28:30])
+	icmpResponse.InnerDstPort = binary.BigEndian.Uint16(payload[30:32])
+	icmpResponse.InnerSeqNum = binary.BigEndian.Uint32(payload[32:36])
+
+	return icmpResponse, nil
 }
 
 func parseTCP(header *ipv4.Header, payload []byte) (*tcpResponse, error) {
@@ -325,7 +354,7 @@ func parseTCP(header *ipv4.Header, payload []byte) (*tcpResponse, error) {
 	return &tcpResponse, nil
 }
 
-func icmpMatch(localIP net.IP, localPort uint16, remoteIP net.IP, remotePort uint16, seqNum uint32, response *icmpResponse) bool {
+func icmpMatch(localIP net.IP, localPort uint16, remoteIP net.IP, remotePort uint16, seqNum uint32, response icmpResponse) bool {
 	return localIP.Equal(response.InnerSrcIP) &&
 		remoteIP.Equal(response.InnerDstIP) &&
 		localPort == response.InnerSrcPort &&

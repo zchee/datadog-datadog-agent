@@ -195,7 +195,7 @@ func Test_parseICMP(t *testing.T) {
 		{
 			description: "full ICMP packet should create icmpResponse",
 			inHeader:    ipv4Header,
-			inPayload:   createMockICMPPacket(icmpLayer, innerIPv4Layer, innerTCPLayer, true),
+			inPayload:   createMockICMPPacket(icmpLayer, innerIPv4Layer, innerTCPLayer, false),
 			expected: &icmpResponse{
 				SrcIP:        srcIP,
 				DstIP:        dstIP,
@@ -216,6 +216,97 @@ func Test_parseICMP(t *testing.T) {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), test.errMsg)
 				assert.Nil(t, actual)
+				return
+			}
+			require.Nil(t, err)
+			require.NotNil(t, actual)
+			// assert.Equal doesn't handle net.IP well
+			assert.Equal(t, structFieldCount(test.expected), structFieldCount(actual))
+			assert.Truef(t, test.expected.SrcIP.Equal(actual.SrcIP), "mismatch source IPs: expected %s, got %s", test.expected.SrcIP.String(), actual.SrcIP.String())
+			assert.Truef(t, test.expected.DstIP.Equal(actual.DstIP), "mismatch dest IPs: expected %s, got %s", test.expected.DstIP.String(), actual.DstIP.String())
+			assert.Truef(t, test.expected.InnerSrcIP.Equal(actual.InnerSrcIP), "mismatch inner source IPs: expected %s, got %s", test.expected.InnerSrcIP.String(), actual.InnerSrcIP.String())
+			assert.Truef(t, test.expected.InnerDstIP.Equal(actual.InnerDstIP), "mismatch inner dest IPs: expected %s, got %s", test.expected.InnerDstIP.String(), actual.InnerDstIP.String())
+			assert.Equal(t, test.expected.InnerSrcPort, actual.InnerSrcPort)
+			assert.Equal(t, test.expected.InnerDstPort, actual.InnerDstPort)
+			assert.Equal(t, test.expected.InnerSeqNum, actual.InnerSeqNum)
+		})
+	}
+}
+
+func Test_bareParseICMP(t *testing.T) {
+	innerSrcIP := net.ParseIP("10.0.0.1")
+	innerDstIP := net.ParseIP("192.168.1.1")
+	ipv4Header := createMockIPv4Header(srcIP, dstIP, 1)
+	icmpLayer := createMockICMPLayer(layers.ICMPv4CodeTTLExceeded)
+	innerIPv4Layer := createMockIPv4Layer(innerSrcIP, innerDstIP, layers.IPProtocolTCP)
+	innerTCPLayer := createMockTCPLayer(12345, 443, 28394, 12737, true, true, true)
+
+	tt := []struct {
+		description string
+		inHeader    *ipv4.Header
+		inPayload   []byte
+		expected    icmpResponse
+		errMsg      string
+	}{
+		{
+			description: "empty IPv4 layer should return an error",
+			inHeader:    &ipv4.Header{},
+			inPayload:   []byte{},
+			expected:    icmpResponse{},
+			errMsg:      "invalid IP header for ICMP packet",
+		},
+		{
+			description: "missing ICMP layer should return an error",
+			inHeader:    ipv4Header,
+			inPayload:   []byte{},
+			expected:    icmpResponse{},
+			errMsg:      "invalid ICMP payload length",
+		},
+		{
+			description: "missing inner layers should return an error",
+			inHeader:    ipv4Header,
+			inPayload:   createMockICMPPacket(icmpLayer, nil, nil, false),
+			expected:    icmpResponse{},
+			errMsg:      "invalid ICMP payload length",
+		},
+		{
+			description: "ICMP packet with partial TCP header should create icmpResponse",
+			inHeader:    ipv4Header,
+			inPayload:   createMockICMPPacket(icmpLayer, innerIPv4Layer, innerTCPLayer, true),
+			expected: icmpResponse{
+				SrcIP:        srcIP,
+				DstIP:        dstIP,
+				InnerSrcIP:   innerSrcIP,
+				InnerDstIP:   innerDstIP,
+				InnerSrcPort: 12345,
+				InnerDstPort: 443,
+				InnerSeqNum:  28394,
+			},
+			errMsg: "",
+		},
+		{
+			description: "full ICMP packet should create icmpResponse",
+			inHeader:    ipv4Header,
+			inPayload:   createMockICMPPacket(icmpLayer, innerIPv4Layer, innerTCPLayer, false),
+			expected: icmpResponse{
+				SrcIP:        srcIP,
+				DstIP:        dstIP,
+				InnerSrcIP:   innerSrcIP,
+				InnerDstIP:   innerDstIP,
+				InnerSrcPort: 12345,
+				InnerDstPort: 443,
+				InnerSeqNum:  28394,
+			},
+			errMsg: "",
+		},
+	}
+
+	for _, test := range tt {
+		t.Run(test.description, func(t *testing.T) {
+			actual, err := bareParseICMP(test.inHeader, test.inPayload)
+			if test.errMsg != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), test.errMsg)
 				return
 			}
 			require.Nil(t, err)
