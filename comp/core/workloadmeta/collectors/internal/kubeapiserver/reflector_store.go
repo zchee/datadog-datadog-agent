@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 // objectParser is an interface allowing to plug any object
@@ -42,16 +43,31 @@ type reflectorStore struct {
 	hasSynced bool
 }
 
+func (r *reflectorStore) Dump(phase string) {
+
+	log.Infof("Phase: %s", phase)
+	log.Infof("Reflector store store map has %d items", len(r.seen))
+
+	for uid, entities := range r.seen {
+		log.Infof("Object with uid %s is mapped to %d entities.", uid, len(entities))
+
+		for _, entityId := range entities {
+			log.Infof("Entity: %s", entityId.String(true))
+		}
+	}
+}
+
 // Add notifies the workloadmeta store with  an EventTypeSet for the given
 // object.
 func (r *reflectorStore) Add(obj interface{}) error {
 	metaObj := obj.(metav1.Object)
 	producedEntities := r.parser.Parse(obj)
-	r.seen[string(metaObj.GetUID())] = make([]workloadmeta.EntityID, 0, len(producedEntities))
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.hasSynced = true
+	r.Dump("Pre Add")
+	r.seen[string(metaObj.GetUID())] = make([]workloadmeta.EntityID, 0, len(producedEntities))
 
 	for _, entity := range producedEntities {
 		r.seen[string(metaObj.GetUID())] = append(r.seen[string(metaObj.GetUID())], entity.GetID())
@@ -63,7 +79,7 @@ func (r *reflectorStore) Add(obj interface{}) error {
 			},
 		})
 	}
-
+	r.Dump("Post Add")
 	return nil
 }
 
@@ -85,6 +101,7 @@ func (r *reflectorStore) Replace(list []interface{}, _ string) error {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.Dump("Pre Replace")
 
 	var events []workloadmeta.CollectorEvent
 
@@ -129,7 +146,7 @@ func (r *reflectorStore) Replace(list []interface{}, _ string) error {
 	r.wlmetaStore.Notify(events)
 	r.seen = seenNow
 	r.hasSynced = true
-
+	r.Dump("Post Replace")
 	return nil
 }
 
@@ -138,6 +155,7 @@ func (r *reflectorStore) Replace(list []interface{}, _ string) error {
 func (r *reflectorStore) Delete(obj interface{}) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.Dump("Pre Delete")
 
 	var uid types.UID
 	switch v := obj.(type) {
@@ -169,6 +187,7 @@ func (r *reflectorStore) Delete(obj interface{}) error {
 		})
 	}
 
+	r.Dump("Post Delete")
 	return nil
 }
 
