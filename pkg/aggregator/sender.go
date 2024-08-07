@@ -191,6 +191,8 @@ func (s *checkSender) sendMetricSample(
 		timestamp = timeNowNano()
 	}
 
+	fmt.Printf("================== checkSender - s.id: %v\n", s.id)
+
 	metricSample := &metrics.MetricSample{
 		Name:            metric,
 		Value:           value,

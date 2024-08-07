@@ -136,7 +136,7 @@ SECURITY_AGENT_TAGS = {
 }
 
 # SERVERLESS_TAGS lists the tags necessary to build serverless
-SERVERLESS_TAGS = {"serverless", "otlp"}
+SERVERLESS_TAGS = {"serverless", "otlp", "zlib", "zstd"}
 
 # SYSTEM_PROBE_TAGS lists the tags necessary to build system-probe
 SYSTEM_PROBE_TAGS = AGENT_TAGS.union({"linux_bpf", "npm"}).difference({"python", "systemd"})

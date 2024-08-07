@@ -296,6 +296,8 @@ func (pb *PayloadsBuilder) writeSerie(serie *metrics.Serie) error {
 	//                       |-----------| 'OriginProduct' enum
 	//                                    |-------| 'Agent' enum value
 
+	fmt.Println("=========================== writeSerie")
+
 	addToPayload := func() error {
 		err := pb.compressor.AddItem(pb.buf.Bytes())
 		if err != nil {
@@ -419,6 +421,7 @@ func (pb *PayloadsBuilder) writeSerie(serie *metrics.Serie) error {
 				if err != nil {
 					return err
 				}
+				fmt.Println("================ iterable_series")
 				return ps.Int32(serieMetadataOriginOriginService, metricSourceToOriginService(serie.Source))
 			})
 		})

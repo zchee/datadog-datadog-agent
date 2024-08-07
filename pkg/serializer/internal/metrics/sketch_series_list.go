@@ -340,7 +340,12 @@ func (pb *payloadsBuilder) marshal(ss *metrics.SketchSeries) error {
 				if err != nil {
 					return err
 				}
-				err = ps.Int32(sketchMetadataOriginOriginCategory, metricSourceToOriginCategory(ss.Source))
+				originCategory := metricSourceToOriginCategory(ss.Source)
+				if ss.Host == "" {
+					// force lambda_metrics
+					originCategory = 38
+				}
+				err = ps.Int32(sketchMetadataOriginOriginCategory, originCategory)
 				if err != nil {
 					return err
 				}
