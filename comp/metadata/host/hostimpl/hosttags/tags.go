@@ -104,7 +104,7 @@ func Get(ctx context.Context, cached bool, conf config.Reader) *Tags {
 		if x, found := cache.Cache.Get(tagsCacheKey); found {
 			tags := x.(*Tags)
 			log.Infof("natasha debugging tags: %v", tags)
-			//return tags
+			return tags
 		}
 	}
 
