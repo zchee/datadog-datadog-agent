@@ -196,7 +196,7 @@ func (d *DeviceCheck) Run(collectionTime time.Time) error {
 			// if the ping fails, send no metrics/metadata, log and add diagnosis
 			log.Errorf("%s: failed to ping device: %s", d.config.IPAddress, err.Error())
 			pingStatus = metadata.DeviceStatusUnreachable
-			d.diagnoses.Add("error", "SNMP_FAILED_TO_PING_DEVICE", "Agent encountered an error when pinging this network device. Check agent logs for more details.")
+			d.diagnoses.Add("error", "SNMP_FAILED_TO_PING_DEVICE", "Agent encountered an error when pinging this network device.")
 			d.sender.Gauge(pingReachableMetric, utils.BoolToFloat64(false), tags)
 			d.sender.Gauge(pingUnreachableMetric, utils.BoolToFloat64(true), tags)
 		} else {
