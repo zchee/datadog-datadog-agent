@@ -44,6 +44,7 @@
       -DLLVM_ENABLE_UNWIND_TABLES=OFF \
       -DLLVM_DISTRIBUTION_COMPONENTS="clang" \
       -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
+      -DLLVM_DEFAULT_TARGET_TRIPLE=$DEFAULT_TARGET \
       ../llvm
     - cmake --build . --target install-clang llc
     # no install target for llc, so copy manually
@@ -52,6 +53,7 @@
     - objdump -p $DATADOG_AGENT_EMBEDDED_PATH/bin/clang-${CLANG_MAJOR_VER} | egrep 'GLIBC_2\.(1[8-9]|[2-9][0-9])' && exit 1
     - objdump -p $DATADOG_AGENT_EMBEDDED_PATH/bin/llc | egrep 'GLIBC_2\.(1[8-9]|[2-9][0-9])' && exit 1
     # fail if clang or llc targets anything other than bpf
+    - $DATADOG_AGENT_EMBEDDED_PATH/bin/clang-${CLANG_MAJOR_VER} -print-effective-triple
     - $DATADOG_AGENT_EMBEDDED_PATH/bin/clang-${CLANG_MAJOR_VER} -print-targets | tail -n +2 > clang_targets.txt
     - diff $CI_PROJECT_DIR/pkg/ebpf/c/expected_targets.txt clang_targets.txt
     - $DATADOG_AGENT_EMBEDDED_PATH/bin/llc --version | tail -n +7 > llc_targets.txt # remove first 6 lines of llc version output; we only care about the registered targets
@@ -76,6 +78,7 @@ build_clang_x64:
   tags: ["arch:amd64"]
   variables:
     ARCH: amd64
+    DEFAULT_TARGET: x86_64-unknown-linux-gnu
 
 build_clang_arm64:
   extends: .build_clang_common
@@ -83,6 +86,7 @@ build_clang_arm64:
   tags: ["arch:arm64"]
   variables:
     ARCH: arm64
+    DEFAULT_TARGET: aarch64-unknown-linux-gnu
 
 build_processed_btfhub_archive:
   rules:
