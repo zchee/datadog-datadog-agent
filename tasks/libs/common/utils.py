@@ -332,6 +332,10 @@ def get_build_flags(
         env["GOARCH"] = arch.go_arch
         env["CGO_ENABLED"] = "1"  # If we're cross-compiling, CGO is disabled by default. Ensure it's always enabled
         env["CC"] = arch.gcc_compiler()
+    if os.getenv('USE_UPDATED_TOOLCHAIN'):
+        arch = platform.processor()
+        env['CC'] = f'{arch}-unknown-linux-gnu-gcc'
+        env['CXX'] = f'{arch}-unknown-linux-gnu-gcc'
 
     if extldflags:
         ldflags += f"'-extldflags={extldflags}' "

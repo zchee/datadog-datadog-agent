@@ -146,6 +146,7 @@ def get_omnibus_env(
         'DEPLOY_AGENT',
         'PACKAGE_ARCH',
         'INSTALL_DIR',
+        'USE_UPDATED_TOOLCHAIN',
     ]
     for key in env_to_forward:
         if key in os.environ:

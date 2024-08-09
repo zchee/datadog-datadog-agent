@@ -24,6 +24,7 @@
     KUBERNETES_CPU_REQUEST: 16
     KUBERNETES_MEMORY_REQUEST: "32Gi"
     KUBERNETES_MEMORY_LIMIT: "32Gi"
+    USE_UPDATED_TOOLCHAIN: true
   artifacts:
     expire_in: 2 weeks
     paths:
@@ -119,6 +120,8 @@ datadog-ot-agent-7-arm64:
     - !reference [.upload_sbom_artifacts]
   before_script:
     - export RELEASE_VERSION=$RELEASE_VERSION_7
+  variables:
+    USE_UPDATED_TOOLCHAIN: true
 
 iot-agent-x64:
   extends: .iot-agent-common
@@ -159,6 +162,7 @@ iot-agent-armhf:
     KUBERNETES_CPU_REQUEST: 16
     KUBERNETES_MEMORY_REQUEST: "32Gi"
     KUBERNETES_MEMORY_LIMIT: "32Gi"
+    USE_UPDATED_TOOLCHAIN: true
   artifacts:
     expire_in: 2 weeks
     paths:
