@@ -14,6 +14,7 @@
 #include "tcp-queue-length-kern-user.h"
 #include "cgroup.h"
 
+#include "bpf_builtins.h"
 #include "bpf_tracing.h"
 #include "bpf_core_read.h"
 #include "map-defs.h"
@@ -38,7 +39,7 @@ static __always_inline void check_sock(struct sock *sk) {
         .write_buffer_max_usage = 0
     };
 
-    struct stats_key k;
+    struct stats_key k __align_stack_8;
     if (!get_cgroup_name(k.cgroup, sizeof(k.cgroup))) {
         return;
     }

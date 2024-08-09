@@ -16,6 +16,10 @@
 # endif
 #endif
 
+#ifndef __aligned
+# define __aligned(X)		__attribute__((aligned(X)))
+#endif
+
 #ifndef __throw_build_bug
 # define __throw_build_bug()	__builtin_trap()
 #endif
