@@ -151,7 +151,7 @@ __attribute__((always_inline)) struct process_event_t *new_process_event(u8 is_f
     struct process_event_t *evt = bpf_map_lookup_elem(&process_event_gen, &key);
 
     if (evt) {
-        __builtin_memset(evt, 0, sizeof(*evt));
+        bpf_memset(evt, 0, sizeof(*evt));
         if (!is_fork) {
             evt->event.flags |= EVENT_FLAGS_ACTIVITY_DUMP_SAMPLE;
         }

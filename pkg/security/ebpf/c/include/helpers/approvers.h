@@ -1,6 +1,7 @@
 #ifndef _APPROVERS_H
 #define _APPROVERS_H
 
+#include "bpf_builtins.h"
 #include "constants/enums.h"
 #include "maps.h"
 
@@ -26,7 +27,7 @@ void __attribute__((always_inline)) monitor_event_approved(u64 event_type, u32 a
 void get_dentry_name(struct dentry *dentry, void *buffer, size_t n);
 
 int __attribute__((always_inline)) approve_by_basename(struct dentry *dentry, u64 event_type) {
-    struct basename_t basename = {};
+    struct basename_t basename __align_stack_8 = {};
     get_dentry_name(dentry, &basename, sizeof(basename));
 
     struct basename_filter_t *filter = bpf_map_lookup_elem(&basename_approvers, &basename);

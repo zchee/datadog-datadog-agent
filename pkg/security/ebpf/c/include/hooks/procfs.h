@@ -1,6 +1,7 @@
 #ifndef _HOOKS_PROCFS_H_
 #define _HOOKS_PROCFS_H_
 
+#include "bpf_builtins.h"
 #include "constants/custom.h"
 #include "constants/offsets/filesystem.h"
 #include "constants/offsets/netns.h"
@@ -131,7 +132,7 @@ int hook_proc_fd_link(ctx_t *ctx) {
 
     struct dentry *d = (struct dentry *)CTX_PARM1(ctx);
     struct dentry *d_parent = NULL;
-    struct basename_t basename = {};
+    struct basename_t basename __align_stack_8 = {};
 
     get_dentry_name(d, &basename, sizeof(basename)); // this is the file descriptor number
     bpf_probe_read(&d_parent, sizeof(d_parent), &d->d_parent);

@@ -1344,6 +1344,15 @@ def validate_object_file_metadata(ctx: Context, build_dir: str | Path = "pkg/ebp
         print(f"All {total_metadata_files} object files have valid metadata")
 
 
+@task
+def check_for_misaligned_stack_objects(ctx: Context, build_dir: str | Path = None):
+    if not build_dir:
+        build_dir = get_ebpf_build_dir(Arch.from_str(CURRENT_ARCH))
+    build_dir = Path(build_dir).absolute()
+    with ctx.cd("./tools/ebpf/stack-align"):
+        ctx.run(f"go run . {build_dir}")
+
+
 def build_object_files(
     ctx,
     major_version='7',
