@@ -293,7 +293,9 @@ DEFAULT_MODULES = {
     ),
     "test/otel": GoModule("test/otel", independent=True, used_by_otel=True),
     "tools/retry_file_dump": GoModule("tools/retry_file_dump", condition=lambda: False, should_tag=False),
-    "tools/ebpf/stack-align": GoModule("tools/ebpf/stack-align", condition=lambda: False, independent=True, importable=False, should_tag=False)
+    "tools/ebpf/stack-align": GoModule(
+        "tools/ebpf/stack-align", condition=lambda: False, independent=True, importable=False, should_tag=False
+    ),
 }
 
 # Folder containing a `go.mod` file but that should not be added to the DEFAULT_MODULES
