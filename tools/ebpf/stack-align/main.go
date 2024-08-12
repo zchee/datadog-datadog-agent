@@ -8,6 +8,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io/fs"
 	"os"
@@ -20,7 +21,18 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+var (
+	useDebugFiles bool
+	buildDir      string
+)
+
+func init() {
+	flag.BoolVar(&useDebugFiles, "use-debug-files", false, "use .o.debug files instead of .o files if present")
+	flag.StringVar(&buildDir, "build-dir", "", "top-level directory where eBPF object files should be checked")
+}
+
 func main() {
+	flag.Parse()
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(1)
@@ -28,10 +40,9 @@ func main() {
 }
 
 func run() error {
-	if len(os.Args) < 2 {
-		return fmt.Errorf("usage: stack-align <build-dir>")
+	if buildDir == "" {
+		return fmt.Errorf("usage: stack-align -build-dir <build-dir> [-use-debug-files]")
 	}
-	dir := os.Args[1]
 
 	disPath, err := exec.LookPath("llvm-dis")
 	if err != nil {
@@ -43,7 +54,7 @@ func run() error {
 	}
 
 	misalignedCount := 0
-	bcPaths, err := glob(dir, `.*\.bc$`)
+	bcPaths, err := glob(buildDir, `.*\.bc$`)
 	if err != nil {
 		return fmt.Errorf("glob: %w", err)
 	}
@@ -57,6 +68,11 @@ func run() error {
 		}
 
 		objFile := strings.TrimSuffix(bcPath, filepath.Ext(bcPath)) + ".o"
+		if useDebugFiles {
+			if _, err := os.Stat(objFile + ".debug"); err == nil {
+				objFile += ".debug"
+			}
+		}
 		for _, structName := range structNames {
 			size, err := structSize(paholePath, structName, objFile)
 			if err != nil {

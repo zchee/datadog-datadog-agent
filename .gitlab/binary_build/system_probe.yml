@@ -15,7 +15,7 @@
     - inv -e system-probe.build --strip-object-files --no-bundle
     # fail if references to glibc >= 2.18
     - objdump -p $CI_PROJECT_DIR/$SYSTEM_PROBE_BINARIES_DIR/system-probe | egrep 'GLIBC_2\.(1[8-9]|[2-9][0-9])' && exit 1
-    - inv -e system-probe.check-for-misaligned-stack-objects
+    - inv -e system-probe.check-for-misaligned-stack-objects --use-debug-files
     - inv -e system-probe.save-build-outputs $CI_PROJECT_DIR/sysprobe-build-outputs.tar.xz
   variables:
     KUBERNETES_MEMORY_REQUEST: "6Gi"
