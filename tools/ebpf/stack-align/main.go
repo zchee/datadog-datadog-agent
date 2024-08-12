@@ -126,7 +126,7 @@ func structSize(paholePath string, structName string, objFile string) (uint64, e
 	paholeCmd.Stderr = &errBuf
 
 	if err := paholeCmd.Run(); err != nil {
-		return 0, fmt.Errorf("%s %s: %w\n%s", paholePath, strings.Join(paholeCmd.Args, " "), err, errBuf.String())
+		return 0, fmt.Errorf("%s: %w\n%s", paholeCmd, err, errBuf.String())
 	}
 
 	sizePattern := "/* size: "
