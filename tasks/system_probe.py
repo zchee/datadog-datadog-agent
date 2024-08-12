@@ -125,10 +125,14 @@ def ninja_define_ebpf_compiler(
         command="clang -MD -MF $out.d $target $ebpfflags $kheaders $flags -c $in -o $out",
         depfile="$out.d",
     )
-    strip = "&& llvm-strip -g $out" if strip_object_files else ""
+    strip = (
+        " && llvm-objcopy --only-keep-debug $out $out.debug"
+        " && llvm-objcopy --strip-debug $out"
+        " && llvm-objcopy --add-gnu-debuglink=$out.debug $out"
+    ) if strip_object_files else ""
     nw.rule(
         name="llc",
-        command=f"llc -march=bpf -filetype=obj -o $out $in {strip}",
+        command=f"llc -march=bpf -filetype=obj -o $out $in{strip}",
     )
 
 
@@ -1475,8 +1479,8 @@ def build_cws_object_files(
 
 
 @task
-def object_files(ctx, kernel_release=None, with_unit_test=False, arch: str = CURRENT_ARCH):
-    build_object_files(ctx, kernel_release=kernel_release, with_unit_test=with_unit_test, arch=arch)
+def object_files(ctx, kernel_release=None, with_unit_test=False, arch: str = CURRENT_ARCH, strip=False):
+    build_object_files(ctx, kernel_release=kernel_release, with_unit_test=with_unit_test, arch=arch, strip_object_files=strip)
 
 
 def clean_object_files(ctx, major_version='7', kernel_release=None, debug=False, strip_object_files=False):
