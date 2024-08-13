@@ -964,17 +964,6 @@ static __always_inline __u64 __bpf_memcmp(const void *x, const void *y,
 #endif
 }
 
-static __always_inline __maybe_unused __u64
-__bpf_no_builtin_memcmp(const void *x __maybe_unused,
-			const void *y __maybe_unused, __u64 len __maybe_unused)
-{
-	__throw_build_bug();
-	return 0;
-}
-
-/* Redirect any direct use in our code to throw an error. */
-#define __builtin_memcmp	__bpf_no_builtin_memcmp
-
 /* Modified for our needs in that we only return either zero (x and y
  * are equal) or non-zero (x and y are non-equal).
  */
