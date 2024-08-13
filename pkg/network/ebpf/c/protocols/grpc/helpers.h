@@ -106,7 +106,7 @@ static __always_inline grpc_status_t scan_headers(struct __sk_buff *skb, skb_inf
 //   means this is not GRPC.
 static __always_inline grpc_status_t is_grpc(struct __sk_buff *skb, const skb_info_t *skb_info) {
     char frame_buf[HTTP2_FRAME_HEADER_SIZE];
-    http2_frame_t current_frame;
+    http2_frame_t current_frame __align_stack_8;
 
     bool found_headers = false;
 

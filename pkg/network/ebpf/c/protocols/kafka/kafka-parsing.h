@@ -1632,7 +1632,7 @@ static __always_inline bool kafka_process(conn_tuple_t *tup, kafka_info_t *kafka
 
     u32 offset = pktbuf_data_offset(pkt);
     kafka_transaction_t *kafka_transaction = &kafka->event.transaction;
-    kafka_header_t kafka_header;
+    kafka_header_t kafka_header __align_stack_8;
     bpf_memset(&kafka_header, 0, sizeof(kafka_header));
     pktbuf_load_bytes_with_telemetry(pkt, offset, (char *)&kafka_header, sizeof(kafka_header));
     kafka_header.message_size = bpf_ntohl(kafka_header.message_size);

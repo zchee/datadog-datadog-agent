@@ -184,7 +184,7 @@ static __always_inline void update_conn_stats(conn_tuple_t *t, size_t sent_bytes
 // update_tcp_stats update rtt, retransmission and state on of a TCP connection
 static __always_inline void update_tcp_stats(conn_tuple_t *t, tcp_stats_t stats) {
     // initialize-if-no-exist the connection state, and load it
-    tcp_stats_t empty = {};
+    tcp_stats_t empty __align_stack_8 = {};
 
     // We skip EEXIST because of the use of BPF_NOEXIST flag. Emitting telemetry for EEXIST here spams metrics
     // and do not provide any useful signal since the key is expected to be present sometimes.
@@ -247,7 +247,7 @@ static __always_inline void handle_tcp_stats(conn_tuple_t* t, struct sock* sk, u
     BPF_CORE_READ_INTO(&rtt_var, tcp_sk(sk), mdev_us);
 #endif
 
-    tcp_stats_t stats = { .rtt = rtt, .rtt_var = rtt_var };
+    tcp_stats_t stats __align_stack_8 = { .rtt = rtt, .rtt_var = rtt_var };
     if (state > 0) {
         stats.state_transitions = (1 << state);
     }

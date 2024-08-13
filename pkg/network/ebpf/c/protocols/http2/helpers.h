@@ -54,7 +54,7 @@ static __always_inline bool is_http2_preface(const char* buf, __u32 buf_size) {
 static __always_inline bool is_http2_server_settings(const char* buf, __u32 buf_size) {
     CHECK_PRELIMINARY_BUFFER_CONDITIONS(buf, buf_size, HTTP2_FRAME_HEADER_SIZE);
 
-    http2_frame_t frame_header;
+    http2_frame_t frame_header __align_stack_8;
     if (!read_http2_frame_header(buf, buf_size, &frame_header)) {
         return false;
     }

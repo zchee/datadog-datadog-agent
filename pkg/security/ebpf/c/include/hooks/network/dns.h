@@ -66,7 +66,7 @@ int classifier_dns_request(struct __sk_buff *skb) {
         return ACT_OK;
     }
 
-    struct dnshdr header = {};
+    struct dnshdr header __align_stack_8 = {};
     if (bpf_skb_load_bytes(skb, pkt->offset, &header, sizeof(header)) < 0) {
         return ACT_OK;
     }

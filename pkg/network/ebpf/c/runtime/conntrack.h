@@ -68,8 +68,8 @@ static __always_inline int nf_conn_to_conntrack_tuples(struct nf_conn* ct, connt
     bpf_memset(tuplehash, 0, sizeof(tuplehash));
 
     BPF_CORE_READ_INTO(&tuplehash, ct, tuplehash);
-    struct nf_conntrack_tuple orig_tup = tuplehash[IP_CT_DIR_ORIGINAL].tuple;
-    struct nf_conntrack_tuple reply_tup = tuplehash[IP_CT_DIR_REPLY].tuple;
+    struct nf_conntrack_tuple orig_tup __align_stack_8 = tuplehash[IP_CT_DIR_ORIGINAL].tuple;
+    struct nf_conntrack_tuple reply_tup __align_stack_8 = tuplehash[IP_CT_DIR_REPLY].tuple;
 
     u32 netns = get_netns(ct);
 

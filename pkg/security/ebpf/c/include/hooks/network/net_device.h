@@ -10,7 +10,7 @@
 
 int __attribute__((always_inline)) start_veth_state_machine() {
     u64 id = bpf_get_current_pid_tgid();
-    struct veth_state_t state = {
+    struct veth_state_t state __align_stack_8 = {
         .state = STATE_NEWLINK,
     };
     bpf_map_update_elem(&veth_state_machine, &id, &state, BPF_ANY);
@@ -114,7 +114,7 @@ int hook___dev_get_by_name(ctx_t *ctx) {
     u64 id = bpf_get_current_pid_tgid();
     struct net *net = (struct net *)CTX_PARM1(ctx);
 
-    struct device_name_t name = {
+    struct device_name_t name __align_stack_8 = {
         .netns = get_netns_from_net(net),
     };
     bpf_probe_read_str(&name.name[0], sizeof(name.name), (void *)CTX_PARM2(ctx));

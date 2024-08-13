@@ -529,7 +529,7 @@ static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_re
 // - DATA frames with the END_STREAM flag set
 static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail_call_state_t *iteration_value, http2_telemetry_t *http2_tel) {
     bool is_headers_or_rst_frame, is_data_end_of_stream;
-    http2_frame_t current_frame = {};
+    http2_frame_t current_frame __align_stack_8 = {};
 
     // The following if-clause could have been "simplified" into
     // if (iteration_value->filter_iterations != 0) {
@@ -596,7 +596,7 @@ static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail
 
 static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_data_offset, conn_tuple_t *tup) {
     const __u32 zero = 0;
-    http2_frame_t current_frame = {};
+    http2_frame_t current_frame __align_stack_8 = {};
 
     // A single packet can contain multiple HTTP/2 frames, due to instruction limitations we have divided the
     // processing into multiple tail calls, where each tail call process a single frame. We must have context when
@@ -635,7 +635,7 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
     if (!has_valid_first_frame) {
         // Handling the case where we have a frame header remainder, and we couldn't read the frame header.
         if (pktbuf_data_offset(pkt) < pktbuf_data_end(pkt) && pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
-            frame_header_remainder_t new_frame_state = { 0 };
+            frame_header_remainder_t new_frame_state __align_stack_8 = { 0 };
             new_frame_state.remainder = HTTP2_FRAME_HEADER_SIZE - (pktbuf_data_end(pkt) - pktbuf_data_offset(pkt));
             bpf_memset(new_frame_state.buf, 0, HTTP2_FRAME_HEADER_SIZE);
         #pragma unroll(HTTP2_FRAME_HEADER_SIZE)
@@ -659,7 +659,7 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
     pktbuf_advance(pkt, current_frame.length);
     // We're exceeding the packet boundaries, so we have a remainder.
     if (pktbuf_data_offset(pkt) > pktbuf_data_end(pkt)) {
-        frame_header_remainder_t new_frame_state = { 0 };
+        frame_header_remainder_t new_frame_state __align_stack_8 = { 0 };
 
         // Saving the remainder.
         new_frame_state.remainder = pktbuf_data_offset(pkt) - pktbuf_data_end(pkt);
@@ -773,7 +773,7 @@ static __always_inline void filter_frame(pktbuf_t pkt, void *map_key, conn_tuple
         __sync_fetch_and_add(&http2_tel->exceeding_max_frames_to_filter, 1);
     }
 
-    frame_header_remainder_t new_frame_state = { 0 };
+    frame_header_remainder_t new_frame_state __align_stack_8 = { 0 };
     if (pktbuf_data_offset(pkt) > pktbuf_data_end(pkt)) {
         // We have a remainder
         new_frame_state.remainder = pktbuf_data_offset(pkt) - pktbuf_data_end(pkt);

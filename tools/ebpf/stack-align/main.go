@@ -78,7 +78,7 @@ func run() error {
 			if err != nil {
 				return err
 			}
-			if size > 8 {
+			if size > 8 && size%8 != 0 {
 				misalignedCount += 1
 				fmt.Printf("struct `%s` in %s is misaligned and needs `__align_stack_8`.\nExample fix: `struct %s x __align_stack_8;`\n\n", structName, objFile, structName)
 			}
@@ -101,18 +101,13 @@ func oneAlignedStructs(disPath string, path string) ([]string, error) {
 		return nil, fmt.Errorf("%s %s: %w\n%s", disPath, strings.Join(discmd.Args, " "), err, errBuf.String())
 	}
 
-	startPattern := "alloca %struct."
-	alignPattern := ", align 1,"
+	alignRegexp := regexp.MustCompile(`alloca %struct.([^,]+), align [124],`)
 	structNames := make(map[string]struct{})
 	rdr := bufio.NewScanner(&buf)
 	for rdr.Scan() {
 		line := rdr.Text()
-		if sidx := strings.Index(line, startPattern); sidx != -1 {
-			substr := line[sidx+len(startPattern):]
-			if eidx := strings.Index(substr, alignPattern); eidx != -1 {
-				structName := substr[:eidx]
-				structNames[structName] = struct{}{}
-			}
+		if match := alignRegexp.FindStringSubmatch(line); match != nil {
+			structNames[match[1]] = struct{}{}
 		}
 	}
 

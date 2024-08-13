@@ -35,8 +35,8 @@ offset_ct(ino)
     }
 
 static __always_inline bool is_conn_nat(const conntrack_tuple_t* orig, const conntrack_tuple_t* reply) {
-    return orig->daddr_l != reply->saddr_l || orig->dport != reply->sport || 
-        orig->saddr_l != reply->daddr_l || orig->sport != reply->dport || 
+    return orig->daddr_l != reply->saddr_l || orig->dport != reply->sport ||
+        orig->saddr_l != reply->daddr_l || orig->sport != reply->dport ||
         orig->daddr_h != reply->saddr_h;
 }
 
@@ -49,9 +49,9 @@ static __always_inline u32 get_netns(struct nf_conn *ct) {
 }
 
 static __always_inline int nf_conn_to_conntrack_tuples(struct nf_conn* ct, conntrack_tuple_t* orig, conntrack_tuple_t* reply) {
-    struct nf_conntrack_tuple orig_tup = {};
+    struct nf_conntrack_tuple orig_tup __align_stack_8 = {};
     bpf_probe_read_kernel_with_telemetry(&orig_tup, sizeof(orig_tup), (char*)ct + offset_ct_origin());
-    struct nf_conntrack_tuple reply_tup = {};
+    struct nf_conntrack_tuple reply_tup __align_stack_8 = {};
     bpf_probe_read_kernel_with_telemetry(&reply_tup, sizeof(reply_tup), (char*)ct + offset_ct_reply());
 
     u32 netns = get_netns(ct);
