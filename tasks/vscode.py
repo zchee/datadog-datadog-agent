@@ -116,14 +116,14 @@ def setup_devcontainer(
 
 
 @task
-def setup_extensions(ctx: Context):
+def setup_extensions(ctx: Context, force=False):
     file = Path(VSCODE_DIR) / VSCODE_EXTENSIONS_FILE
 
     if not file.exists():
         print(color_message(f"The file {file} does not exist. Skipping installation of extensions.", Color.ORANGE))
         raise Exit(code=1)
 
-    if shutil.which("code") is None:
+    if not force and shutil.which("code") is None:
         print(
             color_message(
                 "`code` can't be found in your PATH. Skipping installation of extensions. See https://code.visualstudio.com/docs/setup/mac#_launching-from-the-command-line",
