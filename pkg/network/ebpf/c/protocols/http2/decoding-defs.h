@@ -214,8 +214,8 @@ typedef struct {
 
 typedef enum incomplete_frame_type {
     kIncompleteFrameUnknown
-    kIncompleteFrameHeader = 1,
-    kIncompleteFramePayload = 2,
+    kIncompleteFrameHeader,
+    kIncompleteFramePayload,
 } __attribute__((packed)) incomplete_frame_type_t;
 
 typedef struct {
