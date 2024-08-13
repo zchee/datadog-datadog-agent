@@ -1248,8 +1248,8 @@ func (s *usmHTTP2Suite) TestRawTraffic() {
 				headersLength := message.buf.Len()
 				frame := message.writeData(t, 1, true, data).bytes()
 				return [][]byte{
-					frame[:8],                                 // 9
-					frame[8:headersLength],                    // 55
+					frame[:9],                                 // 9
+					frame[9:headersLength],                    // 55
 					frame[headersLength : headersLength+9],    // 9
 					frame[headersLength+9 : headersLength+12], // 3
 					frame[headersLength+12:],                  // 6
