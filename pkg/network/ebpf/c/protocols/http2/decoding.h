@@ -402,11 +402,10 @@ static __always_inline void pktbuf_process_headers(pktbuf_t pkt, dynamic_table_i
 // The function is trying to read the remaining of a split frame header. We have the first part in
 // `frame_state->buf` (from the previous packet), and now we're trying to read the remaining (`frame_state->remainder`
 // bytes from the current packet).
-// TODO: Change
-static __always_inline void pktbuf_fix_header_frame(pktbuf_t pkt, char *out, frame_header_remainder_t *frame_state) {
-    bpf_memcpy(out, frame_state->buf, HTTP2_FRAME_HEADER_SIZE);
+static __always_inline void pktbuf_fix_header_frame(pktbuf_t pkt, char *out, incomplete_frame_t *incomplete_frame) {
+    bpf_memcpy(out, incomplete_frame->buf, HTTP2_FRAME_HEADER_SIZE);
     // Verifier is unhappy with a single call to `bpf_skb_load_bytes` with a variable length (although checking boundaries)
-    switch (frame_state->remainder) {
+    switch (incomplete_frame->header_bytes_left) {
     case 1:
         pktbuf_load_bytes_from_current_offset(pkt, out + HTTP2_FRAME_HEADER_SIZE - 1, 1);
         break;
@@ -435,26 +434,7 @@ static __always_inline void pktbuf_fix_header_frame(pktbuf_t pkt, char *out, fra
     return;
 }
 
-// TODO: change
-static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_remainder_t *frame_state, http2_frame_t *current_frame, http2_telemetry_t *http2_tel) {
-    // Attempting to read the initial frame in the packet, or handling a state where there is no remainder and finishing reading the current frame.
-    if (frame_state == NULL) {
-        // Checking we have enough bytes in the packet to read a frame header.
-        if (pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
-            // Not enough bytes, cannot read frame, so we have 0 interesting frames in that packet.
-            return false;
-        }
-
-        // Reading frame, and ensuring the frame is valid.
-        pktbuf_load_bytes_from_current_offset(pkt, (char *)current_frame, HTTP2_FRAME_HEADER_SIZE);
-        pktbuf_advance(pkt, HTTP2_FRAME_HEADER_SIZE);
-        if (!format_http2_frame_header(current_frame)) {
-            // Frame is not valid, so we have 0 interesting frames in that packet.
-            return false;
-        }
-        return true;
-    }
-
+static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, incomplete_frame_t *incomplete_frame, http2_frame_t *current_frame, http2_telemetry_t *http2_tel) {
     // Getting here means we have a frame state from the previous packets.
     // Scenarios in order:
     //  1. Check if we have a frame-header remainder - if so, we must try and read the rest of the frame header.
@@ -468,52 +448,61 @@ static __always_inline bool pktbuf_get_first_frame(pktbuf_t pkt, frame_header_re
 
     // Frame-header-remainder.
 
-    if (frame_state->header_length == HTTP2_FRAME_HEADER_SIZE) {
-        // A case where we read an interesting valid frame header in the previous call, and now we're trying to read the
-        // rest of the frame payload. But, since we already read a valid frame, we just fill it as an interesting frame,
-        // and continue to the next tail call.
-        // Copy the cached frame header to the current frame.
-        bpf_memcpy((char *)current_frame, frame_state->buf, HTTP2_FRAME_HEADER_SIZE);
-        frame_state->remainder = 0;
-        return true;
-    }
-    if (frame_state->header_length > 0) {
-        pktbuf_fix_header_frame(pkt, (char*)current_frame, frame_state);
-        if (format_http2_frame_header(current_frame)) {
-            pktbuf_advance(pkt, frame_state->remainder);
-            frame_state->remainder = 0;
-            return true;
-        }
-        frame_state->remainder = 0;
-        // We couldn't read frame header using the remainder.
-        return false;
-    }
+//    // TODO: What to do here?
+//    // assuming we have a frame of length X, this scenario is simply type == kIncompleteFramePayload && payload_bytes_left == X;
+//    if (incomplete_frame->header_length == HTTP2_FRAME_HEADER_SIZE) {
+//        // A case where we read an interesting valid frame header in the previous call, and now we're trying to read the
+//        // rest of the frame payload. But, since we already read a valid frame, we just fill it as an interesting frame,
+//        // and continue to the next tail call.
+//        // Copy the cached frame header to the current frame.
+//        bpf_memcpy((char *)current_frame, incomplete_frame->buf, HTTP2_FRAME_HEADER_SIZE);
+//        incomplete_frame->remainder = 0;
+//        return true;
+//    }
+    bpf_printk("guy frame interesting: %d; missing: %ld\n", incomplete_frame->interesting_frame, incomplete_frame->payload_bytes_left);
+
+    // Reaching here means that we have payload remainder
 
     // We failed to read a frame, if we have a remainder trying to consume it and read the following frame.
-    if (frame_state->remainder > 0) {
-        // To make a "best effort," if we are in a state where we are left with a remainder, and the length of it from
-        // our current position is larger than the data end, we will attempt to handle the remaining buffer as much as possible.
-        if (pktbuf_data_offset(pkt) + frame_state->remainder > pktbuf_data_end(pkt)) {
-            frame_state->remainder -= pktbuf_data_end(pkt) - pktbuf_data_offset(pkt);
-            pktbuf_set_offset(pkt, pktbuf_data_end(pkt));
-            return false;
-        }
-        pktbuf_advance(pkt, frame_state->remainder);
-        frame_state->remainder = 0;
-        // The remainders "ends" the current packet. No interesting frames were found.
-        if (pktbuf_data_offset(pkt) == pktbuf_data_end(pkt)) {
-            return false;
-        }
-        if (pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
-            return false;
-        }
-        reset_frame(current_frame);
-        pktbuf_load_bytes_from_current_offset(pkt, (char *)current_frame, HTTP2_FRAME_HEADER_SIZE);
-        if (format_http2_frame_header(current_frame)) {
-            pktbuf_advance(pkt, HTTP2_FRAME_HEADER_SIZE);
-            return true;
-        }
+    // Frame payload remainder
+
+    // To make a "best effort," if we are in a state where we are left with a remainder, and the length of it from
+    // our current position is larger than the data end, we will attempt to handle the remaining buffer as much as possible.
+    if (pktbuf_data_offset(pkt) + incomplete_frame->payload_bytes_left > pktbuf_data_end(pkt)) {
+        incomplete_frame->payload_bytes_left -= pktbuf_data_end(pkt) - pktbuf_data_offset(pkt);
+        pktbuf_set_offset(pkt, pktbuf_data_end(pkt));
+        bpf_printk("guy 1");
+        return false;
     }
+    // TODO: This can be unified with the above?
+    *current_frame = incomplete_frame->frame;
+
+    if (incomplete_frame->interesting_frame) {
+        incomplete_frame->payload_bytes_left = 0;
+        bpf_printk("guy 2");
+        return true;
+    }
+    pktbuf_advance(pkt, incomplete_frame->payload_bytes_left);
+    incomplete_frame->payload_bytes_left = 0;
+
+    // The remainders "ends" the current packet. No interesting frames were found.
+    if (pktbuf_data_offset(pkt) == pktbuf_data_end(pkt)) {
+        bpf_printk("guy 3");
+        return incomplete_frame->interesting_frame;
+    }
+    // Checking if we can read a frame header from the current packet.
+    if (pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
+        bpf_printk("guy 4");
+        return incomplete_frame->interesting_frame;
+    }
+    reset_frame(current_frame);
+    pktbuf_load_bytes_from_current_offset(pkt, (char *)current_frame, HTTP2_FRAME_HEADER_SIZE);
+    if (format_http2_frame_header(current_frame)) {
+        pktbuf_advance(pkt, HTTP2_FRAME_HEADER_SIZE);
+        bpf_printk("guy 5");
+        return true;
+    }
+    bpf_printk("guy 6");
     // still not valid / does not have a remainder - abort.
     return false;
 }
@@ -590,7 +579,50 @@ static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail
             iteration_value->frames_count < HTTP2_MAX_FRAMES_ITERATIONS);
 }
 
-// TODO: change
+static __always_inline bool empty_incomplete_frame(incomplete_frame_t *incomplete_frame) {
+    return incomplete_frame == NULL ||
+        (incomplete_frame->type == kIncompleteFrameHeader && incomplete_frame->header_bytes_left == 0) ||
+        (incomplete_frame->type == kIncompleteFramePayload && incomplete_frame->payload_bytes_left == 0);
+}
+
+static __always_inline bool get_first_frame_header_without_remainder(pktbuf_t pkt, http2_frame_t *current_frame) {
+    // Checking we have enough bytes in the packet to read a frame header.
+    if (pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
+        // Not enough bytes, cannot read frame, so we have 0 interesting frames in that packet.
+        return false;
+    }
+
+    // Reading frame, and ensuring the frame is valid.
+    pktbuf_load_bytes_from_current_offset(pkt, (char *)current_frame, HTTP2_FRAME_HEADER_SIZE);
+    pktbuf_advance(pkt, HTTP2_FRAME_HEADER_SIZE);
+    return format_http2_frame_header(current_frame);
+}
+
+static __always_inline bool get_first_frame_header_with_header_remainder(pktbuf_t pkt, incomplete_frame_t *incomplete_frame, http2_frame_t *current_frame) {
+    pktbuf_fix_header_frame(pkt, (char*)current_frame, incomplete_frame);
+    if (format_http2_frame_header(current_frame)) {
+        pktbuf_advance(pkt, incomplete_frame->header_bytes_left);
+        incomplete_frame->header_bytes_left = 0;
+        return true;
+    }
+    // We couldn't read frame header using the remainder.
+    // Marking it for deletion
+    incomplete_frame->header_bytes_left = 0;
+    return false;
+}
+
+static __always_inline void consume_frame_payload_remainder(pktbuf_t pkt, incomplete_frame_t *incomplete_frame) {
+    __u32 payload_bytes_left = incomplete_frame->payload_bytes_left;
+    if (pktbuf_data_offset(pkt) + payload_bytes_left > pktbuf_data_end(pkt)) {
+        payload_bytes_left = pktbuf_data_end(pkt) - pktbuf_data_offset(pkt);
+    }
+    if (payload_bytes_left == 0) {
+        return;
+    }
+    pktbuf_advance(pkt, payload_bytes_left);
+    incomplete_frame->payload_bytes_left -= payload_bytes_left;
+}
+
 static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_data_offset, conn_tuple_t *tup) {
     const __u32 zero = 0;
     http2_frame_t current_frame = {};
@@ -616,31 +648,59 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
         return;
     }
 
-    frame_header_remainder_t *frame_state = bpf_map_lookup_elem(&http2_remainder, tup);
-
     http2_telemetry_t *http2_tel = get_telemetry(pkt);
     if (http2_tel == NULL) {
         return;
     }
 
-    bool has_valid_first_frame = pktbuf_get_first_frame(pkt, frame_state, &current_frame, http2_tel);
-    // If we have a state and we consumed it, then delete it.
-    if (frame_state != NULL && frame_state->remainder == 0) {
-        bpf_map_delete_elem(&http2_remainder, tup);
+    bpf_printk("guy packet: %d; end: %d\n", pktbuf_data_offset(pkt), pktbuf_data_end(pkt));
+    bool has_valid_first_frame = false;
+    bool should_consume_frame_payload = true;
+    incomplete_frame_t *incomplete_frame = bpf_map_lookup_elem(&http2_incomplete, tup);
+    if (incomplete_frame == NULL) {
+        bpf_printk("guy no incomplete frame\n");
+        has_valid_first_frame = get_first_frame_header_without_remainder(pkt, &current_frame);
+    } else {
+        bpf_printk("guy incomplete frame: %d\n", incomplete_frame->type);
+        if (incomplete_frame->type == kIncompleteFrameHeader) {
+            has_valid_first_frame = get_first_frame_header_with_header_remainder(pkt, incomplete_frame, &current_frame);
+        } else {
+            bpf_printk("guy incomplete frame payload left: %d\n", incomplete_frame->payload_bytes_left);
+            bpf_printk("guy before offset: %d; end: %d\n", pktbuf_data_offset(pkt), pktbuf_data_end(pkt));
+            consume_frame_payload_remainder(pkt, incomplete_frame);
+            bpf_printk("guy after offset: %d; end: %d\n", pktbuf_data_offset(pkt), pktbuf_data_end(pkt));
+            // If we still have a remainder, we don't have a valid frame.
+            if (incomplete_frame->payload_bytes_left > 0) {
+                return;
+            }
+            if (incomplete_frame->interesting_frame) {
+                has_valid_first_frame = true;
+                should_consume_frame_payload = false;
+                current_frame = incomplete_frame->frame;
+            } else {
+                // We don't have a remainder, so we're trying to read a new frame.
+                has_valid_first_frame = get_first_frame_header_without_remainder(pkt, &current_frame);
+            }
+        }
+
+        if (empty_incomplete_frame(incomplete_frame)) {
+            bpf_printk("guy delete:\n");
+            bpf_map_delete_elem(&http2_incomplete, tup);
+        }
     }
 
     if (!has_valid_first_frame) {
         // Handling the case where we have a frame header remainder, and we couldn't read the frame header.
         if (pktbuf_data_offset(pkt) < pktbuf_data_end(pkt) && pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
-            frame_header_remainder_t new_frame_state = { 0 };
-            new_frame_state.remainder = HTTP2_FRAME_HEADER_SIZE - (pktbuf_data_end(pkt) - pktbuf_data_offset(pkt));
-            bpf_memset(new_frame_state.buf, 0, HTTP2_FRAME_HEADER_SIZE);
+            incomplete_frame_t new_incomplete_frame = { 0 };
+            new_incomplete_frame.type = kIncompleteFrameHeader;
+            new_incomplete_frame.header_bytes_left = HTTP2_FRAME_HEADER_SIZE - (pktbuf_data_end(pkt) - pktbuf_data_offset(pkt));
+            bpf_memset(new_incomplete_frame.buf, 0, HTTP2_FRAME_HEADER_SIZE);
         #pragma unroll(HTTP2_FRAME_HEADER_SIZE)
-            for (__u32 iteration = 0; iteration < HTTP2_FRAME_HEADER_SIZE && new_frame_state.remainder + iteration < HTTP2_FRAME_HEADER_SIZE; ++iteration) {
-                pktbuf_load_bytes(pkt, pktbuf_data_offset(pkt) + iteration, new_frame_state.buf + iteration, 1);
+            for (__u32 iteration = 0; iteration < HTTP2_FRAME_HEADER_SIZE && new_incomplete_frame.header_bytes_left + iteration < HTTP2_FRAME_HEADER_SIZE; ++iteration) {
+                pktbuf_load_bytes(pkt, pktbuf_data_offset(pkt) + iteration, new_incomplete_frame.buf + iteration, 1);
             }
-            new_frame_state.header_length = HTTP2_FRAME_HEADER_SIZE - new_frame_state.remainder;
-            bpf_map_update_elem(&http2_remainder, tup, &new_frame_state, BPF_ANY);
+            bpf_map_update_elem(&http2_incomplete, tup, &new_incomplete_frame, BPF_ANY);
         }
         return;
     }
@@ -648,27 +708,33 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
     bool is_headers_or_rst_frame = current_frame.type == kHeadersFrame || current_frame.type == kRSTStreamFrame;
     bool is_data_end_of_stream = ((current_frame.flags & HTTP2_END_OF_STREAM) == HTTP2_END_OF_STREAM) && (current_frame.type == kDataFrame);
     if (is_headers_or_rst_frame || is_data_end_of_stream) {
+        bpf_printk("guy bla");
         iteration_value->frames_array[0].frame = current_frame;
         iteration_value->frames_array[0].offset = pktbuf_data_offset(pkt);
         iteration_value->frames_count = 1;
     }
 
-    pktbuf_advance(pkt, current_frame.length);
+    if (should_consume_frame_payload) {
+        pktbuf_advance(pkt, current_frame.length);
+    }
     // We're exceeding the packet boundaries, so we have a remainder.
     if (pktbuf_data_offset(pkt) > pktbuf_data_end(pkt)) {
-        frame_header_remainder_t new_frame_state = { 0 };
+        bpf_printk("guy cla; offset: %d; end: %d; frame length: %d\n", pktbuf_data_offset(pkt), pktbuf_data_end(pkt), current_frame.length);
 
+        // TODO: is it frame header or payload remainder?
+        incomplete_frame_t new_incomplete_frame = { 0 };
+        new_incomplete_frame.type = kIncompleteFramePayload;
         // Saving the remainder.
-        new_frame_state.remainder = pktbuf_data_offset(pkt) - pktbuf_data_end(pkt);
+        new_incomplete_frame.payload_bytes_left = pktbuf_data_offset(pkt) - pktbuf_data_end(pkt);
         // We did find an interesting frame (as frames_count == 1), so we cache the current frame and waiting for the
         // next call.
         if (iteration_value->frames_count == 1) {
-            new_frame_state.header_length = HTTP2_FRAME_HEADER_SIZE;
-            bpf_memcpy(new_frame_state.buf, (char *)&current_frame, HTTP2_FRAME_HEADER_SIZE);
+            new_incomplete_frame.frame = current_frame;
+            new_incomplete_frame.interesting_frame = true;
         }
 
         iteration_value->frames_count = 0;
-        bpf_map_update_elem(&http2_remainder, tup, &new_frame_state, BPF_ANY);
+        bpf_map_update_elem(&http2_incomplete, tup, &new_incomplete_frame, BPF_ANY);
         // Not calling the next tail call as we have nothing to process.
         return;
     }
@@ -686,6 +752,7 @@ static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_dat
             .index = PROG_HTTP2_FRAME_FILTER,
         },
     };
+    bpf_printk("guy tail call\n");
     pktbuf_tail_call_compact(pkt, frame_filter_tail_call_array);
 }
 
@@ -705,14 +772,14 @@ int socket__http2_handle_first_frame(struct __sk_buff *skb) {
     // If we detected a tcp termination we should stop processing the packet, and clear its dynamic table by deleting the counter.
     if (is_tcp_termination(&dispatcher_args_copy.skb_info)) {
         // Deleting the entry for the original tuple.
-        bpf_map_delete_elem(&http2_remainder, &dispatcher_args_copy.tup);
+        bpf_map_delete_elem(&http2_incomplete, &dispatcher_args_copy.tup);
         bpf_map_delete_elem(&http2_dynamic_counter_table, &dispatcher_args_copy.tup);
         terminated_http2_batch_enqueue(&dispatcher_args_copy.tup);
         // In case of local host, the protocol will be deleted for both (client->server) and (server->client),
         // so we won't reach for that path again in the code, so we're deleting the opposite side as well.
         flip_tuple(&dispatcher_args_copy.tup);
         bpf_map_delete_elem(&http2_dynamic_counter_table, &dispatcher_args_copy.tup);
-        bpf_map_delete_elem(&http2_remainder, &dispatcher_args_copy.tup);
+        bpf_map_delete_elem(&http2_incomplete, &dispatcher_args_copy.tup);
         return 0;
     }
 
@@ -772,30 +839,31 @@ static __always_inline void filter_frame(pktbuf_t pkt, void *map_key, conn_tuple
         __sync_fetch_and_add(&http2_tel->exceeding_max_frames_to_filter, 1);
     }
 
-    incomplete_frame_t new_incomplete_frame = { 0 };
     if (pktbuf_data_offset(pkt) > pktbuf_data_end(pkt)) {
         // pktbuf_data_offset(pkt) represents the current offset at the end of the last frame.
         // We have an incomplete frame - incomplete payload.
+        incomplete_frame_t new_incomplete_frame = { 0 };
+
         new_incomplete_frame.type = kIncompleteFramePayload;
         new_incomplete_frame.frame = last_frame;
         new_incomplete_frame.payload_bytes_left = pktbuf_data_offset(pkt) - pktbuf_data_end(pkt);
-        bpf_map_update_elem(&http2_remainder, tup, &new_incomplete_frame, BPF_ANY);
+        bpf_map_update_elem(&http2_incomplete, tup, &new_incomplete_frame, BPF_ANY);
     } else if (pktbuf_data_offset(pkt) < pktbuf_data_end(pkt) && pktbuf_data_offset(pkt) + HTTP2_FRAME_HEADER_SIZE > pktbuf_data_end(pkt)) {
         // Reaching here meaning the previous condition didn't met, so we know pktbuf_data_offset(pkt) <= pktbuf_data_end(pkt);
         // If pktbuf_data_offset(pkt) == pktbuf_data_end(pkt), then we have a complete frame. Otherwise, we still have
         // room to read. If we don't have enough bytes to read a frame header, we have an incomplete frame - incomplete header.
         // TODO: What is going to happen is we have 241 frames?
-        new_incomplete_frame.type = kIncompleteFramePayload;
+        incomplete_frame_t new_incomplete_frame = { 0 };
+        new_incomplete_frame.type = kIncompleteFrameHeader;
 
         // We have a frame header remainder
-        new_frame_state.remainder = HTTP2_FRAME_HEADER_SIZE - (pktbuf_data_end(pkt) - pktbuf_data_offset(pkt));
-        bpf_memset(new_frame_state.buf, 0, HTTP2_FRAME_HEADER_SIZE);
+        new_incomplete_frame.header_bytes_left = HTTP2_FRAME_HEADER_SIZE - (pktbuf_data_end(pkt) - pktbuf_data_offset(pkt));
+        bpf_memset(new_incomplete_frame.buf, 0, HTTP2_FRAME_HEADER_SIZE);
     #pragma unroll(HTTP2_FRAME_HEADER_SIZE)
-        for (__u32 iteration = 0; iteration < HTTP2_FRAME_HEADER_SIZE && new_frame_state.remainder + iteration < HTTP2_FRAME_HEADER_SIZE; ++iteration) {
-            pktbuf_load_bytes(pkt, pktbuf_data_offset(pkt) + iteration, new_frame_state.buf + iteration, 1);
+        for (__u32 iteration = 0; iteration < HTTP2_FRAME_HEADER_SIZE && new_incomplete_frame.header_bytes_left + iteration < HTTP2_FRAME_HEADER_SIZE; ++iteration) {
+            pktbuf_load_bytes(pkt, pktbuf_data_offset(pkt) + iteration, new_incomplete_frame.buf + iteration, 1);
         }
-        new_frame_state.header_length = HTTP2_FRAME_HEADER_SIZE - new_frame_state.remainder;
-        bpf_map_update_elem(&http2_remainder, tup, &new_frame_state, BPF_ANY);
+        bpf_map_update_elem(&http2_incomplete, tup, &new_incomplete_frame, BPF_ANY);
     }
 
     if (iteration_value->frames_count == 0) {

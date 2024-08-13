@@ -990,7 +990,7 @@ func (s *usmHTTP2Suite) TestRawTraffic() {
 			expectedEndpoints: nil,
 		},
 		{
-			name: "Interesting frame header sent separately from frame payload",
+			name: "guy Interesting frame header sent separately from frame payload",
 			// Testing the scenario in which the frame header (of an interesting type) is sent separately from the frame payload.
 			messageBuilder: func() [][]byte {
 				headersFrame := newFramer().writeHeaders(t, 1, usmhttp2.HeadersFrameOptions{Headers: testHeaders()}).bytes()
@@ -1010,7 +1010,7 @@ func (s *usmHTTP2Suite) TestRawTraffic() {
 			},
 		},
 		{
-			name: "Not interesting frame header sent separately from frame payload",
+			name: "guy2 Not interesting frame header sent separately from frame payload",
 			// Testing the scenario in which the frame header (of a not interesting type) is sent separately from the frame payload.
 			messageBuilder: func() [][]byte {
 				pingFrame := newFramer().writePing(t).bytes()
@@ -1248,11 +1248,11 @@ func (s *usmHTTP2Suite) TestRawTraffic() {
 				headersLength := message.buf.Len()
 				frame := message.writeData(t, 1, true, data).bytes()
 				return [][]byte{
-					frame[:9],
-					frame[9:headersLength],
-					frame[headersLength : headersLength+9],
-					frame[headersLength+9 : headersLength+12],
-					frame[headersLength+12:],
+					frame[:8],                                 // 9
+					frame[8:headersLength],                    // 55
+					frame[headersLength : headersLength+9],    // 9
+					frame[headersLength+9 : headersLength+12], // 3
+					frame[headersLength+12:],                  // 6
 				}
 			},
 			expectedEndpoints: map[usmhttp.Key]int{
@@ -1899,7 +1899,7 @@ func validateDynamicTableMap(t *testing.T, ebpfProgram *ebpfProgram, expectedDyn
 
 // getRemainderTableMapKeys returns the keys of the remainder table map.
 func getRemainderTableMapKeys(t *testing.T, ebpfProgram *ebpfProgram) []usmhttp.ConnTuple {
-	remainderMap, _, err := ebpfProgram.GetMap("http2_remainder")
+	remainderMap, _, err := ebpfProgram.GetMap("http2_incomplete")
 	require.NoError(t, err)
 	resultIndexes := make([]usmhttp.ConnTuple, 0)
 	var key usmhttp2.ConnTuple
