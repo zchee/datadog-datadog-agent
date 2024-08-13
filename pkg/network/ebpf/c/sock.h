@@ -99,7 +99,7 @@ static __always_inline u16 read_sport(struct sock* skp) {
     return sport;
 }
 
-static u16 read_dport(struct sock *skp) {
+static __always_inline u16 read_dport(struct sock *skp) {
     u16 dport = 0;
 #ifdef COMPILE_PREBUILT
     bpf_probe_read_kernel_with_telemetry(&dport, sizeof(dport), ((char*)skp) + offset_dport());
