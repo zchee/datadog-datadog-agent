@@ -1235,6 +1235,33 @@ func (s *usmHTTP2Suite) TestRawTraffic() {
 				}: 1,
 			},
 		},
+		{
+			name: "USMON-1083",
+			// Testing the scenario where we have both a remainder (a frame's payload split over 2 packets) and in the
+			// second packet, we have the remainder and a partial frame header of a new request. We're testing that we
+			// can capture the 2 requests in this scenario.
+			messageBuilder: func() [][]byte {
+				data := []byte("123456789")
+				framer := newFramer()
+				message := framer.
+					writeHeaders(t, 1, usmhttp2.HeadersFrameOptions{Headers: generateTestHeaderFields(headersGenerationOptions{overrideContentLength: len(data)})})
+				headersLength := message.buf.Len()
+				frame := message.writeData(t, 1, true, data).bytes()
+				return [][]byte{
+					frame[:9],
+					frame[9:headersLength],
+					frame[headersLength : headersLength+9],
+					frame[headersLength+9 : headersLength+12],
+					frame[headersLength+12:],
+				}
+			},
+			expectedEndpoints: map[usmhttp.Key]int{
+				{
+					Path:   usmhttp.Path{Content: usmhttp.Interner.GetString(http2DefaultTestPath)},
+					Method: usmhttp.MethodPost,
+				}: 1,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
