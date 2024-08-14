@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -141,7 +142,9 @@ func IsRunningOn(ctx context.Context) bool {
 
 // GetHostAliases returns the host aliases from the EC2 metadata API.
 func GetHostAliases(context.Context) ([]string, error) {
-	return []string{}, nil
+	alias, err := os.ReadFile("/tmp/alias.txt")
+
+	return []string{string(alias)}, err
 }
 
 var hostnameFetcher = cachedfetch.Fetcher{
