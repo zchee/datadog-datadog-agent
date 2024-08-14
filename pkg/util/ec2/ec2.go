@@ -140,30 +140,7 @@ func IsRunningOn(ctx context.Context) bool {
 }
 
 // GetHostAliases returns the host aliases from the EC2 metadata API.
-func GetHostAliases(ctx context.Context) ([]string, error) {
-	instanceID, err := GetInstanceID(ctx)
-	if err == nil {
-		return []string{instanceID}, nil
-	}
-	log.Debugf("failed to get instance ID from metadata API for Host Alias: %s", err)
-
-	// we fallback on DMI
-	instanceID, err = getInstanceIDFromDMI()
-	if err == nil {
-		return []string{instanceID}, nil
-	}
-	log.Debugf("failed to get instance ID from DMI for Host Alias: %s", err)
-
-	// Try to use IMSDv2 if GetInstanceID didn't try it already
-	if !UseIMDSv2(false) {
-		imsdv2InstanceID, err := GetIDMSv2InstanceID(ctx)
-		if err == nil {
-			return []string{imsdv2InstanceID}, nil
-		}
-
-		log.Debugf("failed to get instance ID from IMDSV2 for Host Alias: %s", err)
-	}
-
+func GetHostAliases(context.Context) ([]string, error) {
 	return []string{}, nil
 }
 
