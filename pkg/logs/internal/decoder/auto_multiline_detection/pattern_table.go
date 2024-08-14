@@ -12,14 +12,29 @@ import (
 
 type row struct {
 	tokens    []Token
-	count     int
-	lastIndex int
+	label     Label
+	count     int64
+	lastIndex int64
+}
+
+// DiagnosticRow is a struct that represents a diagnostic view of a row in the PatternTable.
+type DiagnosticRow struct {
+	TokenString string
+	LabelString string
+	Count       int64
+	LastIndex   int64
 }
 
 // PatternTable is a table of patterns that occur over time from a log source.
+// The pattern table is a heuristic that is used for improving the accuracy of the multiline
+// aggregation by keeping track of the most common patterns that occur in the log source.
+// This heuristic is also used to inspect the variation of patterns in a log source for
+// debugging purposes.
+// The patternt table is always sorted by the frequency of the patterns. When the table
+// becomes full, the least recently updated pattern is evicted.
 type PatternTable struct {
 	table          []*row
-	index          int
+	index          int64
 	maxTableSize   int
 	matchThreshold float64
 }
@@ -27,28 +42,32 @@ type PatternTable struct {
 // NewPatternTable returns a new PatternTable heuristic.
 func NewPatternTable(maxTableSize int, matchThreshold float64) *PatternTable {
 	return &PatternTable{
-		table:          make([]*row, 0, 20),
+		table:          make([]*row, 0, maxTableSize),
 		index:          0,
 		maxTableSize:   maxTableSize,
 		matchThreshold: matchThreshold,
 	}
 }
 
-func (p *PatternTable) insert(tokens []Token) int {
+func (p *PatternTable) insert(tokens []Token, label Label) int {
 	p.index++
 	foundIdx := -1
 	for i, r := range p.table {
 		if isMatch(r.tokens, tokens, p.matchThreshold) {
 			r.count++
+			r.label = label
 			r.lastIndex = p.index
 			foundIdx = i
 			break
 		}
 	}
 
-	if foundIdx > 0 {
-		p.siftUp(foundIdx)
+	if foundIdx == 0 {
 		return foundIdx
+	}
+
+	if foundIdx > 0 {
+		return p.siftUp(foundIdx)
 	}
 
 	// If the table is full, make room for a new entry
@@ -56,20 +75,23 @@ func (p *PatternTable) insert(tokens []Token) int {
 		p.evictLRU()
 	}
 
-	p.table = append(p.table, &row{tokens: tokens, count: 1, lastIndex: p.index})
+	p.table = append(p.table, &row{
+		tokens:    tokens,
+		label:     label,
+		count:     1,
+		lastIndex: p.index,
+	})
 	return len(p.table) - 1
 
 }
 
 // siftUp moves the row at the given index up the table until it is in the correct position.
-func (p *PatternTable) siftUp(idx int) {
-	if idx == 0 {
-		return
-	}
-
-	for p.table[idx].count > p.table[idx-1].count {
+func (p *PatternTable) siftUp(idx int) int {
+	for idx != 0 && p.table[idx].count > p.table[idx-1].count {
 		p.table[idx], p.table[idx-1] = p.table[idx-1], p.table[idx]
+		idx--
 	}
+	return idx
 }
 
 // evictLRU removes the least recently updated row from the table.
@@ -85,23 +107,39 @@ func (p *PatternTable) evictLRU() {
 	p.table = append(p.table[:mini], p.table[mini+1:]...)
 }
 
+// DumpTable returns a slice of DiagnosticRow structs that represent the current state of the table.
+func (p *PatternTable) DumpTable() []DiagnosticRow {
+	debug := make([]DiagnosticRow, 0, len(p.table))
+	for _, r := range p.table {
+		debug = append(debug, DiagnosticRow{
+			TokenString: tokensToString(r.tokens),
+			LabelString: labelToString(r.label),
+			Count:       r.count,
+			LastIndex:   r.lastIndex})
+	}
+	return debug
+}
+
 // Process adds a pattern to the table and updates its label based on it's frequency.
-// This implements the Herustic interface - so we should stop processing if we detect a JSON message by returning false.
+// This implements the Herustic interface - so we should stop processing if the label was changed
+// due to pattern detection.
 func (p *PatternTable) Process(context *messageContext) bool {
 
 	if context.tokens == nil {
-		log.Error("Tokens are required to process user samples")
+		log.Error("Tokens are required to process patterns")
 		return true
 	}
 
-	idx := p.insert(context.tokens)
+	idx := p.insert(context.tokens, context.label)
 
 	// If the log has an aggregate (default) label, but is the most popular,
-	// we shouldn't aggreaget it.
+	// we shouldn't aggreaget it. This is a common false positive case where
+	// a log file with multiple formats can sometimes have log lines that are detected
+	// to have a timestamp but are not actually the start of a multiline message.
 	if idx == 0 && context.label == aggregate {
 		context.label = noAggregate
-		return true
+		return false
 	}
 
-	return false
+	return true
 }
