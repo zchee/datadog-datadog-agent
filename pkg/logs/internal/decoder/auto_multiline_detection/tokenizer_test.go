@@ -84,3 +84,35 @@ func TestTokenizerHeuristic(t *testing.T) {
 	assert.True(t, tokenizer.Process(msg))
 	assert.Equal(t, "CCC DDD", tokensToString(msg.tokens))
 }
+
+func TestIsMatch(t *testing.T) {
+	tokenizer := NewTokenizer(0)
+	// A string of 10 tokens to make math easier.
+	ta := tokenizer.tokenize([]byte("! @ # $ %"))
+	tb := tokenizer.tokenize([]byte("! @ # $ %"))
+
+	assert.True(t, isMatch(ta, tb, 1))
+
+	ta = tokenizer.tokenize([]byte("! @ # $ % "))
+	tb = tokenizer.tokenize([]byte("! @ #1a1a1"))
+
+	assert.True(t, isMatch(ta, tb, 0.5))
+	assert.False(t, isMatch(ta, tb, 0.55))
+
+	ta = tokenizer.tokenize([]byte("! @ # $ % "))
+	tb = tokenizer.tokenize([]byte("#1a1a1$ $ "))
+
+	assert.False(t, isMatch(ta, tb, 0.5))
+	assert.True(t, isMatch(ta, tb, 0.3))
+
+	ta = tokenizer.tokenize([]byte("! @ # $ % "))
+	tb = tokenizer.tokenize([]byte(""))
+
+	assert.False(t, isMatch(ta, tb, 0.5))
+
+	ta = tokenizer.tokenize([]byte("! @ # $ % "))
+	tb = tokenizer.tokenize([]byte("!"))
+
+	assert.True(t, isMatch(ta, tb, 1))
+	assert.True(t, isMatch(ta, tb, 0.01))
+}

@@ -23,3 +23,44 @@ func BenchmarkTokenizerShort(b *testing.B) {
 		tokenizer.tokenize([]byte("abc123"))
 	}
 }
+
+func BenchmarkTokenizerIsMatchNoMatch(b *testing.B) {
+	tokenizer := NewTokenizer(0)
+	ta := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
+	tb := tokenizer.tokenize([]byte("$ abc foo bar thie beginning is different !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		isMatch(ta, tb, 0.75)
+	}
+}
+
+/*
+old
+BenchmarkTokenizerIsMatch-10    	 1000000	      1212 ns/op	       0 B/op	       0 allocs/op
+
+new
+BenchmarkTokenizerIsMatchNoMatch-10    	 3885801	       295.1 ns/op	       0 B/op	       0 allocs/op
+
+*/
+
+func BenchmarkTokenizerIsMatchFullMatch(b *testing.B) {
+	tokenizer := NewTokenizer(0)
+	ta := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
+	tb := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		isMatch(ta, tb, 0.75)
+	}
+}
+
+/*
+
+old
+BenchmarkTokenizerIsMatchFullMatch-10    	  998858	      1238 ns/op	       0 B/op	       0 allocs/op
+
+new
+BenchmarkTokenizerIsMatchFullMatch-10    	  859585	      1227 ns/op	       0 B/op	       0 allocs/op
+
+*/

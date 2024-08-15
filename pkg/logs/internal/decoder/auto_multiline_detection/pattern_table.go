@@ -29,7 +29,7 @@ type DiagnosticRow struct {
 // The pattern table is a heuristic that is used for improving the accuracy of the multiline
 // aggregation by keeping track of the most common patterns that occur in the log source.
 // This heuristic is also used to inspect the variation of patterns in a log source for
-// debugging purposes.
+// diagnostic purposes.
 // The patternt table is always sorted by the frequency of the patterns. When the table
 // becomes full, the least recently updated pattern is evicted.
 type PatternTable struct {
