@@ -109,6 +109,8 @@ func TestIsMatch(t *testing.T) {
 	tb = tokenizer.tokenize([]byte(""))
 
 	assert.False(t, isMatch(ta, tb, 0.5))
+	assert.False(t, isMatch(ta, tb, 0))
+	assert.False(t, isMatch(ta, tb, 1))
 
 	ta = tokenizer.tokenize([]byte("! @ # $ % "))
 	tb = tokenizer.tokenize([]byte("!"))

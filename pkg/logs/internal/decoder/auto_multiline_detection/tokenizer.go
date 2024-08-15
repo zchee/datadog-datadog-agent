@@ -399,7 +399,7 @@ func isMatch(seqA []Token, seqB []Token, thresh float64) bool {
 		if seqA[i] == seqB[i] {
 			match++
 		}
-		if match+(count-i) <= requiredMatches {
+		if match+(count-i-1) < requiredMatches {
 			return false
 		}
 	}
