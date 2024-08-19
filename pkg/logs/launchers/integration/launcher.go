@@ -141,6 +141,11 @@ func writeLogToFile(logFilePath, log string) error {
 
 // makeFileSource Turns an integrations source into a logsSource
 func (s *Launcher) makeFileSource(source *sources.LogSource, logFilePath string) *sources.LogSource {
+	mode, isSet := config.TailingModeFromString(source.Config.TailingMode)
+	if !isSet && source.Config.Identifier != "" {
+		mode = config.Beginning
+		source.Config.TailingMode = mode.String()
+	}
 	fileSource := sources.NewLogSource(source.Name, &config.LogsConfig{
 		Type:        config.FileType,
 		TailingMode: source.Config.TailingMode,
