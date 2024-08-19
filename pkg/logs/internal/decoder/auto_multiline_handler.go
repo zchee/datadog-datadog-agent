@@ -25,7 +25,8 @@ func NewAutoMultilineHandler(outputFn func(m *message.Message), maxContentSize i
 	// Order is important
 	heuristics := []automultilinedetection.Heuristic{
 		automultilinedetection.NewJSONDetector(),
-		automultilinedetection.NewTokenizer(40), // TODO: (brian) this will be configruable in a future change.
+		automultilinedetection.NewTokenizer(config.Datadog().GetInt("logs_config.auto_multi_line.tokenizer_max_input_bytes")),
+		automultilinedetection.NewTimestampDetector(config.Datadog().GetFloat64("logs_config.auto_multi_line.timestamp_detector_match_threshold")),
 		automultilinedetection.NewPatternTable(config.Datadog().GetInt("logs_config.pattern_table_max_size"), config.Datadog().GetFloat64("logs_config.pattern_table_match_threshold")),
 	}
 
