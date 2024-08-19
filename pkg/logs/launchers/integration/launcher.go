@@ -144,11 +144,10 @@ func (s *Launcher) makeFileSource(source *sources.LogSource, logFilePath string)
 	mode, isSet := config.TailingModeFromString(source.Config.TailingMode)
 	if !isSet && source.Config.Identifier != "" {
 		mode = config.Beginning
-		source.Config.TailingMode = mode.String()
 	}
 	fileSource := sources.NewLogSource(source.Name, &config.LogsConfig{
 		Type:        config.FileType,
-		TailingMode: source.Config.TailingMode,
+		TailingMode: mode.String(),
 		Path:        logFilePath,
 		Name:        source.Config.Name,
 		Source:      source.Config.Source,
