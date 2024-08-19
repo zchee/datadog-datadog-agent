@@ -323,7 +323,7 @@ func tokensToString(tokens []tokens.Token) string {
 // given threshold. if the token strings are different lengths, the shortest string is
 // used for comparison. This function is optimized to exit early if the match is impossible
 // without having to compare all of the tokens.
-func isMatch(seqA []Token, seqB []Token, thresh float64) bool {
+func isMatch(seqA []tokens.Token, seqB []tokens.Token, thresh float64) bool {
 	count := len(seqA)
 	if len(seqB) < count {
 		count = len(seqB)

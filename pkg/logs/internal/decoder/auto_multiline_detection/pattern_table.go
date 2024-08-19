@@ -7,11 +7,12 @@
 package automultilinedetection
 
 import (
+	"github.com/DataDog/datadog-agent/pkg/logs/internal/decoder/auto_multiline_detection/tokens"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 type row struct {
-	tokens    []Token
+	tokens    []tokens.Token
 	label     Label
 	count     int64
 	lastIndex int64
@@ -49,7 +50,7 @@ func NewPatternTable(maxTableSize int, matchThreshold float64) *PatternTable {
 	}
 }
 
-func (p *PatternTable) insert(tokens []Token, label Label) int {
+func (p *PatternTable) insert(tokens []tokens.Token, label Label) int {
 	p.index++
 	foundIdx := -1
 	for i, r := range p.table {

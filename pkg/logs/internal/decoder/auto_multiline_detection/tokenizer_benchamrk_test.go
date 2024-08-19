@@ -26,8 +26,8 @@ func BenchmarkTokenizerShort(b *testing.B) {
 
 func BenchmarkTokenizerIsMatchNoMatchStart(b *testing.B) {
 	tokenizer := NewTokenizer(0)
-	ta := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
-	tb := tokenizer.tokenize([]byte("$ abc foo bar thie beginning is different !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
+	ta, _ := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
+	tb, _ := tokenizer.tokenize([]byte("$ abc foo bar thie beginning is different !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -46,8 +46,8 @@ BenchmarkTokenizerIsMatchNoMatch-10    	 3885801	       295.1 ns/op	       0 B/o
 
 func BenchmarkTokenizerIsMatchNoMatchEnd(b *testing.B) {
 	tokenizer := NewTokenizer(0)
-	ta := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
-	tb := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST But this one is different near the end of the sequence"))
+	ta, _ := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
+	tb, _ := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST But this one is different near the end of the sequence"))
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -66,8 +66,8 @@ BenchmarkTokenizerIsMatchNoMatchEnd-10    	 1000000	      1014 ns/op	       0 B/
 
 func BenchmarkTokenizerIsMatchFullMatch(b *testing.B) {
 	tokenizer := NewTokenizer(0)
-	ta := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
-	tb := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
+	ta, _ := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
+	tb, _ := tokenizer.tokenize([]byte("Sun Mar 2PM EST JAN FEB MAR !@#$%^&*()_+[]:-/\\.,\\'{}\"`~ 0123456789 NZST ACDT aaaaaaaaaaaaaaaa CHST T!Z(T)Z#AM 123-abc-[foo] (bar) 12-12-12T12:12:12.12T12:12Z123"))
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
