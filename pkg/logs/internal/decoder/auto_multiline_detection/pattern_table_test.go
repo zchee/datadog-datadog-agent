@@ -21,7 +21,7 @@ func justTokens(tokens []tokens.Token, _ []int) []tokens.Token {
 func TestPatternTable(t *testing.T) {
 
 	tokenizer := NewTokenizer(0)
-	pt := NewPatternTable(5, 1)
+	pt := NewPatternTable(5, 1, true)
 
 	pt.insert(justTokens(tokenizer.tokenize([]byte("abc 123 !"))), aggregate)
 	pt.insert(justTokens(tokenizer.tokenize([]byte("abc 123 @"))), aggregate)
@@ -99,7 +99,7 @@ func TestPatternTable(t *testing.T) {
 func TestPatternTableProcess(t *testing.T) {
 
 	tokenizer := NewTokenizer(60)
-	pt := NewPatternTable(5, 1)
+	pt := NewPatternTable(5, 1, true)
 
 	process := func(input string, label Label, continueProcessing bool) *messageContext {
 		context := &messageContext{

@@ -27,26 +27,26 @@ type DiagnosticRow struct {
 }
 
 // PatternTable is a table of patterns that occur over time from a log source.
-// The pattern table is a heuristic that is used for improving the accuracy of the multiline
-// aggregation by keeping track of the most common patterns that occur in the log source.
-// This heuristic is also used to inspect the variation of patterns in a log source for
-// diagnostic purposes.
+// This heuristic is used to prevent certain classes of false positives in multiline detection
+// as well as collect diagnostic data for fine tuning and debugging.
 // The patternt table is always sorted by the frequency of the patterns. When the table
 // becomes full, the least recently updated pattern is evicted.
 type PatternTable struct {
-	table          []*row
-	index          int64
-	maxTableSize   int
-	matchThreshold float64
+	table                           []*row
+	index                           int64
+	maxTableSize                    int
+	matchThreshold                  float64
+	dontAggregateUnmatchedTopFormat bool
 }
 
 // NewPatternTable returns a new PatternTable heuristic.
-func NewPatternTable(maxTableSize int, matchThreshold float64) *PatternTable {
+func NewPatternTable(maxTableSize int, matchThreshold float64, dontAggregateUnmatchedTopFormat bool) *PatternTable {
 	return &PatternTable{
-		table:          make([]*row, 0, maxTableSize),
-		index:          0,
-		maxTableSize:   maxTableSize,
-		matchThreshold: matchThreshold,
+		table:                           make([]*row, 0, maxTableSize),
+		index:                           0,
+		maxTableSize:                    maxTableSize,
+		matchThreshold:                  matchThreshold,
+		dontAggregateUnmatchedTopFormat: dontAggregateUnmatchedTopFormat,
 	}
 }
 
@@ -137,7 +137,7 @@ func (p *PatternTable) Process(context *messageContext) bool {
 	// we shouldn't aggreaget it. This is a common false positive case where
 	// a log file with multiple formats can sometimes have log lines that are detected
 	// to have a timestamp but are not actually the start of a multiline message.
-	if idx == 0 && context.label == aggregate {
+	if p.dontAggregateUnmatchedTopFormat && idx == 0 && context.label == aggregate {
 		context.label = noAggregate
 		return false
 	}

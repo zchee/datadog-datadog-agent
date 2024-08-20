@@ -27,7 +27,11 @@ func NewAutoMultilineHandler(outputFn func(m *message.Message), maxContentSize i
 		automultilinedetection.NewJSONDetector(),
 		automultilinedetection.NewTokenizer(config.Datadog().GetInt("logs_config.auto_multi_line.tokenizer_max_input_bytes")),
 		automultilinedetection.NewTimestampDetector(config.Datadog().GetFloat64("logs_config.auto_multi_line.timestamp_detector_match_threshold")),
-		automultilinedetection.NewPatternTable(config.Datadog().GetInt("logs_config.pattern_table_max_size"), config.Datadog().GetFloat64("logs_config.pattern_table_match_threshold")),
+		automultilinedetection.NewPatternTable(
+			config.Datadog().GetInt("logs_config.auto_multi_line.pattern_table_max_size"),
+			config.Datadog().GetFloat64("logs_config.auto_multi_line.pattern_table_match_threshold"),
+			config.Datadog().GetBool("logs_config.auto_multi_line.dont_aggregate_unmatched_top_format"),
+		),
 	}
 
 	return &AutoMultilineHandler{
