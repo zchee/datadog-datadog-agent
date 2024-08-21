@@ -83,7 +83,7 @@ arch_mapping = {
 }
 CURRENT_ARCH = arch_mapping.get(platform.machine(), "x64")
 CLANG_VERSION_RUNTIME = "18.1.8"
-CLANG_VERSION_SYSTEM_PREFIX = "18.1"
+CLANG_VERSION_SYSTEM_PREFIX = "20.0"
 
 
 def get_ebpf_build_dir(arch: Arch) -> Path:
