@@ -25,9 +25,9 @@ type packageApmInjectSuite struct {
 	packageBaseSuite
 }
 
-func testApmInjectAgent(os e2eos.Descriptor, arch e2eos.Architecture, method installMethodOption) packageSuite {
+func testApmInjectAgent(os e2eos.Descriptor, arch e2eos.Architecture) packageSuite {
 	return &packageApmInjectSuite{
-		packageBaseSuite: newPackageSuite("apm-inject", os, arch, method),
+		packageBaseSuite: newPackageSuite("apm-inject", os, arch),
 	}
 }
 
