@@ -489,5 +489,5 @@ new-e2e-installer-fast:
     KUBERNETES_CPU_REQUEST: 16
     TARGETS: ./tests/installer
     TEAM: fleet
-    E2E_PIPELINE_ID: "42400637"
-    E2E_COMMIT_SHA: "b59e88c0"
+    E2E_PIPELINE_ID: "42540600"
+    E2E_COMMIT_SHA: "76c45871"
