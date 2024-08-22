@@ -486,6 +486,7 @@ new-e2e-installer-fast:
     - export STABLE_INSTALLER_VERSION_PACKAGE=$(curl -sS https://hub.docker.com/v2/namespaces/datadog/repositories/installer-package/tags | jq -r '.results[] | .name' | sort | tail -n 2 | head -n 1)
     - !reference [.new_e2e_template, before_script]
   variables:
+    KUBERNETES_CPU_REQUEST: 16
     TARGETS: ./tests/installer
     TEAM: fleet
     E2E_PIPELINE_ID: "42400637"
