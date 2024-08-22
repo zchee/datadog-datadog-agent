@@ -105,7 +105,7 @@ def run(
         test_run_arg = f"-run {test_run_name}"
 
     cmd = f'gotestsum --format {gotestsum_format} '
-    cmd += '{junit_file_flag} {json_flag} --packages="{packages}" -- -ldflags="-X {REPO_PATH}/test/new-e2e/tests/containers.GitCommit={commit}" {verbose} -mod={go_mod} -vet=off -timeout {timeout} -tags "{go_build_tags}" {nocache} {run} {skip} {test_run_arg} -args {osversion} {platform} {major_version} {arch} {flavor} {cws_supported_osversion} {src_agent_version} {dest_agent_version} {keep_stacks} {extra_flags}'
+    cmd += '{junit_file_flag} {json_flag} --packages="{packages}" -- -parallel 4 -ldflags="-X {REPO_PATH}/test/new-e2e/tests/containers.GitCommit={commit}" {verbose} -mod={go_mod} -vet=off -timeout {timeout} -tags "{go_build_tags}" {nocache} {run} {skip} {test_run_arg} -args {osversion} {platform} {major_version} {arch} {flavor} {cws_supported_osversion} {src_agent_version} {dest_agent_version} {keep_stacks} {extra_flags}'
 
     args = {
         "go_mod": "mod",
