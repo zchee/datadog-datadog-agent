@@ -58,6 +58,7 @@ func (r *reflectorStore) Add(obj interface{}) error {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	r.hasSynced = true
 	if r.filter != nil && r.filter.filteredOut(entity) {
 		// Don't store the object in memory if it is filtered out

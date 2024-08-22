@@ -34,7 +34,7 @@ var interval = 50 * time.Millisecond
 func Test_AddDelete_Deployment(t *testing.T) {
 	workloadmetaComponent := mockedWorkloadmeta(t)
 
-	deploymentStore := newDeploymentReflectorStore(workloadmetaComponent)
+	deploymentStore := newDeploymentReflectorStore(workloadmetaComponent, workloadmetaComponent.GetConfig())
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -164,7 +164,7 @@ func TestReplace(t *testing.T) {
 		EntityMeta: workloadmeta.EntityMeta{
 			Name: "test-node",
 		},
-		GVR: gvr,
+		GVR: &gvr,
 	}
 
 	workloadmetaComponent := mockedWorkloadmeta(t)

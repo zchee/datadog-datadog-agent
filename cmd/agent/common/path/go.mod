@@ -10,10 +10,10 @@ replace (
 )
 
 require (
-	github.com/DataDog/datadog-agent/pkg/util/executable v0.56.0
-	github.com/DataDog/datadog-agent/pkg/util/log v0.56.0
-	github.com/DataDog/datadog-agent/pkg/util/winutil v0.56.0
-	golang.org/x/sys v0.19.0
+	github.com/DataDog/datadog-agent/pkg/util/executable v0.56.0-rc.3
+	github.com/DataDog/datadog-agent/pkg/util/log v0.56.0-rc.3
+	github.com/DataDog/datadog-agent/pkg/util/winutil v0.56.0-rc.3
+	golang.org/x/sys v0.23.0
 )
 
 require (

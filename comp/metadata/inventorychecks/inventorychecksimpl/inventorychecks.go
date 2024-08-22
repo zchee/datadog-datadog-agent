@@ -22,7 +22,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/collector/collector"
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	flaretypes "github.com/DataDog/datadog-agent/comp/core/flare/types"
-	"github.com/DataDog/datadog-agent/comp/core/log"
+	log "github.com/DataDog/datadog-agent/comp/core/log/def"
 	logagent "github.com/DataDog/datadog-agent/comp/logs/agent"
 	"github.com/DataDog/datadog-agent/comp/metadata/internal/util"
 	"github.com/DataDog/datadog-agent/comp/metadata/inventorychecks"
@@ -138,7 +138,7 @@ func newInventoryChecksProvider(deps dependencies) provides {
 	// This should be removed when migrated to collector component
 	if icExpvar := expvar.Get("inventories"); icExpvar == nil {
 		expvar.Publish("inventories", expvar.Func(func() interface{} {
-			return ic.getPayload(false)
+			return ic.getPayload()
 		}))
 	}
 

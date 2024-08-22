@@ -83,30 +83,15 @@ func (r *HTTPReceiver) telemetryProxyHandler() http.Handler {
 		log.Error("None of the configured apm_config.telemetry endpoints are valid. Telemetry proxy is off")
 		return http.NotFoundHandler()
 	}
-	installSignature := r.conf.InstallSignature
-	underlyingTransport := r.conf.NewHTTPTransport()
-	// Fix and documentation taken from pkg/trace/api/profiles.go
-	// The intake's connection timeout is 60 seconds, which is similar to the default heartbeat periodicity of
-	// telemetry clients. When a new heartbeat is simultaneous to the intake closing the connection, Go's ReverseProxy
-	// returns a 502 error to the tracer. Ensuring that the agent closes the connection before the intake solves this
-	// race condition. A value of 47 was chosen as it's a prime number which doesn't divide 60, reducing the risk of
-	// overlap with other timeouts or periodicities. It provides sufficient buffer time compared to 60, whilst still
-	// allowing connection reuse.
-	underlyingTransport.IdleConnTimeout = 47 * time.Second
-	transport := telemetryMultiTransport{
-		Transport: underlyingTransport,
-		Endpoints: endpoints,
-		statsd:    r.statsd,
-	}
-	limitedLogger := log.NewThrottled(5, 10*time.Second) // limit to 5 messages every 10 seconds
-	logger := stdlog.New(limitedLogger, "telemetry.Proxy: ", 0)
-	director := func(req *http.Request) {
-		req.Header.Set("Via", fmt.Sprintf("trace-agent %s", r.conf.AgentVersion))
-		if _, ok := req.Header["User-Agent"]; !ok {
-			// explicitly disable User-Agent so it's not set to the default value
-			// that net/http gives it: Go-http-client/1.1
-			// See https://codereview.appspot.com/7532043
-			req.Header.Set("User-Agent", "")
+
+	forwarder := r.telemetryForwarder
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// Read at most maxInflightBytes since we're going to throw out the result anyway if it's bigger
+		body, err := io.ReadAll(io.LimitReader(r.Body, forwarder.maxInflightBytes+1))
+		if err != nil {
+			writeEmptyJSON(w, http.StatusInternalServerError)
+			return
 		}
 
 		containerID := r.containerIDProvider.GetContainerID(req.Context(), req.Header)
@@ -115,51 +100,20 @@ func (r *HTTPReceiver) telemetryProxyHandler() http.Handler {
 		}
 		containerTags := getContainerTags(r.conf.ContainerTags, containerID)
 
-		req.Header.Set("DD-Agent-Hostname", r.conf.Hostname)
-		req.Header.Set("DD-Agent-Env", r.conf.DefaultEnv)
-		log.Debugf("Setting headers DD-Agent-Hostname=%s, DD-Agent-Env=%s for telemetry proxy", r.conf.Hostname, r.conf.DefaultEnv)
-		if containerID != "" {
-			req.Header.Set(header.ContainerID, containerID)
+		newReq, err := http.NewRequestWithContext(forwarder.cancelCtx, r.Method, r.URL.String(), bytes.NewBuffer(body))
+		if err != nil {
+			writeEmptyJSON(w, http.StatusInternalServerError)
+			return
 		}
-		if containerTags != "" {
-			req.Header.Set("x-datadog-container-tags", containerTags)
-			log.Debugf("Setting header x-datadog-container-tags=%s for telemetry proxy", containerTags)
-		}
-		if installSignature.Found {
-			req.Header.Set("DD-Agent-Install-Id", installSignature.InstallID)
-			req.Header.Set("DD-Agent-Install-Type", installSignature.InstallType)
-			req.Header.Set("DD-Agent-Install-Time", strconv.FormatInt(installSignature.InstallTime, 10))
-		}
-		if arn, ok := r.conf.GlobalTags[functionARNKeyTag]; ok {
-			req.Header.Set(cloudProviderHeader, string(aws))
-			req.Header.Set(cloudResourceTypeHeader, string(awsLambda))
-			req.Header.Set(cloudResourceIdentifierHeader, arn)
-		} else if taskArn, ok := extractFargateTask(containerTags); ok {
-			req.Header.Set(cloudProviderHeader, string(aws))
-			req.Header.Set(cloudResourceTypeHeader, string(awsFargate))
-			req.Header.Set(cloudResourceIdentifierHeader, taskArn)
-		}
-		if origin, ok := r.conf.GlobalTags[originTag]; ok {
-			switch origin {
-			case "cloudrun":
-				req.Header.Set(cloudProviderHeader, string(gcp))
-				req.Header.Set(cloudResourceTypeHeader, string(cloudRun))
-				if serviceName, found := r.conf.GlobalTags["service_name"]; found {
-					req.Header.Set(cloudResourceIdentifierHeader, serviceName)
-				}
-			case "appservice":
-				req.Header.Set(cloudProviderHeader, string(azure))
-				req.Header.Set(cloudResourceTypeHeader, string(azureAppService))
-				if appName, found := r.conf.GlobalTags["app_name"]; found {
-					req.Header.Set(cloudResourceIdentifierHeader, appName)
-				}
-			case "containerapp":
-				req.Header.Set(cloudProviderHeader, string(azure))
-				req.Header.Set(cloudResourceTypeHeader, string(azureContainerApp))
-				if appName, found := r.conf.GlobalTags["app_name"]; found {
-					req.Header.Set(cloudResourceIdentifierHeader, appName)
-				}
-			}
+		newReq.Header = r.Header.Clone()
+		select {
+		case forwarder.forwardedReqChan <- forwardedRequest{
+			req:  newReq,
+			body: body,
+		}:
+			writeEmptyJSON(w, http.StatusOK)
+		default:
+			writeEmptyJSON(w, http.StatusTooManyRequests)
 		}
 	}
 	return &httputil.ReverseProxy{
@@ -193,26 +147,28 @@ func extractTag(tags string, name string) (string, bool) {
 // additional endpoint.
 //
 // All requests will be sent irregardless of any errors
-// If any request fails, the error will be logged. Only main target's
-// error will be propagated via return value
-func (m *telemetryMultiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if len(m.Endpoints) == 1 {
-		return m.roundTrip(req, m.Endpoints[0])
-	}
-	slurp, err := io.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	newreq := req.Clone(req.Context())
-	newreq.Body = io.NopCloser(bytes.NewReader(slurp))
-	// despite the number of endpoints, we always return the response of the first
-	rresp, rerr := m.roundTrip(newreq, m.Endpoints[0])
-	for _, endpoint := range m.Endpoints[1:] {
-		newreq := req.Clone(req.Context())
-		newreq.Body = io.NopCloser(bytes.NewReader(slurp))
-		if resp, err := m.roundTrip(newreq, endpoint); err == nil {
-			// we discard responses for all subsequent requests
-			io.Copy(io.Discard, resp.Body) //nolint:errcheck
+// If any request fails, the error will be logged.
+func (f *TelemetryForwarder) forwardTelemetry(req forwardedRequest) {
+	defer f.endRequest(req)
+
+	f.setRequestHeader(req.req)
+
+	for i, e := range f.endpoints {
+		var newReq *http.Request
+		if i != len(f.endpoints)-1 {
+			newReq = req.req.Clone(req.req.Context())
+		} else {
+			// don't clone the request for the last endpoint since we can use the
+			// one provided in args.
+			newReq = req.req
+		}
+		newReq.Body = io.NopCloser(bytes.NewReader(req.body))
+
+		if resp, err := f.forwardTelemetryEndpoint(newReq, e); err == nil {
+			if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
+				f.logger.Error("Received unexpected status code %v", resp.StatusCode)
+			}
+			io.Copy(io.Discard, resp.Body) // nolint:errcheck
 			resp.Body.Close()
 		} else {
 			log.Error(err)

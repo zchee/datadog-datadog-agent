@@ -228,12 +228,12 @@ func (e *ebpfConntracker) GetType() string {
 	return "ebpf"
 }
 
-func (e *ebpfConntracker) GetTranslationForConn(stats network.ConnectionStats) *network.IPTranslation {
+func (e *ebpfConntracker) GetTranslationForConn(stats *network.ConnectionStats) *network.IPTranslation {
 	start := time.Now()
 	src := tuplePool.Get()
 	defer tuplePool.Put(src)
 
-	toConntrackTupleFromStats(src, &stats)
+	toConntrackTupleFromStats(src, stats)
 	if log.ShouldLog(seelog.TraceLvl) {
 		log.Tracef("looking up in conntrack (stats): %s", stats)
 	}
@@ -301,11 +301,11 @@ func (e *ebpfConntracker) delete(key *netebpf.ConntrackTuple) {
 	}
 }
 
-func (e *ebpfConntracker) DeleteTranslation(stats network.ConnectionStats) {
+func (e *ebpfConntracker) DeleteTranslation(stats *network.ConnectionStats) {
 	key := tuplePool.Get()
 	defer tuplePool.Put(key)
 
-	toConntrackTupleFromStats(key, &stats)
+	toConntrackTupleFromStats(key, stats)
 
 	dst := e.get(key)
 	e.delete(key)
@@ -441,13 +441,13 @@ func getManager(cfg *config.Config, buf io.ReaderAt, opts manager.Options) (*man
 	if opts.MapEditors == nil {
 		opts.MapEditors = make(map[string]*ebpf.Map)
 	}
-	opts.VerifierOptions.Programs.LogSize = 10 * 1024 * 1024
 	opts.BypassEnabled = cfg.BypassEnabled
 
 	if err := features.HaveMapType(ebpf.LRUHash); err == nil {
 		me := opts.MapSpecEditors[probes.ConntrackMap]
 		me.Type = ebpf.LRUHash
 		me.EditorFlag |= manager.EditType
+		opts.MapSpecEditors[probes.ConntrackMap] = me
 	}
 
 	err = mgr.InitWithOptions(buf, &opts)

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"testing"
 	"time"
@@ -50,7 +51,7 @@ system_probe_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_DISABLE_DNS_INSPECTION", "true")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -72,7 +73,7 @@ network_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_ENABLE_PROTOCOL_CLASSIFICATION", "false")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -94,7 +95,7 @@ service_monitoring_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SERVICE_MONITORING_CONFIG_ENABLE_HTTP_STATS_BY_STATUS_CODE", "true")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -117,7 +118,7 @@ network_config:
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SYSTEM_PROBE_NETWORK_ENABLE_HTTP_MONITORING", "true")
 
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -138,7 +139,7 @@ service_monitoring_config:
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SERVICE_MONITORING_CONFIG_ENABLE_HTTP_MONITORING", "true")
 
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -150,7 +151,7 @@ service_monitoring_config:
 		t.Setenv("DD_SYSTEM_PROBE_NETWORK_ENABLE_HTTP_MONITORING", "true")
 		t.Setenv("DD_SERVICE_MONITORING_CONFIG_ENABLE_HTTP_MONITORING", "false")
 
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -162,7 +163,7 @@ service_monitoring_config:
 		t.Setenv("DD_SYSTEM_PROBE_NETWORK_ENABLE_HTTP_MONITORING", "false")
 		t.Setenv("DD_SERVICE_MONITORING_CONFIG_ENABLE_HTTP_MONITORING", "true")
 
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -174,7 +175,7 @@ service_monitoring_config:
 		t.Setenv("DD_SYSTEM_PROBE_NETWORK_ENABLE_HTTP_MONITORING", "true")
 		t.Setenv("DD_SERVICE_MONITORING_CONFIG_ENABLE_HTTP_MONITORING", "true")
 
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -226,7 +227,7 @@ service_monitoring_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SERVICE_MONITORING_CONFIG_ENABLE_HTTP2_MONITORING", "true")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -248,7 +249,7 @@ service_monitoring_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SERVICE_MONITORING_CONFIG_ENABLE_KAFKA_MONITORING", "true")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -270,7 +271,7 @@ service_monitoring_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SERVICE_MONITORING_CONFIG_ENABLE_POSTGRES_MONITORING", "true")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -285,10 +286,39 @@ service_monitoring_config:
 	})
 }
 
+func TestEnableRedisMonitoring(t *testing.T) {
+	t.Run("via YAML", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+		cfg := configurationFromYAML(t, `
+service_monitoring_config:
+  enable_redis_monitoring: true
+`)
+
+		assert.True(t, cfg.EnableRedisMonitoring)
+	})
+
+	t.Run("via ENV variable", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+		t.Setenv("DD_SERVICE_MONITORING_CONFIG_ENABLE_REDIS_MONITORING", "true")
+		_, err := sysconfig.New("", "")
+		require.NoError(t, err)
+		cfg := New()
+
+		assert.True(t, cfg.EnableRedisMonitoring)
+	})
+
+	t.Run("default", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+		cfg := New()
+
+		assert.False(t, cfg.EnableRedisMonitoring)
+	})
+}
+
 func TestDefaultDisabledJavaTLSSupport(t *testing.T) {
 	aconfig.ResetSystemProbeConfig(t)
 
-	_, err := sysconfig.New("")
+	_, err := sysconfig.New("", "")
 	require.NoError(t, err)
 	cfg := New()
 
@@ -298,7 +328,7 @@ func TestDefaultDisabledJavaTLSSupport(t *testing.T) {
 func TestDefaultDisabledHTTP2Support(t *testing.T) {
 	aconfig.ResetSystemProbeConfig(t)
 
-	_, err := sysconfig.New("")
+	_, err := sysconfig.New("", "")
 	require.NoError(t, err)
 	cfg := New()
 
@@ -309,7 +339,7 @@ func TestDisableGatewayLookup(t *testing.T) {
 	t.Run("via YAML", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		// default config
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -327,7 +357,7 @@ network_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SYSTEM_PROBE_NETWORK_ENABLE_GATEWAY_LOOKUP", "false")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -349,7 +379,7 @@ network_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SYSTEM_PROBE_NETWORK_IGNORE_CONNTRACK_INIT_FAILURE", "true")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -372,7 +402,7 @@ system_probe_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_COLLECT_DNS_STATS", "false")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -380,7 +410,7 @@ system_probe_config:
 
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_COLLECT_DNS_STATS", "true")
-		_, err = sysconfig.New("")
+		_, err = sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg = New()
 
@@ -403,7 +433,7 @@ system_probe_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_COLLECT_DNS_DOMAINS", "false")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -411,7 +441,7 @@ system_probe_config:
 
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_COLLECT_DNS_DOMAINS", "true")
-		_, err = sysconfig.New("")
+		_, err = sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg = New()
 
@@ -434,7 +464,7 @@ system_probe_config:
 	t.Run("via ENV variable", func(t *testing.T) {
 		aconfig.ResetSystemProbeConfig(t)
 		os.Unsetenv("DD_SYSTEM_PROBE_CONFIG_MAX_DNS_STATS")
-		_, err := sysconfig.New("")
+		_, err := sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg := New()
 
@@ -442,7 +472,7 @@ system_probe_config:
 
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SYSTEM_PROBE_CONFIG_MAX_DNS_STATS", "10000")
-		_, err = sysconfig.New("")
+		_, err = sysconfig.New("", "")
 		require.NoError(t, err)
 		cfg = New()
 
@@ -1290,6 +1320,33 @@ service_monitoring_config:
 	})
 }
 
+func TestMaxRedisStatsBuffered(t *testing.T) {
+	t.Run("value set through env var", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+		t.Setenv("DD_SERVICE_MONITORING_CONFIG_MAX_REDIS_STATS_BUFFERED", "50000")
+
+		cfg := New()
+		assert.Equal(t, 50000, cfg.MaxRedisStatsBuffered)
+	})
+
+	t.Run("value set through yaml", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+		cfg := configurationFromYAML(t, `
+service_monitoring_config:
+  max_redis_stats_buffered: 30000
+`)
+
+		assert.Equal(t, 30000, cfg.MaxRedisStatsBuffered)
+	})
+
+	t.Run("default", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+
+		cfg := New()
+		assert.Equal(t, 100000, cfg.MaxRedisStatsBuffered)
+	})
+}
+
 func TestNetworkConfigEnabled(t *testing.T) {
 	ys := true
 
@@ -1323,7 +1380,7 @@ func TestNetworkConfigEnabled(t *testing.T) {
 			}
 
 			aconfig.ResetSystemProbeConfig(t)
-			_, err = sysconfig.New(f.Name())
+			_, err = sysconfig.New(f.Name(), "")
 			require.NoError(t, err)
 			cfg := New()
 			assert.Equal(t, tc.npmEnabled, cfg.NPMEnabled, "npm state")
@@ -1356,6 +1413,33 @@ service_monitoring_config:
 
 		cfg := New()
 		assert.True(t, cfg.EnableIstioMonitoring)
+	})
+}
+
+func TestEnvoyPathConfig(t *testing.T) {
+	t.Run("default value", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+		cfg := New()
+		assert.EqualValues(t, cfg.EnvoyPath, "/bin/envoy")
+	})
+
+	t.Run("via yaml", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+		cfg := configurationFromYAML(t, `
+service_monitoring_config:
+  tls:
+    istio:
+      envoy_path: "/test/envoy"
+`)
+		assert.EqualValues(t, "/test/envoy", cfg.EnvoyPath)
+	})
+
+	t.Run("value set through env var", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+		t.Setenv("DD_SERVICE_MONITORING_CONFIG_TLS_ISTIO_ENVOY_PATH", "/test/envoy")
+
+		cfg := New()
+		assert.EqualValues(t, "/test/envoy", cfg.EnvoyPath)
 	})
 }
 
@@ -1638,8 +1722,7 @@ service_monitoring_config:
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SYSTEM_PROBE_NETWORK_ENABLED", "true")
 		t.Setenv("DD_SYSTEM_PROBE_PROCESS_SERVICE_INFERENCE_ENABLED", "true")
-
-		cfg := aconfig.SystemProbe
+		cfg := aconfig.SystemProbe()
 		sysconfig.Adjust(cfg)
 
 		require.True(t, cfg.GetBool("system_probe_config.process_service_inference.enabled"))
@@ -1715,6 +1798,24 @@ system_probe_config:
     enabled: true`)
 		require.False(t, cfg.GetBool("system_probe_config.process_service_inference.enabled"))
 	})
+
+	t.Run("test platform specific defaults", func(t *testing.T) {
+		aconfig.ResetSystemProbeConfig(t)
+		// usm or npm must be enabled for the process_service_inference to be enabled
+		cfg := modelCfgFromYAML(t, `
+service_monitoring_config:
+  enabled: true`)
+		sysconfig.Adjust(cfg)
+
+		var expected bool
+		if runtime.GOOS == "windows" {
+			expected = true
+		} else {
+			expected = false
+		}
+
+		require.Equal(t, expected, cfg.GetBool("system_probe_config.process_service_inference.enabled"))
+	})
 }
 
 func TestProcessServiceInferenceWindows(t *testing.T) {
@@ -1732,8 +1833,7 @@ service_monitoring_config:
 		aconfig.ResetSystemProbeConfig(t)
 		t.Setenv("DD_SYSTEM_PROBE_NETWORK_ENABLED", "true")
 		t.Setenv("DD_SYSTEM_PROBE_PROCESS_SERVICE_INFERENCE_USE_WINDOWS_SERVICE_NAME", "true")
-
-		cfg := aconfig.SystemProbe
+		cfg := aconfig.SystemProbe()
 		sysconfig.Adjust(cfg)
 
 		require.True(t, cfg.GetBool("system_probe_config.process_service_inference.use_windows_service_name"))
@@ -1817,7 +1917,7 @@ func configurationFromYAML(t *testing.T, yaml string) *Config {
 	require.Equal(t, len(b), n)
 	f.Sync()
 
-	_, err = sysconfig.New(f.Name())
+	_, err = sysconfig.New(f.Name(), "")
 	require.NoError(t, err)
 	return New()
 }
@@ -1833,10 +1933,10 @@ func modelCfgFromYAML(t *testing.T, yaml string) model.Config {
 	require.Equal(t, len(b), n)
 	f.Sync()
 
-	_, err = sysconfig.New(f.Name())
+	_, err = sysconfig.New(f.Name(), "")
 
 	require.NoError(t, err)
-	cfg := aconfig.SystemProbe
+	cfg := aconfig.SystemProbe()
 	sysconfig.Adjust(cfg)
 
 	return cfg

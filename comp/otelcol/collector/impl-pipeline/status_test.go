@@ -5,7 +5,7 @@
 
 //go:build otlp && test
 
-package collector
+package collectorimpl
 
 import (
 	"bytes"
@@ -13,12 +13,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/DataDog/datadog-agent/pkg/config"
+	configmock "github.com/DataDog/datadog-agent/pkg/config/mock"
 )
 
 func TestStatusOut(t *testing.T) {
 	collector := collectorImpl{
-		config: config.Mock(t),
+		config: configmock.New(t),
 	}
 
 	tests := []struct {
