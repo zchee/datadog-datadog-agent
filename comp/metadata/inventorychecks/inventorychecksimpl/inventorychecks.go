@@ -138,7 +138,7 @@ func newInventoryChecksProvider(deps dependencies) provides {
 	// This should be removed when migrated to collector component
 	if icExpvar := expvar.Get("inventories"); icExpvar == nil {
 		expvar.Publish("inventories", expvar.Func(func() interface{} {
-			return ic.getPayload()
+			return ic.getPayload(false)
 		}))
 	}
 

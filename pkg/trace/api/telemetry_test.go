@@ -303,7 +303,7 @@ func TestMaxInflightBytes(t *testing.T) {
 
 			done := make(chan struct{})
 
-			srv := assertingServer(t, func(req *http.Request, body []byte) error {
+			srv := assertingServer(t, func(req *http.Request, _ []byte) error {
 				assert.Equal("test_apikey", req.Header.Get("DD-API-KEY"))
 				assert.Equal("test_hostname", req.Header.Get("DD-Agent-Hostname"))
 				assert.Equal("test_env", req.Header.Get("DD-Agent-Env"))
@@ -347,7 +347,7 @@ func TestInflightBytesReset(t *testing.T) {
 
 	done := make(chan struct{})
 
-	srv := assertingServer(t, func(req *http.Request, body []byte) error {
+	srv := assertingServer(t, func(req *http.Request, _ []byte) error {
 		assert.Equal("test_apikey", req.Header.Get("DD-API-KEY"))
 		assert.Equal("test_hostname", req.Header.Get("DD-Agent-Hostname"))
 		assert.Equal("test_env", req.Header.Get("DD-Agent-Env"))
@@ -401,7 +401,7 @@ func TestActualServer(t *testing.T) {
 
 	done := make(chan struct{})
 
-	intakeMockServer := assertingServer(t, func(req *http.Request, body []byte) error {
+	intakeMockServer := assertingServer(t, func(req *http.Request, _ []byte) error {
 		assert.Equal("test_apikey", req.Header.Get("DD-API-KEY"))
 		assert.Equal("test_hostname", req.Header.Get("DD-Agent-Hostname"))
 		assert.Equal("test_env", req.Header.Get("DD-Agent-Env"))
