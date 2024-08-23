@@ -12,16 +12,18 @@
     # use tmpdir to prevent git remote capture by clang build
     - mkdir /tmp/clangbuild && cd /tmp/clangbuild
     - CLANG_MAJOR_VER=$(echo "${CLANG_LLVM_VER}" | cut -d '.' -f 1)
-    - CLANG_SHA256SUM=5724fe0a13087d5579104cedd2f8b3bc10a212fb79a0fcdac98f4880e19f4519
-    - LLVM_SHA256SUM=f68cf90f369bc7d0158ba70d860b0cb34dbc163d6ff0ebc6cfa5e515b9b2e28d
-    - CLANG_CMAKE_SHA256SUM=59badef592dd34893cd319d42b323aaa990b452d05c7180ff20f23ab1b41e837
-    - wget ${GENERAL_ARTIFACTS_CACHE_BUCKET_URL}/llvm/clang-${CLANG_LLVM_VER}.src.tar.xz -O clang.src.tar.xz
-    - wget ${GENERAL_ARTIFACTS_CACHE_BUCKET_URL}/llvm/llvm-${CLANG_LLVM_VER}.src.tar.xz -O llvm.src.tar.xz
-    - wget ${GENERAL_ARTIFACTS_CACHE_BUCKET_URL}/llvm/cmake-${CLANG_LLVM_VER}.src.tar.xz -O cmake.src.tar.xz
-    - echo -e "${LLVM_SHA256SUM} llvm.src.tar.xz\n${CLANG_SHA256SUM} clang.src.tar.xz\n${CLANG_CMAKE_SHA256SUM} cmake.src.tar.xz" | sha256sum --check -
-    - mkdir clang && tar xf clang.src.tar.xz --strip-components=1 --no-same-owner -C clang
-    - mkdir llvm && tar xf llvm.src.tar.xz --strip-components=1 --no-same-owner -C llvm
-    - mkdir cmake && tar xf cmake.src.tar.xz --strip-components=1 --no-same-owner -C cmake
+#    - CLANG_SHA256SUM=5724fe0a13087d5579104cedd2f8b3bc10a212fb79a0fcdac98f4880e19f4519
+#    - LLVM_SHA256SUM=f68cf90f369bc7d0158ba70d860b0cb34dbc163d6ff0ebc6cfa5e515b9b2e28d
+#    - CLANG_CMAKE_SHA256SUM=59badef592dd34893cd319d42b323aaa990b452d05c7180ff20f23ab1b41e837
+#    - wget ${GENERAL_ARTIFACTS_CACHE_BUCKET_URL}/llvm/clang-${CLANG_LLVM_VER}.src.tar.xz -O clang.src.tar.xz
+#    - wget ${GENERAL_ARTIFACTS_CACHE_BUCKET_URL}/llvm/llvm-${CLANG_LLVM_VER}.src.tar.xz -O llvm.src.tar.xz
+#    - wget ${GENERAL_ARTIFACTS_CACHE_BUCKET_URL}/llvm/cmake-${CLANG_LLVM_VER}.src.tar.xz -O cmake.src.tar.xz
+#    - echo -e "${LLVM_SHA256SUM} llvm.src.tar.xz\n${CLANG_SHA256SUM} clang.src.tar.xz\n${CLANG_CMAKE_SHA256SUM} cmake.src.tar.xz" | sha256sum --check -
+#    - mkdir clang && tar xf clang.src.tar.xz --strip-components=1 --no-same-owner -C clang
+#    - mkdir llvm && tar xf llvm.src.tar.xz --strip-components=1 --no-same-owner -C llvm
+#    - mkdir cmake && tar xf cmake.src.tar.xz --strip-components=1 --no-same-owner -C cmake
+    - git clone --depth=1 --branch bryce.kahle/bpf-intrinsic-willreturn https://github.com/brycekahle/llvm-project
+    - cd llvm-project
     - mkdir build && cd build
     # patch references to glibc >= 2.18
     - patch -ruN ../llvm/CMakeLists.txt < $CI_PROJECT_DIR/pkg/ebpf/c/cmakelists.patch
