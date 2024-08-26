@@ -10,7 +10,7 @@
     - mkdir omnibus\pkg
     - >
       docker run --rm
-      -m 8192M
+      -m 65536M
       -v "$(Get-Location):c:\mnt"
       -e CI_JOB_ID=${CI_JOB_ID}
       -e CI_PIPELINE_ID=${CI_PIPELINE_ID}
@@ -101,7 +101,7 @@ windows_zip_agent_binaries_x64-a7:
     - mkdir omnibus\pkg
     - >
       docker run --rm
-      -m 8192M
+      -m 65536M
       -v "$(Get-Location):c:\mnt"
       -e CI_COMMIT_BRANCH=${CI_COMMIT_BRANCH}
       -e CI_PIPELINE_ID=${CI_PIPELINE_ID}

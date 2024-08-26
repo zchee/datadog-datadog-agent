@@ -24,6 +24,7 @@
     # Docker setup
     - >
       docker run --rm
+      -m 16384M
       -w C:\mnt
       -e AWS_NETWORKING=true
       -e SIGN_WINDOWS_DD_WCS=true
