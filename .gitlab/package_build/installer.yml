@@ -161,7 +161,7 @@ installer-arm64-oci:
 
 windows-installer-amd64:
   stage: package_build
-  tags: ["runner:windows-docker", "windowsversion:1809"]
+  tags: ["runner:windows-docker-test", "windowsversion:1809"]
   needs: ["go_mod_tidy_check", "go_deps"]
   rules:
     - !reference [.except_mergequeue]

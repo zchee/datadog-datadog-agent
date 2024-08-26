@@ -1,7 +1,7 @@
 ---
 .windows_msi_base:
   stage: package_build
-  tags: ["runner:windows-docker", "windowsversion:1809"]
+  tags: ["runner:windows-docker-test", "windowsversion:1809"]
   needs: ["go_mod_tidy_check", "go_deps"]
   script:
     - $ErrorActionPreference = 'Stop'
@@ -86,7 +86,7 @@ windows_zip_agent_binaries_x64-a7:
   rules:
     - !reference [.except_mergequeue]
     - when: on_success
-  tags: ["runner:windows-docker", "windowsversion:1809"]
+  tags: ["runner:windows-docker-test", "windowsversion:1809"]
   needs: ["go_mod_tidy_check", "go_deps"]
   variables:
     ARCH: "x64"
