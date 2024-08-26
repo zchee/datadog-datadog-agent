@@ -5,7 +5,7 @@
     - !reference [.except_mergequeue]
     - when: on_success
   needs: ["go_deps", "go_tools_deps"]
-  tags: ["runner:windows-docker", "windowsversion:1809"]
+  tags: ["runner:windows-docker-test", "windowsversion:1809"]
   before_script:
     - $tmpfile = [System.IO.Path]::GetTempFileName()
     - (& "$CI_PROJECT_DIR\tools\ci\fetch_secret.ps1" "$Env:VCPKG_BLOB_SAS_URL" "$tmpfile")
