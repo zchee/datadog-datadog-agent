@@ -24,6 +24,8 @@ if "%GOMODCACHE%" == "" (
     goto :endofscript
 )
 
+if not exist %GOMODCACHE% mkdir %GOMODCACHE%
+
 @echo MODCACHE_XZ_FILE %MODCACHE_XZ_FILE% MODCACHE_TAR_FILE %MODCACHE_TAR_FILE% GOMODCACHE %GOMODCACHE%
 if exist %MODCACHE_XZ_FILE% (
     @echo Extracting modcache file %MODCACHE_XZ_FILE%
