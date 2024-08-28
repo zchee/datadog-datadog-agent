@@ -29,11 +29,7 @@ if exist %MODCACHE_XZ_FILE% (
     @echo Extracting modcache file %MODCACHE_XZ_FILE%
     Powershell -C "7z x %MODCACHE_XZ_FILE% -o%MODCACHE_ROOT% -mmt -bt"
     dir %MODCACHE_TAR_FILE%
-    REM Use -aoa to allow overwriting existing files
-    REM This shouldn't have any negative impact: since modules are
-    REM stored per version and hash, files that get replaced will
-    REM get replaced by the same files
-    Powershell -C "7z x %MODCACHE_TAR_FILE% -o%GOMODCACHE% -aoa -bt"
+    Powershell -C "Measure-Command { tar -xf %MODCACHE_TAR_FILE% -C %GOMODCACHE% }"
     @echo Modcache extracted
 ) else (
     @echo %MODCACHE_XZ_FILE% not found, dependencies will be downloaded
