@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
+	status "github.com/DataDog/datadog-agent/pkg/logs/status/utils"
 )
 
 type bucket struct {
@@ -78,20 +79,29 @@ func (b *bucket) flush() *message.Message {
 
 // Aggregator aggregates multiline logs with a given label.
 type Aggregator struct {
-	outputFn       func(m *message.Message)
-	bucket         *bucket
-	maxContentSize int
-	flushTimeout   time.Duration
-	flushTimer     *time.Timer
+	outputFn           func(m *message.Message)
+	bucket             *bucket
+	maxContentSize     int
+	flushTimeout       time.Duration
+	flushTimer         *time.Timer
+	multiLineMatchInfo *status.CountInfo
+	linesCombinedInfo  *status.CountInfo
 }
 
 // NewAggregator creates a new aggregator.
-func NewAggregator(outputFn func(m *message.Message), maxContentSize int, flushTimeout time.Duration, tagTruncatedLogs bool, tagMultiLineLogs bool) *Aggregator {
+func NewAggregator(outputFn func(m *message.Message), maxContentSize int, flushTimeout time.Duration, tagTruncatedLogs bool, tagMultiLineLogs bool, tailerInfo *status.InfoRegistry) *Aggregator {
+	multiLineMatchInfo := status.NewCountInfo("MultiLine matches")
+	linesCombinedInfo := status.NewCountInfo("Lines Combined")
+	tailerInfo.Register(multiLineMatchInfo)
+	tailerInfo.Register(linesCombinedInfo)
+
 	return &Aggregator{
-		outputFn:       outputFn,
-		bucket:         &bucket{buffer: bytes.NewBuffer(nil), tagTruncatedLogs: tagTruncatedLogs, tagMultiLineLogs: tagMultiLineLogs},
-		maxContentSize: maxContentSize,
-		flushTimeout:   flushTimeout,
+		outputFn:           outputFn,
+		bucket:             &bucket{buffer: bytes.NewBuffer(nil), tagTruncatedLogs: tagTruncatedLogs, tagMultiLineLogs: tagMultiLineLogs},
+		maxContentSize:     maxContentSize,
+		flushTimeout:       flushTimeout,
+		multiLineMatchInfo: multiLineMatchInfo,
+		linesCombinedInfo:  linesCombinedInfo,
 	}
 }
 
@@ -116,6 +126,7 @@ func (a *Aggregator) Aggregate(msg *message.Message, label Label) {
 
 	// If `startGroup` - flush the bucket.
 	if label == startGroup {
+		a.multiLineMatchInfo.Add(1)
 		a.Flush()
 	}
 
@@ -125,6 +136,10 @@ func (a *Aggregator) Aggregate(msg *message.Message, label Label) {
 		a.bucket.truncate() // Truncate the end of the current bucket
 		a.Flush()
 		a.bucket.truncate() // Truncate the start of the next bucket
+	}
+
+	if !a.bucket.isEmpty() {
+		a.linesCombinedInfo.Add(1)
 	}
 
 	a.bucket.add(msg)

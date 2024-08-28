@@ -117,6 +117,7 @@ func (t *TimestampDetector) ProcessAndContinue(context *messageContext) bool {
 
 	if t.tokenGraph.MatchProbability(context.tokens).probability > t.matchThreshold {
 		context.label = startGroup
+		context.labelAssignedBy = "timestamp_detector"
 	}
 
 	return true
