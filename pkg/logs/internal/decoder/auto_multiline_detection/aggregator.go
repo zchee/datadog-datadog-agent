@@ -12,6 +12,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
 	status "github.com/DataDog/datadog-agent/pkg/logs/status/utils"
+	"github.com/DataDog/datadog-agent/pkg/telemetry"
 )
 
 type bucket struct {
@@ -60,20 +61,27 @@ func (b *bucket) flush() *message.Message {
 	copy(content, data)
 
 	msg := message.NewRawMessage(content, b.message.Status, b.originalDataLen, b.message.ParsingExtra.Timestamp)
+	tlmTags := []string{}
 
 	if b.lineCount > 1 {
 		msg.ParsingExtra.IsMultiLine = true
+		tlmTags = append(tlmTags, "multi_line")
 		if b.tagMultiLineLogs {
 			msg.ParsingExtra.Tags = append(msg.ParsingExtra.Tags, message.AutoMultiLineTag)
 		}
+	} else {
+		tlmTags = append(tlmTags, "single_line")
 	}
 
 	if b.truncated {
 		msg.ParsingExtra.IsTruncated = true
+		tlmTags = append(tlmTags, "truncated")
 		if b.tagTruncatedLogs {
 			msg.ParsingExtra.Tags = append(msg.ParsingExtra.Tags, message.TruncatedTag)
 		}
 	}
+
+	telemetry.GetStatsTelemetryProvider().Count("datadog.logs_agent.auto_multi_line_aggregator.flush", 1, tlmTags)
 	return msg
 }
 
@@ -127,6 +135,7 @@ func (a *Aggregator) Aggregate(msg *message.Message, label Label) {
 	// If `startGroup` - flush the bucket.
 	if label == startGroup {
 		a.multiLineMatchInfo.Add(1)
+		telemetry.GetStatsTelemetryProvider().Count("datadog.logs_agent.auto_multi_line_aggregator.multiline_matches", 1, []string{""})
 		a.Flush()
 	}
 
@@ -140,6 +149,7 @@ func (a *Aggregator) Aggregate(msg *message.Message, label Label) {
 
 	if !a.bucket.isEmpty() {
 		a.linesCombinedInfo.Add(1)
+		telemetry.GetStatsTelemetryProvider().Count("datadog.logs_agent.auto_multi_line_aggregator.lines_combined", 1, []string{""})
 	}
 
 	a.bucket.add(msg)
