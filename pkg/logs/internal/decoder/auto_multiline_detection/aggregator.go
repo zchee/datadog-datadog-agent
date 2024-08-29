@@ -65,17 +65,17 @@ func (b *bucket) flush() *message.Message {
 
 	if b.lineCount > 1 {
 		msg.ParsingExtra.IsMultiLine = true
-		tlmTags = append(tlmTags, "multi_line")
+		tlmTags = append(tlmTags, "line_type:multi")
 		if b.tagMultiLineLogs {
 			msg.ParsingExtra.Tags = append(msg.ParsingExtra.Tags, message.AutoMultiLineTag)
 		}
 	} else {
-		tlmTags = append(tlmTags, "single_line")
+		tlmTags = append(tlmTags, "line_type:single_line")
 	}
 
 	if b.truncated {
 		msg.ParsingExtra.IsTruncated = true
-		tlmTags = append(tlmTags, "truncated")
+		tlmTags = append(tlmTags, "truncated:true")
 		if b.tagTruncatedLogs {
 			msg.ParsingExtra.Tags = append(msg.ParsingExtra.Tags, message.TruncatedTag)
 		}
