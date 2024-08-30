@@ -4,7 +4,9 @@
   rules:
     - !reference [.except_mergequeue]
     - when: on_success
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   needs:
     [
@@ -14,7 +16,6 @@
       "generate_minimized_btfs_x64",
     ]
   script:
-    - source /root/.bashrc
     - !reference [.retrieve_linux_go_deps]
     - !reference [.cache_omnibus_ruby_deps, setup]
     - echo "About to build for $RELEASE_VERSION"

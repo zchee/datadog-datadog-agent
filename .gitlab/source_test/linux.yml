@@ -3,7 +3,7 @@
   stage: source_test
   needs: ["go_deps"]
   before_script:
-    - source /root/.bashrc && conda activate $CONDA_ENV
+    - conda activate $CONDA_ENV
     - !reference [.retrieve_linux_go_deps]
     - inv -e rtloader.make --install-prefix=$CI_PROJECT_DIR/dev --python-runtimes "$PYTHON_RUNTIMES"
     - inv -e rtloader.install
@@ -50,7 +50,6 @@
 
 .upload_coverage:
   # Upload coverage files to Codecov. Never fail on coverage upload.
-  - source /root/.bashrc
   - export CODECOV_TOKEN=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $CODECOV_TOKEN_SSM_NAME)
   - inv -e coverage.upload-to-codecov $COVERAGE_CACHE_FLAG || true
 
@@ -65,7 +64,7 @@
   script:
     - !reference [.retrieve_linux_go_deps]
     - !reference [.retrieve_linux_go_tools_deps]
-    - source /root/.bashrc && conda activate ddpy3
+    - conda activate ddpy3
     - inv -e rtloader.make --install-prefix=$CI_PROJECT_DIR/dev --python-runtimes "3"
     - inv -e rtloader.install
     - inv -e install-tools
@@ -73,7 +72,9 @@
 
 
 .linux_x64:
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
 
 tests_deb-x64-py2:
@@ -185,7 +186,9 @@ tests_rpm-x64-py3:
   after_script:
     - !reference [.upload_junit_source]
     - !reference [.upload_coverage]
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   variables:
     PYTHON_RUNTIMES: '3'
@@ -210,7 +213,9 @@ tests_deb-arm64-py3:
     - .linux_tests
   after_script:
     - !reference [.upload_coverage]
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:arm64"]
   variables:
     PYTHON_RUNTIMES: '3'
@@ -219,7 +224,9 @@ tests_deb-arm64-py3:
 lint_linux-arm64:
   extends:
     - .linux_lint
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:arm64"]
 
 tests_rpm-arm64-py2:
@@ -240,7 +247,9 @@ tests_rpm-arm64-py3:
     - .linux_tests
   after_script:
     - !reference [.upload_coverage]
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:arm64"]
   variables:
     PYTHON_RUNTIMES: '3'
@@ -252,7 +261,6 @@ go_mod_tidy_check:
   extends: .linux_x64
   needs: ["go_deps"]
   before_script:
-    - source /root/.bashrc
     - !reference [.retrieve_linux_go_deps]
   script:
     - inv -e check-mod-tidy

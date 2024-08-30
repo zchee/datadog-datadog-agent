@@ -16,7 +16,6 @@
   before_script:
     - !reference [.retrieve_linux_go_deps]
     - !reference [.retrieve_linux_go_tools_deps]
-    - source /root/.bashrc
   script:
     - inv -e install-tools
     - inv -e system-probe.object-files
@@ -26,7 +25,9 @@
 
 tests_ebpf_x64:
   extends: .tests_linux_ebpf
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_x64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_x64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   variables:
     ARCH: amd64
@@ -53,7 +54,6 @@ tests_ebpf_arm64:
     paths:
       - $CI_PROJECT_DIR/kmt-deps
   before_script:
-    - source /root/.bashrc
     - !reference [.retrieve_linux_go_deps]
     - !reference [.retrieve_linux_go_tools_deps]
     - inv -e install-tools
@@ -63,14 +63,18 @@ tests_ebpf_arm64:
 
 prepare_sysprobe_ebpf_functional_tests_arm64:
   extends: .prepare_sysprobe_ebpf_functional_tests
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_arm64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_arm64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:arm64"]
   variables:
     ARCH: arm64
 
 prepare_sysprobe_ebpf_functional_tests_x64:
   extends: .prepare_sysprobe_ebpf_functional_tests
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_x64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_x64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   variables:
     ARCH: amd64
@@ -87,7 +91,6 @@ prepare_sysprobe_ebpf_functional_tests_x64:
       - $CI_PROJECT_DIR/kmt-deps
       - $DD_AGENT_TESTING_DIR/site-cookbooks/dd-security-agent-check/files
   before_script:
-    - source /root/.bashrc
     - !reference [.retrieve_linux_go_deps]
     - !reference [.retrieve_linux_go_tools_deps]
     - inv -e install-tools
@@ -101,14 +104,18 @@ prepare_sysprobe_ebpf_functional_tests_x64:
 
 prepare_secagent_ebpf_functional_tests_arm64:
   extends: .prepare_secagent_ebpf_functional_tests
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_arm64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_arm64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:arm64"]
   variables:
     ARCH: arm64
 
 prepare_secagent_ebpf_functional_tests_x64:
   extends: .prepare_secagent_ebpf_functional_tests
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_x64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/system-probe_x64$DATADOG_AGENT_SYSPROBE_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_SYSPROBE_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   variables:
     ARCH: amd64

@@ -2,7 +2,6 @@
 .package_deb_common:
   stage: packaging
   script:
-    - source /root/.bashrc
     - !reference [.cache_omnibus_ruby_deps, setup]
     - echo "About to package for $RELEASE_VERSION"
     - !reference [.setup_deb_signing_key]
@@ -22,14 +21,18 @@
     - !reference [.cache_omnibus_ruby_deps, cache]
 
 .package_deb_x86:
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   variables:
     DD_PKG_ARCH: x86_64
     PACKAGE_ARCH: amd64
 
 .package_deb_arm64:
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:arm64"]
   variables:
     PACKAGE_ARCH: arm64
@@ -88,7 +91,6 @@ agent_deb-arm64-a7:
 .package_ot_deb_common:
   extends: [.package_deb_common]
   script:
-    - source /root/.bashrc
     - !reference [.cache_omnibus_ruby_deps, setup]
     - echo "About to package for $RELEASE_VERSION"
     - !reference [.setup_deb_signing_key]
@@ -143,7 +145,6 @@ installer_deb-arm64:
     - when: on_success
   stage: packaging
   script:
-    - source /root/.bashrc
     - !reference [.cache_omnibus_ruby_deps, setup]
     - echo "About to package for $RELEASE_VERSION"
     - !reference [.setup_deb_signing_key]
@@ -176,7 +177,9 @@ iot_agent_deb-arm64:
 
 iot_agent_deb-armhf:
   extends: .package_iot_deb_common
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_armhf$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_armhf$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:arm64"]
   needs: ["iot-agent-armhf"]
   variables:

@@ -4,7 +4,6 @@
     - when: on_success
   stage: package_build
   script:
-    - source /root/.bashrc
     - echo "About to build for $RELEASE_VERSION"
     - !reference [.retrieve_linux_go_deps]
     - !reference [.cache_omnibus_ruby_deps, setup]
@@ -33,7 +32,9 @@
     - !reference [.cache_omnibus_ruby_deps, cache]
 
 .agent_build_x86:
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   needs:
     [
@@ -46,7 +47,9 @@
     PACKAGE_ARCH: amd64
 
 .agent_build_arm64:
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:arm64"]
   needs:
     [
@@ -110,7 +113,6 @@ datadog-ot-agent-7-arm64:
   extends: .agent_build_common
   needs: ["go_mod_tidy_check", "go_deps"]
   script:
-    - source /root/.bashrc
     - echo "About to build for $RELEASE_VERSION"
     - !reference [.retrieve_linux_go_deps]
     - !reference [.cache_omnibus_ruby_deps, setup]
@@ -125,18 +127,24 @@ datadog-ot-agent-7-arm64:
 iot-agent-x64:
   extends: .iot-agent-common
   tags: ["arch:amd64"]
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
 
 iot-agent-arm64:
   extends: .iot-agent-common
   tags: ["arch:arm64"]
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
 
 iot-agent-armhf:
   extends: .iot-agent-common
   # Run with platform:arm64 since no platform:armhf exists and arm64 should be backwards compatible
   tags: ["arch:arm64"]
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_armhf$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_armhf$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   variables:
     # On armv7, dpkg is built as a 32bits application, which means
     # we can only address 32 bits of memory, which is likely to OOM
@@ -149,7 +157,6 @@ iot-agent-armhf:
     - when: on_success
   stage: package_build
   script:
-    - source /root/.bashrc
     - echo "About to build for $RELEASE_VERSION"
     - !reference [.retrieve_linux_go_deps]
     - !reference [.cache_omnibus_ruby_deps, setup]
@@ -172,12 +179,16 @@ iot-agent-armhf:
 dogstatsd-x64:
   extends: .dogstatsd_build_common
   needs: ["go_mod_tidy_check", "build_dogstatsd-binary_x64", "go_deps"]
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
 
 dogstatsd-arm64:
   extends: .dogstatsd_build_common
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:arm64"]
   needs: ["go_mod_tidy_check", "build_dogstatsd-binary_arm64", "go_deps"]
 

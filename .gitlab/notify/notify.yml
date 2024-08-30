@@ -48,19 +48,22 @@ notify:
 
 send_pipeline_stats:
   stage: notify
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   when: always
   dependencies: []
   script:
-    - source /root/.bashrc
     - export GITLAB_TOKEN=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $GITLAB_READ_API_TOKEN_SSM_NAME)
     - export DD_API_KEY=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $API_KEY_ORG2_SSM_NAME)
     - invoke -e notify.send-stats
 
 notify_github:
   stage: notify
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/docker_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/docker_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   rules:
     - !reference [.except_mergequeue]
@@ -79,7 +82,6 @@ notify_github:
   dependencies: []
   allow_failure: true
   script:
-    - source /root/.bashrc
     - !reference [.install_pr_commenter]
     - messagefile="$(mktemp)"
     - echo "Use this command from [test-infra-definitions](https://github.com/DataDog/test-infra-definitions) to manually test this PR changes on a VM:" >> "$messagefile"
@@ -91,7 +93,9 @@ notify_github:
     - rm "$messagefile"
 
 notify_gitlab_ci_changes:
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   stage: notify
   needs: []
   tags: ["arch:amd64"]
@@ -109,7 +113,6 @@ notify_gitlab_ci_changes:
     - git checkout main
     - git checkout -
   script:
-    - source /root/.bashrc
     - python3 -m pip install -r tasks/libs/requirements-github.txt
     - |
       export GITHUB_KEY_B64=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $GITHUB_PR_COMMENTER_APP_KEY_SSM_NAME | base64)
@@ -119,7 +122,9 @@ notify_gitlab_ci_changes:
     - inv -e notify.gitlab-ci-diff --pr-comment
 
 .failure_summary_job:
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   stage: notify
   dependencies: []
   tags: ["arch:amd64"]
@@ -127,7 +132,6 @@ notify_gitlab_ci_changes:
   timeout: 15 minutes # Added to prevent a stuck job blocking the resource_group defined above
 
 .failure_summary_setup:
-  - source /root/.bashrc
   - export SLACK_API_TOKEN=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $SLACK_AGENT_CI_TOKEN_SSM_NAME)
   - export GITLAB_TOKEN=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $GITLAB_READ_API_TOKEN_SSM_NAME)
   - export DD_API_KEY=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $API_KEY_ORG2_SSM_NAME)

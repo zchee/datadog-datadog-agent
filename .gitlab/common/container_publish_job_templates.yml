@@ -6,14 +6,15 @@
   SRC_CWS_INSTRUMENTATION: registry.ddbuild.io/ci/datadog-agent/cws-instrumentation
 
 .docker_publish_job_definition:
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+  image:
+    name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
+    entrypoint: ["/entrypoint.sh"]
   tags: ["arch:amd64"]
   variables:
     <<: *docker_variables
     IMG_VARIABLES: ""
     IMG_SIGNING: ""
   script: # We can't use the 'trigger' keyword on manual jobs, otherwise they can't be run if the pipeline fails and is retried
-    - source /root/.bashrc
     - export GITLAB_TOKEN=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $GITLAB_SCHEDULER_TOKEN_SSM_NAME)
     - |
       if [[ "$BUCKET_BRANCH" == "nightly" && ( "$IMG_SOURCES" =~ "$SRC_AGENT" || "$IMG_SOURCES" =~ "$SRC_DCA" || "$IMG_SOURCES" =~ "$SRC_CWS_INSTRUMENTATION" || "$IMG_VARIABLES" =~ "$SRC_AGENT" || "$IMG_VARIABLES" =~ "$SRC_DCA" || "$IMG_VARIABLES" =~ "$SRC_CWS_INSTRUMENTATION" ) ]]; then
