@@ -11,15 +11,19 @@ ARCH=$(uname -m)
 if [ "$ARCH" = "arm64" ]; then
   CI_UPLOADER_SHA=$CI_UPLOADER_ARM64_SHA
   CI_UPLOADER_BINARY="datadog-ci_darwin-arm64"
+  CI_UPLOADER_FOLDER="/opt/datadog-ci/bin"
+  echo "export PATH=\"${CI_UPLOADER_FOLDER}:$PATH\"" >>~/.zshrc
 else
   CI_UPLOADER_SHA=$CI_UPLOADER_AMD64_SHA
   CI_UPLOADER_BINARY="datadog-ci_darwin-x64"
+  CI_UPLOADER_FOLDER="/usr/local/bin"
 fi
 
 echo 'Installing datadog-ci...'
-curl -fsSL https://github.com/DataDog/datadog-ci/releases/download/v${CI_UPLOADER_VERSION}/${CI_UPLOADER_BINARY} --output "/usr/local/bin/datadog-ci"
-echo "${CI_UPLOADER_SHA} */usr/local/bin/datadog-ci" | shasum -a 256 --check
-chmod +x /usr/local/bin/datadog-ci
+curl -fsSL https://github.com/DataDog/datadog-ci/releases/download/v${CI_UPLOADER_VERSION}/${CI_UPLOADER_BINARY} --output "${CI_UPLOADER_FOLDER}/datadog-ci"
+echo "${CI_UPLOADER_SHA} *${CI_UPLOADER_FOLDER}/datadog-ci" | shasum -a 256 --check
+chmod +x ${CI_UPLOADER_FOLDER}/datadog-ci
+
 
 # Codecov uploader is only released on amd64 macOS
 if [ "$ARCH" = "x86_64" ]; then
