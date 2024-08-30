@@ -28,3 +28,7 @@ if [ "$ARCH" = "x86_64" ]; then
     echo "${CODECOV_SHA} */usr/local/bin/codecov" | shasum -a 256 --check
     chmod +x /usr/local/bin/codecov
 fi
+
+
+datadog-ci --help
+codecov --help
