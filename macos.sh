@@ -12,6 +12,7 @@ if [ "$ARCH" = "arm64" ]; then
   CI_UPLOADER_SHA=$CI_UPLOADER_ARM64_SHA
   CI_UPLOADER_BINARY="datadog-ci_darwin-arm64"
   CI_UPLOADER_FOLDER="/opt/datadog-ci/bin"
+  mkdir -p ${CI_UPLOADER_FOLDER}
   echo "export PATH=\"${CI_UPLOADER_FOLDER}:$PATH\"" >>~/.zshrc
 else
   CI_UPLOADER_SHA=$CI_UPLOADER_AMD64_SHA
