@@ -88,6 +88,7 @@ lint_macos:
   extends: .macos_gitlab
   needs: ["setup_agent_version"]
   script:
+    - echo "arch is $(uname -m)"
     - inv -e linter.go --cpus 12 --timeout 60
 
 .tests_macos_gitlab:
