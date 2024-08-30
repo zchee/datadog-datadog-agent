@@ -29,7 +29,7 @@
 .package_rpm_x86:
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   variables:
     DD_PKG_ARCH: x86_64
@@ -38,7 +38,7 @@
 .package_rpm_arm64:
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_arm64$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:arm64"]
   variables:
     PACKAGE_ARCH: arm64
@@ -172,7 +172,7 @@ iot_agent_rpm-armhf:
   extends: .package_iot_rpm_common
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_armhf$DATADOG_AGENT_ARMBUILDIMAGES_SUFFIX:$DATADOG_AGENT_ARMBUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   # Run with platform:arm64 since no platform:armhf exists and arm64 should be backwards compatible
   tags: ["arch:arm64"]
   needs: ["iot-agent-armhf"]

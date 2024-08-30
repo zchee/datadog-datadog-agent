@@ -273,7 +273,7 @@ notify_ebpf_complexity_changes:
   stage: notify
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   rules:
     - !reference [.except_mergequeue]

@@ -37,7 +37,7 @@
   stage: kitchen_deploy
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   variables:
     DD_PIPELINE_ID: $CI_PIPELINE_ID-a6
@@ -83,7 +83,7 @@ deploy_deb_testing-a6_arm64:
   stage: kitchen_deploy
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   variables:
     DD_PIPELINE_ID: $CI_PIPELINE_ID-a7
@@ -138,7 +138,7 @@ deploy_deb_testing-a7_arm64:
   stage: kitchen_deploy
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   variables:
     DD_PIPELINE_ID: $CI_PIPELINE_ID-a6
@@ -177,7 +177,7 @@ deploy_rpm_testing-a6_arm64:
   stage: kitchen_deploy
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   variables:
     DD_PIPELINE_ID: $CI_PIPELINE_ID-a7
@@ -222,7 +222,7 @@ deploy_suse_rpm_testing_x64-a6:
   stage: kitchen_deploy
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   needs:
     [
@@ -246,7 +246,7 @@ deploy_suse_rpm_testing_x64-a7:
   stage: kitchen_deploy
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   needs:
     [
@@ -273,7 +273,7 @@ deploy_suse_rpm_testing_arm64-a7:
   stage: kitchen_deploy
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   needs: ["installer_suse_rpm-arm64", "agent_suse-arm64-a7", "lint_linux-arm64"]
   variables:
@@ -293,7 +293,7 @@ deploy_windows_testing-a6:
   stage: kitchen_deploy
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   needs: ["lint_windows-x64", "windows_msi_x64-a6"]
   before_script:
@@ -309,7 +309,7 @@ deploy_windows_testing-a7:
   stage: kitchen_deploy
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/gitlab_agent_deploy$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   needs:
     ["lint_windows-x64", "windows_msi_and_bosh_zip_x64-a7", "windows-installer-amd64"]

@@ -50,7 +50,7 @@ send_pipeline_stats:
   stage: notify
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   when: always
   dependencies: []
@@ -63,7 +63,7 @@ notify_github:
   stage: notify
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/docker_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   tags: ["arch:amd64"]
   rules:
     - !reference [.except_mergequeue]
@@ -95,7 +95,7 @@ notify_github:
 notify_gitlab_ci_changes:
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   stage: notify
   needs: []
   tags: ["arch:amd64"]
@@ -124,7 +124,7 @@ notify_gitlab_ci_changes:
 .failure_summary_job:
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: [""]
+    entrypoint: ["/entrypoint.sh", "/bin/bash"]
   stage: notify
   dependencies: []
   tags: ["arch:amd64"]
