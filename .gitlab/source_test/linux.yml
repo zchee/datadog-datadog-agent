@@ -74,7 +74,7 @@
 .linux_x64:
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
 
 tests_deb-x64-py2:
@@ -188,7 +188,7 @@ tests_rpm-x64-py3:
     - !reference [.upload_coverage]
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   variables:
     PYTHON_RUNTIMES: '3'
@@ -215,7 +215,7 @@ tests_deb-arm64-py3:
     - !reference [.upload_coverage]
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:arm64"]
   variables:
     PYTHON_RUNTIMES: '3'
@@ -226,7 +226,7 @@ lint_linux-arm64:
     - .linux_lint
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:arm64"]
 
 tests_rpm-arm64-py2:
@@ -249,7 +249,7 @@ tests_rpm-arm64-py3:
     - !reference [.upload_coverage]
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/rpm_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:arm64"]
   variables:
     PYTHON_RUNTIMES: '3'

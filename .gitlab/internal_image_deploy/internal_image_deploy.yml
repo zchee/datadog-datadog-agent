@@ -12,7 +12,7 @@ docker_trigger_internal:
       artifacts: false
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   variables:
     DYNAMIC_BUILD_RENDER_RULES: agent-build-only # fake rule to not trigger the ones in the images repo
@@ -59,7 +59,7 @@ docker_trigger_internal-ot:
       artifacts: false
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   variables:
     DYNAMIC_BUILD_RENDER_RULES: agent-build-only # fake rule to not trigger the ones in the images repo
@@ -106,7 +106,7 @@ docker_trigger_cluster_agent_internal:
       artifacts: false
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   variables:
     DYNAMIC_BUILD_RENDER_RULES: agent-build-only # fake rule to not trigger the ones in the images repo
@@ -154,7 +154,7 @@ docker_trigger_cws_instrumentation_internal:
       artifacts: false
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   variables:
     DYNAMIC_BUILD_RENDER_RULES: agent-build-only # fake rule to not trigger the ones in the images repo

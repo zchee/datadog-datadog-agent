@@ -19,7 +19,7 @@ cluster_agent-build_amd64:
     !reference [.on_tag_or_a7]
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   needs: ["go_mod_tidy_check", "go_deps"]
   variables:
@@ -33,7 +33,7 @@ cluster_agent-build_arm64:
     !reference [.on_tag_or_a7]
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_arm64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:arm64"]
   needs: ["go_mod_tidy_check", "go_deps"]
   variables:

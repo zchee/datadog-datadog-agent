@@ -10,7 +10,7 @@ update_rc_build_links:
       artifacts: false
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   script:
     - export ATLASSIAN_PASSWORD=$($CI_PROJECT_DIR/tools/ci/aws_ssm_get_wrapper.sh $JIRA_READ_API_TOKEN_SSM_NAME)

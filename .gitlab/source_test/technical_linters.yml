@@ -2,7 +2,7 @@ lint_python:
   stage: source_test
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   needs: []
   script:
@@ -12,7 +12,7 @@ lint_update_go:
   stage: source_test
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   needs: []
   script:
@@ -22,7 +22,7 @@ validate_modules:
   stage: source_test
   image:
     name: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: [""]
   tags: ["arch:amd64"]
   needs: []
   script:
