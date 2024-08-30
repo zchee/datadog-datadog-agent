@@ -24,7 +24,7 @@ chmod +x /usr/local/bin/datadog-ci
 # Codecov uploader is only released on amd64 macOS
 if [ "$ARCH" = "x86_64" ]; then
     echo 'Installing Codecov uploader...'
-    curl -fsSL https://uploader.codecov.io/v${CODECOV_VERSION}/${CODECOV_ARCH}/codecov --output "/usr/local/bin/codecov"
+    curl -fsSL https://uploader.codecov.io/v${CODECOV_VERSION}/macos/codecov --output "/usr/local/bin/codecov"
     echo "${CODECOV_SHA} */usr/local/bin/codecov" | shasum -a 256 --check
     chmod +x /usr/local/bin/codecov
 fi
