@@ -89,6 +89,7 @@ lint_macos:
   needs: ["setup_agent_version"]
   script:
     - echo "arch is $(uname -m)"
+    - $CI_PROJECT_DIR/macos.sh
     - inv -e linter.go --cpus 12 --timeout 60
 
 .tests_macos_gitlab:
