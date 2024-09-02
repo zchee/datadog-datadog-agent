@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -276,6 +277,7 @@ func (t *TaggerClient) Tag(entity string, cardinality types.TagCardinality) ([]s
 func (t *TaggerClient) AccumulateTagsFor(entity string, cardinality types.TagCardinality, tb tagset.TagsAccumulator) error {
 	// TODO: defer unlock once performance overhead of defer is negligible
 	t.mux.RLock()
+	log.Debug("KEISUKE | t.captureTagger: %+v, t.defaultTagger: %+v | %s", t.captureTagger, t.defaultTagger, debug.Stack())
 	if t.captureTagger != nil {
 		err := t.captureTagger.AccumulateTagsFor(entity, cardinality, tb)
 		if err == nil {
@@ -387,6 +389,14 @@ func (t *TaggerClient) EnrichTags(tb tagset.TagsAccumulator, originInfo taggerty
 	cardinality := taggerCardinality(originInfo.Cardinality, t.dogstatsdCardinality)
 
 	productOrigin := originInfo.ProductOrigin
+	log.Debug(
+		"KEISUKE | tb: %+v, originInfo: %+v, t: %+v, cardinality: %+v, productOrigin: %+v",
+		tb,
+		originInfo,
+		t,
+		cardinality,
+		productOrigin,
+	)
 	// If origin_detection_unified is disabled, we use DogStatsD's Legacy Origin Detection.
 	// TODO: remove this when origin_detection_unified is enabled by default
 	if !t.datadogConfig.originDetectionUnifiedEnabled && productOrigin == taggertypes.ProductOriginDogStatsD {
