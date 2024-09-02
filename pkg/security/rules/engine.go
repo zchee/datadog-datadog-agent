@@ -127,7 +127,7 @@ func (e *RuleEngine) Start(ctx context.Context, reloadChan <-chan struct{}, wg *
 		ruleFilters = append(ruleFilters, agentVersionFilter)
 	}
 
-	ruleFilterModel, err := NewRuleFilterModel(e.probe.Origin())
+	ruleFilterModel, err := NewRuleFilterModel(e.probe.Config, e.probe.Origin())
 	if err != nil {
 		return fmt.Errorf("failed to create rule filter: %w", err)
 	}
@@ -298,7 +298,7 @@ func (e *RuleEngine) LoadPolicies(providers []rules.PolicyProvider, sendLoadedRe
 	}
 
 	// update current policies related module attributes
-	e.policiesVersions = getPoliciesVersions(rs)
+	e.policiesVersions = getPoliciesVersions(rs, e.config.PolicyMonitorReportInternalPolicies)
 
 	// notify listeners
 	if e.rulesLoaded != nil {
@@ -393,7 +393,7 @@ func (e *RuleEngine) RuleMatch(rule *rules.Rule, event eval.Event) bool {
 
 	// add matched rules before any auto suppression check to ensure that this information is available in activity dumps
 	if ev.ContainerContext.ContainerID != "" && (e.config.ActivityDumpTagRulesEnabled || e.config.AnomalyDetectionTagRulesEnabled) {
-		ev.Rules = append(ev.Rules, model.NewMatchedRule(rule.Definition.ID, rule.Definition.Version, rule.Definition.Tags, rule.Definition.Policy.Name, rule.Definition.Policy.Version))
+		ev.Rules = append(ev.Rules, model.NewMatchedRule(rule.Def.ID, rule.Def.Version, rule.Def.Tags, rule.Policy.Name, rule.Policy.Def.Version))
 	}
 
 	if e.AutoSuppression.Suppresses(rule, ev) {
@@ -402,7 +402,7 @@ func (e *RuleEngine) RuleMatch(rule *rules.Rule, event eval.Event) bool {
 
 	e.probe.HandleActions(rule, event)
 
-	if rule.Definition.Silent {
+	if rule.Def.Silent {
 		return false
 	}
 
@@ -541,12 +541,15 @@ func logLoadingErrors(msg string, m *multierror.Error) {
 	}
 }
 
-func getPoliciesVersions(rs *rules.RuleSet) []string {
+func getPoliciesVersions(rs *rules.RuleSet, includeInternalPolicies bool) []string {
 	var versions []string
 
 	cache := make(map[string]bool)
 	for _, rule := range rs.GetRules() {
-		version := rule.Definition.Policy.Version
+		if rule.Policy.IsInternal && !includeInternalPolicies {
+			continue
+		}
+		version := rule.Policy.Def.Version
 		if _, exists := cache[version]; !exists {
 			cache[version] = true
 

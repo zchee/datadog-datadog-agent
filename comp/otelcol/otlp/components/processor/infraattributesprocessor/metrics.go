@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/DataDog/datadog-agent/comp/core/tagger"
 	"github.com/DataDog/datadog-agent/comp/core/tagger/types"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/util"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -22,11 +22,11 @@ import (
 
 type infraAttributesMetricProcessor struct {
 	logger      *zap.Logger
-	tagger      tagger.Component
+	tagger      taggerClient
 	cardinality types.TagCardinality
 }
 
-func newInfraAttributesMetricProcessor(set processor.Settings, cfg *Config, tagger tagger.Component) (*infraAttributesMetricProcessor, error) {
+func newInfraAttributesMetricProcessor(set processor.Settings, cfg *Config, tagger taggerClient) (*infraAttributesMetricProcessor, error) {
 	iamp := &infraAttributesMetricProcessor{
 		logger:      set.Logger,
 		tagger:      tagger,
@@ -61,10 +61,10 @@ func entityIDsFromAttributes(attrs pcommon.Map) []string {
 		}
 	}
 	if namespace, ok := attrs.Get(conventions.AttributeK8SNamespaceName); ok {
-		entityIDs = append(entityIDs, fmt.Sprintf("kubernetes_metadata://namespaces//%v", namespace.AsString()))
+		entityIDs = append(entityIDs, fmt.Sprintf("kubernetes_metadata://%s", string(util.GenerateKubeMetadataEntityID("", "namespaces", "", namespace.AsString()))))
 	}
 	if nodeName, ok := attrs.Get(conventions.AttributeK8SNodeName); ok {
-		entityIDs = append(entityIDs, fmt.Sprintf("kubernetes_metadata://nodes//%v", nodeName.AsString()))
+		entityIDs = append(entityIDs, fmt.Sprintf("kubernetes_metadata://%s", string(util.GenerateKubeMetadataEntityID("", "nodes", "", nodeName.AsString()))))
 	}
 	if podUID, ok := attrs.Get(conventions.AttributeK8SPodUID); ok {
 		entityIDs = append(entityIDs, fmt.Sprintf("kubernetes_pod_uid://%v", podUID.AsString()))

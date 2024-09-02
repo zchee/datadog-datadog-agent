@@ -52,8 +52,6 @@ BPF_LRU_MAP(exec_pid_transfer, u32, u64, 512)
 BPF_LRU_MAP(netns_cache, u32, u32, 40960)
 BPF_LRU_MAP(span_tls, u32, struct span_tls_t, 4096)
 BPF_LRU_MAP(inode_discarders, struct inode_discarder_t, struct inode_discarder_params_t, 4096)
-BPF_LRU_MAP(pid_discarders, u32, struct pid_discarder_params_t, 512)
-BPF_LRU_MAP(pathnames, struct path_key_t, struct path_leaf_t, 1) // edited
 BPF_LRU_MAP(flow_pid, struct pid_route_t, u32, 10240)
 BPF_LRU_MAP(conntrack, struct namespaced_flow_t, struct namespaced_flow_t, 4096)
 BPF_LRU_MAP(io_uring_ctx_pid, void *, u64, 2048)
@@ -68,9 +66,11 @@ BPF_LRU_MAP(user_sessions, struct user_session_key_t, struct user_session_t, 102
 
 BPF_LRU_MAP_FLAGS(tasks_in_coredump, u64, u8, 64, BPF_F_NO_COMMON_LRU)
 BPF_LRU_MAP_FLAGS(syscalls, u64, struct syscall_cache_t, 1, BPF_F_NO_COMMON_LRU) // max entries will be overridden at runtime
+BPF_LRU_MAP_FLAGS(pathnames, struct path_key_t, struct path_leaf_t, 1, BPF_F_NO_COMMON_LRU) // edited
 
 BPF_PERCPU_ARRAY_MAP(dr_erpc_state, struct dr_erpc_state_t, 1)
 BPF_PERCPU_ARRAY_MAP(cgroup_tracing_event_gen, struct cgroup_tracing_event_t, EVENT_GEN_SIZE)
+BPF_PERCPU_ARRAY_MAP(cgroup_prefix, cgroup_prefix_t, 1)
 BPF_PERCPU_ARRAY_MAP(fb_discarder_stats, struct discarder_stats_t, EVENT_LAST_DISCARDER + 1)
 BPF_PERCPU_ARRAY_MAP(bb_discarder_stats, struct discarder_stats_t, EVENT_LAST_DISCARDER + 1)
 BPF_PERCPU_ARRAY_MAP(fb_approver_stats, struct approver_stats_t, EVENT_LAST_APPROVER + 1)
@@ -89,9 +89,10 @@ BPF_PERCPU_ARRAY_MAP(syscalls_stats, struct syscalls_stats_t, EVENT_MAX)
 
 BPF_PROG_ARRAY(args_envs_progs, 3)
 BPF_PROG_ARRAY(dentry_resolver_kprobe_or_fentry_callbacks, EVENT_MAX)
+BPF_LRU_MAP(dentry_resolver_inputs, u64, struct dentry_resolver_input_t, 256)
 BPF_PROG_ARRAY(dentry_resolver_tracepoint_callbacks, EVENT_MAX)
-BPF_PROG_ARRAY(dentry_resolver_kprobe_or_fentry_progs, 5)
-BPF_PROG_ARRAY(dentry_resolver_tracepoint_progs, 2)
+BPF_PROG_ARRAY(dentry_resolver_kprobe_or_fentry_progs, 6)
+BPF_PROG_ARRAY(dentry_resolver_tracepoint_progs, 3)
 BPF_PROG_ARRAY(classifier_router, 100)
 BPF_PROG_ARRAY(sys_exit_progs, 64)
 
