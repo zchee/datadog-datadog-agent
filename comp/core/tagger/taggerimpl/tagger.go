@@ -277,7 +277,7 @@ func (t *TaggerClient) Tag(entity string, cardinality types.TagCardinality) ([]s
 func (t *TaggerClient) AccumulateTagsFor(entity string, cardinality types.TagCardinality, tb tagset.TagsAccumulator) error {
 	// TODO: defer unlock once performance overhead of defer is negligible
 	t.mux.RLock()
-	log.Debug("KEISUKE | t.captureTagger: %+v, t.defaultTagger: %+v | %s", t.captureTagger, t.defaultTagger, debug.Stack())
+	log.Debugf("KEISUKE | t.captureTagger: %+v, t.defaultTagger: %+v | %s", t.captureTagger, t.defaultTagger, debug.Stack())
 	if t.captureTagger != nil {
 		err := t.captureTagger.AccumulateTagsFor(entity, cardinality, tb)
 		if err == nil {
@@ -389,7 +389,7 @@ func (t *TaggerClient) EnrichTags(tb tagset.TagsAccumulator, originInfo taggerty
 	cardinality := taggerCardinality(originInfo.Cardinality, t.dogstatsdCardinality)
 
 	productOrigin := originInfo.ProductOrigin
-	log.Debug(
+	log.Debugf(
 		"KEISUKE | tb: %+v, originInfo: %+v, t: %+v, cardinality: %+v, productOrigin: %+v",
 		tb,
 		originInfo,
