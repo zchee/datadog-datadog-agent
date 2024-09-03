@@ -27,6 +27,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/autoscaling"
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/autoscaling/workload/model"
+	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/apiserver/common"
 )
 
 type fixture struct {
@@ -313,9 +314,11 @@ func TestDatadogPodAutoscalerTargetingClusterAgent(t *testing.T) {
 	assert.NoError(t, err)
 	f.RunControllerSync(true, "default/dpa-dca")
 
+	pn, _ := common.GetSelfPodName()
+	assert.Equal(t, "datadog-agent-cluster-agent-7dbf798595-tp9lg", pn)
+
 	f.Objects = append(f.Objects, dpaTyped)
 	f.Actions = nil
-
 	f.ExpectUpdateStatusAction(expectedUnstructuredError)
 	f.RunControllerSync(true, "default/dpa-dca")
 	assert.Len(t, f.store.GetAll(), 1)
