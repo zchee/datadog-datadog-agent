@@ -9,6 +9,7 @@ package workload
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -247,7 +248,8 @@ func TestDatadogPodAutoscalerTargetingClusterAgent(t *testing.T) {
 		Owner: datadoghq.DatadogPodAutoscalerLocalOwner,
 	}
 
-	dpa, dpaTyped := newFakePodAutoscaler("default", "dpa-dca", 1, dpaSpec, datadoghq.DatadogPodAutoscalerStatus{})
+	currentNs := common.GetMyNamespace()
+	dpa, dpaTyped := newFakePodAutoscaler(currentNs, "dpa-dca", 1, dpaSpec, datadoghq.DatadogPodAutoscalerStatus{})
 	f.InformerObjects = append(f.InformerObjects, dpa)
 
 	expectedDPAError := &datadoghq.DatadogPodAutoscaler{
@@ -257,7 +259,7 @@ func TestDatadogPodAutoscalerTargetingClusterAgent(t *testing.T) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "dpa-dca",
-			Namespace:  "default",
+			Namespace:  currentNs,
 			Generation: 1,
 			UID:        dpa.GetUID(),
 		},
@@ -312,7 +314,8 @@ func TestDatadogPodAutoscalerTargetingClusterAgent(t *testing.T) {
 	}
 	expectedUnstructuredError, err := autoscaling.ToUnstructured(expectedDPAError)
 	assert.NoError(t, err)
-	f.RunControllerSync(true, "default/dpa-dca")
+	id := fmt.Sprintf("%s/dpa-dca", currentNs)
+	f.RunControllerSync(true, id)
 
 	pn, _ := common.GetSelfPodName()
 	assert.Equal(t, "datadog-agent-cluster-agent-7dbf798595-tp9lg", pn)
@@ -320,9 +323,9 @@ func TestDatadogPodAutoscalerTargetingClusterAgent(t *testing.T) {
 	f.Objects = append(f.Objects, dpaTyped)
 	f.Actions = nil
 	f.ExpectUpdateStatusAction(expectedUnstructuredError)
-	f.RunControllerSync(true, "default/dpa-dca")
+	f.RunControllerSync(true, id)
 	assert.Len(t, f.store.GetAll(), 1)
-	pai, found := f.store.Get("default/dpa-dca")
+	pai, found := f.store.Get(id)
 	assert.Truef(t, found, "Expected to find DatadogPodAutoscaler in store")
 	assert.Equal(t, errors.New("Autoscaling target cannot be set to the cluster agent"), pai.Error())
 }
