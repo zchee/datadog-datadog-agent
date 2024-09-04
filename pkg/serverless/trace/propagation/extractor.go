@@ -114,10 +114,7 @@ func (e Extractor) extract(event interface{}) (*TraceContext, error) {
 	case events.LambdaFunctionURLRequest:
 		carrier, err = headersCarrier(ev.Headers)
 	case events.StepFunctionPayload:
-		tc, err := createTraceContextFromStepFunctionInput(ev)
-		if err == nil {
-			return tc, nil
-		}
+		carrier, err = stepFunctionsCarrier(ev)
 	default:
 		err = errorUnsupportedExtractionType
 	}
@@ -133,9 +130,10 @@ func (e Extractor) extract(event interface{}) (*TraceContext, error) {
 		return nil, err
 	}
 	return &TraceContext{
-		TraceID:          sc.TraceID(),
-		ParentID:         sc.SpanID(),
-		SamplingPriority: getSamplingPriority(sc),
+		TraceID:           sc.TraceID(),
+		TraceIDUpper64Hex: getUpperTraceID(sc),
+		ParentID:          sc.SpanID(),
+		SamplingPriority:  getSamplingPriority(sc),
 	}, nil
 }
 
@@ -216,6 +214,18 @@ func getSamplingPriority(sc ddtrace.SpanContext) (priority sampler.SamplingPrior
 		}
 	}
 	return
+}
+
+func getUpperTraceID(sc ddtrace.SpanContext) string {
+	var tid string
+	if tc, ok := sc.(interface{ TraceID128() string }); ok && tc != nil {
+		tid = tc.TraceID128()
+	}
+	upper64 := tid[:16]
+	if upper64 == "0000000000000000" {
+		return ""
+	}
+	return upper64
 }
 
 // convertStrToUint64 converts a given string to uint64 optionally returning an

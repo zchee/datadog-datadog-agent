@@ -223,10 +223,8 @@ func headersCarrier(hdrs map[string]string) (tracer.TextMapReader, error) {
 	return tracer.TextMapCarrier(hdrs), nil
 }
 
-// createTraceContextFromStepFunctionInput extracts the execution ARN, state name, and state entered time and uses them to generate Trace ID and Parent ID
-func createTraceContextFromStepFunctionInput(event events.StepFunctionPayload) (*TraceContext, error) {
-	tc := new(TraceContext)
-
+// stepFunctionsCarrier extracts the execution ARN, state name, and state entered time and uses them to generate Trace ID and Parent ID
+func stepFunctionsCarrier(event events.StepFunctionPayload) (tracer.TextMapReader, error) {
 	execArn := event.Execution.ID
 	stateName := event.State.Name
 	stateEnteredTime := event.State.EnteredTime
@@ -238,11 +236,12 @@ func createTraceContextFromStepFunctionInput(event events.StepFunctionPayload) (
 	lowerTraceID, upperTraceID := stringToDdTraceIDs(execArn)
 	parentID := stringToDdSpanID(execArn, stateName, stateEnteredTime)
 
-	tc.TraceID = lowerTraceID
-	tc.TraceIDUpper64Hex = upperTraceID
-	tc.ParentID = parentID
-	tc.SamplingPriority = sampler.PriorityAutoKeep
-	return tc, nil
+	return headersCarrier(map[string]string{
+		"X-Datadog-Trace-ID":          fmt.Sprintf("%d", lowerTraceID),
+		"X-Datadog-Parent-ID":         fmt.Sprintf("%d", parentID),
+		"X-Datadog-Sampling-Priority": fmt.Sprintf("%d", sampler.PriorityAutoKeep),
+		"X-Datadog-Tags":              fmt.Sprintf("_dd.p.tid=%s", upperTraceID),
+	})
 }
 
 // stringToDdSpanID hashes the Execution ARN, state name, and state entered time to generate a 64-bit span ID
