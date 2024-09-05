@@ -366,10 +366,14 @@ var ignoreComms = map[string]struct{}{
 	"dhclient":         {},
 	"docker-proxy":     {},
 	"livenessprobe":    {},
+	"process-agent":    {},
+	"security-agent":   {},
 	"sshd":             {},
+	"system-probe":     {},
 	"systemd":          {},
 	"systemd-resolved": {},
 	"systemd-networkd": {},
+	"trace-agent":      {},
 }
 
 // getService gets information for a single service.
