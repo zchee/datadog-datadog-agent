@@ -981,34 +981,49 @@ int BPF_BYPASSABLE_KPROBE(kprobe__tcp_connect, struct sock *skp) {
     return 0;
 }
 
-SEC("kretprobe/tcp_connect")
-int BPF_BYPASSABLE_KRETPROBE(kretprobe__tcp_connect, int rc) {
+SEC("kprobe/inet_stream_connect")
+int kprobe__inet_stream_connect(struct pt_regs *ctx) {
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    struct socket *sock = (struct socket *)PT_REGS_PARM1(ctx);
+
+    // Store the socket pointer in the map with pid_tgid as the key
+    bpf_map_update_elem(&sock_map, &pid_tgid, &sock, BPF_ANY);
+
+    return 0;
+}
+
+SEC("kretprobe/inet_stream_connect")
+int BPF_BYPASSABLE_KRETPROBE(kretprobe__inet_stream_connect, int rc) {
     u64 pid_tgid = bpf_get_current_pid_tgid();
     log_debug("kretprobe/tcp_connect: tgid: %llu, pid: %llu", pid_tgid >> 32, pid_tgid & 0xFFFFFFFF);
+    struct socket **sock ;
     if (rc < 0) {
-        log_debug("kretprobe/tcp_connect: connect failed, rc: %d", rc);
+        log_debug("adamk kretprobe/inet_stream_connect: connect failed, rc: %d", rc);
         bpf_map_delete_elem(&pending_tcp_connect, &pid_tgid);
-        return 0;
     }
 
-    skp_conn_tuple_t *skp_conn = bpf_map_lookup_elem(&pending_tcp_connect, &pid_tgid);
-    if (skp_conn == NULL) {
+    sock = bpf_map_lookup_elem(&sock_map, &pid_tgid);
+    if (sock == NULL) {
         return 0;
     }
-
+    struct socket *sock = *sock;
     bpf_map_delete_elem(&pending_tcp_connect, &pid_tgid);
-    skp_conn_tuple_t skp_conn_val = *skp_conn;
-
-    u64 *existing_pid = bpf_map_lookup_elem(&tcp_ongoing_connect_pid, &skp_conn_val);
-    if (existing_pid) {
-        if (*existing_pid == pid_tgid) {
-            log_debug("adamk kretprobe/tcp_connect: ongoing connect already exists, pid: %llu", *existing_pid);
-            increment_telemetry_count(tcp_connect_pid_match);
-        } else {
-            log_debug("adamk kretprobe/tcp_connect: ongoing connect already exists, pid: %llu", *existing_pid);
-            increment_telemetry_count(tcp_connect_pid_mismatch);
-        }
+    int err = 0;
+    bpf_probe_read_kernel_with_telemetry(&err, sizeof(err), &skp_conn->sk->sk_err);
+    if (err != 0) {
+        log_debug("adamk kretprobe/inet_stream_connect: skc_err set, rc: %d", err);
     }
+
+    // u64 *existing_pid = bpf_map_lookup_elem(&tcp_ongoing_connect_pid, &skp_conn_val);
+    // if (existing_pid) {
+    //     if (*existing_pid == pid_tgid) {
+    //         log_debug("adamk kretprobe/tcp_connect: ongoing connect already exists, pid: %llu", *existing_pid);
+    //         increment_telemetry_count(tcp_connect_pid_match);
+    //     } else {
+    //         log_debug("adamk kretprobe/tcp_connect: ongoing connect already exists, pid: %llu", *existing_pid);
+    //         increment_telemetry_count(tcp_connect_pid_mismatch);
+    //     }
+    // }
 
     if (tcp_failed_connections_enabled()) {
         bpf_map_update_with_telemetry(tcp_ongoing_connect_tuple, &skp_conn_val.sk, &skp_conn_val.tup, BPF_NOEXIST);
