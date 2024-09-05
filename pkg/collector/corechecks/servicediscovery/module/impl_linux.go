@@ -362,14 +362,14 @@ func customNewProcess(pid int32) (*process.Process, error) {
 // ignoreComms is a list of process names (matched against /proc/PID/comm) to
 // never report as a service. Note that comm is limited to 16 characters.
 var ignoreComms = map[string]struct{}{
-	"sshd":             {},
+	"datadog-agent":    {},
 	"dhclient":         {},
+	"docker-proxy":     {},
+	"livenessprobe":    {},
+	"sshd":             {},
 	"systemd":          {},
 	"systemd-resolved": {},
 	"systemd-networkd": {},
-	"datadog-agent":    {},
-	"livenessprobe":    {},
-	"docker-proxy":     {},
 }
 
 // getService gets information for a single service.
