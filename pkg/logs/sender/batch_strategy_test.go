@@ -193,7 +193,7 @@ func TestBatchStrategyFlushChannel(t *testing.T) {
 	}
 
 	// Trigger a manual flush
-	flushChan <- struct{}{}
+	flushChan <- &sync.WaitGroup{}
 
 	assert.ElementsMatch(t, messages, (<-output).Messages)
 
