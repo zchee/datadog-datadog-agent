@@ -8,19 +8,24 @@
 package kubernetesresourceparsers
 
 import (
-	"regexp"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/util"
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"regexp"
+	"sync"
 )
 
 type metadataParser struct {
 	gvr               *schema.GroupVersionResource
 	annotationsFilter []*regexp.Regexp
 }
+
+var (
+	uidToResourceMap = make(map[types.UID]string)
+	mapMutex         sync.RWMutex
+)
 
 // NewMetadataParser initialises and returns a metadata parser
 func NewMetadataParser(gvr schema.GroupVersionResource, annotationsExclude []string) (ObjectParser, error) {
@@ -35,6 +40,7 @@ func NewMetadataParser(gvr schema.GroupVersionResource, annotationsExclude []str
 func (p metadataParser) Parse(obj interface{}) workloadmeta.Entity {
 	partialObjectMetadata := obj.(*metav1.PartialObjectMetadata)
 	id := util.GenerateKubeMetadataEntityID(p.gvr.Group, p.gvr.Resource, partialObjectMetadata.Namespace, partialObjectMetadata.Name)
+	addToUIDToResourceMap(partialObjectMetadata.UID, p.gvr.Resource)
 
 	return &workloadmeta.KubernetesMetadata{
 		EntityID: workloadmeta.EntityID{
@@ -49,4 +55,25 @@ func (p metadataParser) Parse(obj interface{}) workloadmeta.Entity {
 		},
 		GVR: p.gvr,
 	}
+}
+
+func addToUIDToResourceMap(uid types.UID, resource string) {
+	mapMutex.Lock()
+	defer mapMutex.Unlock()
+
+	uidToResourceMap[uid] = resource
+}
+
+// GetResourceFromUID returns the resource from the mapped UID
+func GetResourceFromUID(uid types.UID) (string, bool) {
+	mapMutex.RLock()
+	defer mapMutex.RUnlock()
+
+	resource, found := uidToResourceMap[uid]
+	return resource, found
+}
+
+// GetUIDToResourceMap returns the map
+func GetUIDToResourceMap() map[types.UID]string {
+	return uidToResourceMap
 }

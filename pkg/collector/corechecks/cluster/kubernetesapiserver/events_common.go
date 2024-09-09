@@ -21,6 +21,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/tagger/kubetags"
 	"github.com/DataDog/datadog-agent/comp/core/tagger/types"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/util"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/util/kubernetes_resource_parsers"
 	ddConfig "github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/metrics/event"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/apiserver"
@@ -282,8 +283,12 @@ func getInvolvedObjectTags(involvedObject v1.ObjectReference, taggerInstance tag
 		} else {
 			apiGroup = ""
 		}
-		resourceType := strings.ToLower(involvedObject.Kind) + "s"
-		entityID = types.NewEntityID(types.KubernetesMetadata, string(util.GenerateKubeMetadataEntityID(apiGroup, resourceType, involvedObject.Namespace, involvedObject.Name))).String()
+		resource, found := kubernetesresourceparsers.GetResourceFromUID(involvedObject.UID)
+		if !found {
+			uidMap := kubernetesresourceparsers.GetUIDToResourceMap()
+			log.Debugf("Unable to find resource with UID '%s' and kind %s \n Map: %s", involvedObject.UID, involvedObject.Kind, uidMap)
+		}
+		entityID = types.NewEntityID(types.KubernetesMetadata, string(util.GenerateKubeMetadataEntityID(apiGroup, resource, involvedObject.Namespace, involvedObject.Name))).String()
 	}
 
 	entity, err := taggerInstance.GetEntity(entityID)

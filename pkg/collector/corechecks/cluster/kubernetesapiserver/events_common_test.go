@@ -148,6 +148,7 @@ func Test_getInvolvedObjectTags(t *testing.T) {
 		{
 			name: "get tags for any metadata resource",
 			involvedObject: v1.ObjectReference{
+				UID:        "fakeuid",
 				Kind:       "ResourceType",
 				Name:       "generic-resource",
 				Namespace:  "default",
