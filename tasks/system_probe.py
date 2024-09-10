@@ -136,7 +136,7 @@ def ninja_define_ebpf_compiler(
     )
     nw.rule(
         name="llc",
-        command=f"llc -march=bpf -filetype=obj -o $out $in{strip}",
+        command=f"llc -march=bpf -mcpu=v1 -filetype=obj -o $out $in{strip}",
     )
 
 
