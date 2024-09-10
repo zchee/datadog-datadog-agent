@@ -56,7 +56,7 @@ static __always_inline __maybe_unused void pktbuf_advance(pktbuf_t pkt, u32 offs
     pktbuf_invalid_operation();
 }
 
-static __always_inline __maybe_unused u32 pktbuf_data_offset(pktbuf_t pkt)
+static __always_inline __maybe_unused u64 pktbuf_data_offset(pktbuf_t pkt)
 {
     switch (pkt.type) {
     case PKTBUF_SKB:

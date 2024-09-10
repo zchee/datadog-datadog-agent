@@ -31,8 +31,7 @@ extern void __format_check(const char *fmt, ...) __attribute__ ((format(printf, 
 /* llvm builtin functions that eBPF C program may use to
  * emit BPF_LD_ABS and BPF_LD_IND instructions
  */
-unsigned long long
-load_byte(void *skb,
+unsigned long long load_byte(void *skb,
     unsigned long long off) asm("llvm.bpf.load.byte");
 unsigned long long load_half(void *skb,
     unsigned long long off) asm("llvm.bpf.load.half");

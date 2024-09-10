@@ -32,7 +32,7 @@ int uprobe__http2_tls_handle_first_frame(struct pt_regs *ctx) {
 
     pktbuf_t pkt = pktbuf_from_tls(ctx, &dispatcher_args_copy);
 
-    handle_first_frame(pkt, (__u32*)&args->data_off, &dispatcher_args_copy.tup);
+    handle_first_frame(pkt, (__u64*)&args->data_off, &dispatcher_args_copy.tup);
     return 0;
 }
 

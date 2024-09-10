@@ -594,7 +594,7 @@ static __always_inline bool pktbuf_find_relevant_frames(pktbuf_t pkt, http2_tail
             iteration_value->frames_count < HTTP2_MAX_FRAMES_ITERATIONS);
 }
 
-static __always_inline void handle_first_frame(pktbuf_t pkt, __u32 *external_data_offset, conn_tuple_t *tup) {
+static __always_inline void handle_first_frame(pktbuf_t pkt, __u64 *external_data_offset, conn_tuple_t *tup) {
     const __u32 zero = 0;
     http2_frame_t current_frame __align_stack_8 = {};
 

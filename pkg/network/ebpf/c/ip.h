@@ -59,39 +59,39 @@ struct __tcphdr {
 // https://github.com/torvalds/linux/commit/e6a18d36118bea3bf497c9df4d9988b6df120689
 // We should consider using something like `asm volatile("":::"r1")` so this patch
 // can also benefit hosts running kernel 4.4
-__maybe_unused static __always_inline u64 __load_word(void *ptr, u32 offset) {
+__maybe_unused static __always_inline u32 __load_word(void *ptr, u64 offset) {
 #ifdef COMPILE_PREBUILT
     return load_word(ptr, offset);
 #else
     if (bpf_helper_exists(BPF_FUNC_skb_load_bytes)) {
         u32 res = 0;
-        bpf_skb_load_bytes(ptr, offset, &res, sizeof(res));
+        bpf_skb_load_bytes(ptr, (u32)offset, &res, sizeof(res));
         return bpf_htonl(res);
     }
     return load_word(ptr, offset);
 #endif
 }
 
-__maybe_unused static __always_inline u64 __load_half(void *ptr, u32 offset) {
+__maybe_unused static __always_inline u16 __load_half(void *ptr, u64 offset) {
 #ifdef COMPILE_PREBUILT
     return load_half(ptr, offset);
 #else
     if (bpf_helper_exists(BPF_FUNC_skb_load_bytes)) {
         u16 res = 0;
-        bpf_skb_load_bytes(ptr, offset, &res, sizeof(res));
+        bpf_skb_load_bytes(ptr, (u32)offset, &res, sizeof(res));
         return bpf_htons(res);
     }
     return load_half(ptr, offset);
 #endif
 }
 
-__maybe_unused static __always_inline u64 __load_byte(void *ptr, u32 offset) {
+__maybe_unused static __always_inline u8 __load_byte(void *ptr, u64 offset) {
 #ifdef COMPILE_PREBUILT
     return load_byte(ptr, offset);
 #else
     if (bpf_helper_exists(BPF_FUNC_skb_load_bytes)) {
         u8 res = 0;
-        bpf_skb_load_bytes(ptr, offset, &res, sizeof(res));
+        bpf_skb_load_bytes(ptr, (u32)offset, &res, sizeof(res));
         return res;
     }
     return load_byte(ptr, offset);
@@ -119,8 +119,8 @@ static __always_inline void read_ipv4_skb(struct __sk_buff *skb, __u64 off, __u6
 // This struct is populated by calling `read_conn_tuple_skb` from a program type
 // that manipulates a `__sk_buff` object.
 typedef struct {
-    __u32 data_off;
-    __u32 data_end;
+    __u64 data_off;
+    __u64 data_end;
     __u32 tcp_seq;
     __u8 tcp_flags;
 } skb_info_t;
