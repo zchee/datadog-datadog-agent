@@ -6,6 +6,8 @@ parameter_name="$1"
 
 set +x
 
+exit 42
+
 while [[ $retry_count -lt $max_retries ]]; do
     result=$(aws ssm get-parameter --region us-east-1 --name "$parameter_name" --with-decryption --query "Parameter.Value" --output text 2> awsErrorFile)
     error=$(<awsErrorFile)
