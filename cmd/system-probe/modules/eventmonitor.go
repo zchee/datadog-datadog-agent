@@ -90,5 +90,13 @@ func createEventMonitorModule(_ *sysconfigtypes.Config, deps module.FactoryDepen
 		}
 	}
 
+	sdprocconsumer, err := createServiceDiscoveryProcessConsumer(evm)
+	if err != nil {
+		return nil, err
+	}
+	if sdprocconsumer != nil {
+		evm.RegisterEventConsumer(sdprocconsumer)
+	}
+
 	return evm, err
 }

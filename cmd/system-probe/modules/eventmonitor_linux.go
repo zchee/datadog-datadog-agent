@@ -35,3 +35,7 @@ func createProcessMonitorConsumer(evm *eventmonitor.EventMonitor, config *netcon
 
 	return procmon.NewProcessMonitorEventConsumer(evm)
 }
+
+func createServiceDiscoveryProcessConsumer(_ *eventmonitor.EventMonitor) (eventmonitor.EventConsumerInterface, error) {
+	return nil, nil
+}
