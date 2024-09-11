@@ -21,6 +21,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if len(b) == 0 {
+		log.Fatal("no input data")
+	}
 
 	b = removeAbsolutePath(b, runtime.GOOS)
 

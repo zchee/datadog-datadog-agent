@@ -82,7 +82,7 @@ arch_mapping = {
     "arm64": "arm64",  # darwin
 }
 CURRENT_ARCH = arch_mapping.get(platform.machine(), "x64")
-CLANG_VERSION_RUNTIME = "19.1.0-rc3"
+CLANG_VERSION_RUNTIME = "19.1.0-rc4"
 CLANG_VERSION_SYSTEM_PREFIX = "19.1"
 
 
