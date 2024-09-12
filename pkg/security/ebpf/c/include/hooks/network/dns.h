@@ -7,25 +7,19 @@
 
 __attribute__((always_inline)) int parse_dns_request(struct __sk_buff *skb, struct packet_t *pkt, struct dns_event_t *evt) {
     u16 qname_length = 0;
-    u8 end_of_name = 0;
 
 // Handle DNS request
 #pragma unroll
-    for (int i = 0; i < DNS_MAX_LENGTH; i++) {
-        if (end_of_name) {
-            evt->name[i] = 0;
-            break;
-        }
-
+    for (int i = 0; i < DNS_MAX_LENGTH; i++, qname_length++) {
         if (bpf_skb_load_bytes(skb, pkt->offset, &evt->name[i], sizeof(u8)) < 0) {
             return -1;
         }
 
-        qname_length += 1;
         pkt->offset += 1;
 
         if (evt->name[i] == 0) {
-            end_of_name = 1;
+            qname_length += 1;
+            break;
         }
     }
 
