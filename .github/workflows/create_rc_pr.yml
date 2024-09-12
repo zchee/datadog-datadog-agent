@@ -57,6 +57,12 @@ jobs:
         matrix:
           value: ${{fromJSON(needs.find_release_branches.outputs.branches)}}
       steps:
+            - uses: actions/create-github-app-token@v1
+              id: app-token
+              with:
+                app-id: ${{ vars.RELEASE_GITHUB-APP_ID }}
+                private-key: ${{ secrets.RELEASE_GITHUB_APP_KEY }}
+                owner: ${{ github.repository_owner }}
             - name: Checkout release branch
               uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
               with:
@@ -76,6 +82,11 @@ jobs:
                 pip install -r tasks/libs/requirements-github.txt
                 pip install -r tasks/requirements_release_tasks.txt
 
+            - name: Get GitHub App User ID
+              id: get-user-id
+              run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+              env:
+                GH_TOKEN: ${{ steps.app-token.outputs.token }}
             - name: Check for changes since last RC
               id: check_for_changes
               env:
@@ -83,12 +94,12 @@ jobs:
                 ATLASSIAN_PASSWORD: ${{ secrets.ATLASSIAN_PASSWORD }}
                 SLACK_API_TOKEN : ${{ secrets.SLACK_DATADOG_AGENT_BOT_TOKEN }}
               run: |
+                git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+                git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>'
                 echo "CHANGES=$(inv -e release.check-for-changes -r ${{ matrix.value }} ${{ needs.find_release_branches.outputs.warning }})" >> $GITHUB_OUTPUT
 
             - name: Create RC PR
               if: ${{ steps.check_for_changes.outputs.CHANGES == 'true'}}
               run: |
-                git config user.name "github-actions[bot]"
-                git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
                 git fetch
                 inv -e release.create-rc --slack-webhook=${{ secrets.AGENT_RELEASE_SYNC_SLACK_WEBHOOK }}
