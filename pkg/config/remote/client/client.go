@@ -485,6 +485,8 @@ func (c *Client) update() error {
 	if err != nil {
 		return err
 	}
+
+	log.Infof("remote-config changed products %s", changedProducts)
 	// We don't want to force the products to reload config if nothing changed
 	// in the latest update.
 	if len(changedProducts) == 0 {
