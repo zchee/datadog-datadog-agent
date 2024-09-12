@@ -126,6 +126,16 @@ func GetProvider(wmeta optional.Option[workloadmeta.Component]) Provider {
 	return metricsProvider
 }
 
+// GetProviderUnsafe returns the metrics provider singleton, or an error if it has not
+// been created yet
+func GetProviderUnsafe() (Provider, error) {
+	if metricsProvider == nil {
+		return nil, errors.New("metrics provider not initialized")
+	}
+
+	return metricsProvider, nil
+}
+
 func newProvider(wmeta optional.Option[workloadmeta.Component]) *GenericProvider {
 	provider := &GenericProvider{
 		cache:         NewCache(cacheGCInterval),

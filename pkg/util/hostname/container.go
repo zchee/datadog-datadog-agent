@@ -23,6 +23,7 @@ import (
 var (
 	configIsContainerized  = env.IsContainerized
 	configIsFeaturePresent = env.IsFeaturePresent
+	configIsSidecar        = env.IsSidecar
 
 	kubernetesGetKubeAPIServerHostname = kubernetes.GetKubeAPIServerHostname
 	dockerGetHostname                  = docker.GetHostname
@@ -71,4 +72,17 @@ func fromContainer(ctx context.Context, _ string) (string, error) {
 	}
 
 	return "", fmt.Errorf("no container environment detected or none of them detected a valid hostname")
+}
+
+// for testing purposes
+func fromSidecar(_ context.Context, _ string) (string, error) {
+	if !configIsContainerized() {
+		return "", fmt.Errorf("the agent is not containerized")
+	}
+
+	if configIsSidecar() {
+		return "", nil
+	}
+
+	return "", fmt.Errorf("agent is not runnning as a sidecar")
 }

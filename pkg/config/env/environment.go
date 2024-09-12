@@ -17,6 +17,11 @@ func IsContainerized() bool {
 	return os.Getenv("DOCKER_DD_AGENT") != ""
 }
 
+// IsSidecar returns whether the Agent is running in a container as a sidecar
+func IsSidecar() bool {
+	return os.Getenv("DD_SIDECAR") != ""
+}
+
 // IsDockerRuntime returns true if we are to find the /.dockerenv file
 // which is typically only set by Docker
 func IsDockerRuntime() bool {

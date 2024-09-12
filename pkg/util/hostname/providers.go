@@ -82,6 +82,12 @@ var providerCatalog = []provider{
 		expvarName:       "fargate",
 	},
 	{
+		name:             "sidecar",
+		cb:               fromSidecar,
+		stopIfSuccessful: true,
+		expvarName:       "sidecar",
+	},
+	{
 		name:             "gce",
 		cb:               fromGCE,
 		stopIfSuccessful: true,

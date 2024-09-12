@@ -57,3 +57,7 @@ type ContainerStats = provider.ContainerStats
 
 // GetProvider returns the metrics provider singleton
 var GetProvider = provider.GetProvider
+
+// GetProviderUnsafe returns the metrics provider singleton, or an error if it has not
+// been created yet
+var GetProviderUnsafe = provider.GetProviderUnsafe
