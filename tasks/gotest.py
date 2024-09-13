@@ -454,14 +454,7 @@ def get_modified_packages(ctx, build_tags=None, lint=False) -> list[GoModule]:
     go_mod_modified_modules = set()
 
     for modified_file in modified_go_files:
-        match_precision = 0
-        best_module_path = None
-
-        # Since several modules can match the path we take only the most precise one
-        for module_path in DEFAULT_MODULES:
-            if module_path in modified_file and len(module_path) > match_precision:
-                match_precision = len(module_path)
-                best_module_path = module_path
+        best_module_path = get_go_module(modified_file)
 
         # Check if the package is in the target list of the module we want to test
         targeted = False
@@ -664,7 +657,8 @@ def get_impacted_packages(ctx, build_tags=None):
             )
 
     # Some files like tasks/gotest.py should trigger all tests
-    if should_run_all_tests(files, TRIGGER_ALL_TESTS_PATHS):
+    if should_run_all_tests(ctx, TRIGGER_ALL_TESTS_PATHS):
+        print(f"Triggering all tests because a file matching one of the {TRIGGER_ALL_TESTS_PATHS} was modified")
         return DEFAULT_MODULES.values()
 
     modified_packages = {f"github.com/DataDog/datadog-agent/{os.path.dirname(file)}" for file in files}
@@ -825,12 +819,10 @@ def get_go_module(path):
     raise Exception(f"No go.mod file found for package at {path}")
 
 
-def should_run_all_tests(files, trigger_files):
-    for trigger_file in trigger_files:
-        if len(fnmatch.filter(files, trigger_file)):
-            print(f"Triggering all tests because a file matching {trigger_file} was modified")
-            return True
-    return False
+def should_run_all_tests(ctx, trigger_files):
+    base_branch = _get_release_json_value("base_branch")
+    files = get_modified_files(ctx, base_branch=base_branch)
+    return any(len(fnmatch.filter(files, trigger_file)) for trigger_file in trigger_files)
 
 
 def get_go_modified_files(ctx):
