@@ -33,6 +33,8 @@ const (
 	ProductContainerAutoscalingSettings = "CONTAINER_AUTOSCALING_SETTINGS"
 	// ProductContainerAutoscalingValues receives values for container autoscaling
 	ProductContainerAutoscalingValues = "CONTAINER_AUTOSCALING_VALUES"
+	// ProductOrchestratorK8sCRDs receives values for k8s crds
+	ProductOrchestratorK8sCRDs = "ORCHESTRATOR_K8S_CRDS"
 )
 
 // ProductListToString converts a product list to string list
