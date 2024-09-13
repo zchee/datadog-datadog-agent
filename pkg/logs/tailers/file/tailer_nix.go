@@ -43,10 +43,9 @@ func (t *Tailer) setup(offset int64, whence int) error {
 
 // read lets the tailer tail the content of a file
 // until it is closed or the tailer is stopped.
-func (t *Tailer) read() (int, error) {
-	// keep reading data from file
-	inBuf := make([]byte, 4096)
-	n, err := t.osFile.Read(inBuf)
+// buf is a reusable slice managed by the caller.
+func (t *Tailer) read(buf []byte) (int, error) {
+	n, err := t.osFile.Read(buf)
 	if err != nil && err != io.EOF {
 		// an unexpected error occurred, stop the tailor
 		t.file.Source.Status().Error(err)
@@ -55,7 +54,8 @@ func (t *Tailer) read() (int, error) {
 	if n == 0 {
 		return 0, nil
 	}
+	// TODO(remy): telemetry on `n`
 	t.lastReadOffset.Add(int64(n))
-	t.decoder.InputChan <- decoder.NewInput(inBuf[:n])
+	t.decoder.InputChan <- decoder.NewInput(buf[:n])
 	return n, nil
 }

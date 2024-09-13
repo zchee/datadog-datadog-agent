@@ -288,8 +288,10 @@ func (t *Tailer) readForever() {
 		log.Info("Closed", t.file.Path, "for tailer key", t.file.GetScanKey(), "read", t.Source().BytesRead.Get(), "bytes and", t.decoder.GetLineCount(), "lines")
 	}()
 
+	buf := make([]byte, 16*1024)
 	for {
-		n, err := t.read()
+		buf = buf[0:]
+		n, err := t.read(buf)
 		if err != nil {
 			return
 		}
