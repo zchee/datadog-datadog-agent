@@ -271,14 +271,19 @@ int BPF_BYPASSABLE_KPROBE(kprobe__tcp_close, struct sock *sk) {
         bpf_map_update_with_telemetry(tcp_close_args, &pid_tgid, &t, BPF_ANY);
     }
 
-    skp_conn_tuple_t skp_conn = {.sk = sk, .tup = t};
-    skp_conn.tup.pid = 0;
-
-    bpf_map_delete_elem(&tcp_ongoing_connect_pid, &skp_conn);
-
     if (!tcp_failed_connections_enabled()) {
         cleanup_conn(ctx, &t, sk);
         return 0;
+    }
+
+    skp_conn_tuple_t skp_conn = {.sk = sk, .tup = t};
+    skp_conn.tup.pid = 0;
+
+    // bpf_map_delete_elem(&tcp_ongoing_connect_pid, &skp_conn);
+    pid_ts_t *failed_conn_pid = bpf_map_lookup_elem(&tcp_ongoing_connect_pid, &skp_conn);
+    if (failed_conn_pid) {
+        failed_conn_pid->timestamp = bpf_ktime_get_ns() - 1795000000000; // minus 30 minutes, signals 5 second TTL
+        bpf_map_update_with_telemetry(tcp_ongoing_connect_pid, &skp_conn, failed_conn_pid, BPF_ANY);
     }
 
     // check if this connection was already flushed and ensure we don't flush again
@@ -287,12 +292,6 @@ int BPF_BYPASSABLE_KPROBE(kprobe__tcp_close, struct sock *sk) {
     __u64 timestamp = bpf_ktime_get_ns();
     if (bpf_map_update_with_telemetry(conn_close_flushed, &t, &timestamp, BPF_NOEXIST, -EEXIST) == 0) {
         cleanup_conn(ctx, &t, sk);
-        int err = 0;
-        bpf_probe_read_kernel_with_telemetry(&err, sizeof(err), (&sk->sk_err));
-        if (err == TCP_CONN_FAILED_RESET || err == TCP_CONN_FAILED_TIMEOUT || err == TCP_CONN_FAILED_REFUSED) {
-            increment_telemetry_count(tcp_close_target_failures);
-            flush_tcp_failure(ctx, &t, err);
-        }
     } else {
         bpf_map_delete_elem(&conn_close_flushed, &t);
         increment_telemetry_count(double_flush_attempts_close);
