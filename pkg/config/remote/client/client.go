@@ -440,6 +440,7 @@ func (c *Client) pollLoop() {
 // applies that update, informing any registered listeners of any config state changes
 // that occurred.
 func (c *Client) update() error {
+	fmt.Println("Josh polling for updates")
 	req, err := c.newUpdateRequest()
 	if err != nil {
 		return err
@@ -454,6 +455,7 @@ func (c *Client) update() error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Josh updated products: %v\n", changedProducts)
 	// We don't want to force the products to reload config if nothing changed
 	// in the latest update.
 	if len(changedProducts) == 0 {
@@ -462,6 +464,7 @@ func (c *Client) update() error {
 
 	c.m.Lock()
 	defer c.m.Unlock()
+	fmt.Printf("Josh Product Listeners %+v\n", c.listeners)
 	for product, productListeners := range c.listeners {
 		if containsProduct(changedProducts, product) {
 			for _, listener := range productListeners {
@@ -473,8 +476,11 @@ func (c *Client) update() error {
 }
 
 func containsProduct(products []string, product string) bool {
+	fmt.Printf("Josh checking contains all product %s\n", products)
 	for _, p := range products {
+		fmt.Printf("Josh checking contains product %s\n", p)
 		if product == p {
+			fmt.Printf("Josh match on product %s\n", p)
 			return true
 		}
 	}
