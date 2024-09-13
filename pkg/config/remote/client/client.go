@@ -443,16 +443,23 @@ func (c *Client) update() error {
 	fmt.Println("Josh polling for updates")
 	req, err := c.newUpdateRequest()
 	if err != nil {
+		fmt.Printf("Josh new update error %v\n", err)
 		return err
 	}
+
+	fmt.Printf("Josh client get configs request %v\n", req)
 
 	response, err := c.configFetcher.ClientGetConfigs(c.ctx, req)
 	if err != nil {
+		fmt.Printf("Josh client get configs error %v\n", err)
 		return err
 	}
 
+	fmt.Printf("Josh client get configs response %v\n", response)
+
 	changedProducts, err := c.applyUpdate(response)
 	if err != nil {
+		fmt.Printf("Josh apply update error %v\n", err)
 		return err
 	}
 	fmt.Printf("Josh updated products: %v\n", changedProducts)
