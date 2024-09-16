@@ -107,11 +107,10 @@ func (c *Scrubber) ScrubYaml(input []byte) ([]byte, error) {
 		c.ScrubDataObj(data)
 		newInput, err := yaml.Marshal(data)
 		if err == nil {
-			input = newInput
-		} else {
-			// Since the scrubber is a dependency of the logger we can use it here.
-			fmt.Fprintf(os.Stderr, "error scrubbing YAML, falling back on text scrubber: %s\n", err)
+			return newInput, nil
 		}
+		// Since the scrubber is a dependency of the logger we can use it here.
+		fmt.Fprintf(os.Stderr, "error scrubbing YAML, falling back on text scrubber: %s\n", err)
 	}
 	return c.ScrubBytes(input)
 }

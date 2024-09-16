@@ -75,7 +75,7 @@ func TestConfigScrubbedYaml(t *testing.T) {
 	trimmedOutput := strings.TrimSpace(strings.Replace(string(outputConfData), "\r\n", "\n", -1))
 	trimmedCleaned := strings.TrimSpace(strings.Replace(string(cleaned), "\r\n", "\n", -1))
 
-	assert.Equal(t, trimmedOutput, trimmedCleaned)
+	assert.YAMLEq(t, trimmedOutput, trimmedCleaned)
 }
 
 func TestConfigScrubbedJson(t *testing.T) {
