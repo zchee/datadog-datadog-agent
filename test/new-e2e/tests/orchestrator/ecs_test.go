@@ -42,11 +42,7 @@ func TestECSSuite(t *testing.T) {
 }
 
 func extraAgentEnv() string {
-	envs := []string{
-		"DD_ECS_TASK_COLLECTION_ENABLED=true",
-		"DD_ORCHESTRATOR_EXPLORER_ENABLED=true",
-		"DD_ORCHESTRATOR_EXPLORER_ECS_COLLECTION_ENABLED=true",
-	}
+	envs := []string{"DD_ECS_TASK_COLLECTION_ENABLED=true"}
 	return strings.Join(envs, ",")
 }
 
