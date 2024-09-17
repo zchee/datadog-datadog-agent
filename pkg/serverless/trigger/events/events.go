@@ -231,6 +231,7 @@ type EventBridgeEvent struct {
 	DetailType string `json:"detail-type"`
 	Source     string
 	StartTime  string
+	Detail     map[string]map[string]string
 }
 
 // S3Event mirrors events.S3Event type, removing unused fields.
@@ -277,6 +278,7 @@ type SNSEventRecord struct {
 
 // SNSEntity mirrors events.SNSEntity type, removing unused fields.
 type SNSEntity struct {
+	Message           string
 	MessageID         string
 	Type              string
 	TopicArn          string

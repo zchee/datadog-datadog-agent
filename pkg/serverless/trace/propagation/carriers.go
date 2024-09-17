@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	awsTraceHeader   = "AWSTraceHeader"
-	datadogSQSHeader = "_datadog"
+	awsTraceHeader     = "AWSTraceHeader"
+	datadogTraceHeader = "_datadog"
 
 	rootPrefix     = "Root="
 	parentPrefix   = "Parent="
@@ -108,7 +108,7 @@ func extractTraceContextfromAWSTraceHeader(value string) (*TraceContext, error) 
 // sqsMessageCarrier returns the tracer.TextMapReader used to extract trace
 // context from the events.SQSMessage type.
 func sqsMessageCarrier(event events.SQSMessage) (tracer.TextMapReader, error) {
-	if attr, ok := event.MessageAttributes[datadogSQSHeader]; ok {
+	if attr, ok := event.MessageAttributes[datadogTraceHeader]; ok {
 		return sqsMessageAttrCarrier(attr)
 	}
 	return snsSqsMessageCarrier(event)
@@ -162,7 +162,12 @@ func snsSqsMessageCarrier(event events.SQSMessage) (tracer.TextMapReader, error)
 // snsEntityCarrier returns the tracer.TextMapReader used to extract trace
 // context from the attributes of an events.SNSEntity type.
 func snsEntityCarrier(event events.SNSEntity) (tracer.TextMapReader, error) {
-	msgAttrs, ok := event.MessageAttributes[datadogSQSHeader]
+	var eventBridgeEvent events.EventBridgeEvent
+	if err := json.Unmarshal([]byte(event.Message), &eventBridgeEvent); err == nil {
+		return eventBridgeCarrier(eventBridgeEvent)
+	}
+
+	msgAttrs, ok := event.MessageAttributes[datadogTraceHeader]
 	if !ok {
 		return nil, errorNoDDContextFound
 	}
@@ -199,6 +204,13 @@ func snsEntityCarrier(event events.SNSEntity) (tracer.TextMapReader, error) {
 		return nil, fmt.Errorf("Error unmarshaling the decoded binary: %w", err)
 	}
 	return carrier, nil
+}
+
+func eventBridgeCarrier(event events.EventBridgeEvent) (tracer.TextMapReader, error) {
+	if traceContext, ok := event.Detail[datadogTraceHeader]; ok {
+		return tracer.TextMapCarrier(traceContext), nil
+	}
+	return nil, errorNoDDContextFound
 }
 
 type invocationPayload struct {
