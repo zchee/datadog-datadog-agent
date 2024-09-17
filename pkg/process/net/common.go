@@ -67,7 +67,7 @@ type RemoteSysProbeUtil struct {
 
 // GetRemoteSystemProbeUtil returns a ready to use RemoteSysProbeUtil. It is backed by a shared singleton.
 func GetRemoteSystemProbeUtil(path string) (*RemoteSysProbeUtil, error) {
-	err := CheckPath(path)
+	err := CheckSystemProbePath(path)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up remote system probe util, %v", err)
 	}
