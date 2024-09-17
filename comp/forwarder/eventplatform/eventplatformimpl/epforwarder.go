@@ -417,8 +417,9 @@ func newHTTPPassthroughPipeline(coreConfig pkgconfig.Reader, eventPlatformReceiv
 	} else {
 		strategy = sender.NewBatchStrategy(inputChan,
 			senderInput,
-			make(chan *sync.WaitGroup),
+			make(chan struct{}),
 			false,
+			nil,
 			sender.ArraySerializer,
 			endpoints.BatchWait,
 			endpoints.BatchMaxSize,

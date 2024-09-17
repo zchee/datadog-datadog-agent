@@ -27,7 +27,7 @@ import (
 // Pipeline processes and sends messages to the backend
 type Pipeline struct {
 	InputChan  chan *message.Message
-	flushChan  chan *sync.WaitGroup
+	flushChan  chan struct{}
 	processor  *processor.Processor
 	strategy   sender.Strategy
 	sender     *sender.Sender
@@ -58,7 +58,7 @@ func NewPipeline(outputChan chan *message.Payload,
 
 	strategyInput := make(chan *message.Message, config.ChanSize)
 	senderInput := make(chan *message.Payload, 1) // Only buffer 1 message since payloads can be large
-	flushChan := make(chan *sync.WaitGroup)
+	flushChan := make(chan struct{})
 
 	var logsSender *sender.Sender
 
@@ -73,7 +73,7 @@ func NewPipeline(outputChan chan *message.Payload,
 		encoder = processor.RawEncoder
 	}
 
-	strategy := getStrategy(strategyInput, senderInput, flushChan, endpoints, serverless, pipelineID)
+	strategy := getStrategy(strategyInput, senderInput, flushChan, endpoints, serverless, flushWg, pipelineID)
 	logsSender = sender.NewSender(cfg, senderInput, outputChan, mainDestinations, config.DestinationPayloadChanSize, senderDoneChan, flushWg)
 
 	inputChan := make(chan *message.Message, config.ChanSize)
@@ -108,7 +108,7 @@ func (p *Pipeline) Stop() {
 
 // Flush flushes synchronously the processor and sender managed by this pipeline.
 func (p *Pipeline) Flush(ctx context.Context) {
-	p.flushChan <- p.flushWg
+	p.flushChan <- struct{}{}
 	p.processor.Flush(ctx) // flush messages in the processor into the sender
 
 	if p.serverless {
@@ -151,13 +151,13 @@ func getDestinations(endpoints *config.Endpoints, destinationsContext *client.De
 }
 
 //nolint:revive // TODO(AML) Fix revive linter
-func getStrategy(inputChan chan *message.Message, outputChan chan *message.Payload, flushChan chan *sync.WaitGroup, endpoints *config.Endpoints, serverless bool, _ int) sender.Strategy {
+func getStrategy(inputChan chan *message.Message, outputChan chan *message.Payload, flushChan chan struct{}, endpoints *config.Endpoints, serverless bool, flushWg *sync.WaitGroup, _ int) sender.Strategy {
 	if endpoints.UseHTTP || serverless {
 		encoder := sender.IdentityContentType
 		if endpoints.Main.UseCompression {
 			encoder = sender.NewGzipContentEncoding(endpoints.Main.CompressionLevel)
 		}
-		return sender.NewBatchStrategy(inputChan, outputChan, flushChan, serverless, sender.ArraySerializer, endpoints.BatchWait, endpoints.BatchMaxSize, endpoints.BatchMaxContentSize, "logs", encoder)
+		return sender.NewBatchStrategy(inputChan, outputChan, flushChan, serverless, flushWg, sender.ArraySerializer, endpoints.BatchWait, endpoints.BatchMaxSize, endpoints.BatchMaxContentSize, "logs", encoder)
 	}
 	return sender.NewStreamStrategy(inputChan, outputChan, sender.IdentityContentType)
 }

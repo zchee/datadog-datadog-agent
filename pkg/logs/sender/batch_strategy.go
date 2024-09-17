@@ -25,8 +25,9 @@ var (
 type batchStrategy struct {
 	inputChan  chan *message.Message
 	outputChan chan *message.Payload
-	flushChan  chan *sync.WaitGroup
+	flushChan  chan struct{}
 	serverless bool
+	flushWg    *sync.WaitGroup
 	buffer     *MessageBuffer
 	// pipelineName provides a name for the strategy to differentiate it from other instances in other internal pipelines
 	pipelineName    string
@@ -40,21 +41,23 @@ type batchStrategy struct {
 // NewBatchStrategy returns a new batch concurrent strategy with the specified batch & content size limits
 func NewBatchStrategy(inputChan chan *message.Message,
 	outputChan chan *message.Payload,
-	flushChan chan *sync.WaitGroup,
+	flushChan chan struct{},
 	serverless bool,
+	flushWg *sync.WaitGroup,
 	serializer Serializer,
 	batchWait time.Duration,
 	maxBatchSize int,
 	maxContentSize int,
 	pipelineName string,
 	contentEncoding ContentEncoding) Strategy {
-	return newBatchStrategyWithClock(inputChan, outputChan, flushChan, serverless, serializer, batchWait, maxBatchSize, maxContentSize, pipelineName, clock.New(), contentEncoding)
+	return newBatchStrategyWithClock(inputChan, outputChan, flushChan, serverless, flushWg, serializer, batchWait, maxBatchSize, maxContentSize, pipelineName, clock.New(), contentEncoding)
 }
 
 func newBatchStrategyWithClock(inputChan chan *message.Message,
 	outputChan chan *message.Payload,
-	flushChan chan *sync.WaitGroup,
+	flushChan chan struct{},
 	serverless bool,
+	flushWg *sync.WaitGroup,
 	serializer Serializer,
 	batchWait time.Duration,
 	maxBatchSize int,
@@ -68,6 +71,7 @@ func newBatchStrategyWithClock(inputChan chan *message.Message,
 		outputChan:      outputChan,
 		flushChan:       flushChan,
 		serverless:      serverless,
+		flushWg:         flushWg,
 		buffer:          NewMessageBuffer(maxBatchSize, maxContentSize),
 		serializer:      serializer,
 		batchWait:       batchWait,
@@ -108,13 +112,8 @@ func (s *batchStrategy) Start() {
 			case <-flushTicker.C:
 				// flush the payloads at a regular interval so pending messages don't wait here for too long.
 				s.flushBuffer(s.outputChan)
-			case wg := <-s.flushChan:
+			case <-s.flushChan:
 				// flush payloads on demand, used for infrequently running serverless functions
-				if s.serverless && !s.buffer.IsEmpty() {
-					// increment the WaitGroup so we block a pipeline flush from finishing until
-					// all payloads are sent to all destinations
-					wg.Add(1)
-				}
 				s.flushBuffer(s.outputChan)
 			}
 		}
@@ -163,6 +162,11 @@ func (s *batchStrategy) sendMessages(messages []*message.Message, outputChan cha
 	if err != nil {
 		log.Warn("Encoding failed - dropping payload", err)
 		return
+	}
+
+	if s.serverless {
+		// Increment the wait group so the flush doesn't finish until all payloads are sent to all destinations
+		s.flushWg.Add(1)
 	}
 
 	outputChan <- &message.Payload{
