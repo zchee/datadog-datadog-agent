@@ -29,7 +29,7 @@ const (
 	netType              = "unix"
 )
 
-// CheckPath is used in conjunction with calling the stats endpoint, since we are calling this
+// CheckSystemProbePath is used in conjunction with calling the stats endpoint, since we are calling this
 // From the main agent and want to ensure the socket exists
 func CheckSystemProbePath(path string) error {
 	if path == "" {
