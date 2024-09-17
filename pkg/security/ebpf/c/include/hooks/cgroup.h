@@ -63,7 +63,8 @@ static __attribute__((always_inline)) int trace__cgroup_write(ctx_t *ctx) {
         // Select the old cache entry
         old_entry = get_proc_from_cookie(cookie);
         if (old_entry) {
-            if (old_entry->container.container_id[0] != '\0') {
+            // do not override container context if it has already been set
+            if (old_entry->container.cgroup_context.cgroup_flags != 0 || old_entry->container.container_id[0] != '\0') {
                 return 0;
             }
 
@@ -181,8 +182,9 @@ static __attribute__((always_inline)) int trace__cgroup_write(ctx_t *ctx) {
         (length >= 7 && (*prefix)[length-7] == '.'  && (*prefix)[length-6] == 's' && (*prefix)[length-5] == 'c' && (*prefix)[length-4] == 'o' && (*prefix)[length-3] == 'p' && (*prefix)[length-2] == 'e')
     )) {
         container_flags = CGROUP_MANAGER_SYSTEMD;
+    } else if (container_flags != 0) {
+        bpf_probe_read(&new_entry.container.container_id, sizeof(new_entry.container.container_id), container_id);
     }
-    bpf_probe_read(&new_entry.container.container_id, sizeof(new_entry.container.container_id), container_id);
 
     new_entry.container.cgroup_context.cgroup_flags = container_flags;
     new_entry.container.cgroup_context.cgroup_file = resolver->key;
