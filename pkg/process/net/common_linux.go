@@ -31,7 +31,7 @@ const (
 
 // CheckPath is used in conjunction with calling the stats endpoint, since we are calling this
 // From the main agent and want to ensure the socket exists
-func CheckPath(path string) error {
+func CheckSystemProbePath(path string) error {
 	if path == "" {
 		return fmt.Errorf("socket path is empty")
 	}

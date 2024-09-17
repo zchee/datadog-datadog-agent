@@ -34,8 +34,8 @@ const (
 	SystemProbePipeName = `\\.\pipe\dd_system_probe`
 )
 
-// CheckPath is used to make sure the globalSocketPath has been set before attempting to connect
-func CheckPath(path string) error {
+// CheckSystemProbePath is used to make sure the globalSocketPath has been set before attempting to connect
+func CheckSystemProbePath(path string) error {
 	if path == "" {
 		return fmt.Errorf("socket path is empty")
 	}

@@ -11,6 +11,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	process_net "github.com/DataDog/datadog-agent/pkg/process/net"
 )
 
 // Get returns a http client configured to talk to the system-probe
@@ -21,7 +23,7 @@ func Get(socketPath string) *http.Client {
 			MaxIdleConns:    2,
 			IdleConnTimeout: 30 * time.Second,
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial(netType, socketPath)
+				return process_net.DialSystemProbe(netType, socketPath)
 			},
 			TLSHandshakeTimeout:   1 * time.Second,
 			ResponseHeaderTimeout: 5 * time.Second,
