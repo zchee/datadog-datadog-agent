@@ -6,7 +6,6 @@
 package sender
 
 import (
-	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -127,7 +126,6 @@ func (s *Sender) run() {
 			// Wait for all destinations to finish sending the payload
 			senderDoneWg.Wait()
 			// Decrement the wait group when this payload has been sent
-			fmt.Println("=========== s.flushWg.Done() ===========")
 			s.flushWg.Done()
 		}
 	}
