@@ -27,6 +27,7 @@
     KUBERNETES_CPU_REQUEST: 16
     KUBERNETES_MEMORY_REQUEST: "32Gi"
     KUBERNETES_MEMORY_LIMIT: "32Gi"
+    USE_UPDATED_TOOLCHAIN: true
   artifacts:
     expire_in: 2 weeks
     paths:
@@ -100,6 +101,7 @@ datadog-agent-oci-arm64-a7:
     KUBERNETES_CPU_REQUEST: 8
     KUBERNETES_MEMORY_REQUEST: "16Gi"
     KUBERNETES_MEMORY_LIMIT: "16Gi"
+    USE_UPDATED_TOOLCHAIN: true
   artifacts:
     expire_in: 2 weeks
     paths:
