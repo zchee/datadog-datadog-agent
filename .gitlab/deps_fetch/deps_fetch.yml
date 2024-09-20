@@ -43,7 +43,7 @@ go_deps:
     - inv -e deps --verbose
     - inv -e install-tools
     # Remove download cache, should not be needed since all dependencies should be present
-    - rm -rf $GOPATH/pkg/mod/cache/
+    - find $GOPATH/pkg/mod/cache -type f -name "*.zip" | xargs rm -f
     - cd $GOPATH/pkg/mod/ && tar c -I "pxz -T${KUBERNETES_CPU_REQUEST}" -f $CI_PROJECT_DIR/modcache.tar.xz .
   artifacts:
     expire_in: 1 day
@@ -69,7 +69,7 @@ go_tools_deps:
     - if [ -f modcache_tools.tar.xz  ]; then exit 0; fi
     - inv -e install-tools
     # Remove download cache, should not be needed since all dependencies should be present
-    - rm -rf $GOPATH/pkg/mod/cache/
+    - find $GOPATH/pkg/mod/cache -type f -name "*.zip" | xargs rm -f
     - cd $GOPATH/pkg/mod/ && tar c -I "pxz -T${KUBERNETES_CPU_REQUEST}" -f $CI_PROJECT_DIR/modcache_tools.tar.xz .
   artifacts:
     expire_in: 1 day
@@ -90,7 +90,7 @@ go_e2e_deps:
     - if [ -f modcache_e2e.tar.xz  ]; then exit 0; fi
     - inv -e new-e2e-tests.deps
     # Remove download cache, should not be needed since all dependencies should be present
-    - rm -rf $GOPATH/pkg/mod/cache/
+    - find $GOPATH/pkg/mod/cache -type f -name "*.zip" | xargs rm -f
     - cd $GOPATH/pkg/mod/ && tar c -I "pxz -T${KUBERNETES_CPU_REQUEST}" -f $CI_PROJECT_DIR/modcache_e2e.tar.xz .
   artifacts:
     expire_in: 1 day
