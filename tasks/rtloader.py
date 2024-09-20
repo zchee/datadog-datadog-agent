@@ -4,7 +4,6 @@ RtLoader namespaced tasks
 
 import errno
 import os
-import platform
 import shutil
 import sys
 
@@ -65,9 +64,8 @@ def make(ctx, install_prefix=None, python_runtimes='3', cmake_options=''):
         cmake_options += " -G \"Unix Makefiles\""
 
     cmake_args = cmake_options + f" -DBUILD_DEMO:BOOL=OFF -DCMAKE_INSTALL_PREFIX:PATH={install_prefix or dev_path}"
-    if os.getenv('USE_UPDATED_TOOLCHAIN'):
-        arch = platform.processor()
-        cmake_args += f' --toolchain /opt/cmake/{arch}-unknown-linux-gnu.toolchain.cmake'
+    if os.getenv('DD_CMAKE_TOOLCHAIN'):
+        cmake_args += f' --toolchain {os.getenv("DD_CMAKE_TOOLCHAIN")}'
 
     python_runtimes = python_runtimes.split(',')
 
