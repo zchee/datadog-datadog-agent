@@ -42,7 +42,6 @@ cd %REPO_ROOT% || exit /b 101
 
 pip3 install -r requirements.txt || exit /b 102
 
-inv -e deps || exit /b 103
 if "%GO_VERSION_CHECK%" == "true" (
     inv -e check-go-version || exit /b 104
 )

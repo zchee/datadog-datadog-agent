@@ -33,7 +33,6 @@ if($err -ne 0){
     [Environment]::Exit($err)
 }
 
-& inv -e deps
 & .\tasks\winbuildscripts\pre-go-build.ps1 -PythonRuntimes "$Env:PY_RUNTIMES"
 
 & inv -e rtloader.test
