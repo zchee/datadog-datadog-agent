@@ -323,6 +323,15 @@ if windows_target?
     end
   }
 
+  raise_if_fips_symbol_not_found = Proc.new { |symbols|
+      puts "Checking for FIPS symbols: '#{symbols}'"
+      count = symbols.scan("cng").count()
+      if count == 0
+        raise FIPSSymbolsNotFound.new("Expected to find symbol 'cng' but no symbol was found.")
+      end
+    end
+  }
+
   GO_BINARIES = [
     "#{install_dir}\\bin\\agent\\agent.exe",
     "#{install_dir}\\bin\\agent\\trace-agent.exe",
@@ -336,6 +345,9 @@ if windows_target?
   GO_BINARIES.each do |bin|
     # Check the exported symbols from the binary
     inspect_binary(bin, &raise_if_forbidden_symbol_found)
+
+    # Check that CNG symbols are present
+    inspect_binary(bin, &raise_if_fips_symbol_not_found)
 
     # strip the binary of debug symbols
     windows_symbol_stripping_file bin
@@ -360,6 +372,22 @@ if windows_target?
     end
   end
 
+end
+
+if fips_mode? && linux_target?
+
+    LINUX_BINARIES = [
+      "#{install_dir}/bin/agent",
+      "#{install_dir}/embedded/bin/agent/trace-agent",
+      "#{install_dir}/embedded/bin/agent/process-agent",
+      "#{install_dir}/embedded/bin/agent/security-agent",
+      "#{install_dir}/embedded/bin/agent/system-probe"
+    ]
+
+    linux_symbol_checker = FIPSComplianceChecker.new("_Cfunc_go_openssl")
+    LINUX_BINARIES.each do |bin|
+      linux_symbol_checker.check(bin)
+    end
 end
 
 if linux_target? or windows_target?
