@@ -7,7 +7,7 @@
     },
     "nightly": {
         "INTEGRATIONS_CORE_VERSION": "master",
-        "OMNIBUS_SOFTWARE_VERSION": "chouquette/wip_glibc",
+        "OMNIBUS_SOFTWARE_VERSION": "3d56293fc143befd6d64a6ecb14a400dedd27f10",
         "OMNIBUS_RUBY_VERSION": "chouquette/glibc_2",
         "JMXFETCH_VERSION": "0.49.3",
         "JMXFETCH_HASH": "258085a94d529a6bdf914db36dd50faf6fde2cebc44b1f54a60eb209a5d8917c",
@@ -26,7 +26,7 @@
     },
     "nightly-a7": {
         "INTEGRATIONS_CORE_VERSION": "master",
-        "OMNIBUS_SOFTWARE_VERSION": "chouquette/wip_glibc",
+        "OMNIBUS_SOFTWARE_VERSION": "3d56293fc143befd6d64a6ecb14a400dedd27f10",
         "OMNIBUS_RUBY_VERSION": "chouquette/glibc_2",
         "JMXFETCH_VERSION": "0.49.3",
         "JMXFETCH_HASH": "258085a94d529a6bdf914db36dd50faf6fde2cebc44b1f54a60eb209a5d8917c",
