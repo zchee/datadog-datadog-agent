@@ -12,7 +12,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/config/env"
 	configUtils "github.com/DataDog/datadog-agent/pkg/config/utils"
-	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics"
 	"github.com/DataDog/datadog-agent/pkg/util/fargate"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/clustername"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -64,13 +63,6 @@ func GetStaticTagsSlice(ctx context.Context) []string {
 				log.Infof("Couldn't build the %q.. tag, DD_CLUSTER_NAME can be used to set it", clusterTagNamePrefix)
 			} else {
 				tags = append(tags, clusterTagNamePrefix+cluster)
-			}
-		}
-	} else if env.IsSidecar() {
-		provider, err := metrics.GetProviderUnsafe()
-		if err != nil {
-			if ctrID, err := provider.GetMetaCollector().GetSelfContainerID(); err == nil {
-				tags = append(tags, "sidecar_id:"+ctrID)
 			}
 		}
 	}

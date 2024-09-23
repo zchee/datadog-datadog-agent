@@ -17,12 +17,15 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/tagger/taglist"
 	"github.com/DataDog/datadog-agent/comp/core/tagger/types"
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
+	"github.com/DataDog/datadog-agent/pkg/config/env"
 	configutils "github.com/DataDog/datadog-agent/pkg/config/utils"
 	"github.com/DataDog/datadog-agent/pkg/status/health"
 	"github.com/DataDog/datadog-agent/pkg/util"
+	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics"
 	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/clustername"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+	"github.com/DataDog/datadog-agent/pkg/util/optional"
 )
 
 const (
@@ -107,6 +110,15 @@ func (c *WorkloadMetaCollector) collectStaticGlobalTags(ctx context.Context) {
 				c.staticTags = make(map[string]string, 1)
 			}
 			c.staticTags[clusterTagNamePrefix] = cluster
+		}
+	}
+	if env.IsSidecar() {
+		ctrID, err := metrics.GetProvider(optional.NewOption(c.store)).GetMetaCollector().GetSelfContainerID()
+		if err != nil {
+			if c.staticTags == nil {
+				c.staticTags = make(map[string]string, 1)
+			}
+			c.staticTags["sidecar_id"] = ctrID
 		}
 	}
 	if len(c.staticTags) > 0 {
