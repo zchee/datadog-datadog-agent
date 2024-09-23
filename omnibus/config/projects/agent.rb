@@ -327,7 +327,6 @@ if windows_target?
       if count == 0
         raise FIPSSymbolsNotFound.new("Expected to find symbol 'cng' but no symbol was found.")
       end
-    end
   }
 
   GO_BINARIES = [
