@@ -26,12 +26,11 @@ static void *(*bpf_telemetry_update_patch)(unsigned long, ...) = (void *)PATCH_T
     LOAD_CONSTANT(MK_KEY(map), err_telemetry_key);                             \
     if (err_telemetry_key > 0) {                              \
         map_err_telemetry_t *entry =                                           \
-        bpf_map_lookup_elem(&map_err_telemetry_map, &err_telemetry_key);       \
+            bpf_map_lookup_elem(&map_err_telemetry_map, &err_telemetry_key);   \
         if (entry) {                                                           \
             errno_slot = errno_ret * -1;                                       \
             if (errno_slot >= T_MAX_ERRNO) {                                   \
                 errno_slot = T_MAX_ERRNO - 1;                                  \
-                errno_slot &= (T_MAX_ERRNO - 1);                               \
             }                                                                  \
             errno_slot &= (T_MAX_ERRNO - 1);                                   \
             long *target = &entry->err_count[errno_slot];                      \
@@ -72,11 +71,6 @@ static void *(*bpf_telemetry_update_patch)(unsigned long, ...) = (void *)PATCH_T
                 errno_slot = errno_ret * -1;                                                    \
                 if (errno_slot >= T_MAX_ERRNO) {                                                \
                     errno_slot = T_MAX_ERRNO - 1;                                               \
-                    /* This is duplicated below because on clang 14.0.6 the compiler
-                     * concludes that this if-check will always force errno_slot in range
-                     * (0, T_MAX_ERRNO-1], and removes the bounds check, causing the verifier
-                     * to trip. Duplicating this check forces clang not to omit the check */    \
-                    errno_slot &= (T_MAX_ERRNO - 1);                                            \
                 }                                                                               \
                 errno_slot &= (T_MAX_ERRNO - 1);                                                \
                 if (helper_indx >= 0) {                                                         \
