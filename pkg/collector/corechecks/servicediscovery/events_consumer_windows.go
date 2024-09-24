@@ -29,7 +29,7 @@ var (
 )
 
 // NewProcessConsumer returns a new ProcessConsumer instance
-func NewProcessEventConsumer(config *sdconfig.Config) (*ProcessEventConsumer, error) {
+func NewProcessEventConsumer(_ *sdconfig.Config) (*ProcessEventConsumer, error) {
 	return &ProcessEventConsumer{}, nil
 }
 
