@@ -1,7 +1,7 @@
 allow_failed_job:
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
   tags: ["arch:amd64"]
-  stage: source_test
+  stage: .pre
   script:
     - exit 1
   allow_failure: true
@@ -9,7 +9,7 @@ allow_failed_job:
 on_success_job:
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64$DATADOG_AGENT_BUILDIMAGES_SUFFIX:$DATADOG_AGENT_BUILDIMAGES
   tags: ["arch:amd64"]
-  stage: source_test
+  stage: .pre
   needs: ["allow_failed_job"]
   script:
     - exit 0
