@@ -11,7 +11,8 @@ import (
 	"github.com/DataDog/datadog-agent/cmd/system-probe/api/module"
 	"github.com/DataDog/datadog-agent/cmd/system-probe/config"
 	sd "github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery"
-	sdconfig "github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/config"
+
+	//sdconfig "github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/config"
 	"github.com/DataDog/datadog-agent/pkg/eventmonitor"
 	netconfig "github.com/DataDog/datadog-agent/pkg/network/config"
 )
@@ -28,8 +29,8 @@ func createProcessMonitorConsumer(_ *eventmonitor.EventMonitor, _ *netconfig.Con
 }
 
 func createServiceDiscoveryProcessConsumer(em *eventmonitor.EventMonitor) (eventmonitor.EventConsumerInterface, error) {
-	sdconfig := sdconfig.NewConfig()
-	consumer, err := sd.NewProcessEventConsumer(sdconfig)
+	//sdconfig := sdconfig.NewConfig()
+	consumer, err := sd.NewProcessEventConsumer(nil) //sdconfig)
 	if err != nil {
 		return nil, err
 	}

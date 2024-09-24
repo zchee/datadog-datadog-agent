@@ -6,9 +6,9 @@
 // Package config holds config related files
 package config
 
-import (
-	coreconfig "github.com/DataDog/datadog-agent/pkg/config"
-)
+//import (
+//	coreconfig "github.com/DataDog/datadog-agent/pkg/config"
+//)
 
 const (
 	// DefaultEventBurst is the default value for event burst with the process
@@ -25,7 +25,7 @@ type Config struct {
 // NewConfig creates a config for the service discovery for Windows
 func NewConfig() *Config {
 	config := &Config{
-		EventBurst: coreconfig.SystemProbe().GetInt("discovery.event_burst"),
+		//EventBurst: coreconfig.SystemProbe().GetInt("discovery.event_burst"),
 	}
 
 	if config.EventBurst == 0 {
