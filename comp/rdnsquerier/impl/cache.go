@@ -94,18 +94,21 @@ func (c *cacheImpl) getHostname(addr string, updateHostnameSync func(string), up
 			// The cache entry exists but the query is in progress.  Add updateHostnameAsync to list of callbacks to be called when query successfully completes.
 			c.internalTelemetry.cacheHitInProgress.Inc()
 			entry.callbacks = append(entry.callbacks, updateHostnameAsync)
+			c.logger.Debugf("JMWDEBUG Cache hit (in progress) for %s - added callback - callbacks slice size %d", addr, len(entry.callbacks))
 			return nil
 		}
 
 		if entry.ExpirationTime.After(time.Now()) {
 			// cache hit (not expired) - invoke the sync callback
 			c.internalTelemetry.cacheHit.Inc()
+			c.logger.Debugf("JMWDEBUG Cache hit (not expired) for addr %s hostname %s", addr, entry.Hostname)
 			updateHostnameSync(entry.Hostname)
 			return nil
 		}
 
 		// cache hit (expired) - remove the cache entry, then fall thru and process the same as a cache miss
 		c.internalTelemetry.cacheHitExpired.Inc()
+		c.logger.Debugf("JMWDEBUG Cache hit (expired) for addr %s - falling thru to cache miss path", addr)
 		delete(c.data, addr)
 	}
 
@@ -118,6 +121,7 @@ func (c *cacheImpl) getHostname(addr string, updateHostnameSync func(string), up
 		retriesRemaining: c.config.cache.maxRetries,
 		queryInProgress:  true,
 	}
+	c.logger.Debugf("JMWDEBUG Cache miss for addr %s - created cacheEntry %+v - cache size %d", addr, c.data[addr], len(c.data))
 
 	err := c.sendQuery(addr)
 	if err != nil {
@@ -146,6 +150,7 @@ func (c *cacheImpl) sendQuery(addr string) error {
 						c.internalTelemetry.cacheRetry.Inc()
 						entry.retriesRemaining--
 
+						c.logger.Debugf("JMWDEBUG retrying lookup for addr %s hostname %s - retries remaining %d", addr, hostname, entry.retriesRemaining)
 						// note that the retry is attempted without a delay because the rate limiter/circuit breaker will delay when necessary
 						err := c.sendQuery(addr)
 						if err != nil {
@@ -159,6 +164,7 @@ func (c *cacheImpl) sendQuery(addr string) error {
 
 					c.mutex.Unlock()
 
+					c.logger.Debugf("JMWDEBUG lookup of addr %s failed, no retries remaining, err %v", addr, err)
 					c.internalTelemetry.cacheRetriesExceeded.Inc()
 					// max retries exceeded, fall thru to update the cache and invoke callback(s) with the error
 				}
@@ -184,6 +190,7 @@ func (c *cacheImpl) sendQuery(addr string) error {
 
 				c.mutex.Unlock()
 
+				c.logger.Debugf("JMWDEBUG got lookup results for addr %s - hostname %s, err %v - updated cache entry, calling %d callbacks", addr, hostname, err, len(callbacks))
 				for _, callback := range callbacks {
 					callback(hostname, err)
 				}

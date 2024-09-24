@@ -190,6 +190,8 @@ func (q *rdnsQuerierImpl) start(_ context.Context) error {
 	q.cache.start()
 	q.started = true
 
+	q.startGenerateFakeQueries() //JMWDEBUG
+
 	return nil
 }
 

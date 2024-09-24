@@ -18,6 +18,8 @@ type rdnsQuerierConfig struct {
 
 	cache       cacheConfig
 	rateLimiter rateLimiterConfig
+
+	debug debugConfig //JMWDEBUG
 }
 
 type cacheConfig struct {
@@ -82,6 +84,7 @@ func newConfig(agentConfig config.Component) *rdnsQuerierConfig {
 		},
 	}
 
+	c.getDebugConfig(agentConfig) //JMWDEBUG
 	c.setDefaults()
 	return c
 }

@@ -15,6 +15,10 @@ type resolver interface {
 }
 
 func newResolver(config *rdnsQuerierConfig) resolver {
+	if config.debug.fakeResolver {
+		return newResolverFake(config) //JMWDEBUG
+	}
+
 	return &resolverImpl{
 		config: config,
 	}
