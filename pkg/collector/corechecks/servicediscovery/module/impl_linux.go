@@ -355,7 +355,7 @@ func (s *discovery) getServiceInfo(proc *process.Process) (*serviceInfo, error) 
 		lang = language.FindUsingPrivilegedDetector(s.privilegedDetector, proc.Pid)
 	}
 	nameMeta := servicediscovery.GetServiceName(cmdline, envs, root, lang, contextMap)
-	apmInstrumentation := apm.Detect(int(proc.Pid), cmdline, envs, lang, contextMap)
+	apmInstrumentation := apm.Detect(proc.Pid, cmdline, envs, lang, contextMap)
 
 	return &serviceInfo{
 		generatedName:      nameMeta.Name,
