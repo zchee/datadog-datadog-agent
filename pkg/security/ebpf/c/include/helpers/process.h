@@ -1,6 +1,7 @@
 #ifndef _HELPERS_PROCESS_H_
 #define _HELPERS_PROCESS_H_
 
+#include "bpf_builtins.h"
 #include "constants/custom.h"
 #include "constants/enums.h"
 #include "constants/offsets/process.h"
