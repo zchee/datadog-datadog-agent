@@ -9,4 +9,5 @@ py.exe -c 'import shutil; print(shutil.which("vault"))'
 py.exe -c 'import shutil; print(shutil.which("vault.exe"))'
 ls "c:\devtools"
 ls "c:\devtools\vault"
-#$result=(vault kv get -field="token" kv/k8s/gitlab-runner/datadog-agent/"api-key-org2")
+$result=(vault kv get -field="app_id" kv/k8s/gitlab-runner/datadog-agent/"agent-github-app")
+Write-Host "Result: $result"
