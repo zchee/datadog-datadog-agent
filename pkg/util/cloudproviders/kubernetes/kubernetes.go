@@ -35,6 +35,7 @@ func GetHostAliases(ctx context.Context) ([]string, error) {
 	}
 
 	log.Infof("GetHostAliases: %v", annotations)
+	fmt.Printf("GetHostAliases: %v\n", annotations)
 	for _, annotation := range pkgconfigsetup.Datadog().GetStringSlice("kubernetes_node_annotations_as_host_aliases") {
 		if value, found := annotations[annotation]; found {
 			aliases = append(aliases, value)
@@ -42,5 +43,6 @@ func GetHostAliases(ctx context.Context) ([]string, error) {
 	}
 
 	log.Infof("GetHostAliases aliases: %v", aliases)
+	fmt.Printf("GetHostAliases aliases: %v\n", aliases)
 	return aliases, nil
 }
