@@ -14,6 +14,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/config/env"
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/hostinfo"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 var (
@@ -26,7 +27,6 @@ func GetHostAliases(ctx context.Context) ([]string, error) {
 	if !env.IsFeaturePresent(env.Kubernetes) {
 		return []string{}, nil
 	}
-
 	aliases := []string{}
 
 	annotations, err := hostinfo.GetNodeAnnotations(ctx)
@@ -34,11 +34,13 @@ func GetHostAliases(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("failed to get node annotations: %w", err)
 	}
 
+	log.Infof("GetHostAliases: %v", annotations)
 	for _, annotation := range pkgconfigsetup.Datadog().GetStringSlice("kubernetes_node_annotations_as_host_aliases") {
 		if value, found := annotations[annotation]; found {
 			aliases = append(aliases, value)
 		}
 	}
 
+	log.Infof("GetHostAliases aliases: %v", aliases)
 	return aliases, nil
 }
