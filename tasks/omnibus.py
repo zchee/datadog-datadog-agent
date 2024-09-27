@@ -54,7 +54,7 @@ def omnibus_run_task(
             try:
                 res = ctx.run(cmd.format(**args), env=env, err_stream=sys.stdout)
                 print(res.stdout)
-                print(res.strerr)
+                print(res.stderr)
                 print(res.exited)
             except Exception as err:
                 print(f"Failed to run omnibus task: {err}")
