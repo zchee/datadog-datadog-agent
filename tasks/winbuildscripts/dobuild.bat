@@ -48,12 +48,7 @@ if "%GO_VERSION_CHECK%" == "true" (
 )
 
 @echo "inv -e %OMNIBUS_BUILD% %OMNIBUS_ARGS% --skip-deps --major-version %MAJOR_VERSION% --release-version %RELEASE_VERSION%"
-inv -e %OMNIBUS_BUILD% %OMNIBUS_ARGS% --skip-deps --major-version %MAJOR_VERSION% --release-version %RELEASE_VERSION% > output.log 2>&1
-if %errorlevel% neq 0 (
-    type output.log
-    exit /b 105
-)
-
+inv -e %OMNIBUS_BUILD% %OMNIBUS_ARGS% --skip-deps --major-version %MAJOR_VERSION% --release-version %RELEASE_VERSION% 
 
 REM only build MSI for main targets for now.
 if "%OMNIBUS_TARGET%" == "main" (
