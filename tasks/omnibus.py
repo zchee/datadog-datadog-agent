@@ -50,9 +50,9 @@ def omnibus_run_task(
             "populate_s3_cache": populate_s3_cache,
         }
 
-        with gitlab_section(f"Running omnibus task {task}", collapsed=True):
+        with gitlab_section(f"Running omnibus task {task}", collapsed=False, echo=True):
             try:
-                res = ctx.run(cmd.format(**args), env=env, err_stream=sys.stdout)
+                res = ctx.run(cmd.format(**args), env=env, err_stream=sys.stdout, echo=True, warn=True)
                 print(res.stdout)
                 print(res.stderr)
                 print(res.exited)
