@@ -4,6 +4,7 @@
 # Copyright 2016-present Datadog, Inc.
 require "./lib/ostools.rb"
 require "omnibus/logging"
+include Omnibus::Logging
 flavor = ENV['AGENT_FLAVOR']
 output_config_dir = ENV["OUTPUT_CONFIG_DIR"]
 
@@ -330,7 +331,7 @@ if windows_target?
       if count == 0
         raise FIPSSymbolsNotFound.new("Expected to find symbol 'github.com/microsoft/go-crypto-winnative' but no symbol was found.")
       else
-        Omnibus::Logging.log.info(log_key) { "Symbol 'github.com/microsoft/go-crypto-winnative' found #{count} times in binary." }
+        log.info(log_key) { "Symbol 'github.com/microsoft/go-crypto-winnative' found #{count} times in binary." }
       end
   }
 
