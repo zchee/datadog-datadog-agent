@@ -330,7 +330,7 @@ if windows_target?
       if count == 0
         raise FIPSSymbolsNotFound.new("Expected to find symbol 'github.com/microsoft/go-crypto-winnative' but no symbol was found.")
       else
-        log.info(log_key) { "Symbol 'github.com/microsoft/go-crypto-winnative' found #{count} times in binary." }
+        Omnibus::Logging.log.info(log_key) { "Symbol 'github.com/microsoft/go-crypto-winnative' found #{count} times in binary." }
       end
   }
 
