@@ -11,6 +11,8 @@
 name "openssl-fips-provider"
 default_version "0.0.1"
 
+resources_path="#{Omnibus::Config.project_root}/resources/fips"
+
 OPENSSL_FIPS_MODULE_VERSION="3.0.9"
 OPENSSL_FIPS_MODULE_FILENAME="openssl-#{OPENSSL_FIPS_MODULE_VERSION}.tar.gz"
 OPENSSL_FIPS_MODULE_SHA256_SUM="eb1ab04781474360f77c318ab89d8c5a03abc38e63d65a603cabbf1b00a1dc90"
@@ -32,4 +34,14 @@ build do
     command "make"
     command "make install"
     # ---------------- DO NOT MODIFY LINES ABOVE HERE ----------------
+
+    mkdir "#{install_dir}/embedded/ssl"
+    mkdir "#{install_dir}/embedded/lib/ossl-modules"
+    copy "/usr/local/lib*/ossl-modules/fips.so", "#{install_dir}/embedded/lib/ossl-modules/fips.so"
+
+    copy "#{resources_path}/openssl.cnf", "#{install_dir}/embedded/ssl/openssl.cnf.tmp"
+    erb source: "fipsinstall.sh.erb",
+        dest: "#{install_dir}/embedded/bin/fipsinstall.sh",
+        mode: 0755,
+        vars: { install_dir: install_dir }
 end
