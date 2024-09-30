@@ -20,6 +20,7 @@ import yaml
 from invoke.context import Context
 from invoke.tasks import task
 
+from tasks.build_tags import add_fips_tags
 from tasks.kernel_matrix_testing import selftest as selftests
 from tasks.kernel_matrix_testing import stacks, vmconfig
 from tasks.kernel_matrix_testing.ci import KMTTestRunJob, get_all_jobs_for_pipeline, get_test_results_from_tarfile
@@ -956,6 +957,7 @@ def kmt_sysprobe_prepare(
 
     info("[+] Computing Go dependencies for test packages...")
     build_tags = get_sysprobe_buildtags(False, False)
+    build_tags = add_fips_tags(build_tags, True)
     target_packages = build_target_packages(filter_pkgs, build_tags)
     pkg_deps = compute_package_dependencies(ctx, target_packages, build_tags)
 
@@ -977,6 +979,7 @@ def kmt_sysprobe_prepare(
         ninja_copy_ebpf_files(nw, "system-probe", kmt_paths, arch)
 
         build_tags = get_sysprobe_buildtags(False, False)
+        build_tags = add_fips_tags(build_tags, True)
         for pkg in target_packages:
             pkg_name = os.path.relpath(pkg, os.getcwd())
             target_path = os.path.join(kmt_paths.sysprobe_tests, pkg_name)
