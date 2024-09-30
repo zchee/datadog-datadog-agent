@@ -243,7 +243,7 @@ if do_build
 
   if linux_target?
     dependency 'datadog-security-agent-policies'
-    dependency 'openssl-fips'
+    dependency 'openssl-fips-provider'
   end
 
 
