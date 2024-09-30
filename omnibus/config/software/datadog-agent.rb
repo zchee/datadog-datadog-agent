@@ -4,6 +4,7 @@
 # Copyright 2016-present Datadog, Inc.
 
 require './lib/ostools.rb'
+require "./lib/project_extension.rb"
 require 'pathname'
 
 name 'datadog-agent'
