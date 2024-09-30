@@ -78,4 +78,9 @@ module Omnibus
     expose :inspect_binary
     expose :sign_file
   end
+
+  class Software
+    prepend ProjectExtensions
+    expose :inspect_binary
+  end
 end
