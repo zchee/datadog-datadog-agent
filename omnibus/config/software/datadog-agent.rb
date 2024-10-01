@@ -268,6 +268,7 @@ build do
 
         LINUX_BINARIES.each do |bin|
           partially_applied_check = check_block.call(bin)
+          puts("Checking if inspect_binary is called or not for #{bin}")
           inspect_binary(bin, &partially_applied_check)
         end
       end
