@@ -32,7 +32,7 @@ type Webhook struct {
 	name       string
 	isEnabled  bool
 	endpoint   string
-	resources  []string
+	resources  map[string][]string
 	operations []admissionregistrationv1.OperationType
 	patcher    workload.PodPatcher
 }
@@ -43,7 +43,7 @@ func NewWebhook(patcher workload.PodPatcher) *Webhook {
 		name:       webhookName,
 		isEnabled:  pkgconfigsetup.Datadog().GetBool("autoscaling.workload.enabled"),
 		endpoint:   webhookEndpoint,
-		resources:  []string{"pods"},
+		resources:  map[string][]string{"": {"pods"}},
 		operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 		patcher:    patcher,
 	}
@@ -71,7 +71,7 @@ func (w *Webhook) Endpoint() string {
 
 // Resources returns the kubernetes resources for which the webhook should
 // be invoked
-func (w *Webhook) Resources() []string {
+func (w *Webhook) Resources() map[string][]string {
 	return w.resources
 }
 
@@ -92,7 +92,7 @@ func (w *Webhook) LabelSelectors(_ bool) (namespaceSelector *metav1.LabelSelecto
 // WebhookFunc returns the function that mutates the resources
 func (w *Webhook) WebhookFunc() admission.WebhookFunc {
 	return func(request *admission.Request) *admiv1.AdmissionResponse {
-		return common.MutationResponse(mutatecommon.Mutate(request.Raw, request.Namespace, w.Name(), w.updateResources, request.DynamicClient))
+		return common.MutationResponse(mutatecommon.Mutate(request.Object, request.Namespace, w.Name(), w.updateResources, request.DynamicClient))
 	}
 }
 

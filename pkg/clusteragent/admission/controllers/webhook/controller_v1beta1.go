@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
+	"github.com/DataDog/datadog-agent/comp/aggregator/demultiplexer"
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/common"
@@ -57,6 +58,7 @@ func NewControllerV1beta1(
 	wmeta workloadmeta.Component,
 	pa workload.PodPatcher,
 	datadogConfig config.Component,
+	demultiplexer demultiplexer.Component,
 ) *ControllerV1beta1 {
 	controller := &ControllerV1beta1{}
 	controller.clientSet = client
@@ -71,7 +73,7 @@ func NewControllerV1beta1(
 	controller.queue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "webhooks")
 	controller.isLeaderFunc = isLeaderFunc
 	controller.isLeaderNotif = isLeaderNotif
-	controller.webhooks = controller.generateWebhooks(wmeta, pa, datadogConfig)
+	controller.webhooks = controller.generateWebhooks(wmeta, pa, datadogConfig, demultiplexer)
 	controller.generateTemplates()
 
 	if _, err := secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -352,7 +354,7 @@ func (c *ControllerV1beta1) generateTemplates() {
 	c.mutatingWebhookTemplates = mutatingWebhooks
 }
 
-func (c *ControllerV1beta1) getValidatingWebhookSkeleton(nameSuffix, path string, operations []admiv1beta1.OperationType, resources []string, namespaceSelector, objectSelector *metav1.LabelSelector) admiv1beta1.ValidatingWebhook {
+func (c *ControllerV1beta1) getValidatingWebhookSkeleton(nameSuffix, path string, operations []admiv1beta1.OperationType, resourcesMap map[string][]string, namespaceSelector, objectSelector *metav1.LabelSelector) admiv1beta1.ValidatingWebhook {
 	matchPolicy := admiv1beta1.Exact
 	sideEffects := admiv1beta1.SideEffectClassNone
 	port := c.config.getServicePort()
@@ -369,16 +371,6 @@ func (c *ControllerV1beta1) getValidatingWebhookSkeleton(nameSuffix, path string
 				Path:      &path,
 			},
 		},
-		Rules: []admiv1beta1.RuleWithOperations{
-			{
-				Operations: operations,
-				Rule: admiv1beta1.Rule{
-					APIGroups:   []string{""},
-					APIVersions: []string{"v1"},
-					Resources:   resources,
-				},
-			},
-		},
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffects,
@@ -388,10 +380,24 @@ func (c *ControllerV1beta1) getValidatingWebhookSkeleton(nameSuffix, path string
 		ObjectSelector:          objectSelector,
 	}
 
+	for group, resources := range resourcesMap {
+		for _, resource := range resources {
+			// TODO (wassim): Using directly admiv1.OperationType in v1beta1 API, we should use the conversion function or find a better way (abstract on the webhook side and fill per controller).
+			webhook.Rules = append(webhook.Rules, admiv1beta1.RuleWithOperations{
+				Operations: operations,
+				Rule: admiv1beta1.Rule{
+					APIGroups:   []string{group},
+					APIVersions: []string{"v1"},
+					Resources:   []string{resource},
+				},
+			})
+		}
+	}
+
 	return webhook
 }
 
-func (c *ControllerV1beta1) getMutatingWebhookSkeleton(nameSuffix, path string, operations []admiv1beta1.OperationType, resources []string, namespaceSelector, objectSelector *metav1.LabelSelector) admiv1beta1.MutatingWebhook {
+func (c *ControllerV1beta1) getMutatingWebhookSkeleton(nameSuffix, path string, operations []admiv1beta1.OperationType, resourcesMap map[string][]string, namespaceSelector, objectSelector *metav1.LabelSelector) admiv1beta1.MutatingWebhook {
 	matchPolicy := admiv1beta1.Exact
 	sideEffects := admiv1beta1.SideEffectClassNone
 	port := c.config.getServicePort()
@@ -409,16 +415,6 @@ func (c *ControllerV1beta1) getMutatingWebhookSkeleton(nameSuffix, path string, 
 				Path:      &path,
 			},
 		},
-		Rules: []admiv1beta1.RuleWithOperations{
-			{
-				Operations: operations,
-				Rule: admiv1beta1.Rule{
-					APIGroups:   []string{""},
-					APIVersions: []string{"v1"},
-					Resources:   resources,
-				},
-			},
-		},
 		ReinvocationPolicy:      &reinvocationPolicy,
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
@@ -427,6 +423,19 @@ func (c *ControllerV1beta1) getMutatingWebhookSkeleton(nameSuffix, path string, 
 		AdmissionReviewVersions: []string{"v1beta1"},
 		NamespaceSelector:       namespaceSelector,
 		ObjectSelector:          objectSelector,
+	}
+
+	for group, resources := range resourcesMap {
+		for _, resource := range resources {
+			webhook.Rules = append(webhook.Rules, admiv1beta1.RuleWithOperations{
+				Operations: operations,
+				Rule: admiv1beta1.Rule{
+					APIGroups:   []string{group},
+					APIVersions: []string{"v1"},
+					Resources:   []string{resource},
+				},
+			})
+		}
 	}
 
 	return webhook

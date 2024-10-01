@@ -47,7 +47,7 @@ type Webhook struct {
 	name            string
 	isEnabled       bool
 	endpoint        string
-	resources       []string
+	resources       map[string][]string
 	operations      []admissionregistrationv1.OperationType
 	ownerCacheTTL   time.Duration
 	wmeta           workloadmeta.Component
@@ -60,7 +60,7 @@ func NewWebhook(wmeta workloadmeta.Component, injectionFilter mutatecommon.Injec
 		name:            webhookName,
 		isEnabled:       pkgconfigsetup.Datadog().GetBool("admission_controller.inject_tags.enabled"),
 		endpoint:        pkgconfigsetup.Datadog().GetString("admission_controller.inject_tags.endpoint"),
-		resources:       []string{"pods"},
+		resources:       map[string][]string{"": {"pods"}},
 		operations:      []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 		ownerCacheTTL:   ownerCacheTTL(),
 		wmeta:           wmeta,
@@ -90,7 +90,7 @@ func (w *Webhook) Endpoint() string {
 
 // Resources returns the kubernetes resources for which the webhook should
 // be invoked
-func (w *Webhook) Resources() []string {
+func (w *Webhook) Resources() map[string][]string {
 	return w.resources
 }
 
@@ -128,7 +128,7 @@ func (o *ownerInfo) buildID(ns string) string {
 // WebhookFunc returns the function that mutates the resources
 func (w *Webhook) WebhookFunc() admission.WebhookFunc {
 	return func(request *admission.Request) *admiv1.AdmissionResponse {
-		return common.MutationResponse(mutatecommon.Mutate(request.Raw, request.Namespace, w.Name(), func(pod *corev1.Pod, ns string, dc dynamic.Interface) (bool, error) {
+		return common.MutationResponse(mutatecommon.Mutate(request.Object, request.Namespace, w.Name(), func(pod *corev1.Pod, ns string, dc dynamic.Interface) (bool, error) {
 			// Adds the DD_ENV, DD_VERSION, DD_SERVICE env vars to the pod template from pod and higher-level resource labels.
 			return w.injectTags(pod, ns, dc)
 		}, request.DynamicClient))
