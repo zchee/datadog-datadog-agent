@@ -695,6 +695,7 @@ def build_sysprobe_binary(
     )
 
     build_tags = get_default_build_tags(build="system-probe")
+    build_tags.append("goexperiment.systemcrypto")
     if bundle_ebpf:
         build_tags.append(BUNDLE_TAG)
     if strip_binary:
