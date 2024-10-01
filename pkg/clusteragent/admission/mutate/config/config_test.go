@@ -475,7 +475,7 @@ func TestJSONPatchCorrectness(t *testing.T) {
 			datadogConfig := fxutil.Test[config.Component](t, core.MockBundle())
 			webhook := NewWebhook(wmeta, autoinstrumentation.GetInjectionFilter(), datadogConfig)
 			request := admission.Request{
-				Raw:       podJSON,
+				Object:    podJSON,
 				Namespace: "bar",
 			}
 			admissionResponse := webhook.WebhookFunc()(&request)
@@ -510,7 +510,7 @@ func BenchmarkJSONPatch(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		request := admission.Request{
-			Raw:       podJSON,
+			Object:    podJSON,
 			Namespace: "bar",
 		}
 		admissionResponse := webhook.WebhookFunc()(&request)

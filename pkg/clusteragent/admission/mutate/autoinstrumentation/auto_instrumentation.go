@@ -52,8 +52,9 @@ type Webhook struct {
 	name                     string
 	isEnabled                bool
 	endpoint                 string
-	resources                []string
+	resources                map[string][]string
 	operations               []admissionregistrationv1.OperationType
+	matchConditions          []admissionregistrationv1.MatchCondition
 	initSecurityContext      *corev1.SecurityContext
 	initResourceRequirements corev1.ResourceRequirements
 	containerRegistry        string
@@ -104,8 +105,9 @@ func NewWebhook(wmeta workloadmeta.Component, filter mutatecommon.InjectionFilte
 		name:                     webhookName,
 		isEnabled:                isEnabled,
 		endpoint:                 pkgconfigsetup.Datadog().GetString("admission_controller.auto_instrumentation.endpoint"),
-		resources:                []string{"pods"},
+		resources:                map[string][]string{"": {"pods"}},
 		operations:               []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+		matchConditions:          []admissionregistrationv1.MatchCondition{},
 		initSecurityContext:      initSecurityContext,
 		initResourceRequirements: initResourceRequirements,
 		injectionFilter:          filter,
@@ -139,7 +141,7 @@ func (w *Webhook) Endpoint() string {
 
 // Resources returns the kubernetes resources for which the webhook should
 // be invoked
-func (w *Webhook) Resources() []string {
+func (w *Webhook) Resources() map[string][]string {
 	return w.resources
 }
 
@@ -155,10 +157,16 @@ func (w *Webhook) LabelSelectors(useNamespaceSelector bool) (namespaceSelector *
 	return common.DefaultLabelSelectors(useNamespaceSelector)
 }
 
+// MatchConditions returns the Match Conditions used for fine-grained
+// request filtering
+func (w *Webhook) MatchConditions() []admissionregistrationv1.MatchCondition {
+	return w.matchConditions
+}
+
 // WebhookFunc returns the function that mutates the resources
 func (w *Webhook) WebhookFunc() admission.WebhookFunc {
 	return func(request *admission.Request) *admiv1.AdmissionResponse {
-		return common.MutationResponse(mutatecommon.Mutate(request.Raw, request.Namespace, w.Name(), w.inject, request.DynamicClient))
+		return common.MutationResponse(mutatecommon.Mutate(request.Object, request.Namespace, w.Name(), w.inject, request.DynamicClient))
 	}
 }
 
