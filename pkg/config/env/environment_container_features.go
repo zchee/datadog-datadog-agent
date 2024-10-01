@@ -29,4 +29,6 @@ const (
 	CloudFoundry Feature = "cloudfoundry"
 	// Podman containers storage path accessible
 	Podman Feature = "podman"
+	// Sidecar potentially multiple agents on one host, no access to host itself
+	Sidecar Feature = "sidecar"
 )

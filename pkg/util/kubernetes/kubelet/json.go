@@ -8,12 +8,14 @@
 package kubelet
 
 import (
+	"os"
 	"time"
 	"unsafe"
 
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/DataDog/datadog-agent/pkg/config"
+	"github.com/DataDog/datadog-agent/pkg/config/env"
 )
 
 // jsoniterConfig mirrors jsoniter.ConfigFastest
@@ -63,6 +65,13 @@ func (pu *podUnmarshaller) filteringDecoder(ptr unsafe.Pointer, iter *jsoniter.I
 	podCallback := func(iter *jsoniter.Iterator) bool {
 		pod := &Pod{}
 		iter.ReadVal(pod)
+
+		// If running in sidecar mode, filter out everything that is not the current pod
+		if env.IsFeaturePresent(env.Sidecar) {
+			if pod.Metadata.Name != os.Getenv("HOSTNAME") { // TODO better way to do this
+				return false
+			}
+		}
 
 		// Quick exit for running/pending containers
 		if pod.Status.Phase == "Running" || pod.Status.Phase == "Pending" {

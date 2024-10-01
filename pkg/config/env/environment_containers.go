@@ -45,6 +45,7 @@ func init() {
 	registerFeature(ECSOrchestratorExplorer)
 	registerFeature(CloudFoundry)
 	registerFeature(Podman)
+	registerFeature(Sidecar)
 }
 
 // IsAnyContainerFeaturePresent checks if any of known container features is present
@@ -57,7 +58,8 @@ func IsAnyContainerFeaturePresent() bool {
 		IsFeaturePresent(ECSFargate) ||
 		IsFeaturePresent(EKSFargate) ||
 		IsFeaturePresent(CloudFoundry) ||
-		IsFeaturePresent(Podman)
+		IsFeaturePresent(Podman) ||
+		IsFeaturePresent(Sidecar)
 }
 
 func detectContainerFeatures(features FeatureMap, cfg model.Reader) {
@@ -67,6 +69,13 @@ func detectContainerFeatures(features FeatureMap, cfg model.Reader) {
 	detectAWSEnvironments(features, cfg)
 	detectCloudFoundry(features, cfg)
 	detectPodman(features, cfg)
+	detectSidecar(features, cfg)
+}
+
+func detectSidecar(features FeatureMap, cfg model.Reader) {
+	if cfg.GetBool("sidecar") {
+		features[Sidecar] = struct{}{}
+	}
 }
 
 func detectKubernetes(features FeatureMap, cfg model.Reader) {
