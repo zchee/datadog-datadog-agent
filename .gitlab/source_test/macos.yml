@@ -65,8 +65,23 @@ tests_macos:
   extends: .macos_gitlab
   needs: ["go_deps", "go_tools_deps"]
   script:
+    - which golangci-lint
+    - echo $GOPATH
+    - echo $GOPATH/pkg/mod/cache
+    - ls -la $GOPATH/pkg/mod/cache
+    - echo $GOROOT
+    - go version
+    - which go
+    - go env GOMODCACHE
     - !reference [.retrieve_linux_go_deps]
     - !reference [.retrieve_linux_go_tools_deps]
+    - which golangci-lint
+    - echo $GOPATH
+    - echo $GOPATH/pkg/mod/cache
+    - ls -la $GOPATH/pkg/mod/cache
+    - echo $GOROOT
+    - go version
+    - go env GOMODCACHE
     - inv -e linter.go --cpus 12 --timeout 60
 
 .tests_macos_gitlab:
