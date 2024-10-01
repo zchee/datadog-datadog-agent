@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -41,11 +40,6 @@ func TestECSSuite(t *testing.T) {
 	suite.Run(t, &ecsSuite{})
 }
 
-func extraAgentEnv() string {
-	envs := []string{"DD_ECS_TASK_COLLECTION_ENABLED=true"}
-	return strings.Join(envs, ",")
-}
-
 func (suite *ecsSuite) SetupSuite() {
 	ctx := context.Background()
 
@@ -56,9 +50,8 @@ func (suite *ecsSuite) SetupSuite() {
 		"ddinfra:aws/ecs/fargateCapacityProvider":    auto.ConfigValue{Value: "true"},
 		"ddinfra:aws/ecs/linuxBottlerocketNodeGroup": auto.ConfigValue{Value: "true"},
 
-		"ddagent:deploy":       auto.ConfigValue{Value: "true"},
-		"ddagent:fakeintake":   auto.ConfigValue{Value: "true"},
-		"ddagent:extraEnvVars": auto.ConfigValue{Value: extraAgentEnv()},
+		"ddagent:deploy":     auto.ConfigValue{Value: "true"},
+		"ddagent:fakeintake": auto.ConfigValue{Value: "true"},
 
 		"ddtestworkload:deploy": auto.ConfigValue{Value: "true"},
 	}
