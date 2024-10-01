@@ -101,6 +101,7 @@ def build(
 
     ldflags += ' '.join([f"-X '{main + key}={value}'" for key, value in ld_vars.items()])
     build_tags += get_default_build_tags(build="security-agent")
+    build_tags.append("goexperiment.systemcrypto")
 
     if os.path.exists(BIN_PATH):
         os.remove(BIN_PATH)

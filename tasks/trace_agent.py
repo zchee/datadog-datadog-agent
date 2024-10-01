@@ -75,6 +75,7 @@ def build(
     build_exclude = [] if build_exclude is None else build_exclude.split(",")
 
     build_tags = get_build_tags(build_include, build_exclude)
+    build_tags.append("goexperiment.systemcrypto")
 
     race_opt = "-race" if race else ""
     build_type = "-a" if rebuild else ""

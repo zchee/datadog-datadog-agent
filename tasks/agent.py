@@ -220,6 +220,7 @@ def build(
 
             all_tags |= set(build_tags)
         build_tags = list(all_tags)
+        build_tags.append("goexperiment.systemcrypto")
 
     cmd = "go build -mod={go_mod} {race_opt} {build_type} -tags \"{go_build_tags}\" "
 

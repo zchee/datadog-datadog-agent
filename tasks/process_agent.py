@@ -82,6 +82,7 @@ def build(
     build_exclude = [] if build_exclude is None else build_exclude.split(",")
 
     build_tags = get_build_tags(build_include, build_exclude)
+    build_tags.append("goexperiment.systemcrypto")
 
     if os.path.exists(BIN_PATH):
         os.remove(BIN_PATH)
