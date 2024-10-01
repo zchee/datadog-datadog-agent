@@ -24,7 +24,7 @@ golang_deps_diff:
 
 golang_deps_commenter:
   stage: source_test
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/pr-commenter:2
+  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/pr-commenter:3
   tags: ["arch:amd64"]
   rules: # this should only run on dev branches
     - !reference [.except_main_or_release_branch]
@@ -38,7 +38,8 @@ golang_deps_commenter:
     - echo "${CI_COMMIT_REF_NAME}"
     - |
       set +e
-      out=$(pr-commenter --for-pr="${CI_COMMIT_REF_NAME}" --header="Go Package Import Differences" --infile deps-report.md 2>&1)
+      message=$(cat deps-report.md)
+      out=$(curl -f -v 'https://pr-commenter.us1.ddbuild.io/internal/cit/pr-comment' -H "$(/bin/authanywhere)" -X PATCH -d '{"commit":"$CI_COMMIT_REF_NAME", "message":"$message", "header":"Go Package Import Differences", "org":"Datadog", "repo":"datadog-agent"}')
       exitcode=$?
       set -e
       if [ -n "${out}" ]; then
