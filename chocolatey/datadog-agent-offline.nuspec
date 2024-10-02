@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>datadog-agent-offline</id>
-    <version>$package_version$</version>
+    <version>7.56.0</version>
     <packageSourceUrl>https://github.com/DataDog/datadog-agent/tree/main/chocolatey</packageSourceUrl>
     <owners>Datadog</owners>
     <title>Datadog Agent Offline Install</title>
