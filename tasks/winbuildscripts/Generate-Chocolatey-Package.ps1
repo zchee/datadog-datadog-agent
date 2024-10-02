@@ -44,7 +44,8 @@ if ($rawAgentVersion -match $releaseCandidatePattern) {
         exit 2
     }
     $agentVersionMatches = $rawAgentVersion | Select-String -Pattern $develPattern
-    $agentVersion = "{0}-devel-{1}" -f $agentVersionMatches.Matches.Groups[1], $agentVersionMatches.Matches.Groups[2].Value
+    $agentVersion = "7.56.0"
+    $url = "https://s3.amazonaws.com/ddagent-windows-stable/ddagent-cli-7.56.0.msi"
     # We don't have release notes for devel, so point it to the generic url
     $releaseNotes = "https://github.com/DataDog/datadog-agent/releases"
 } elseif ($rawAgentVersion -match $releasePattern) {
