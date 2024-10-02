@@ -69,7 +69,7 @@ func (pu *podUnmarshaller) filteringDecoder(ptr unsafe.Pointer, iter *jsoniter.I
 		// If running in sidecar mode, filter out everything that is not the current pod
 		if env.IsFeaturePresent(env.Sidecar) {
 			if pod.Metadata.Name != os.Getenv("HOSTNAME") { // TODO better way to do this
-				return false
+				return true
 			}
 		}
 

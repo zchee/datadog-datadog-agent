@@ -74,6 +74,7 @@ func detectContainerFeatures(features FeatureMap, cfg model.Reader) {
 
 func detectSidecar(features FeatureMap, cfg model.Reader) {
 	if cfg.GetBool("sidecar") {
+		log.Info("Agent running in sidecar mode")
 		features[Sidecar] = struct{}{}
 	}
 }
