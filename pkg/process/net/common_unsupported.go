@@ -40,6 +40,7 @@ func (r *RemoteSysProbeUtil) GetConnections(_ string) (*model.Connections, error
 	return nil, ErrNotImplemented
 }
 
+// foo
 // GetNetworkID is not supported
 func (r *RemoteSysProbeUtil) GetNetworkID() (string, error) {
 	return "", ErrNotImplemented
