@@ -14,6 +14,7 @@
 #include <thread>
 #include <cstdlib>
 #include <Windows.h>
+#include <chrono>
 #include "Process.h"
 #include "Service.h"
 #include "Win32Exception.h"
@@ -40,6 +41,9 @@ namespace
         sstream << "[" << errorCode << " (0x" << std::hex << errorCode << ")]";
         return sstream.str();
     }
+
+    std::chrono::seconds service_start_timeout = std::chrono::seconds(60); // Give the service 1 minute to start by default
+    std::chrono::seconds service_stop_timeout = std::chrono::seconds(30); // Give the service 30 seconds to stop by default
 }
 
 const std::wstring GetEnvVar(std::wstring const& name)
@@ -137,26 +141,40 @@ void StreamLogsToStdout(std::filesystem::path const& logFilePath)
     }
 }
 
+void tryStopService(Service& service, const std::wstring& serviceName)
+{
+    try
+    {
+        service.Stop(service_stop_timeout);
+    }
+    catch (...)
+    {
+        std::wcout << L"[ENTRYPOINT][ERROR] Could not stop " << serviceName << ". Trying to kill process." << std::endl;
+        service.Kill(STATUS_TIMEOUT);
+        throw;
+    }
+}
+
 void RunService(std::wstring const& serviceName, std::filesystem::path const& logsPath)
 {
     Service service(serviceName);
     std::wcout << L"[ENTRYPOINT][INFO] Starting service " << serviceName << std::endl;
-    service.Start();
+    try
+    {
+        service.Start(service_start_timeout);
+    }
+    catch (...)
+    {
+        std::wcout << L"[ENTRYPOINT][ERROR] Could not start " << serviceName << L" (timeout)" << std::endl;
+        tryStopService(service, serviceName);
+        return;
+    }
     std::wcout << L"[ENTRYPOINT][INFO] Success. Waiting for exit signal." << std::endl;
     std::thread logThread(StreamLogsToStdout, logsPath);
     logThread.detach();
     WaitForSingleObject(CtrlSignalReceivedEvent, INFINITE);
     std::wcout << L"[ENTRYPOINT][INFO] Stopping service " << serviceName << std::endl;
-    try
-    {
-        service.Stop();
-    }
-    catch (...)
-    {
-        std::wcout << L"[ENTRYPOINT][INFO] Could not stop " << serviceName << ". Trying to kill process." << std::endl;
-        TerminateProcess(OpenProcess(PROCESS_ALL_ACCESS, FALSE, service.PID()), STATUS_TIMEOUT);
-        throw;
-    }
+    tryStopService(service, serviceName);
 }
 
 void RunExecutable(std::wstring const& command)
@@ -199,13 +217,13 @@ void Cleanup()
 // Returns: 0 on success, -1 on error.
 int _tmain(int argc, _TCHAR** argv)
 {
-    DWORD exitCode = -1;
+    int exitCode = -1;
 
     auto command = GetEnvVar(L"ENTRYPOINT");
     if (argc <= 1 && command.empty())
     {
         std::cout << "Usage: entrypoint.exe <service> | <executable> <args>" << std::endl;
-        return -1;
+        return exitCode;
     }
 
     CtrlSignalReceivedEvent = CreateEvent(
@@ -218,27 +236,53 @@ int _tmain(int argc, _TCHAR** argv)
     if (CtrlSignalReceivedEvent == nullptr)
     {
         std::cout << "[ENTRYPOINT][ERROR] Failed to create event with error: " << FormatErrorCode(GetLastError()) << std::endl;
-        return -1;
+        return exitCode;
     }
 
     if (!SetConsoleCtrlHandler(CtrlHandle, TRUE))
     {
         std::cout << "[ENTRYPOINT][ERROR] Failed to set control handle with error: " << FormatErrorCode(GetLastError()) << std::endl;
         Cleanup();
-        return -1;
+        return exitCode;
     }
 
     try
     {
-        auto runInitScripts = GetEnvVar(L"ENTRYPOINT_INITSCRIPTS");
-        if (runInitScripts.empty() || runInitScripts.compare(TRUE_STR) == 0)
+        const auto runInitScripts = GetEnvVar(L"ENTRYPOINT_INITSCRIPTS");
+        if (runInitScripts.empty() || runInitScripts == TRUE_STR)
         {
             ExecuteInitScripts();
         }
 
         // We checked earlier that argc >= 2 if command is empty
-        if (command.empty()) {
+        if (command.empty())
+        {
             command.assign(argv[1]);
+        }
+
+        // DD_SERVICE_START_TIMEOUT format is %Mm%Ss, so it matches 0m30s, 30m5s etc...
+        std::wstringstream serviceStartTimeoutEnvVar(GetEnvVar(L"DD_SERVICE_START_TIMEOUT"));
+        if (!serviceStartTimeoutEnvVar.view().empty())
+        {
+            // ReSharper disable once CppRedundantQualifier - legibility.
+            serviceStartTimeoutEnvVar >> std::chrono::parse(L"%Mm%Ss", service_start_timeout);
+            std::wcout << L"[ENTRYPOINT][INFO] DD_SERVICE_START_TIMEOUT = " << service_start_timeout << std::endl;
+            // No need to check if the timeout is too short for service start, as even with 1s the entrypoint will
+            // start all the services, wait until they settle, and then turn them off.
+        }
+
+        // DD_SERVICE_STOP_TIMEOUT format is %Mm%Ss, so it matches 0m30s, 30m5s etc...
+        std::wstringstream serviceStopTimeoutEnvVar(GetEnvVar(L"DD_SERVICE_STOP_TIMEOUT"));
+        if (!serviceStopTimeoutEnvVar.view().empty())
+        {
+            // ReSharper disable once CppRedundantQualifier - legibility.
+            serviceStopTimeoutEnvVar >> std::chrono::parse(L"%Mm%Ss", service_stop_timeout);
+            std::wcout << L"[ENTRYPOINT][INFO] DD_SERVICE_STOP_TIMEOUT = " << service_stop_timeout << std::endl;
+            if (service_stop_timeout < std::chrono::seconds(30))
+            {
+                std::wcout << L"[ENTRYPOINT][WARNING] DD_SERVICE_STOP_TIMEOUT < 30s, resetting it to 30s to avoid causing issues with stopping dependent services" << std::endl;
+                service_stop_timeout = std::chrono::seconds(30);
+            }
         }
 
         auto svcIt = services.find(command);
