@@ -19,7 +19,7 @@ func IsFargateInstance() bool {
 
 // GetOrchestrator returns whether the Agent is running on ECS or EKS.
 func GetOrchestrator() OrchestratorName {
-	if env.IsFeaturePresent(env.EKSFargate) {
+	if env.IsFeaturePresent(env.EKSFargate) || env.IsFeaturePresent(env.Sidecar) {
 		return EKS
 	}
 	if env.IsFeaturePresent(env.ECSFargate) {
@@ -31,6 +31,9 @@ func GetOrchestrator() OrchestratorName {
 // GetEKSFargateNodename returns the node name in EKS Fargate
 func GetEKSFargateNodename() (string, error) {
 	if nodename := config.Datadog().GetString("kubernetes_kubelet_nodename"); nodename != "" {
+		return nodename, nil
+	}
+	if nodename := config.Datadog().GetString("kubernetes_kubelet_host"); env.IsFeaturePresent(env.Sidecar) && nodename != "" {
 		return nodename, nil
 	}
 	return "", errors.New("kubernetes_kubelet_nodename is not defined, make sure DD_KUBERNETES_KUBELET_NODENAME is set via the downward API")

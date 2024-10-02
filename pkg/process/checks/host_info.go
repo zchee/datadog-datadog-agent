@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/DataDog/datadog-agent/pkg/config"
+	"github.com/DataDog/datadog-agent/pkg/config/env"
 	pb "github.com/DataDog/datadog-agent/pkg/proto/pbgo/core"
 	"github.com/DataDog/datadog-agent/pkg/util/fargate"
 	"github.com/DataDog/datadog-agent/pkg/util/flavor"
@@ -89,7 +90,7 @@ func resolveHostName(config config.Reader) (string, error) {
 // via cli and lastly falling back to os.Hostname() if it is unavailable
 func getHostname(ctx context.Context, ddAgentBin string, grpcConnectionTimeout time.Duration) (string, error) {
 	// Fargate is handled as an exceptional case (there is no concept of a host, so we use the ARN in-place).
-	if fargate.IsFargateInstance() {
+	if fargate.IsFargateInstance() || env.IsFeaturePresent(env.Sidecar) {
 		hostname, err := fargate.GetFargateHost(ctx)
 		if err == nil {
 			return hostname, nil

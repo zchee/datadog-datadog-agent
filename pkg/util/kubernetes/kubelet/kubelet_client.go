@@ -164,7 +164,7 @@ func getKubeletClient(ctx context.Context) (*kubeletClient, error) {
 	var err error
 
 	kubeletTimeout := 30 * time.Second
-	kubeletProxyEnabled := config.Datadog().GetBool("eks_fargate") || config.Datadog().GetBool("sidecar")
+	kubeletProxyEnabled := config.Datadog().GetBool("eks_fargate") || config.Datadog().GetBool("kubelet_apiserver_proxy")
 	kubeletHost := config.Datadog().GetString("kubernetes_kubelet_host")
 	kubeletHTTPSPort := config.Datadog().GetInt("kubernetes_https_kubelet_port")
 	kubeletHTTPPort := config.Datadog().GetInt("kubernetes_http_kubelet_port")

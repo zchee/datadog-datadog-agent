@@ -30,7 +30,7 @@ var ErrorNotSupported = errors.New("fentry tracer is only supported on Fargate")
 
 // LoadTracer loads a new tracer
 func LoadTracer(config *config.Config, mgrOpts manager.Options, connCloseEventHandler ddebpf.EventHandler) (*manager.Manager, func(), error) {
-	if !fargate.IsFargateInstance() {
+	if !fargate.IsFargateInstance() || env.IsFeaturePresent(env.Sidecar) {
 		return nil, nil, ErrorNotSupported
 	}
 

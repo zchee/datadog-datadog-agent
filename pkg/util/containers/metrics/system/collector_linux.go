@@ -126,7 +126,7 @@ func newSystemCollector(cache *provider.Cache, wlm optional.Option[workloadmeta.
 
 		// When the Agent runs as a sidecar (e.g. Fargate) with shared PID namespace, we can use the system collector in some cases.
 		// TODO: Check how we could detect shared PID namespace instead of makeing assumption
-		isAgentSidecar := env.IsFeaturePresent(env.ECSFargate) || env.IsFeaturePresent(env.EKSFargate)
+		isAgentSidecar := env.IsFeaturePresent(env.ECSFargate) || env.IsFeaturePresent(env.EKSFargate) || env.IsFeaturePresent(env.Sidecar)
 
 		// With sysfs we can always get cgroup stats
 		if env.IsHostSysAvailable() {

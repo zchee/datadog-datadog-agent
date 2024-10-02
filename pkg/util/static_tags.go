@@ -44,7 +44,9 @@ func GetStaticTagsSlice(ctx context.Context) []string {
 		} else {
 			tags = append(tags, "eks_fargate_node:"+node)
 		}
+	}
 
+	if env.IsFeaturePresent(env.Kubernetes) {
 		// kube_cluster_name
 		clusterTagNamePrefix := "kube_cluster_name:"
 		var tag string

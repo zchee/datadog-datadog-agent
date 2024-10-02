@@ -17,6 +17,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/configresolver"
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/integration"
 	"github.com/DataDog/datadog-agent/pkg/config"
+	"github.com/DataDog/datadog-agent/pkg/config/env"
 	configUtils "github.com/DataDog/datadog-agent/pkg/config/utils"
 	"github.com/DataDog/datadog-agent/pkg/util/fargate"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -395,7 +396,7 @@ func GetIntegrationConfigFromFile(name, fpath string) (integration.Config, error
 		// at this point the Yaml was already parsed, no need to check the error
 		rawConf, _ := yaml.Marshal(instance)
 		dataConf := (integration.Data)(rawConf)
-		if fargate.IsFargateInstance() {
+		if fargate.IsFargateInstance() || env.IsFeaturePresent(env.Sidecar) {
 			// In Fargate, since no host tags are applied in the backend,
 			// add the configured DD_TAGS/DD_EXTRA_TAGS to the instance tags.
 			tags := configUtils.GetConfiguredTags(config.Datadog(), false)
