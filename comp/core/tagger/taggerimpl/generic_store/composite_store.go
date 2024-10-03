@@ -5,7 +5,9 @@
 
 package genericstore
 
-import "github.com/DataDog/datadog-agent/comp/core/tagger/types"
+import (
+	"github.com/DataDog/datadog-agent/comp/core/tagger/types"
+)
 
 type compositeObjectStore[T any] struct {
 	data map[types.EntityIDPrefix]map[string]T
@@ -28,6 +30,16 @@ func (os *compositeObjectStore[T]) Get(entityID types.EntityID) (object T, found
 
 	object, found = submap[entityID.GetID()]
 	return
+}
+
+// GetWithEntityIDStr implements ObjectStore#GetWithEntityIDStr
+func (os *compositeObjectStore[T]) GetWithEntityIDStr(id string) (object T, found bool) {
+	entityID, err := types.NewEntityIDFromString(id)
+	if err != nil {
+		return
+	}
+
+	return os.Get(entityID)
 }
 
 // Set implements ObjectStore#Set
@@ -64,10 +76,11 @@ func (os *compositeObjectStore[T]) Size() int {
 }
 
 // ListObjects implements ObjectStore#ListObjects
-func (os *compositeObjectStore[T]) ListObjects() []T {
+func (os *compositeObjectStore[T]) ListObjects(filter *types.Filter) []T {
 	objects := make([]T, 0, os.Size())
 
-	for _, idToObjects := range os.data {
+	for prefix := range filter.GetPrefixes() {
+		idToObjects := os.data[prefix]
 		for _, object := range idToObjects {
 			objects = append(objects, object)
 		}
@@ -77,8 +90,9 @@ func (os *compositeObjectStore[T]) ListObjects() []T {
 }
 
 // ForEach implements ObjectStore#ForEach
-func (os *compositeObjectStore[T]) ForEach(apply types.ApplyFunc[T]) {
-	for prefix, idToObjects := range os.data {
+func (os *compositeObjectStore[T]) ForEach(filter *types.Filter, apply types.ApplyFunc[T]) {
+	for prefix := range filter.GetPrefixes() {
+		idToObjects := os.data[prefix]
 		for id, object := range idToObjects {
 			apply(types.NewEntityID(prefix, id), object)
 		}

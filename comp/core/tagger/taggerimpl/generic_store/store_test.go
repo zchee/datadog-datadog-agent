@@ -75,6 +75,44 @@ func TestObjectStore_GetSet(t *testing.T) {
 	test(t, true)
 }
 
+func TestObjectStore_GetWithEntityIDStr(t *testing.T) {
+	test := func(t *testing.T, isComposite bool) {
+		cfg := configmock.New(t)
+		cfg.SetWithoutSource("tagger.tagstore_use_composite_entity_id", isComposite)
+
+		store := NewObjectStore[any](cfg)
+
+		id := types.NewEntityID("prefix", "id")
+		idStr := id.String()
+		// getting a non-existent item
+		obj, found := store.GetWithEntityIDStr(idStr)
+		assert.Nil(t, obj)
+		assert.Falsef(t, found, "item should not be found in store")
+
+		// set item
+		store.Set(id, struct{}{})
+
+		// getting item
+		obj, found = store.GetWithEntityIDStr(idStr)
+		assert.NotNil(t, obj)
+		assert.Truef(t, found, "item should be found in store")
+
+		// unsetting item
+		store.Unset(id)
+
+		// getting a non-existent item
+		obj, found = store.GetWithEntityIDStr(idStr)
+		assert.Nil(t, obj)
+		assert.Falsef(t, found, "item should not be found in store")
+	}
+
+	// default store
+	test(t, false)
+
+	// composite store
+	test(t, true)
+}
+
 func TestObjectStore_Size(t *testing.T) {
 
 	test := func(t *testing.T, isComposite bool) {
@@ -114,20 +152,26 @@ func TestObjectStore_ListObjects(t *testing.T) {
 		cfg.SetWithoutSource("tagger.tagstore_use_composite_entity_id", isComposite)
 		store := NewObjectStore[any](cfg)
 
+		// build some filter
+		fb := types.NewFilterBuilder()
+		fb.Include(types.EntityIDPrefix("prefix1"), types.EntityIDPrefix("prefix2"))
+		filter := fb.Build(types.HighCardinality)
+
 		// list should return empty
-		list := store.ListObjects()
+		list := store.ListObjects(filter)
 		assert.Equalf(t, len(list), 0, "ListObjects should return an empty list")
 
 		// add some items
 		ids := []string{"prefix1://id1", "prefix2://id2", "prefix3://id3", "prefix4://id4"}
 		for _, id := range ids {
 			entityID, _ := types.NewEntityIDFromString(id)
-			store.Set(entityID, struct{}{})
+			store.Set(entityID, id)
 		}
 
 		// list should return empty
-		list = store.ListObjects()
-		assert.Equalf(t, len(list), len(ids), "ListObjects should return a list of size %d", len(ids))
+		list = store.ListObjects(filter)
+		expectedListing := []any{"prefix1://id1", "prefix2://id2"}
+		assert.ElementsMatch(t, expectedListing, list)
 	}
 
 	// default store
@@ -152,10 +196,16 @@ func TestObjectStore_ForEach(t *testing.T) {
 		}
 
 		accumulator := []string{}
-		store.ForEach(func(id types.EntityID, _ any) { accumulator = append(accumulator, id.String()) })
+
+		// build some filter
+		fb := types.NewFilterBuilder()
+		fb.Include(types.EntityIDPrefix("prefix1"), types.EntityIDPrefix("prefix2"))
+		filter := fb.Build(types.HighCardinality)
+
+		store.ForEach(filter, func(id types.EntityID, _ any) { accumulator = append(accumulator, id.String()) })
 
 		// list should return empty
-		assert.ElementsMatch(t, accumulator, ids)
+		assert.ElementsMatch(t, accumulator, []string{"prefix1://id1", "prefix2://id2"})
 	}
 
 	// default store
