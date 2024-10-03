@@ -36,13 +36,17 @@ func GetStaticTagsSlice(ctx context.Context) []string {
 	tags = append(tags, configUtils.GetConfiguredTags(config.Datadog(), false)...)
 
 	// EKS Fargate specific tags
-	if env.IsFeaturePresent(env.EKSFargate) {
+	if env.IsFeaturePresent(env.EKSFargate) || env.IsFeaturePresent(env.Kubernetes) {
 		// eks_fargate_node
+		tagName := "kube_node"
+		if env.IsFeaturePresent(env.EKSFargate) {
+			tagName = "eks_fargate_node"
+		}
 		node, err := fargate.GetEKSFargateNodename()
 		if err != nil {
-			log.Infof("Couldn't build the 'eks_fargate_node' tag: %v", err)
+			log.Infof("Couldn't build the '%v' tag: %v", tagName, err)
 		} else {
-			tags = append(tags, "eks_fargate_node:"+node)
+			tags = append(tags, tagName+":"+node)
 		}
 	}
 
@@ -67,6 +71,7 @@ func GetStaticTagsSlice(ctx context.Context) []string {
 				tags = append(tags, clusterTagNamePrefix+cluster)
 			}
 		}
+		tags = append(tags, "dd_sidecar:true")
 	}
 
 	return tags
