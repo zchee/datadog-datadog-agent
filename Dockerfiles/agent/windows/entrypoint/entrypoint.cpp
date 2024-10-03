@@ -42,8 +42,7 @@ namespace
         return sstream.str();
     }
 
-    std::chrono::seconds service_start_timeout = std::chrono::seconds(60); // Give the service 1 minute to start by default
-    std::chrono::seconds service_stop_timeout = std::chrono::seconds(30); // Give the service 30 seconds to stop by default
+    std::chrono::seconds service_timeout = std::chrono::seconds(30); // Default Windows value
 }
 
 const std::wstring GetEnvVar(std::wstring const& name)
@@ -145,7 +144,7 @@ void tryStopService(Service& service, const std::wstring& serviceName)
 {
     try
     {
-        service.Stop(service_stop_timeout);
+        service.Stop(service_timeout);
     }
     catch (...)
     {
@@ -161,7 +160,7 @@ void RunService(std::wstring const& serviceName, std::filesystem::path const& lo
     std::wcout << L"[ENTRYPOINT][INFO] Starting service " << serviceName << std::endl;
     try
     {
-        service.Start(service_start_timeout);
+        service.Start(service_timeout);
     }
     catch (...)
     {
@@ -198,7 +197,7 @@ void RunExecutable(std::wstring const& command)
 
     if (waitResult == WAIT_OBJECT_0)
     {
-        exitCode = process.WaitForExit();
+        exitCode = process.WaitForExit(service_timeout);
     }
     else
     {
@@ -260,29 +259,48 @@ int _tmain(int argc, _TCHAR** argv)
             command.assign(argv[1]);
         }
 
-        // DD_SERVICE_START_TIMEOUT format is %Mm%Ss, so it matches 0m30s, 30m5s etc...
-        std::wstringstream serviceStartTimeoutEnvVar(GetEnvVar(L"DD_SERVICE_START_TIMEOUT"));
-        if (!serviceStartTimeoutEnvVar.view().empty())
+        // DD_SERVICE_STOP_TIMEOUT format is %Mm%Ss, so it matches 0m30s, 30m5s etc...
+        std::wstringstream serviceTimeoutEnvVar(GetEnvVar(L"DD_SERVICE_TIMEOUT"));
+        if (!serviceTimeoutEnvVar.view().empty())
         {
             // ReSharper disable once CppRedundantQualifier - legibility.
-            serviceStartTimeoutEnvVar >> std::chrono::parse(L"%Mm%Ss", service_start_timeout);
-            std::wcout << L"[ENTRYPOINT][INFO] DD_SERVICE_START_TIMEOUT = " << service_start_timeout << std::endl;
-            // No need to check if the timeout is too short for service start, as even with 1s the entrypoint will
-            // start all the services, wait until they settle, and then turn them off.
+            serviceTimeoutEnvVar >> std::chrono::parse(L"%Mm%Ss", service_timeout);
+            std::wcout << L"[ENTRYPOINT][INFO] DD_SERVICE_TIMEOUT = " << service_timeout << std::endl;
+            if (service_timeout < std::chrono::seconds(30))
+            {
+                std::wcout << L"[ENTRYPOINT][WARNING] DD_SERVICE_TIMEOUT < 30s, resetting it to 30s to avoid causing issues with stopping dependent services" << std::endl;
+                service_timeout = std::chrono::seconds(30);
+            }
         }
 
-        // DD_SERVICE_STOP_TIMEOUT format is %Mm%Ss, so it matches 0m30s, 30m5s etc...
-        std::wstringstream serviceStopTimeoutEnvVar(GetEnvVar(L"DD_SERVICE_STOP_TIMEOUT"));
-        if (!serviceStopTimeoutEnvVar.view().empty())
+        // Set the SCM timeout in the registry to be twice as long, that way we can handle shutting down the services ourselves
+        HKEY controlKey;
+        auto status = RegCreateKeyEx(
+            HKEY_LOCAL_MACHINE,
+            L"SYSTEM\\CurrentControlSet\\Control",
+            0,
+            nullptr,
+            REG_OPTION_NON_VOLATILE, KEY_WRITE | KEY_QUERY_VALUE,
+            nullptr,
+            &controlKey,
+            nullptr
+        );
+        if (status != ERROR_SUCCESS)
         {
-            // ReSharper disable once CppRedundantQualifier - legibility.
-            serviceStopTimeoutEnvVar >> std::chrono::parse(L"%Mm%Ss", service_stop_timeout);
-            std::wcout << L"[ENTRYPOINT][INFO] DD_SERVICE_STOP_TIMEOUT = " << service_stop_timeout << std::endl;
-            if (service_stop_timeout < std::chrono::seconds(30))
-            {
-                std::wcout << L"[ENTRYPOINT][WARNING] DD_SERVICE_STOP_TIMEOUT < 30s, resetting it to 30s to avoid causing issues with stopping dependent services" << std::endl;
-                service_stop_timeout = std::chrono::seconds(30);
-            }
+            throw std::exception("failed to open registry");
+        }
+        const DWORD servicesPipeTimeout = static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(service_timeout).count() * 2);
+        status = RegSetValueEx(
+            controlKey,
+            L"ServicesPipeTimeout",
+            0,
+            REG_DWORD,
+            reinterpret_cast<const BYTE*>(&servicesPipeTimeout),
+            sizeof servicesPipeTimeout
+        );
+        if (status != ERROR_SUCCESS)
+        {
+            throw std::exception("Setting key value failed.");
         }
 
         auto svcIt = services.find(command);
