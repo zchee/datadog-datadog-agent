@@ -155,11 +155,11 @@ func TestFork1st(t *testing.T) {
 
 	// parent
 	parent := newFakeExecEvent(0, 1, "/bin/parent")
-	new, err := processList.Insert(parent, true, "")
+	inserted, err := processList.Insert(parent, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, true, new)
+	assert.Equal(t, true, inserted)
 	stats.AddProcess(1)
 	stats.ValidateCounters(t, processList)
 	if !isProcessAndExecPresent(processList, pc, parent) {
@@ -169,11 +169,11 @@ func TestFork1st(t *testing.T) {
 	// parent
 	//     \ child
 	child := newFakeExecEvent(1, 2, "/bin/child")
-	new, err = processList.Insert(child, true, "")
+	inserted, err = processList.Insert(child, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, true, new)
+	assert.Equal(t, true, inserted)
 	stats.AddProcess(1)
 	stats.ValidateCounters(t, processList)
 	if checkParentality(processList, pc, parent, child) == false {
@@ -197,7 +197,7 @@ func TestFork1st(t *testing.T) {
 	}
 
 	// nothing
-	deleted, err = processList.DeleteProcess(pc.GetProcessCacheKey(&parent.ProcessContext.Process), "")
+	deleted, err = processList.DeleteCachedProcess(pc.GetProcessCacheKey(&parent.ProcessContext.Process), "")
 	assert.Equal(t, true, deleted)
 	stats.DeleteProcess(1)
 	stats.ValidateCounters(t, processList)

@@ -43,39 +43,68 @@ type processKey struct {
 }
 
 type execKey struct {
+	pid         uint32
+	nsid        uint64
+	execTime    int64
 	pathnameStr string
 }
 
-// IsValidRootNode evaluates if the provided process entry is allowed to become a root node of an Activity Dump
-func (at *ProcessResolver) IsAValidRootNode(entry *model.Process) bool {
+// GetProcessCacheKey returns the process unique identifier
+func (pr *ProcessResolver) GetProcessCacheKey(process *model.Process) interface{} {
+	if process.Pid != 0 {
+		return processKey{pid: process.Pid, nsid: process.NSID}
+	}
+	return nil
+}
+
+// GetExecCacheKey returns the exec unique identifier
+func (pr *ProcessResolver) GetExecCacheKey(process *model.Process) interface{} {
+	if process.Pid != 0 {
+		path := process.FileEvent.PathnameStr
+		if IsBusybox(process.FileEvent.PathnameStr) {
+			path = process.Argv[0]
+		}
+		return execKey{
+			pid:         process.Pid,
+			nsid:        process.NSID,
+			execTime:    process.ExecTime.UnixMicro(),
+			pathnameStr: path,
+		}
+	}
+	return nil
+}
+
+// GetParentProcessCacheKey returns the parent process unique identifier
+func (pr *ProcessResolver) GetParentProcessCacheKey(event *model.Event) interface{} {
+	if event.ProcessContext.Pid != 1 && event.ProcessContext.PPid > 0 {
+		return processKey{pid: event.ProcessContext.PPid, nsid: event.ProcessContext.NSID}
+	}
+	return nil
+}
+
+// IsAValidRootNode evaluates if the provided process entry is allowed to become a root node of an Activity Dump
+func (pr *ProcessResolver) IsAValidRootNode(entry *model.Process) bool {
 	return entry.Pid == 1
 }
 
-func (at *ProcessResolver) ExecMatches(e1, e2 *processlist.ExecNode) bool {
+// ExecMatches returns true if both exec nodes matches
+func (pr *ProcessResolver) ExecMatches(e1, e2 *processlist.ExecNode) bool {
 	return e1.FileEvent.PathnameStr == e2.FileEvent.PathnameStr
 }
 
-func (at *ProcessResolver) ProcessMatches(p1, p2 *processlist.ProcessNode) bool {
+// ProcessMatches returns true if both process nodes matches
+func (pr *ProcessResolver) ProcessMatches(p1, p2 *processlist.ProcessNode) bool {
 	return p1.CurrentExec.Pid == p2.CurrentExec.Pid && p1.CurrentExec.NSID == p2.CurrentExec.NSID
 }
 
 // SendStats sends the tree statistics
-func (at *ProcessResolver) SendStats(client statsd.ClientInterface) error {
+// nolint: all
+func (pr *ProcessResolver) SendStats(client statsd.ClientInterface) error {
 	// TODO
 	return nil
 }
 
-func (at *ProcessResolver) GetProcessCacheKey(process *model.Process) interface{} {
-	return processKey{pid: process.Pid, nsid: process.NSID}
-}
-
-func (at *ProcessResolver) GetExecCacheKey(process *model.Process) interface{} {
-	return execKey{pathnameStr: process.FileEvent.PathnameStr}
-}
-
-func (at *ProcessResolver) GetParentProcessCacheKey(event *model.Event) interface{} {
-	if event.ProcessContext.Pid != 1 {
-		return processKey{pid: event.ProcessContext.PPid, nsid: event.ProcessContext.NSID}
-	}
-	return nil
+// IsBusybox returns true if the pathname matches busybox
+func IsBusybox(pathname string) bool {
+	return pathname == "/bin/busybox" || pathname == "/usr/bin/busybox"
 }

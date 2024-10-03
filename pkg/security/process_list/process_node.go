@@ -11,6 +11,7 @@ package processlist
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"sync"
 
 	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
@@ -20,6 +21,11 @@ import (
 // ProcessNode holds the activity of a process
 type ProcessNode struct {
 	sync.Mutex
+
+	// represent the key used to retrieve the process from the cache
+	// if the owner is able to define a key we use it, otherwise we'll put
+	// a random generated uint64 cookie
+	Key interface{}
 
 	// mainly used by dump/profiles
 	ImageTags []string
@@ -43,13 +49,18 @@ type ProcessNode struct {
 	// == Fields used by process resolver:
 	// refCount?
 	// onRelase CB?
-	// (would be great if we finaly can get rid of it!)
+	// (would be great if we finally can get rid of it!)
 	UserData interface{}
 }
 
-func NewProcessExecNodeFromEvent(event *model.Event) *ProcessNode {
-	exec := NewExecNodeFromEvent(event)
+// NewProcessExecNodeFromEvent returns a process node filled with an exec node corresponding to the given event
+func NewProcessExecNodeFromEvent(event *model.Event, processKey, execKey interface{}) *ProcessNode {
+	if processKey == nil {
+		processKey = rand.Uint64()
+	}
+	exec := NewExecNodeFromEvent(event, execKey)
 	process := &ProcessNode{
+		Key:           processKey,
 		CurrentExec:   exec,
 		PossibleExecs: []*ExecNode{exec},
 	}
@@ -57,7 +68,7 @@ func NewProcessExecNodeFromEvent(event *model.Event) *ProcessNode {
 	return process
 }
 
-// GetParent returns nil for the ActivityTree
+// GetCurrentParent returns the current parent
 func (pn *ProcessNode) GetCurrentParent() ProcessNodeIface {
 	pn.Lock()
 	defer pn.Unlock()
@@ -65,7 +76,7 @@ func (pn *ProcessNode) GetCurrentParent() ProcessNodeIface {
 	return pn.CurrentParent
 }
 
-// GetParent returns nil for the ActivityTree
+// GetPossibleParents returns the possible parents
 func (pn *ProcessNode) GetPossibleParents() []ProcessNodeIface {
 	pn.Lock()
 	defer pn.Unlock()
@@ -73,7 +84,7 @@ func (pn *ProcessNode) GetPossibleParents() []ProcessNodeIface {
 	return pn.PossibleParents
 }
 
-// GetChildren returns the list of children from the ProcessNode
+// GetChildren returns the list of children of the ProcessNode
 func (pn *ProcessNode) GetChildren() *[]*ProcessNode {
 	pn.Lock()
 	defer pn.Unlock()
@@ -95,7 +106,7 @@ func (pn *ProcessNode) GetCurrentSiblings() *[]*ProcessNode {
 	return nil
 }
 
-// AppendChild appends a new root node in the ActivityTree
+// AppendChild appends a new node in the process node
 func (pn *ProcessNode) AppendChild(child *ProcessNode, currentParent bool) {
 	pn.Lock()
 	defer pn.Unlock()
@@ -107,7 +118,7 @@ func (pn *ProcessNode) AppendChild(child *ProcessNode, currentParent bool) {
 	}
 }
 
-// AppendChild appends a new root node in the ActivityTree
+// AppendExec adds a new exec to the process node, and mark it as current if currentExec is specified
 func (pn *ProcessNode) AppendExec(exec *ExecNode, currentExec bool) {
 	pn.Lock()
 	defer pn.Unlock()
@@ -120,7 +131,7 @@ func (pn *ProcessNode) AppendExec(exec *ExecNode, currentExec bool) {
 }
 
 // UnlinkChild unlinks a child from the children list
-func (pn *ProcessNode) UnlinkChild(owner ProcessListOwner, child *ProcessNode) bool {
+func (pn *ProcessNode) UnlinkChild(owner Owner, child *ProcessNode) bool {
 	pn.Lock()
 	defer pn.Unlock()
 
@@ -135,7 +146,25 @@ func (pn *ProcessNode) UnlinkChild(owner ProcessListOwner, child *ProcessNode) b
 	return removed
 }
 
-// debug prints out recursively content of each node
+// Walk walks the process node and childs recursively
+func (pn *ProcessNode) Walk(f func(node *ProcessNode) (stop bool)) (stop bool) {
+	pn.Lock()
+	defer pn.Unlock()
+
+	for _, child := range pn.Children {
+		stop = child.Walk(f)
+		if stop {
+			return stop
+		}
+		stop = f(child)
+		if stop {
+			return stop
+		}
+	}
+	return stop
+}
+
+// Debug prints out recursively content of each node
 func (pn *ProcessNode) Debug(w io.Writer, prefix string) {
 	pn.Lock()
 	defer pn.Unlock()
