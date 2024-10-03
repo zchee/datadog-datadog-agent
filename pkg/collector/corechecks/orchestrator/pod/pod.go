@@ -11,8 +11,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
 
 	"go.uber.org/atomic"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/informers"
+	v1pod "k8s.io/client-go/informers/core/v1"
+	"k8s.io/client-go/tools/cache"
 
 	model "github.com/DataDog/agent-payload/v5/process"
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/integration"
@@ -21,10 +29,12 @@ import (
 	core "github.com/DataDog/datadog-agent/pkg/collector/corechecks"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/cluster/orchestrator/processors"
 	k8sProcessors "github.com/DataDog/datadog-agent/pkg/collector/corechecks/cluster/orchestrator/processors/k8s"
+	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 	"github.com/DataDog/datadog-agent/pkg/orchestrator"
 	oconfig "github.com/DataDog/datadog-agent/pkg/orchestrator/config"
 	"github.com/DataDog/datadog-agent/pkg/process/checks"
 	"github.com/DataDog/datadog-agent/pkg/util/hostname"
+	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/apiserver"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/clustername"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -35,6 +45,7 @@ import (
 const CheckName = "orchestrator_pod"
 
 var groupID atomic.Int32
+var startTerminatedPodsCollection sync.Once
 
 func nextGroupID() int32 {
 	groupID.Add(1)
@@ -44,12 +55,13 @@ func nextGroupID() int32 {
 // Check doesn't need additional fields
 type Check struct {
 	core.CheckBase
-	hostName   string
-	clusterID  string
-	sender     sender.Sender
-	processor  *processors.Processor
-	config     *oconfig.OrchestratorConfig
-	systemInfo *model.SystemInfo
+	hostName                     string
+	clusterID                    string
+	sender                       sender.Sender
+	processor                    *processors.Processor
+	config                       *oconfig.OrchestratorConfig
+	systemInfo                   *model.SystemInfo
+	stopTerminatedPodsCollection chan struct{}
 }
 
 // Factory creates a new check factory
@@ -114,11 +126,22 @@ func (c *Check) Configure(
 		log.Warnf("Failed to collect system info: %s", err)
 	}
 
+	c.stopTerminatedPodsCollection = make(chan struct{})
+
 	return nil
 }
 
 // Run executes the check
 func (c *Check) Run() error {
+	if pkgconfigsetup.Datadog().GetBool("orchestrator_explorer.terminated_resources") {
+		startTerminatedPodsCollection.Do(func() {
+			log.Infof("Starting terminated pods collection")
+			if err := c.startTerminatedPodsCollection(); err != nil {
+				log.Errorf("Unable to start terminated pods collection: %s", err)
+			}
+		})
+	}
+
 	if c.clusterID == "" {
 		clusterID, err := clustername.GetClusterID()
 		if err != nil {
@@ -162,4 +185,86 @@ func (c *Check) Run() error {
 	c.sender.OrchestratorManifest(processResult.ManifestMessages, c.clusterID)
 
 	return nil
+}
+
+func (c *Check) startTerminatedPodsCollection() error {
+	podInformer, err := getPodInformer()
+	if err != nil {
+		return err
+	}
+
+	if _, err = podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		DeleteFunc: c.deletionHandler,
+	}); err != nil {
+		return err
+	}
+
+	go podInformer.Informer().Run(c.stopTerminatedPodsCollection)
+
+	return nil
+}
+
+func (c *Check) deletionHandler(obj interface{}) {
+	pod, ok := obj.(*v1.Pod)
+	if !ok {
+		log.Warn("deletionHandler received an object that is not a Pod")
+		return
+	}
+
+	ctx := &processors.K8sProcessorContext{
+		BaseProcessorContext: processors.BaseProcessorContext{
+			Cfg:              c.config,
+			NodeType:         orchestrator.K8sPod,
+			ClusterID:        c.clusterID,
+			ManifestProducer: true,
+		},
+		HostName:           c.hostName,
+		ApiGroupVersionTag: "kube_api_version:v1",
+		SystemInfo:         c.systemInfo,
+	}
+
+	processResult, processed := c.processor.Process(ctx, []*v1.Pod{pod})
+	if processed == -1 {
+		log.Warn("unable to process pods: a panic occurred")
+		return
+	}
+
+	orchestrator.SetCacheStats(1, processed, ctx.NodeType)
+
+	c.sender.OrchestratorMetadata(processResult.MetadataMessages, c.clusterID, int(orchestrator.K8sPod))
+	c.sender.OrchestratorManifest(processResult.ManifestMessages, c.clusterID)
+}
+
+func getPodInformer() (v1pod.PodInformer, error) {
+	kubeUtil, err := kubelet.GetKubeUtil()
+	if err != nil {
+		return nil, err
+	}
+
+	nodeName, err := kubeUtil.GetNodename(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	apiCtx, apiCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer apiCancel()
+
+	apiClient, err := apiserver.WaitForAPIClient(apiCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	tweakListOptions := func(options *metav1.ListOptions) {
+		options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
+	}
+
+	informerFactory := informers.NewSharedInformerFactoryWithOptions(apiClient.InformerCl, 300*time.Second, informers.WithTweakListOptions(tweakListOptions))
+
+	return informerFactory.Core().V1().Pods(), nil
+}
+
+// Stop stops the check
+func (c *Check) Stop() {
+	close(c.stopTerminatedPodsCollection)
+	log.Infof("Terminated pods collection stopped")
 }
