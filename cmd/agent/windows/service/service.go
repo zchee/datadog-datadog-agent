@@ -10,6 +10,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/DataDog/datadog-agent/cmd/agent/common"
 	runcmd "github.com/DataDog/datadog-agent/cmd/agent/subcommands/run"
@@ -32,6 +33,7 @@ func (s *service) Name() string {
 }
 
 func (s *service) Init() error {
+	time.Sleep(40 * time.Second)
 	_ = common.CheckAndUpgradeConfig()
 	// ignore config upgrade error, continue running with what we have.
 
