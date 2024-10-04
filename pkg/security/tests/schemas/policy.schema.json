@@ -346,12 +346,6 @@
             }
           ]
         },
-        "limiter_token": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
         "silent": {
           "type": "boolean"
         },

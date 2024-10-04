@@ -98,7 +98,7 @@ func NewCWSConsumer(evm *eventmonitor.EventMonitor, cfg *config.RuntimeSecurityC
 	if opts.EventSender != nil {
 		c.eventSender = opts.EventSender
 	} else {
-		c.eventSender = c.APIServer()
+		c.eventSender = c
 	}
 
 	seclog.Infof("Instantiating CWS rule engine")
@@ -108,7 +108,7 @@ func NewCWSConsumer(evm *eventmonitor.EventMonitor, cfg *config.RuntimeSecurityC
 		listeners = append(listeners, selfTester)
 	}
 
-	c.ruleEngine, err = rulesmodule.NewRuleEngine(evm, cfg, evm.Probe, c.rateLimiter, c.apiServer, c, c.statsdClient, listeners...)
+	c.ruleEngine, err = rulesmodule.NewRuleEngine(evm, cfg, evm.Probe, c.rateLimiter, c.apiServer, c.eventSender, c.statsdClient, listeners...)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (c *CWSConsumer) Start() error {
 	// we can now wait for self test events
 	cb := func(success []eval.RuleID, fails []eval.RuleID, testEvents map[eval.RuleID]*serializers.EventSerializer) {
 		if c.config.SelfTestSendReport {
-			c.reportSelfTest(success, fails, testEvents)
+			ReportSelfTest(c.eventSender, c.statsdClient, success, fails, testEvents)
 		}
 
 		seclog.Debugf("self-test results : success : %v, failed : %v", success, fails)
@@ -221,19 +221,20 @@ func (c *CWSConsumer) RunSelfTest(gRPC bool) (bool, error) {
 	return true, nil
 }
 
-func (c *CWSConsumer) reportSelfTest(success []eval.RuleID, fails []eval.RuleID, testEvents map[eval.RuleID]*serializers.EventSerializer) {
+// ReportSelfTest reports to Datadog that a self test was performed
+func ReportSelfTest(sender events.EventSender, statsdClient statsd.ClientInterface, success []eval.RuleID, fails []eval.RuleID, testEvents map[eval.RuleID]*serializers.EventSerializer) {
 	// send metric with number of success and fails
 	tags := []string{
 		fmt.Sprintf("success:%d", len(success)),
 		fmt.Sprintf("fails:%d", len(fails)),
 	}
-	if err := c.statsdClient.Count(metrics.MetricSelfTest, 1, tags, 1.0); err != nil {
+	if err := statsdClient.Count(metrics.MetricSelfTest, 1, tags, 1.0); err != nil {
 		seclog.Errorf("failed to send self_test metric: %s", err)
 	}
 
 	// send the custom event with the list of succeed and failed self tests
 	rule, event := selftests.NewSelfTestEvent(success, fails, testEvents)
-	c.SendEvent(rule, event, nil, "")
+	sender.SendEvent(rule, event, nil, "")
 }
 
 // Stop closes the module
@@ -254,14 +255,13 @@ func (c *CWSConsumer) Stop() {
 
 // HandleCustomEvent is called by the probe when an event should be sent to Datadog but doesn't need evaluation
 func (c *CWSConsumer) HandleCustomEvent(rule *rules.Rule, event *events.CustomEvent) {
-	c.SendEvent(rule, event, nil, "")
+	c.eventSender.SendEvent(rule, event, nil, "")
 }
 
 // SendEvent sends an event to the backend after checking that the rate limiter allows it for the provided rule
-// Implements the EventSender interface
 func (c *CWSConsumer) SendEvent(rule *rules.Rule, event events.Event, extTagsCb func() []string, service string) {
 	if c.rateLimiter.Allow(rule.ID, event) {
-		c.eventSender.SendEvent(rule, event, extTagsCb, service)
+		c.apiServer.SendEvent(rule, event, extTagsCb, service)
 	} else {
 		seclog.Tracef("Event on rule %s was dropped due to rate limiting", rule.ID)
 	}

@@ -156,11 +156,6 @@ func (ce *CustomEvent) GetWorkloadID() string {
 	return ""
 }
 
-// GetFieldValue returns the field value
-func (ce *CustomEvent) GetFieldValue(_ eval.Field) (interface{}, error) {
-	return "", eval.ErrFieldNotFound{}
-}
-
 // GetEventType returns the event type
 func (ce *CustomEvent) GetEventType() model.EventType {
 	return ce.eventType
