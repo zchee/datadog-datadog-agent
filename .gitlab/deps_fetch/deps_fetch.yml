@@ -55,7 +55,7 @@ go_deps:
     # failing a job because of a network issue when building the custom binary is very low, but still exists.
     - key:
         files:
-          - \**/go.mod
+          - "**/go.mod"
           - .gitlab/deps_fetch/deps_fetch.yml
         prefix: "go_deps_modcache"
       paths:
