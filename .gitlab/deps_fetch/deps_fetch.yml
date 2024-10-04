@@ -56,7 +56,7 @@ go_deps:
     - key:
         files:
           - "**/go.mod"
-          - .gitlab/deps_fetch/deps_fetch.yml
+          - "{go.mod,.gitlab/deps_fetch/deps_fetch.yml}"
         prefix: "go_deps_modcache"
       paths:
         - modcache.tar.xz
