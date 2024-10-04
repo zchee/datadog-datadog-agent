@@ -280,3 +280,4 @@ require (
 	github.com/pulumi/pulumi-gcp/sdk/v6 v6.67.1 // indirect
 	github.com/pulumi/pulumi-gcp/sdk/v7 v7.38.0 // indirect
 )
+
