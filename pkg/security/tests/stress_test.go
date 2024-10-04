@@ -37,9 +37,7 @@ func stressOpen(t *testing.T, rule *rules.RuleDefinition, pathname string, size 
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)
@@ -185,9 +183,7 @@ func stressExec(t *testing.T, rule *rules.RuleDefinition, pathname string, execu
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)

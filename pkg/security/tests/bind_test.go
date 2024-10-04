@@ -40,9 +40,7 @@ func TestBindEvent(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")

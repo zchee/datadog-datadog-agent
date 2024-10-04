@@ -51,9 +51,7 @@ func TestChown(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	prevUID := 98
@@ -320,9 +318,7 @@ func TestChownUserGroup(t *testing.T) {
 	defer removeFakePasswd()
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("fchown", func(t *testing.T) {

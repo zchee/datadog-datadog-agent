@@ -120,9 +120,7 @@ func TestUserGroup(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	for _, distroTest := range distroTests {

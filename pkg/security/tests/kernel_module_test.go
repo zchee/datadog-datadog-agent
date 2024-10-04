@@ -114,9 +114,7 @@ func TestKworker(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	_ = unix.DeleteModule("xt_LED", 0)
@@ -205,9 +203,7 @@ func TestLoadModule(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("init_module", func(t *testing.T) {
@@ -360,9 +356,7 @@ func TestUnloadModule(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("delete_module", func(t *testing.T) {

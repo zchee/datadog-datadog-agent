@@ -49,9 +49,7 @@ func TestSBOM(t *testing.T) {
 		},
 	}
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{enableSBOM: true, enableHostSBOM: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)

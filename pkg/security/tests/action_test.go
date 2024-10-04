@@ -65,9 +65,7 @@ func TestActionKill(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -214,9 +212,7 @@ func TestActionKillExcludeBinary(t *testing.T) {
 	executable := which(t, "sleep")
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{enforcementExcludeBinary: executable}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	killed := atomic.NewBool(false)
@@ -274,9 +270,7 @@ func TestActionKillRuleSpecific(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -558,9 +552,7 @@ func TestActionKillDisarm(t *testing.T) {
 		enforcementDisarmerExecutablePeriod:     enforcementDisarmerExecutablePeriod,
 		eventServerRetention:                    1 * time.Nanosecond,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -647,9 +639,7 @@ func TestActionKillDisarmFromRule(t *testing.T) {
 		enforcementDisarmerExecutablePeriod:     1 * time.Hour,
 		eventServerRetention:                    1 * time.Nanosecond,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -680,9 +670,7 @@ func TestActionHash(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFile, _, err := test.Path("test-hash-action")

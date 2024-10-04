@@ -13,11 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/DataDog/datadog-agent/pkg/security/ebpf/kernel"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/containerutils"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/rules"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestContainerCreatedAt(t *testing.T) {
@@ -39,9 +40,7 @@ func TestContainerCreatedAt(t *testing.T) {
 		},
 	}
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFile, _, err := test.Path("test-open")
@@ -111,9 +110,7 @@ func TestContainerFlagsDocker(t *testing.T) {
 		},
 	}
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFile, _, err := test.Path("test-open")
@@ -158,9 +155,7 @@ func TestContainerFlagsPodman(t *testing.T) {
 		},
 	}
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFile, _, err := test.Path("test-open")

@@ -34,9 +34,7 @@ func runHardlinkTests(t *testing.T, opts testOpts) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(opts))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	// copy touch to make sure it is place on the same fs, hard link constraint
@@ -138,9 +136,7 @@ func TestHardLink(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	// copy touch to make sure it is place on the same fs, hard link constraint

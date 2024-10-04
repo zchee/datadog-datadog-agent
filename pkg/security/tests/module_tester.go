@@ -73,6 +73,14 @@ func (s *stringSlice) Set(value string) error {
 	return nil
 }
 
+func fatalAndResetOnError(tb testing.TB, err error) {
+	tb.Helper()
+	if err != nil {
+		testMod = nil
+		tb.Fatal(err)
+	}
+}
+
 func (tm *testModule) HandleEvent(event *model.Event) {
 	tm.eventHandlers.RLock()
 	defer tm.eventHandlers.RUnlock()

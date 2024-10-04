@@ -32,9 +32,7 @@ func TestLink(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	fileMode := 0o447

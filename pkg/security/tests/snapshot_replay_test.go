@@ -33,10 +33,7 @@ func TestSnapshotReplay(t *testing.T) {
 			gotEvent = true
 		},
 	}))
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	assert.True(t, gotEvent, "didn't get the event from snapshot")

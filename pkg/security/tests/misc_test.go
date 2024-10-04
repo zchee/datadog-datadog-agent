@@ -40,9 +40,7 @@ func TestOsOrigin(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{ruleDef})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	test.WaitSignal(t, func() error {
@@ -70,9 +68,7 @@ func TestHostname(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{ruleDef})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	test.WaitSignal(t, func() error {

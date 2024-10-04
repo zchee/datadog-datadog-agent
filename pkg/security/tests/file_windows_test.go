@@ -31,9 +31,7 @@ func TestBasicFileTest(t *testing.T) {
 		enableFIM: true,
 	}
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{cfn}, withStaticOpts(opts))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	// this is kinda hokey.  ETW (which is what FIM is based on) takes an indeterminant amount of time to start up.
 	// so wait around for it to start
@@ -74,9 +72,7 @@ func TestRenameFileEvent(t *testing.T) {
 		enableFIM: true,
 	}
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{cfn}, withStaticOpts(opts))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	// this is kinda hokey.  ETW (which is what FIM is based on) takes an indeterminant amount of time to start up.
 	// so wait around for it to start
@@ -111,9 +107,7 @@ func TestDeleteFileEvent(t *testing.T) {
 		enableFIM: true,
 	}
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{cfn}, withStaticOpts(opts))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	// this is kinda hokey.  ETW (which is what FIM is based on) takes an indeterminant amount of time to start up.
 	// so wait around for it to start
@@ -147,9 +141,7 @@ func TestWriteFileEvent(t *testing.T) {
 		enableFIM: true,
 	}
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{cfn}, withStaticOpts(opts))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	// this is kinda hokey.  ETW (which is what FIM is based on) takes an indeterminant amount of time to start up.
 	// so wait around for it to start
@@ -195,9 +187,7 @@ func TestWriteFileEventWithCreate(t *testing.T) {
 		enableFIM: true,
 	}
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(opts))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	// this is kinda hokey.  ETW (which is what FIM is based on) takes an indeterminant amount of time to start up.
 	// so wait around for it to start

@@ -36,9 +36,7 @@ func TestSetXAttr(t *testing.T) {
 	defer testDrive.Close()
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withDynamicOpts(dynamicTestOpts{testDir: testDrive.Root()}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	xattrName, err := syscall.BytePtrFromString("user.test_xattr")
@@ -169,9 +167,7 @@ func TestRemoveXAttr(t *testing.T) {
 	defer testDrive.Close()
 
 	test, err := newTestModule(t, nil, ruleDefs, withDynamicOpts(dynamicTestOpts{testDir: testDrive.Root()}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	xattrName, err := syscall.BytePtrFromString("user.test_xattr")

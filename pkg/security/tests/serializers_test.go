@@ -39,9 +39,7 @@ func fetchRealisticEventSerializerInner(tb testing.TB) *serializers.EventSeriali
 	}
 
 	test, err := newTestModule(tb, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		tb.Fatal(err)
-	}
+	fatalAndResetOnError(tb, err)
 	defer test.Close()
 
 	_, testFilePtr, err := test.Path("test-open")

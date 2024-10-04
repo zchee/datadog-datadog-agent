@@ -63,9 +63,7 @@ func TestSELinux(t *testing.T) {
 	defer setBoolValue(TestBoolName, savedBoolValue)
 
 	test, err := newTestModule(t, nil, ruleset)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("setenforce", func(t *testing.T) {
@@ -166,9 +164,7 @@ func TestSELinuxCommitBools(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleset)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	savedBoolValue, err := getBoolValue(TestBoolName)

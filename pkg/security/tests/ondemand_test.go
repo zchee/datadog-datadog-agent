@@ -15,10 +15,11 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
-	"github.com/DataDog/datadog-agent/pkg/security/secl/rules"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sys/unix"
+
+	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
+	"github.com/DataDog/datadog-agent/pkg/security/secl/rules"
 )
 
 func TestOnDemandOpen(t *testing.T) {
@@ -48,9 +49,7 @@ func TestOnDemandOpen(t *testing.T) {
 	}
 
 	test, err := newTestModuleWithOnDemandProbes(t, onDemands, nil, ruleDefs, withStaticOpts(testOpts{disableOnDemandRateLimiter: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	fileMode := 0o447
@@ -106,9 +105,7 @@ func TestOnDemandChdir(t *testing.T) {
 	}
 
 	test, err := newTestModuleWithOnDemandProbes(t, onDemands, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFolder, _, err := test.Path("test-chdir")
@@ -158,9 +155,7 @@ func TestOnDemandMprotect(t *testing.T) {
 	}
 
 	test, err := newTestModuleWithOnDemandProbes(t, onDemands, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	test.WaitSignal(t, func() error {

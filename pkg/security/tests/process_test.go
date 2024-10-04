@@ -61,9 +61,7 @@ func TestProcess(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{ruleDef})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	test.WaitSignal(t, func() error {
@@ -90,9 +88,7 @@ func TestProcessEBPFLess(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFLessProbe)
@@ -218,9 +214,7 @@ func TestProcessContext(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -1073,9 +1067,7 @@ func TestProcessEnvsWithValue(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(opts))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("ldpreload", func(t *testing.T) {
@@ -1106,9 +1098,7 @@ func TestProcessExecCTime(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{ruleDef})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	test.WaitSignal(t, func() error {
@@ -1136,9 +1126,7 @@ func TestProcessPIDVariable(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{ruleDef})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	test.WaitSignal(t, func() error {
@@ -1219,9 +1207,7 @@ func TestProcessScopedVariable(t *testing.T) {
 	}}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var filename1, filename2, filename3 string
@@ -1279,9 +1265,7 @@ func TestTimestampVariable(t *testing.T) {
 	}}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var filename1, filename2 string
@@ -1320,9 +1304,7 @@ func TestProcessExec(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{ruleDef})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -1370,9 +1352,7 @@ func TestProcessMetadata(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	fileMode := uint16(0o777)
@@ -1443,9 +1423,7 @@ func TestProcessExecExit(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var execPid uint32
@@ -1560,9 +1538,7 @@ func TestProcessCredentialsUpdate(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -1717,9 +1693,7 @@ func TestProcessIsThread(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -1794,9 +1768,7 @@ func TestProcessExit(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("exit-ok", func(t *testing.T) {
@@ -1936,9 +1908,7 @@ func TestProcessBusybox(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	wrapper, err := newDockerCmdWrapper(test.Root(), test.Root(), "alpine", "")
@@ -2140,9 +2110,7 @@ chmod 755 pyscript.py
 	}
 
 	testModule, err := newTestModule(t, nil, ruleList)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer testModule.Close()
 
 	p, ok := testModule.probe.PlatformProbe.(*sprobe.EBPFProbe)
@@ -2191,9 +2159,7 @@ func TestProcessResolution(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)
@@ -2356,9 +2322,7 @@ func TestProcessFilelessExecution(t *testing.T) {
 	}
 
 	testModule, err := newTestModule(t, nil, ruleList)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer testModule.Close()
 
 	syscallTester, err := loadSyscallTester(t, testModule, "syscall_tester")

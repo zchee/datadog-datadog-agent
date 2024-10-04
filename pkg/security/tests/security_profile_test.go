@@ -63,9 +63,7 @@ func TestSecurityProfile(t *testing.T) {
 		securityProfileDir:                  outputDir,
 		securityProfileWatchDir:             true,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -243,9 +241,7 @@ func TestAnomalyDetection(t *testing.T) {
 		anomalyDetectionMinimumStablePeriodDNS:  time.Second,
 		anomalyDetectionWarmupPeriod:            time.Second,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -428,9 +424,7 @@ func TestAnomalyDetectionWarmup(t *testing.T) {
 		anomalyDetectionWarmupPeriod:            3 * time.Second,
 		tagsResolver:                            NewFakeMonoResolver(),
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	err = test.StopAllActivityDumps()
@@ -600,9 +594,7 @@ func TestSecurityProfileReinsertionPeriod(t *testing.T) {
 		anomalyDetectionMinimumStablePeriodDNS:  10 * time.Second,
 		anomalyDetectionWarmupPeriod:            10 * time.Second,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -808,9 +800,7 @@ func TestSecurityProfileAutoSuppression(t *testing.T) {
 		anomalyDetectionMinimumStablePeriodDNS:  reinsertPeriod,
 		anomalyDetectionWarmupPeriod:            reinsertPeriod,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -977,9 +967,7 @@ func TestSecurityProfileDifferentiateArgs(t *testing.T) {
 		anomalyDetectionMinimumStablePeriodDNS:  time.Second,
 		anomalyDetectionWarmupPeriod:            time.Second,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	dockerInstance, dump, err := test.StartADockerGetDump()
@@ -1090,9 +1078,7 @@ func TestSecurityProfileLifeCycleExecs(t *testing.T) {
 		anomalyDetectionWarmupPeriod:            1 * time.Second,
 		tagsResolver:                            fakeManualResolver,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -1266,9 +1252,7 @@ func TestSecurityProfileLifeCycleDNS(t *testing.T) {
 		anomalyDetectionWarmupPeriod:            1 * time.Second,
 		tagsResolver:                            fakeManualResolver,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -1441,9 +1425,7 @@ func TestSecurityProfileLifeCycleEvictitonProcess(t *testing.T) {
 		tagsResolver:                            fakeManualResolver,
 		securityProfileMaxImageTags:             2,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -1622,9 +1604,7 @@ func TestSecurityProfileLifeCycleEvictitonDNS(t *testing.T) {
 		tagsResolver:                            fakeManualResolver,
 		securityProfileMaxImageTags:             2,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -1803,9 +1783,7 @@ func TestSecurityProfileLifeCycleEvictitonProcessUnstable(t *testing.T) {
 		tagsResolver:                            fakeManualResolver,
 		securityProfileMaxImageTags:             2,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -1986,9 +1964,7 @@ func TestSecurityProfilePersistence(t *testing.T) {
 		anomalyDetectionWarmupPeriod:            1 * time.Second,
 		tagsResolver:                            fakeManualResolver,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	dockerInstance1, err := test.StartADocker()
@@ -2196,9 +2172,7 @@ func TestSecurityProfileSyscallDrift(t *testing.T) {
 		securityProfileDir:                         outputDir,
 		tagsResolver:                               NewFakeMonoResolver(),
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	goSyscallTester, err := loadSyscallTester(t, test, "syscall_go_tester")
@@ -2321,9 +2295,7 @@ func TestSecurityProfileSyscallDriftExecExitInProfile(t *testing.T) {
 		securityProfileDir:                         outputDir,
 		tagsResolver:                               NewFakeMonoResolver(),
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	goSyscallTester, err := loadSyscallTester(t, test, "syscall_go_tester")
@@ -2444,9 +2416,7 @@ func TestSecurityProfileSyscallDriftNoNewSyscall(t *testing.T) {
 		securityProfileDir:                         outputDir,
 		tagsResolver:                               NewFakeMonoResolver(),
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	goSyscallTester, err := loadSyscallTester(t, test, "syscall_go_tester")

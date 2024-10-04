@@ -31,9 +31,7 @@ func TestMMapEvent(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("mmap", func(t *testing.T) {
@@ -76,9 +74,7 @@ func TestMMapApproverZero(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	test.WaitSignal(t, func() error {

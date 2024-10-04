@@ -75,9 +75,7 @@ func TestActivityDumpsThreatScore(t *testing.T) {
 		activityDumpTracedEventTypes:        testActivityDumpTracedEventTypes,
 		activityDumpTagRules:                true,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {

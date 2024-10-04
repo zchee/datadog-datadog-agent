@@ -109,9 +109,7 @@ func TestOverlayFS(t *testing.T) {
 	defer testDrive.Close()
 
 	test, err := newTestModule(t, nil, ruleDefs, withDynamicOpts(dynamicTestOpts{testDir: testDrive.Root()}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	// create layers

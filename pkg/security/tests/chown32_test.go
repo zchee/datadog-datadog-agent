@@ -38,9 +38,7 @@ func TestChown32(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{ruleDef, ruleDef2})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_x86_tester")

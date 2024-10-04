@@ -32,9 +32,7 @@ func TestRmdir(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	mkdirMode := 0o707
@@ -177,9 +175,7 @@ func TestRmdirInvalidate(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	ifSyscallSupported("SYS_RMDIR", func(t *testing.T, syscallNB uintptr) {

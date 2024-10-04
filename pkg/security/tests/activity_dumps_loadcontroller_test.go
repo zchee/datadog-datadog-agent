@@ -54,9 +54,7 @@ func TestActivityDumpsLoadControllerTimeout(t *testing.T) {
 		networkIngressEnabled:               true,
 	}
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{}, withStaticOpts(opts))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	// first, stop all running activity dumps
@@ -118,9 +116,7 @@ func TestActivityDumpsLoadControllerEventTypes(t *testing.T) {
 		activityDumpLoadControllerPeriod:    testActivityDumpLoadControllerPeriod,
 		networkIngressEnabled:               true,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -228,9 +224,7 @@ func TestActivityDumpsLoadControllerRateLimiter(t *testing.T) {
 		activityDumpLoadControllerPeriod:    testActivityDumpLoadControllerPeriod,
 		networkIngressEnabled:               true,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {

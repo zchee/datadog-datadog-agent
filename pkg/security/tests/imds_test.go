@@ -16,12 +16,13 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/DataDog/datadog-agent/pkg/config/env"
 	"github.com/DataDog/datadog-agent/pkg/security/ebpf/kernel"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/rules"
-	"github.com/DataDog/datadog-agent/pkg/security/tests/imds_utils"
-	"github.com/stretchr/testify/assert"
+	imdsutils "github.com/DataDog/datadog-agent/pkg/security/tests/imds_utils"
 )
 
 func TestAWSIMDSv1Request(t *testing.T) {
@@ -71,9 +72,7 @@ func TestAWSIMDSv1Request(t *testing.T) {
 	}()
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("aws_imds_v1_request", func(t *testing.T) {
@@ -149,9 +148,7 @@ func TestAWSIMDSv1Response(t *testing.T) {
 	}()
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("aws_imds_v1_response", func(t *testing.T) {
@@ -225,9 +222,7 @@ func TestNoAWSIMDSv1Response(t *testing.T) {
 	}()
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{networkIngressEnabled: false}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("no_aws_imds_v1_response", func(t *testing.T) {
@@ -297,9 +292,7 @@ func TestAWSIMDSv2Request(t *testing.T) {
 	}()
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("aws_imds_v2_request", func(t *testing.T) {
@@ -375,9 +368,7 @@ func TestGCPIMDS(t *testing.T) {
 	}()
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("gcp_imds_request", func(t *testing.T) {
@@ -453,9 +444,7 @@ func TestAzureIMDS(t *testing.T) {
 	}()
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("azure_imds_request", func(t *testing.T) {
@@ -531,9 +520,7 @@ func TestIBMIMDS(t *testing.T) {
 	}()
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("ibm_imds_request", func(t *testing.T) {
@@ -609,9 +596,7 @@ func TestOracleIMDS(t *testing.T) {
 	}()
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("oracle_imds_request", func(t *testing.T) {
@@ -692,9 +677,7 @@ func TestIMDSProcessContext(t *testing.T) {
 	}()
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFile, testFilePtr, err := test.Path("test-open")

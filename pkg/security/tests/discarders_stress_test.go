@@ -177,9 +177,7 @@ func runTestDiscarders(t *testing.T, metrics map[string]*metric) {
 		},
 	}
 	test, err := newTestModule(t, nil, rules, withStaticOpts(testOpts{enableActivityDump: false}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	rootPath, _, err := test.Path("files_generator_root")

@@ -35,9 +35,7 @@ func TestEventRulesetLoaded(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	test.cws.SendStats()
@@ -79,9 +77,7 @@ func TestEventHeartbeatSent(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	test.cws.SendStats()
@@ -120,9 +116,7 @@ func TestEventRaleLimiters(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -232,9 +226,7 @@ func truncatedParents(t *testing.T, staticOpts testOpts, dynamicOpts dynamicTest
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withStaticOpts(staticOpts), withDynamicOpts(dynamicOpts))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	truncatedParentsFile, _, err := test.Path(truncatedParents)

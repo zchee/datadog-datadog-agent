@@ -92,9 +92,7 @@ func benchLatencyDNS(t *testing.T, rule *rules.RuleDefinition, executable string
 		var ruleDefs []*rules.RuleDefinition
 		ruleDefs = append(ruleDefs, rule)
 		test, err := newTestModule(t, nil, ruleDefs)
-		if err != nil {
-			t.Fatal(err)
-		}
+		fatalAndResetOnError(t, err)
 		defer test.Close()
 	}
 

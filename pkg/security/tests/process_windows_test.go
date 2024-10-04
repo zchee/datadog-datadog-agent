@@ -13,9 +13,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/rules"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestBasicTest(t *testing.T) {
@@ -24,9 +25,7 @@ func TestBasicTest(t *testing.T) {
 		Expression: `exec.file.name in ["at.exe","schtasks.exe"]`,
 	}
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{ruleDef})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("basic process", func(t *testing.T) {

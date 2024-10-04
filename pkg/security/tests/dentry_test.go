@@ -38,9 +38,7 @@ func TestDentryPathERPC(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withStaticOpts(testOpts{disableMapDentryResolution: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)
@@ -105,9 +103,7 @@ func TestDentryPathMap(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withStaticOpts(testOpts{disableERPCDentryResolution: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)
@@ -172,9 +168,7 @@ func TestDentryName(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)
@@ -223,9 +217,7 @@ func BenchmarkERPCDentryResolutionPath(b *testing.B) {
 	}
 
 	test, err := newTestModule(b, nil, []*rules.RuleDefinition{rule}, withStaticOpts(testOpts{disableMapDentryResolution: true}))
-	if err != nil {
-		b.Fatal(err)
-	}
+	fatalAndResetOnError(b, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)
@@ -292,9 +284,7 @@ func BenchmarkMapDentryResolutionSegment(b *testing.B) {
 	}
 
 	test, err := newTestModule(b, nil, []*rules.RuleDefinition{rule}, withStaticOpts(testOpts{disableERPCDentryResolution: true}))
-	if err != nil {
-		b.Fatal(err)
-	}
+	fatalAndResetOnError(b, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)
@@ -361,9 +351,7 @@ func BenchmarkMapDentryResolutionPath(b *testing.B) {
 	}
 
 	test, err := newTestModule(b, nil, []*rules.RuleDefinition{rule}, withStaticOpts(testOpts{disableERPCDentryResolution: true}))
-	if err != nil {
-		b.Fatal(err)
-	}
+	fatalAndResetOnError(b, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)

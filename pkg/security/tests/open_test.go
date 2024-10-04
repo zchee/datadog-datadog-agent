@@ -44,9 +44,7 @@ func TestOpen(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFile, testFilePtr, err := test.Path("test-open")
@@ -396,9 +394,7 @@ func TestOpenMetadata(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	fileMode := 0o447
@@ -443,9 +439,7 @@ func TestOpenDiscarded(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("pipefs", func(t *testing.T) {
@@ -484,9 +478,7 @@ func TestOpenApproverZero(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withDynamicOpts(dynamicTestOpts{disableBundledRules: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFile, testFilePtr, err := test.Path("test-open")
@@ -548,9 +540,7 @@ func openMountByID(mountID int) (f *os.File, err error) {
 
 func benchmarkOpenSameFile(b *testing.B, disableFilters bool, rules ...*rules.RuleDefinition) {
 	test, err := newTestModule(b, nil, rules, withStaticOpts(testOpts{disableFilters: disableFilters}))
-	if err != nil {
-		b.Fatal(err)
-	}
+	fatalAndResetOnError(b, err)
 	defer test.Close()
 
 	testFile, _, err := test.Path("benchtest")
@@ -618,9 +608,7 @@ func createFolder(current string, filesPerFolder, maxDepth int) error {
 
 func benchmarkFind(b *testing.B, filesPerFolder, maxDepth int, rules ...*rules.RuleDefinition) {
 	test, err := newTestModule(b, nil, rules)
-	if err != nil {
-		b.Fatal(err)
-	}
+	fatalAndResetOnError(b, err)
 	defer test.Close()
 
 	if err := createFolder(test.Root(), filesPerFolder, maxDepth); err != nil {

@@ -40,9 +40,7 @@ func TestMacros(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, macros, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFile, _, err := test.Path("test-macro")

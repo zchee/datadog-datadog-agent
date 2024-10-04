@@ -38,9 +38,7 @@ func TestLoginUID(t *testing.T) {
 			Expression: `open.file.path == "/tmp/test-auid" && open.flags & O_CREAT != 0 && process.auid == 1005 && process.file.name == "syscall_go_tester"`,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	goSyscallTester, err := loadSyscallTester(t, test, "syscall_go_tester")

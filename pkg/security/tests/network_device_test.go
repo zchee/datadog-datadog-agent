@@ -50,9 +50,7 @@ func TestNetDevice(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	currentNetns, err := utils.NetNSPathFromPid(utils.Getpid()).GetProcessNetworkNamespace()
@@ -161,9 +159,7 @@ func TestTCFilters(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withStaticOpts(testOpts{networkIngressEnabled: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 
 	var testModuleCleanedUp bool
 	defer func() {

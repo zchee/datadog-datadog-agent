@@ -63,9 +63,7 @@ func TestFilterOpenBasenameApprover(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withDynamicOpts(dynamicTestOpts{disableBundledRules: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var fd1, fd2 int
@@ -140,9 +138,7 @@ func TestFilterOpenLeafDiscarder(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var fd int
@@ -210,9 +206,7 @@ func TestFilterOpenLeafDiscarderActivityDump(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withStaticOpts(testOpts{enableActivityDump: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	if err := test.StopAllActivityDumps(); err != nil {
@@ -274,9 +268,7 @@ func testFilterOpenParentDiscarder(t *testing.T, parents ...string) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var fd int
@@ -421,9 +413,7 @@ func TestFilterOpenAUIDEqualApprover(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	goSyscallTester, err := loadSyscallTester(t, test, "syscall_go_tester")
@@ -463,9 +453,7 @@ func TestFilterOpenAUIDLesserApprover(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	goSyscallTester, err := loadSyscallTester(t, test, "syscall_go_tester")
@@ -495,9 +483,7 @@ func TestFilterOpenAUIDGreaterApprover(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	goSyscallTester, err := loadSyscallTester(t, test, "syscall_go_tester")
@@ -527,9 +513,7 @@ func TestFilterOpenAUIDNotEqualUnsetApprover(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	goSyscallTester, err := loadSyscallTester(t, test, "syscall_go_tester")
@@ -555,9 +539,7 @@ func TestFilterDiscarderMask(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("mask", ifSyscallSupported("SYS_UTIME", func(t *testing.T, syscallNB uintptr) {
@@ -631,9 +613,7 @@ func TestFilterRenameFileDiscarder(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var fd int
@@ -717,9 +697,7 @@ func TestFilterRenameFolderDiscarder(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var fd int
@@ -797,9 +775,7 @@ func TestFilterOpenFlagsApprover(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var fd int
@@ -889,9 +865,7 @@ func TestFilterDiscarderRetention(t *testing.T) {
 	defer testDrive.Close()
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, withDynamicOpts(dynamicTestOpts{testDir: testDrive.Root()}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var fd int
@@ -991,9 +965,7 @@ func TestFilterBpfCmd(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	var m *ebpf.Map
@@ -1055,9 +1027,7 @@ func TestFilterRuntimeDiscarded(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{discardRuntime: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testFile, _, err := test.Path("no-event")

@@ -48,9 +48,7 @@ func TestMount(t *testing.T) {
 	defer testDrive.Close()
 
 	test, err := newTestModule(t, nil, ruleDefs, withDynamicOpts(dynamicTestOpts{testDir: testDrive.Root()}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	mntPath := testDrive.Path("test-mount")
@@ -166,9 +164,7 @@ func TestMountPropagated(t *testing.T) {
 	}}
 
 	test, err := newTestModule(t, nil, ruleDefs, withForceReload())
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	dir1Path, _, err := test.Path("dir1")
@@ -326,9 +322,7 @@ func TestMountSnapshot(t *testing.T) {
 	defer bindMountA.unmount(0)
 
 	test, err := newTestModule(t, nil, nil, withDynamicOpts(dynamicTestOpts{testDir: testDrive.Root()}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	p, ok := test.probe.PlatformProbe.(*sprobe.EBPFProbe)
@@ -432,9 +426,7 @@ func TestMountEvent(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs, withDynamicOpts(dynamicTestOpts{testDir: testDrive.Root()}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	tmpfsMountPointPath := testDrive.Path(tmpfsMountPointName)

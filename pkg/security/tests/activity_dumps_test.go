@@ -60,9 +60,7 @@ func TestActivityDumps(t *testing.T) {
 		activityDumpCleanupPeriod:           testActivityDumpCleanupPeriod,
 		networkIngressEnabled:               true,
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
 	if err != nil {
@@ -551,9 +549,7 @@ func TestActivityDumpsAutoSuppression(t *testing.T) {
 		activityDumpAutoSuppressionEnabled:  true,
 		autoSuppressionEventTypes:           []string{"exec", "dns"},
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	dockerInstance, dump, err := test.StartADockerGetDump()
@@ -648,9 +644,7 @@ func TestActivityDumpsAutoSuppressionDriftOnly(t *testing.T) {
 		activityDumpAutoSuppressionEnabled:  true,
 		autoSuppressionEventTypes:           []string{"exec", "dns"},
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	dockerInstance1, err := test.StartADocker()

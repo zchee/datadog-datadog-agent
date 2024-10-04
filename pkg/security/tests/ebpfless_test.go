@@ -43,9 +43,7 @@ func TestEBPFLessAttach(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, ruleDefs, withStaticOpts(testOpts{ebpfLessEnabled: true, dontWaitEBPFLessClient: true}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")
@@ -54,12 +52,14 @@ func TestEBPFLessAttach(t *testing.T) {
 	}
 
 	doneCh := make(chan bool)
+	errCh := make(chan error, 1)
 
 	test.WaitSignal(t, func() error {
 		go func() {
 			testFile, _, err := test.Path("test-ebpfless-attach")
 			if err != nil {
-				t.Fatal(err)
+				errCh <- err
+				return
 			}
 			defer os.Remove(testFile)
 
@@ -103,6 +103,8 @@ func TestEBPFLessAttach(t *testing.T) {
 
 	select {
 	case <-doneCh:
+	case err := <-errCh:
+		t.Fatal(err)
 	case <-time.After(time.Second * 10):
 		t.Error("test timeout")
 	}

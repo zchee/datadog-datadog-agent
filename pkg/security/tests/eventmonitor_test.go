@@ -14,9 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/eventmonitor/examples"
 	"github.com/avast/retry-go/v4"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/DataDog/datadog-agent/pkg/eventmonitor/examples"
 )
 
 func TestEventMonitor(t *testing.T) {
@@ -30,9 +31,7 @@ func TestEventMonitor(t *testing.T) {
 			test.eventMonitor.RegisterEventConsumer(sec)
 		},
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	syscallTester, err := loadSyscallTester(t, test, "syscall_tester")

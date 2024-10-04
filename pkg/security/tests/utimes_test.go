@@ -30,9 +30,7 @@ func TestUtimes(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{ruleDef})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	t.Run("utime", ifSyscallSupported("SYS_UTIME", func(t *testing.T, syscallNB uintptr) {

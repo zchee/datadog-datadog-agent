@@ -41,10 +41,7 @@ func TestBasicRegistryTestPowershell(t *testing.T) {
 		enableFIM: true,
 	}
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{openDef, createDef}, withStaticOpts(opts))
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	// this is kinda hokey.  ETW (which is what FIM is based on) takes an indeterminant amount of time to start up.
@@ -88,10 +85,7 @@ func TestBasicRegistryTestRegExe(t *testing.T) {
 		enableFIM: true,
 	}
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{openDef, createDef}, withStaticOpts(opts))
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	// this is kinda hokey.  ETW (which is what FIM is based on) takes an indeterminant amount of time to start up.
@@ -136,10 +130,7 @@ func TestBasicRegistryTestAPI(t *testing.T) {
 		enableFIM: true,
 	}
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{openDef, createDef}, withStaticOpts(opts))
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	// this is kinda hokey.  ETW (which is what FIM is based on) takes an indeterminant amount of time to start up.

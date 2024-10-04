@@ -34,9 +34,7 @@ func TestRename(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	fileMode := 0o447
@@ -221,9 +219,7 @@ func TestRenameInvalidate(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testOldFile, _, err := test.Path("test-rename")
@@ -285,9 +281,7 @@ func TestRenameReuseInode(t *testing.T) {
 	defer testDrive.Close()
 
 	test, err := newTestModule(t, nil, ruleDefs, withDynamicOpts(dynamicTestOpts{testDir: testDrive.Root()}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testOldFile, _, err := test.Path("test-rename-old")
@@ -363,9 +357,7 @@ func TestRenameFolder(t *testing.T) {
 	}
 
 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatalAndResetOnError(t, err)
 	defer test.Close()
 
 	testOldFolder, _, err := test.Path(path.Dir("folder/folder-old/test-rename"))
