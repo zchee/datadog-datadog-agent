@@ -132,7 +132,7 @@ func buildCommandArgs(pkg string, xmlpath string, jsonpath string, file string, 
 		fmt.Sprintf("--rerun-fails=%d", testConfig.retryCount),
 		"--rerun-fails-max-failures=100",
 		"--raw-command", "--",
-		filepath.Join(testConfig.testingTools, "go/bin/test2json"), "-t", "-p", pkg, file, "-test.v", fmt.Sprintf("-test.count=%d", testConfig.runCount), "-test.timeout=" + getTimeout(pkg).String(),
+		filepath.Join(testConfig.testingTools, "go/bin/test2json"), "-t", "-p", pkg, file, "-test.v", fmt.Sprintf("-test.count=%d", testConfig.runCount), "-test.timeout=" + getTimeout(pkg).String(), "-loglevel", "debug",
 	}
 
 	if testConfig.extraParams != "" {
