@@ -15,3 +15,6 @@ type taggerClient interface {
 	// GlobalTags is an interface function that queries taggerclient singleton
 	GlobalTags(cardinality types.TagCardinality) ([]string, error)
 }
+
+// GenerateKubeMetadataEntityID is a function that generates an entity ID for a Kubernetes resource.
+type GenerateKubeMetadataEntityID func(group, resource, namespace, name string) string
