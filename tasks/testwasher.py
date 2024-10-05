@@ -103,9 +103,13 @@ class TestWasher:
         failed_command_modules = []
         for module_result in module_results:
             failing_tests, flaky_marked_tests = self.parse_test_results(module_result.path)
+            print(f"Failing tests: {failing_tests}")
+            print(f"Flaky marked tests: {flaky_marked_tests}")
             non_flaky_failing_tests = self.get_non_flaky_failing_tests(
                 failing_tests=failing_tests, flaky_marked_tests=flaky_marked_tests
             )
+            print(f"Non-flaky failing tests: {non_flaky_failing_tests}")
+            print(f"Failed module: {module_result.failed}")
             if (
                 not failing_tests and module_result.failed
             ):  # In this case the Go test command failed on one of the modules but no test failed, it means that the test command itself failed (build errors,...)
@@ -115,6 +119,7 @@ class TestWasher:
                 should_succeed = False
                 for package, tests in non_flaky_failing_tests.items():
                     failed_tests.extend(f"- {package} {test}" for test in tests)
+            print(f"Should succeed: {should_succeed}")
         if failed_tests:
             print("The test command failed, the following tests failed and are not supposed to be flaky:")
             print("\n".join(sorted(failed_tests)))
