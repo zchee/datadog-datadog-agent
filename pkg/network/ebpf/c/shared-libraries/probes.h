@@ -20,8 +20,8 @@ static __always_inline void fill_path_safe(lib_path_t *path, const char *path_ar
 static __always_inline void do_sys_open_helper_enter(const char *filename) {
     lib_path_t path = {0};
     long size = bpf_probe_read_user_str_with_telemetry(path.buf, sizeof(path.buf), filename);
-    if (size >= 0) {
-        path.len = size;
+    if (size > 0 && size < LIB_PATH_MAX_SIZE && path.buf[size - 1] == 0) {
+        path.len = size - 1;
     } else {
         fill_path_safe(&path, filename);
     }
