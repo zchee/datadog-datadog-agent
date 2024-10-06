@@ -19,16 +19,9 @@ static __always_inline void fill_path_safe(lib_path_t *path, const char *path_ar
 
 static __always_inline void do_sys_open_helper_enter(const char *filename) {
     lib_path_t path = {0};
-    if (bpf_probe_read_user_with_telemetry(path.buf, sizeof(path.buf), filename) >= 0) {
-// Find the null character and clean up the garbage following it
-#pragma unroll
-        for (int i = 0; i < LIB_PATH_MAX_SIZE; i++) {
-            if (path.len) {
-                path.buf[i] = 0;
-            } else if (path.buf[i] == 0) {
-                path.len = i;
-            }
-        }
+    long size = bpf_probe_read_user_str_with_telemetry(path.buf, sizeof(path.buf), filename);
+    if (size >= 0) {
+        path.len = size;
     } else {
         fill_path_safe(&path, filename);
     }
