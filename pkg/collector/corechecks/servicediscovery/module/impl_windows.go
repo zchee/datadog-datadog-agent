@@ -50,7 +50,7 @@ type serviceInfo struct {
 	apmInstrumentation apm.Instrumentation
 	cmdLine            []string
 	startTimeSecs      uint64
-	lastCpuUsage       float64
+	lastCPUUsage       float64
 }
 
 type resourceInfo struct {
@@ -67,7 +67,7 @@ type discovery struct {
 	// scrubber is used to remove potentially sensitive data from the command line
 	scrubber *procutil.DataScrubber
 
-	lastTotalSystemCpuUsage float64
+	lastTotalSystemCPUUsage float64
 }
 
 // NewDiscoveryModule creates a new discovery system probe module.
@@ -128,8 +128,8 @@ func (s *discovery) getServices() (*[]model.Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	totalSystemCpuUsage := systemStats[0].User + systemStats[0].System
-	systemCpuUsageDelta := totalSystemCpuUsage - s.lastTotalSystemCpuUsage
+	totalSystemCPUUsage := systemStats[0].User + systemStats[0].System
+	systemCPUUsageDelta := totalSystemCPUUsage - s.lastTotalSystemCPUUsage
 
 	// Get all current live processes.
 	// This calls Win32 EnumProcess
@@ -150,19 +150,19 @@ func (s *discovery) getServices() (*[]model.Service, error) {
 		newServiceInfos[pid] = serviceInfo
 
 		// Compile a snapshot to report to the cloud.
-		service, err := s.buildServiceSnapshot(pid, serviceInfo, resInfo, systemCpuUsageDelta)
+		service, err := s.buildServiceSnapshot(pid, serviceInfo, resInfo, systemCPUUsageDelta)
 		if err != nil {
 			continue
 		}
 
 		// Save the CPU usage for the next iteration.
-		serviceInfo.lastCpuUsage = resInfo.cpuUsage
+		serviceInfo.lastCPUUsage = resInfo.cpuUsage
 
 		services = append(services, *service)
 	}
 
 	// Save the total system CPU usage for the next iteration.
-	s.lastTotalSystemCpuUsage = totalSystemCpuUsage
+	s.lastTotalSystemCPUUsage = totalSystemCPUUsage
 
 	s.cleanCache(newServiceInfos)
 
@@ -229,7 +229,7 @@ func (s *discovery) queryServiceInfo(pid int32) (*serviceInfo, *resourceInfo, er
 	// Try to detect the runtime language of process.
 	lang := language.FindInArgs(exe, cmdline)
 
-	// rootDir has no effect for GetServiceName since USM has only Linux exectuable detectors.
+	// rootDir has no effect for GetServiceName since USM has only Linux executable detectors.
 	rootDir := filepath.Dir(exe)
 
 	contextMap := make(usm.DetectorContextMap)
@@ -273,7 +273,7 @@ func queryResourceInfo(proc *process.Process) (*resourceInfo, error) {
 	}, nil
 }
 
-func (s *discovery) buildServiceSnapshot(pid int32, serviceInfo *serviceInfo, resInfo *resourceInfo, systemCpuUsageDelta float64) (*model.Service, error) {
+func (s *discovery) buildServiceSnapshot(pid int32, serviceInfo *serviceInfo, resInfo *resourceInfo, systemCPUsageDelta float64) (*model.Service, error) {
 	// Preferred the name from DD_TAGS.
 	preferredName := serviceInfo.ddServiceName
 	if preferredName == "" {
@@ -281,8 +281,8 @@ func (s *discovery) buildServiceSnapshot(pid int32, serviceInfo *serviceInfo, re
 	}
 
 	// Compute average CPU core usage.
-	procCpuUsageDelta := resInfo.cpuUsage - serviceInfo.lastCpuUsage
-	avgCpuCores := (procCpuUsageDelta / systemCpuUsageDelta) * float64(runtime.NumCPU())
+	procCPUUsageDelta := resInfo.cpuUsage - serviceInfo.lastCPUUsage
+	avgCCores := (procCPUUsageDelta / systemCPUsageDelta) * float64(runtime.NumCPU())
 
 	return &model.Service{
 		// Static information
