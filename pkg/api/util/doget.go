@@ -10,8 +10,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"time"
+
+	"github.com/DataDog/datadog-agent/comp/core/config"
+	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 )
 
 // ShouldCloseConnection is an option to DoGet to indicate whether to close the underlying
@@ -30,6 +34,83 @@ type ReqOptions struct {
 	Conn      ShouldCloseConnection
 	Ctx       context.Context
 	Authtoken string
+}
+
+type AgentAdress struct {
+	Cmd    string
+	Expvar string
+}
+
+type AgentAdresses struct {
+	CoreAgent     AgentAdress
+	TraceAgent    AgentAdress
+	SecurityAgent AgentAdress
+	ProcessAgent  AgentAdress
+	ClusterAgent  AgentAdress
+}
+
+const (
+	CoreCmd    = "core-cmd"
+	CoreExpvar = "core-expvar"
+
+	TraceCmd    = "trace-cmd"
+	TraceExpvar = "trace-expvar"
+
+	SecurityCmd    = "security-cmd"
+	SecurityExpvar = "security-expvar"
+
+	ProcessCmd    = "process-agent"
+	ProcessExpvar = "process-expvar"
+
+	ClusterAgent = "cluster-agent"
+)
+
+type DialContext func(ctx context.Context, network string, addr string) (net.Conn, error)
+
+func NewAgentAdressesGetter(config config.Reader) func() AgentAdresses {
+	return func() AgentAdresses {
+
+		coreAgentAddress, err := pkgconfigsetup.GetIPCAddress(config)
+		if err != nil {
+			// TODO take care of if err
+		}
+
+		securityAgentAddressPort, err := pkgconfigsetup.GetSecurityAgentAPIAddressPort(config)
+		if err != nil {
+
+		}
+
+		processAgentAddressPort, err := pkgconfigsetup.GetProcessAPIAddressPort(config)
+		if err != nil {
+			// return "", fmt.Errorf("config error: %s", err.Error())
+		}
+
+		return AgentAdresses{
+			CoreAgent: AgentAdress{
+				Cmd:    net.JoinHostPort(coreAgentAddress, config.GetString("cmd_port")),
+				Expvar: net.JoinHostPort(coreAgentAddress, config.GetString("expvar_port")),
+			},
+			TraceAgent: AgentAdress{
+				Cmd:    net.JoinHostPort(coreAgentAddress, config.GetString("apm_config.debug.port")),
+				Expvar: net.JoinHostPort(coreAgentAddress, config.GetString("apm_config.debug.port")),
+			},
+
+			SecurityAgent: AgentAdress{
+				Cmd:    securityAgentAddressPort,
+				Expvar: net.JoinHostPort(coreAgentAddress, config.GetString("security_agent.expvar_port")),
+			},
+
+			ProcessAgent: AgentAdress{
+				Cmd:    processAgentAddressPort,
+				Expvar: net.JoinHostPort(coreAgentAddress, config.GetString("process_config.expvar_port")),
+			},
+
+			ClusterAgent: AgentAdress{
+				Cmd: net.JoinHostPort(coreAgentAddress, config.GetString("cluster_agent.cmd_port")),
+			},
+		}
+
+	}
 }
 
 // GetClient is a convenience function returning an http client
@@ -52,6 +133,7 @@ func GetClientWithTimeout(to time.Duration, verify bool) *http.Client {
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DialContext:     getDialContext(NewAgentAdressesGetter(pkgconfigsetup.Datadog())),
 	}
 
 	return &http.Client{Transport: tr}
