@@ -199,7 +199,10 @@ func (h *headerProvider) getKernelHeaders(hv Version) ([]string, headerFetchResu
 		log.Debugf("unable to find system kernel headers: %v", err)
 	}
 
-	downloadedDirs := validateHeaderDirs(hv, getDownloadedHeaderDirs(h.headerDownloadDir), false)
+	tmpDownloadedDirs := getDownloadedHeaderDirs(h.headerDownloadDir)
+	log.Debugf("Download dirs: %+q", tmpDownloadedDirs)
+	downloadedDirs := validateHeaderDirs(hv, tmpDownloadedDirs, false)
+	log.Debugf("Validated dirs: %+q", downloadedDirs)
 	if len(downloadedDirs) > 0 && !containsCriticalHeaders(downloadedDirs) {
 		// If this happens, it means we've previously downloaded kernel headers containing broken
 		// symlinks. We'll delete these to prevent them from affecting the next download
