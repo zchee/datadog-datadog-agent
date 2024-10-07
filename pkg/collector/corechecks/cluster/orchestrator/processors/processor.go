@@ -72,8 +72,9 @@ type K8sProcessorContext struct {
 	APIClient *apiserver.APIClient
 	HostName  string
 	//nolint:revive // TODO(CAPP) Fix revive linter
-	ApiGroupVersionTag string
-	SystemInfo         *model.SystemInfo
+	ApiGroupVersionTag           string
+	SystemInfo                   *model.SystemInfo
+	TerminatedResourcesCollector bool
 }
 
 // ECSProcessorContext holds ECS resource processing attributes

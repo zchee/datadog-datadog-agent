@@ -70,6 +70,10 @@ func (h *PodHandlers) BeforeCacheCheck(ctx processors.ProcessorContext, resource
 	// additional tags
 	m.Tags = append(m.Tags, fmt.Sprintf("pod_status:%s", strings.ToLower(m.Status)))
 
+	if pctx.TerminatedResourcesCollector {
+		m.Tags = append(m.Tags, "terminated_resources_collector:true")
+	}
+
 	// tags that should be on the tagger
 	if len(taggerTags) == 0 {
 		// Tags which should be on the tagger
