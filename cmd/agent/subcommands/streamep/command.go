@@ -56,10 +56,10 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 
 //nolint:revive // TODO(CINT) Fix revive linter
 func streamEventPlatform(_ log.Component, config config.Component, cliParams *cliParams) error {
-	ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
-	if err != nil {
-		return err
-	}
+	// ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
+	// if err != nil {
+	// 	return err
+	// }
 
 	body, err := json.Marshal(&cliParams.filters)
 
@@ -67,7 +67,7 @@ func streamEventPlatform(_ log.Component, config config.Component, cliParams *cl
 		return err
 	}
 
-	urlstr := fmt.Sprintf("https://%v:%v/agent/stream-event-platform", ipcAddress, config.GetInt("cmd_port"))
+	urlstr := fmt.Sprintf("https://%v/agent/stream-event-platform", util.CoreCmd)
 	return streamRequest(urlstr, body, func(chunk []byte) {
 		fmt.Print(string(chunk))
 	})

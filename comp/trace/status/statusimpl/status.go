@@ -20,6 +20,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/status"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 
+	"github.com/DataDog/datadog-agent/pkg/api/util"
 	apiutil "github.com/DataDog/datadog-agent/pkg/api/util"
 )
 
@@ -95,7 +96,7 @@ func (s statusProvider) populateStatus() map[string]interface{} {
 	port := s.Config.GetInt("apm_config.debug.port")
 
 	c := client()
-	url := fmt.Sprintf("http://localhost:%d/debug/vars", port)
+	url := fmt.Sprintf("http://%v/debug/vars", util.TraceCmd)
 	resp, err := apiutil.DoGet(c, url, apiutil.CloseConnection)
 	if err != nil {
 		return map[string]interface{}{

@@ -26,6 +26,7 @@ import (
 	flaretypes "github.com/DataDog/datadog-agent/comp/core/flare/types"
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/pkg/api/security"
+	"github.com/DataDog/datadog-agent/pkg/api/util"
 	apiutil "github.com/DataDog/datadog-agent/pkg/api/util"
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 	"github.com/DataDog/datadog-agent/pkg/diagnose"
@@ -318,23 +319,12 @@ func getDiagnoses(isFlareLocal bool, deps diagnose.SuitesDeps) func() ([]byte, e
 }
 
 func getAgentTaggerList() ([]byte, error) {
-	ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
-	if err != nil {
-		return nil, err
-	}
-
-	taggerListURL := fmt.Sprintf("https://%v:%v/agent/tagger-list", ipcAddress, pkgconfigsetup.Datadog().GetInt("cmd_port"))
-
+	taggerListURL := fmt.Sprintf("https://%v/agent/tagger-list", util.CoreCmd)
 	return getTaggerList(taggerListURL)
 }
 
 func getProcessAgentTaggerList() ([]byte, error) {
-	addressPort, err := pkgconfigsetup.GetProcessAPIAddressPort(pkgconfigsetup.Datadog())
-	if err != nil {
-		return nil, fmt.Errorf("wrong configuration to connect to process-agent")
-	}
-
-	taggerListURL := fmt.Sprintf("http://%s/agent/tagger-list", addressPort)
+	taggerListURL := fmt.Sprintf("http://%v/agent/tagger-list", util.ProcessCmd)
 	return getTaggerList(taggerListURL)
 }
 
@@ -359,12 +349,12 @@ func getTaggerList(remoteURL string) ([]byte, error) {
 }
 
 func getAgentWorkloadList() ([]byte, error) {
-	ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
-	if err != nil {
-		return nil, err
-	}
+	// ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	return getWorkloadList(fmt.Sprintf("https://%v:%v/agent/workload-list?verbose=true", ipcAddress, pkgconfigsetup.Datadog().GetInt("cmd_port")))
+	return getWorkloadList(fmt.Sprintf("https://%v/agent/workload-list?verbose=true", util.CoreCmd))
 }
 
 func getWorkloadList(url string) ([]byte, error) {

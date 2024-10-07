@@ -84,10 +84,10 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 
 //nolint:revive // TODO(AML) Fix revive linter
 func streamLogs(_ log.Component, config config.Component, cliParams *CliParams) error {
-	ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
-	if err != nil {
-		return err
-	}
+	// ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
+	// if err != nil {
+	// 	return err
+	// }
 
 	body, err := json.Marshal(&cliParams.filters)
 
@@ -95,7 +95,7 @@ func streamLogs(_ log.Component, config config.Component, cliParams *CliParams) 
 		return err
 	}
 
-	urlstr := fmt.Sprintf("https://%v:%v/agent/stream-logs", ipcAddress, config.GetInt("cmd_port"))
+	urlstr := fmt.Sprintf("https://%v/agent/stream-logs", util.CoreCmd)
 
 	var f *os.File
 	var bufWriter *bufio.Writer

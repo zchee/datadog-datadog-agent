@@ -78,7 +78,7 @@ func runStatus(_ log.Component, config config.Component, _ secrets.Component, pa
 
 	url := url.URL{
 		Scheme:   "https",
-		Host:     fmt.Sprintf("localhost:%v", config.GetInt("security_agent.cmd_port")),
+		Host:     util.SecurityCmd,
 		Path:     "/agent/status",
 		RawQuery: v.Encode(),
 	}

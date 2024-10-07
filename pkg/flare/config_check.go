@@ -31,7 +31,7 @@ func GetClusterAgentConfigCheck(w io.Writer, withDebug bool) error {
 
 	targetURL := url.URL{
 		Scheme: "https",
-		Host:   fmt.Sprintf("localhost:%v", pkgconfigsetup.Datadog().GetInt("cluster_agent.cmd_port")),
+		Host:   util.ClusterAgent,
 		Path:   "config-check",
 	}
 
