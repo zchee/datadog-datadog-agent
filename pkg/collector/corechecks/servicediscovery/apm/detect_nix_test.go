@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/envs"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/usm"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http/testutil"
 	usmtestutil "github.com/DataDog/datadog-agent/pkg/network/usm/testutil"
@@ -54,7 +55,7 @@ func TestInjected(t *testing.T) {
 	}
 	for _, d := range data {
 		t.Run(d.name, func(t *testing.T) {
-			result := isInjected(d.envs)
+			result := isInjected(envs.NewEnvironmentVariables(d.envs))
 			assert.Equal(t, d.result, result)
 		})
 	}
@@ -93,7 +94,7 @@ func Test_javaDetector(t *testing.T) {
 	}
 	for _, d := range data {
 		t.Run(d.name, func(t *testing.T) {
-			result := javaDetector(0, d.args, d.envs, nil)
+			result := javaDetector(0, d.args, envs.NewEnvironmentVariables(d.envs), nil)
 			if result != d.result {
 				t.Errorf("expected %s got %s", d.result, result)
 			}
@@ -130,7 +131,7 @@ func Test_nodeDetector(t *testing.T) {
 
 	for _, d := range data {
 		t.Run(d.name, func(t *testing.T) {
-			result := nodeDetector(0, nil, nil, d.contextMap)
+			result := nodeDetector(0, nil, envs.NewEnvironmentVariables(nil), d.contextMap)
 			assert.Equal(t, d.result, result)
 		})
 	}
@@ -230,7 +231,7 @@ func TestDotNetDetector(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var result Instrumentation
 			if test.maps == "" {
-				result = dotNetDetector(0, nil, test.env, nil)
+				result = dotNetDetector(0, nil, envs.NewEnvironmentVariables(test.env), nil)
 			} else {
 				result = dotNetDetectorFromMapsReader(strings.NewReader(test.maps))
 			}
@@ -259,12 +260,12 @@ func TestGoDetector(t *testing.T) {
 		_ = cmdWithoutSymbols.Process.Kill()
 	})
 
-	result := goDetector(os.Getpid(), nil, nil, nil)
+	result := goDetector(os.Getpid(), nil, envs.NewEnvironmentVariables(nil), nil)
 	require.Equal(t, None, result)
 
-	result = goDetector(cmdWithSymbols.Process.Pid, nil, nil, nil)
+	result = goDetector(cmdWithSymbols.Process.Pid, nil, envs.NewEnvironmentVariables(nil), nil)
 	require.Equal(t, Provided, result)
 
-	result = goDetector(cmdWithoutSymbols.Process.Pid, nil, nil, nil)
+	result = goDetector(cmdWithoutSymbols.Process.Pid, nil, envs.NewEnvironmentVariables(nil), nil)
 	require.Equal(t, Provided, result)
 }

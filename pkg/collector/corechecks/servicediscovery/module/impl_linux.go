@@ -27,6 +27,7 @@ import (
 	"github.com/DataDog/datadog-agent/cmd/system-probe/utils"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/apm"
+	envsmod "github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/envs"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/language"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/model"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/servicediscovery/usm"
@@ -355,7 +356,7 @@ func (s *discovery) getServiceInfo(proc *process.Process) (*serviceInfo, error) 
 		lang = language.FindUsingPrivilegedDetector(s.privilegedDetector, proc.Pid)
 	}
 	nameMeta := servicediscovery.GetServiceName(cmdline, envs, root, lang, contextMap)
-	apmInstrumentation := apm.Detect(int(proc.Pid), cmdline, envs, lang, contextMap)
+	apmInstrumentation := apm.Detect(int(proc.Pid), cmdline, envsmod.NewEnvironmentVariables(envs), lang, contextMap)
 
 	return &serviceInfo{
 		generatedName:      nameMeta.Name,
