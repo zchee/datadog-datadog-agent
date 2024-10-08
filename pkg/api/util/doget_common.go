@@ -13,56 +13,20 @@ import (
 	"net"
 )
 
-var knownPlatform = map[string]string{
-	"apm":      "apm_config.debug.port",
-	"security": "security_agent.cmd_port",
-	"process":  "process_config.cmd_port",
-	"core":     "cmd_port",
-}
-
 // func getDialContext(config config.Reader) DialContext {
-func getDialContext(agentAdresses func() AgentAdresses) DialContext {
+func getDialContext(dialBookGetter func() dialBook) dialContext {
 	return func(_ context.Context, network string, addr string) (net.Conn, error) {
 		host, _, err := net.SplitHostPort(addr)
 		if err != nil {
-			return &net.TCPConn{}, err
+			return nil, err
 		}
 
-		var path string
+		dialBook := dialBookGetter()
 
-		switch host {
-		case CoreCmd:
-			path = agentAdresses().CoreAgent.Cmd
-		case CoreExpvar:
-			path = agentAdresses().CoreAgent.Expvar
-
-		case TraceCmd:
-			path = agentAdresses().TraceAgent.Cmd
-		case TraceExpvar:
-			path = agentAdresses().TraceAgent.Expvar
-
-		case ProcessCmd:
-			path = agentAdresses().ProcessAgent.Cmd
-		case ProcessExpvar:
-			path = agentAdresses().ProcessAgent.Expvar
-
-		case SecurityCmd:
-			path = agentAdresses().SecurityAgent.Cmd
-		case SecurityExpvar:
-			path = agentAdresses().SecurityAgent.Expvar
-
-		case ClusterAgent:
-			path = agentAdresses().ClusterAgent.Cmd
-		default:
-			path = addr
+		if path, ok := dialBook[host]; ok {
+			fmt.Printf("receive request for %v, reaching %v", host, path)
+			return net.Dial("tcp", path)
 		}
-
-		if path == "" {
-			return &net.TCPConn{}, err
-		}
-
-		fmt.Printf("receive request for %v", addr)
-
-		return net.Dial("tcp", path)
+		return nil, fmt.Errorf("%v: unknown Agent address", host)
 	}
 }

@@ -36,18 +36,19 @@ type ReqOptions struct {
 	Authtoken string
 }
 
-type AgentAdress struct {
-	Cmd    string
-	Expvar string
+// type AgentAdress struct {
+// 	Cmd    string
+// 	Expvar string
+// }
+
+type DialBookBuilder struct {
+	config config.Reader
+	host   string
+	addr   map[string]string
+	err    error
 }
 
-type AgentAdresses struct {
-	CoreAgent     AgentAdress
-	TraceAgent    AgentAdress
-	SecurityAgent AgentAdress
-	ProcessAgent  AgentAdress
-	ClusterAgent  AgentAdress
-}
+type dialBook map[string]string
 
 const (
 	CoreCmd    = "core-cmd"
@@ -65,78 +66,140 @@ const (
 	ClusterAgent = "cluster-agent"
 )
 
-type DialContext func(ctx context.Context, network string, addr string) (net.Conn, error)
+type dialContext func(ctx context.Context, network string, addr string) (net.Conn, error)
 
-func NewAgentAdressesGetter(config config.Reader) func() AgentAdresses {
-	return func() AgentAdresses {
+func NewDialBookBuilder(config config.Reader) DialBookBuilder {
+	coreAgentAddress, err := pkgconfigsetup.GetIPCAddress(config)
 
-		coreAgentAddress, err := pkgconfigsetup.GetIPCAddress(config)
-		if err != nil {
-			// TODO take care of if err
-		}
-
-		securityAgentAddressPort, err := pkgconfigsetup.GetSecurityAgentAPIAddressPort(config)
-		if err != nil {
-
-		}
-
-		processAgentAddressPort, err := pkgconfigsetup.GetProcessAPIAddressPort(config)
-		if err != nil {
-			// return "", fmt.Errorf("config error: %s", err.Error())
-		}
-
-		return AgentAdresses{
-			CoreAgent: AgentAdress{
-				Cmd:    net.JoinHostPort(coreAgentAddress, config.GetString("cmd_port")),
-				Expvar: net.JoinHostPort(coreAgentAddress, config.GetString("expvar_port")),
-			},
-			TraceAgent: AgentAdress{
-				Cmd:    net.JoinHostPort(coreAgentAddress, config.GetString("apm_config.debug.port")),
-				Expvar: net.JoinHostPort(coreAgentAddress, config.GetString("apm_config.debug.port")),
-			},
-
-			SecurityAgent: AgentAdress{
-				Cmd:    securityAgentAddressPort,
-				Expvar: net.JoinHostPort(coreAgentAddress, config.GetString("security_agent.expvar_port")),
-			},
-
-			ProcessAgent: AgentAdress{
-				Cmd:    processAgentAddressPort,
-				Expvar: net.JoinHostPort(coreAgentAddress, config.GetString("process_config.expvar_port")),
-			},
-
-			ClusterAgent: AgentAdress{
-				Cmd: net.JoinHostPort(coreAgentAddress, config.GetString("cluster_agent.cmd_port")),
-			},
-		}
-
+	return DialBookBuilder{
+		config: config,
+		host:   coreAgentAddress,
+		addr:   make(map[string]string),
+		err:    err,
 	}
+}
+
+func (a DialBookBuilder) WithCore() DialBookBuilder {
+	// If AgentAdress is erroneous, return
+	if a.err != nil {
+		return a
+	}
+
+	a.addr[CoreCmd] = net.JoinHostPort(a.host, a.config.GetString("cmd_port"))
+	a.addr[CoreExpvar] = net.JoinHostPort(a.host, a.config.GetString("expvar_port"))
+
+	return a
+}
+
+func (a DialBookBuilder) WithTrace() DialBookBuilder {
+	// If AgentAdress is erroneous, return
+	if a.err != nil {
+		return a
+	}
+
+	a.addr[TraceCmd] = net.JoinHostPort(a.host, a.config.GetString("apm_config.debug.port"))
+	a.addr[TraceExpvar] = net.JoinHostPort(a.host, a.config.GetString("apm_config.debug.port"))
+
+	return a
+}
+
+func (a DialBookBuilder) WithProcess() DialBookBuilder {
+	// If AgentAdress is erroneous, return
+	if a.err != nil {
+		return a
+	}
+
+	processAgentAddressPort, err := pkgconfigsetup.GetProcessAPIAddressPort(a.config)
+	if err != nil {
+		a.err = err
+		return a
+	}
+
+	a.addr[ProcessCmd] = processAgentAddressPort
+	a.addr[ProcessExpvar] = net.JoinHostPort(a.host, a.config.GetString("process_config.expvar_port"))
+
+	return a
+}
+
+func (a DialBookBuilder) WithSecurity() DialBookBuilder {
+	// If AgentAdress is erroneous, return
+	if a.err != nil {
+		return a
+	}
+
+	securityAgentAddressPort, err := pkgconfigsetup.GetSecurityAgentAPIAddressPort(a.config)
+	if err != nil {
+		a.err = err
+		return a
+	}
+
+	a.addr[SecurityCmd] = securityAgentAddressPort
+	a.addr[SecurityExpvar] = net.JoinHostPort(a.host, a.config.GetString("security_agent.expvar_port"))
+
+	return a
+}
+
+func (a DialBookBuilder) WithCluster() DialBookBuilder {
+	// If AgentAdress is erroneous, return
+	if a.err != nil {
+		return a
+	}
+
+	a.addr[ClusterAgent] = net.JoinHostPort(a.host, a.config.GetString("cluster_agent.cmd_port"))
+
+	return a
+}
+
+func (a DialBookBuilder) Build() (dialBook, error) {
+	if a.err != nil {
+		return nil, a.err
+	}
+
+	return a.addr, nil
+}
+
+func NewDefaultDialBook(config config.Reader) (dialBook, error) {
+	return NewDialBookBuilder(config).WithCore().WithTrace().WithProcess().WithSecurity().WithCluster().Build()
+}
+
+type ClientBuilder struct {
+	tr      *http.Transport
+	timeout time.Duration
 }
 
 // GetClient is a convenience function returning an http client
 // `GetClient(false)` must be used only for HTTP requests whose destination is
 // localhost (ie, for Agent commands).
-func GetClient(verify bool) *http.Client {
-	return GetClientWithTimeout(0, verify)
+func GetClient() ClientBuilder {
+	return ClientBuilder{
+		tr: &http.Transport{},
+	}
 }
 
-// GetClientWithTimeout is a convenience function returning an http client
-// Arguments correspond to the request timeout duration, and a boolean to
-// verify the server TLS client (false should only be used on localhost
-// trusted endpoints).
-func GetClientWithTimeout(to time.Duration, verify bool) *http.Client {
-	if verify {
-		return &http.Client{
-			Timeout: to,
-		}
-	}
+func (c ClientBuilder) WithNoVerify() ClientBuilder {
+	c.tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	return c
+}
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		DialContext:     getDialContext(NewAgentAdressesGetter(pkgconfigsetup.Datadog())),
-	}
+func (c ClientBuilder) WithTimeout(to time.Duration) ClientBuilder {
+	c.timeout = to
+	return c
+}
 
-	return &http.Client{Transport: tr}
+func (c ClientBuilder) WithResolver(d dialBook) ClientBuilder {
+	c.tr.DialContext = getDialContext(
+		func() dialBook {
+			return d
+		})
+
+	return c
+}
+
+func (c ClientBuilder) Build() *http.Client {
+	return &http.Client{
+		Transport: c.tr,
+		Timeout:   c.timeout,
+	}
 }
 
 // DoGet is a wrapper around performing HTTP GET requests
