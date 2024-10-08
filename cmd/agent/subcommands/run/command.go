@@ -257,6 +257,7 @@ func run(log log.Component,
 	settings settings.Component,
 	_ optional.Option[gui.Component],
 	_ agenttelemetry.Component,
+	rdnsQuerier rdnsquerier.Component,
 ) error {
 	defer func() {
 		stopAgent()
@@ -321,6 +322,7 @@ func run(log log.Component,
 		cloudfoundrycontainer,
 		jmxlogger,
 		settings,
+		rdnsQuerier,
 	); err != nil {
 		return err
 	}
@@ -573,6 +575,7 @@ func startAgent(
 
 	// TODO: (components) - Until the checks are components we set there context so they can depends on components.
 	check.InitializeInventoryChecksContext(invChecks)
+	check.InitializeRDNSQuerierContext(rdnsQuerier)
 
 	// Init JMX runner and inject dogstatsd component
 	jmxfetch.InitRunner(server, jmxLogger)

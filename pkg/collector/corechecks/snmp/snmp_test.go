@@ -36,6 +36,9 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/networkdevice/utils"
 
+	rdnsquerier "github.com/DataDog/datadog-agent/comp/rdnsquerier/def"           //JMW
+	rdnsquerierfxmock "github.com/DataDog/datadog-agent/comp/rdnsquerier/fx-mock" //JMW
+	"github.com/DataDog/datadog-agent/pkg/collector/check"                        //JMW
 	checkid "github.com/DataDog/datadog-agent/pkg/collector/check/id"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/snmp/internal/checkconfig"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/snmp/internal/common"
@@ -53,6 +56,12 @@ type deps struct {
 
 func createDeps(t *testing.T) deps {
 	return fxutil.Test[deps](t, compressionimpl.MockModule(), demultiplexerimpl.MockModule(), defaultforwarder.MockModule(), core.MockBundle())
+}
+
+func TestJMW(t *testing.T) {
+	rdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerierfxmock.MockModule())
+	check.InitializeRDNSQuerierContext(rdnsQuerier)
+	defer check.ReleaseContext()
 }
 
 func Test_Run_simpleCase(t *testing.T) {

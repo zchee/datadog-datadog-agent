@@ -264,6 +264,7 @@ func run(
 	jmxLogger jmxlogger.Component,
 	telemetry telemetry.Component,
 	logReceiver optional.Option[integrations.Component],
+	rdnsQuerier rdnsQuerier.Component,
 ) error {
 	previousIntegrationTracing := false
 	previousIntegrationTracingExhaustive := false
@@ -288,6 +289,7 @@ func run(
 
 	// TODO: (components) - Until the checks are components we set there context so they can depends on components.
 	check.InitializeInventoryChecksContext(invChecks)
+	check.InitializeRDNSQuerierContext(rdnsQuerier)
 	pkgcollector.InitPython(common.GetPythonPaths()...)
 	commonchecks.RegisterChecks(wmeta, config, telemetry)
 
