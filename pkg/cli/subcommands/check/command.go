@@ -65,6 +65,7 @@ import (
 	integrations "github.com/DataDog/datadog-agent/comp/logs/integrations/def"
 	"github.com/DataDog/datadog-agent/comp/metadata/inventorychecks"
 	"github.com/DataDog/datadog-agent/comp/metadata/inventorychecks/inventorychecksimpl"
+	rdnsquerier "github.com/DataDog/datadog-agent/comp/rdnsquerier/def" //JMW
 	"github.com/DataDog/datadog-agent/comp/remote-config/rcservice"
 	"github.com/DataDog/datadog-agent/comp/remote-config/rcservicemrf"
 	"github.com/DataDog/datadog-agent/comp/serializer/compression/compressionimpl"
@@ -264,7 +265,7 @@ func run(
 	jmxLogger jmxlogger.Component,
 	telemetry telemetry.Component,
 	logReceiver optional.Option[integrations.Component],
-	rdnsQuerier rdnsQuerier.Component,
+	rdnsQuerier rdnsquerier.Component,
 ) error {
 	previousIntegrationTracing := false
 	previousIntegrationTracingExhaustive := false
