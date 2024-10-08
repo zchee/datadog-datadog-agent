@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
+message(INFO "python location: ${Python3_ROOT_DIR}")
+set(CMAKE_FIND_DEBUG_MODE TRUE)
 find_package (Python3 COMPONENTS Interpreter Development)
 
 if(Python3_VERSION_MINOR LESS "7")
@@ -7,7 +9,7 @@ if(Python3_VERSION_MINOR LESS "7")
     "Python3 version found is too old: found ${Python3_EXECUTABLE} (version \"${Python3_VERSION}\"), minimum required version is 3.7"
   )
 endif()
-message(ERROR "Python include dir: ${Python3_INCLUDE_DIRS} python exec: ${Python3_EXECUTABLE}")
+message(WARNING "Python include dir: ${Python3_INCLUDE_DIRS} python exec: ${Python3_EXECUTABLE}")
 
 project(datadog-agent-three VERSION 0.1.0 DESCRIPTION "CPython backend for the Datadog Agent")
 
