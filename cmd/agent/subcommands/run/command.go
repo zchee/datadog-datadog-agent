@@ -498,6 +498,7 @@ func startAgent(
 	_ cloudfoundrycontainer.Component,
 	jmxLogger jmxlogger.Component,
 	settings settings.Component,
+	rdnsQuerier rdnsquerier.Component,
 ) error {
 	var err error
 
