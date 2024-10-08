@@ -713,6 +713,7 @@ workflow:
   - tasks/security_agent.py
   - tasks/kmt.py
   - tasks/kernel_matrix_testing/*
+  - go.mod
 
 .on_security_agent_changes_or_manual:
   - <<: *if_main_branch
