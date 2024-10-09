@@ -36,9 +36,10 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/networkdevice/utils"
 
-	rdnsquerier "github.com/DataDog/datadog-agent/comp/rdnsquerier/def"           //JMW
-	rdnsquerierfxmock "github.com/DataDog/datadog-agent/comp/rdnsquerier/fx-mock" //JMW
-	"github.com/DataDog/datadog-agent/pkg/collector/check"                        //JMW
+	//rdnsquerier "github.com/DataDog/datadog-agent/comp/rdnsquerier/def"           //JMW
+	//rdnsquerierfxmock "github.com/DataDog/datadog-agent/comp/rdnsquerier/fx-mock" //JMW
+	rdnsqueriermock "github.com/DataDog/datadog-agent/comp/rdnsquerier/mock" //JMW
+	"github.com/DataDog/datadog-agent/pkg/collector/check"                   //JMW
 	checkid "github.com/DataDog/datadog-agent/pkg/collector/check/id"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/snmp/internal/checkconfig"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/snmp/internal/common"
@@ -59,12 +60,15 @@ func createDeps(t *testing.T) deps {
 }
 
 func TestJMW(t *testing.T) {
-	rdnsQuerier := fxutil.Test[rdnsquerier.Component](t, rdnsquerierfxmock.MockModule())
+	rdnsQuerier := rdnsqueriermock.NewMock()
 	check.InitializeRDNSQuerierContext(rdnsQuerier)
 	defer check.ReleaseContext()
 }
 
 func Test_Run_simpleCase(t *testing.T) {
+	check.InitializeRDNSQuerierContext(rdnsqueriermock.NewMock())
+	defer check.ReleaseContext()
+
 	// We cache the run_path directory because the chk.Run() method will write in cache
 	testDir := t.TempDir()
 	pkgconfigsetup.Datadog().SetWithoutSource("run_path", testDir)

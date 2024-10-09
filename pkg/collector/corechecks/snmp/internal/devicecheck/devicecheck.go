@@ -153,7 +153,7 @@ func (d *DeviceCheck) GetDeviceHostname() (string, error) {
 }
 
 // Run executes the check
-func (d *DeviceCheck) Run(collectionTime time.Time) error {
+func (d *DeviceCheck) Run(collectionTime time.Time) error { // JMW
 	startTime := time.Now()
 	staticTags := append(d.config.GetStaticTags(), d.config.GetNetworkTags()...)
 
@@ -237,7 +237,7 @@ func (d *DeviceCheck) Run(collectionTime time.Time) error {
 
 		deviceDiagnosis := d.diagnoses.Report()
 
-		d.sender.ReportNetworkDeviceMetadata(d.config, values, deviceMetadataTags, collectionTime, deviceStatus, pingStatus, deviceDiagnosis)
+		d.sender.ReportNetworkDeviceMetadata(d.config, values, deviceMetadataTags, collectionTime, deviceStatus, pingStatus, deviceDiagnosis) // JMW
 	}
 
 	d.submitTelemetryMetrics(startTime, metricTags)

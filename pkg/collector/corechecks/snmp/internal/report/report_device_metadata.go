@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/DataDog/datadog-agent/comp/forwarder/eventplatform"
@@ -21,6 +22,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/networkdevice/profile/profiledefinition"
 	"github.com/DataDog/datadog-agent/pkg/networkdevice/utils"
 
+	"github.com/DataDog/datadog-agent/pkg/collector/check" //JMW
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/snmp/internal/checkconfig"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/snmp/internal/common"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/snmp/internal/lldp"
@@ -51,13 +53,13 @@ var supportedDeviceTypes = map[string]bool{
 }
 
 // ReportNetworkDeviceMetadata reports device metadata
-func (ms *MetricSender) ReportNetworkDeviceMetadata(config *checkconfig.CheckConfig, store *valuestore.ResultValueStore, origTags []string, collectTime time.Time, deviceStatus devicemetadata.DeviceStatus, pingStatus devicemetadata.DeviceStatus, diagnoses []devicemetadata.DiagnosisMetadata) {
+func (ms *MetricSender) ReportNetworkDeviceMetadata(config *checkconfig.CheckConfig, store *valuestore.ResultValueStore, origTags []string, collectTime time.Time, deviceStatus devicemetadata.DeviceStatus, pingStatus devicemetadata.DeviceStatus, diagnoses []devicemetadata.DiagnosisMetadata) { // JMW
 	tags := utils.CopyStrings(origTags)
 	tags = util.SortUniqInPlace(tags)
 
 	metadataStore := buildMetadataStore(config.Metadata, store)
 
-	devices := []devicemetadata.DeviceMetadata{buildNetworkDeviceMetadata(config.DeviceID, config.DeviceIDTags, config, metadataStore, tags, deviceStatus, pingStatus)}
+	devices := []devicemetadata.DeviceMetadata{buildNetworkDeviceMetadata(config.DeviceID, config.DeviceIDTags, config, metadataStore, tags, deviceStatus, pingStatus)} // JMW
 
 	interfaces := buildNetworkInterfacesMetadata(config.DeviceID, metadataStore)
 	ipAddresses := buildNetworkIPAddressesMetadata(config.DeviceID, metadataStore)
@@ -191,7 +193,7 @@ func buildMetadataStore(metadataConfigs profiledefinition.MetadataConfig, values
 	return metadataStore
 }
 
-func buildNetworkDeviceMetadata(deviceID string, idTags []string, config *checkconfig.CheckConfig, store *metadata.Store, tags []string, deviceStatus devicemetadata.DeviceStatus, pingStatus devicemetadata.DeviceStatus) devicemetadata.DeviceMetadata {
+func buildNetworkDeviceMetadata(deviceID string, idTags []string, config *checkconfig.CheckConfig, store *metadata.Store, tags []string, deviceStatus devicemetadata.DeviceStatus, pingStatus devicemetadata.DeviceStatus) devicemetadata.DeviceMetadata { // JMW
 	var vendor, sysName, sysDescr, sysObjectID, location, serialNumber, version, productName, model, osName, osVersion, osHostname, deviceType string
 	if store != nil {
 		sysName = store.GetScalarAsString("device.name")
@@ -214,12 +216,49 @@ func buildNetworkDeviceMetadata(deviceID string, idTags []string, config *checkc
 		vendor = config.ProfileDef.Device.Vendor
 	}
 
+	log.Infof("JMW get reverse DNS hostname from IP address %s here???", config.IPAddress)
+
+	var ipBytes []byte
+	// Convert the string to an IP object
+	ip := net.ParseIP(config.IPAddress)
+	if ip != nil {
+		// Convert the IP address string to a byte slice
+		ipBytes := ip.To4() // Use To4() for IPv4 addresses
+		log.Infof("JMW ipBytes: %v", ipBytes)
+	}
+
+	var rdnsHostname string
+	if rdnsQuerier, err := check.GetRDNSQuerierContext(); err == nil {
+		log.Infof("JMW doing reverse DNS lookup for IP address %s", config.IPAddress)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		err = rdnsQuerier.GetHostname(
+			ipBytes,
+			func(hostname string) {
+				rdnsHostname = hostname
+				log.Infof("JMW SYNC CALLBACK got reverse DNS hostname from IP address %s: %s", config.IPAddress, hostname)
+				wg.Done()
+			},
+			func(hostname string, err error) {
+				if err != nil {
+					log.Infof("JMW ASYNC CALLBACK got error from rDNS lookup : %s", err)
+					return
+				}
+				log.Infof("JMW ASYNC CALLBACK got reverse DNS hostname from IP address %s: %s", config.IPAddress, hostname)
+				rdnsHostname = hostname
+				wg.Done()
+			},
+		)
+		wg.Wait()
+	}
+
 	return devicemetadata.DeviceMetadata{
 		ID:             deviceID,
 		IDTags:         idTags,
 		Name:           sysName,
 		Description:    sysDescr,
 		IPAddress:      config.IPAddress,
+		RDNSHostname:   rdnsHostname,
 		SysObjectID:    sysObjectID,
 		Location:       location,
 		Profile:        config.Profile,

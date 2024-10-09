@@ -308,7 +308,7 @@ func (c *SystemdCheck) submitVersion(conn *dbus.Conn) {
 	}
 	checkID := string(c.ID())
 	log.Debugf("Submit version %v for checkID %v", version, checkID)
-	if inv, err := check.GetInventoryChecksContext(); err == nil {
+	if inv, err := check.GetInventoryChecksContext(); err == nil { // JMWEX
 		inv.Set(checkID, "version.raw", version)
 	}
 }

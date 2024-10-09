@@ -188,6 +188,7 @@ func SetCheckMetadata(checkID, name, value *C.char) {
 	key := C.GoString(name)
 	val := C.GoString(value)
 
+	// JMWEX
 	if inv, err := check.GetInventoryChecksContext(); err == nil {
 		inv.Set(cid, key, val)
 	}

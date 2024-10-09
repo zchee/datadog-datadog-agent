@@ -22,14 +22,14 @@ import (
 // method.
 type checkContext struct {
 	ic          inventorychecks.Component
-	rdnsQuerier rdnsquerier.Component
+	rdnsQuerier rdnsquerier.Component // JMWEX
 }
 
 var ctx checkContext
 var checkContextMutex = sync.Mutex{}
 
 // GetInventoryChecksContext returns a reference to the inventorychecks component for Python and Go checks to use.
-func GetInventoryChecksContext() (inventorychecks.Component, error) {
+func GetInventoryChecksContext() (inventorychecks.Component, error) { // JMWEX
 	checkContextMutex.Lock()
 	defer checkContextMutex.Unlock()
 
@@ -50,7 +50,7 @@ func InitializeInventoryChecksContext(ic inventorychecks.Component) {
 }
 
 // GetRDNSQuerierContext returns a reference to the rdnsquerier component Go checks to use.
-func GetRDNSQuerierContext() (rdnsquerier.Component, error) {
+func GetRDNSQuerierContext() (rdnsquerier.Component, error) { // JMWEX
 	checkContextMutex.Lock()
 	defer checkContextMutex.Unlock()
 
@@ -61,7 +61,7 @@ func GetRDNSQuerierContext() (rdnsquerier.Component, error) {
 }
 
 // InitializeRDNSQuerierContext sets the reference to rdnsquerier in checkContext
-func InitializeRDNSQuerierContext(rdnsQuerier rdnsquerier.Component) {
+func InitializeRDNSQuerierContext(rdnsQuerier rdnsquerier.Component) { // JMWEX
 	checkContextMutex.Lock()
 	defer checkContextMutex.Unlock()
 
@@ -76,5 +76,5 @@ func ReleaseContext() {
 	defer checkContextMutex.Unlock()
 
 	ctx.ic = nil
-	ctx.rdnsQuerier = nil
+	ctx.rdnsQuerier = nil // JMWEX
 }

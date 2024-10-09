@@ -160,7 +160,7 @@ func NewComponent(reqs Requires) (Provides, error) {
 func (q *rdnsQuerierImpl) GetHostname(ipAddr []byte, updateHostnameSync func(string), updateHostnameAsync func(string, error)) error {
 	q.internalTelemetry.total.Inc()
 
-	netipAddr, ok := netip.AddrFromSlice(ipAddr)
+	netipAddr, ok := netip.AddrFromSlice(ipAddr) // JMW []byte to netip.Addr
 	if !ok {
 		q.internalTelemetry.invalidIPAddress.Inc()
 		return fmt.Errorf("invalid IP address %v", ipAddr)

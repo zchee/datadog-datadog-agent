@@ -54,6 +54,7 @@ type DeviceMetadata struct {
 	IDTags         []string     `json:"id_tags"` // id_tags is the input to produce device.id, it's also used to correlated with device metrics.
 	Tags           []string     `json:"tags"`
 	IPAddress      string       `json:"ip_address"`
+	RDNSHostname   string       `json:"rdns_hostname,omitempty"`
 	Status         DeviceStatus `json:"status"`
 	PingStatus     DeviceStatus `json:"ping_status,omitempty"`
 	Name           string       `json:"name,omitempty"`

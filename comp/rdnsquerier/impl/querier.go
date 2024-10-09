@@ -37,7 +37,7 @@ type querierImpl struct {
 }
 
 type query struct {
-	addr                string
+	addr                string // JMWADDR is a string when we create the query/call the resolver
 	updateHostnameAsync func(string, error)
 }
 

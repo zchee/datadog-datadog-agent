@@ -25,7 +25,7 @@ type resolverImpl struct {
 	config *rdnsQuerierConfig
 }
 
-func (r *resolverImpl) lookup(addr string) (string, error) {
+func (r *resolverImpl) lookup(addr string) (string, error) { // JMWADDR resolver takes a string for IP addr
 	// net.LookupAddr() can return both a non-zero length slice of hostnames and an error, but when
 	// using the host C library resolver at most one result will be returned.  So for now, since
 	// specifying other DNS resolvers is not supported, if we get an error we know that no valid
