@@ -349,12 +349,7 @@ func getTaggerList(remoteURL string) ([]byte, error) {
 }
 
 func getAgentWorkloadList() ([]byte, error) {
-	// ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	return getWorkloadList(fmt.Sprintf("https://%v/agent/workload-list?verbose=true", util.CoreCmd))
+	return getWorkloadList(fmt.Sprintf("https://%v/agent/workload-list?verbose=true", apiutil.CoreCmd))
 }
 
 func getWorkloadList(url string) ([]byte, error) {

@@ -62,7 +62,7 @@ func workloadList(_ log.Component, config config.Component, cliParams *cliParams
 		return err
 	}
 
-	url, err := workloadURL(config, cliParams.verboseList)
+	url, err := workloadURL(cliParams.verboseList)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func workloadList(_ log.Component, config config.Component, cliParams *cliParams
 	return nil
 }
 
-func workloadURL(config config.Component, verbose bool) (string, error) {
+func workloadURL(verbose bool) (string, error) {
 	url := fmt.Sprintf("https://%s/agent/workload-list", util.SecurityCmd)
 
 	if verbose {

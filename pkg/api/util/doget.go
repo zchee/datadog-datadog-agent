@@ -9,9 +9,11 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
@@ -35,10 +37,11 @@ type ReqOptions struct {
 	Authtoken string
 }
 
-type pathResolver map[string]func() (string, error)
+type AddrResolver map[string]func() (string, error)
 
 const (
 	CoreCmd    = "core-cmd"
+	CoreIPC    = "core-ipc"
 	CoreExpvar = "core-expvar"
 
 	TraceCmd    = "trace-cmd"
@@ -55,7 +58,7 @@ const (
 
 type dialContext func(ctx context.Context, network string, addr string) (net.Conn, error)
 
-var db = pathResolver{
+var db = AddrResolver{
 	CoreCmd: func() (string, error) {
 		config := pkgconfigsetup.Datadog()
 		host, err := pkgconfigsetup.GetIPCAddress(config)
@@ -64,6 +67,15 @@ var db = pathResolver{
 			return "", err
 		}
 		return net.JoinHostPort(host, config.GetString("cmd_port")), nil
+	},
+	CoreIPC: func() (string, error) {
+		config := pkgconfigsetup.Datadog()
+		port := config.GetInt("agent_ipc.port")
+		if port <= 0 {
+			return "", fmt.Errorf("agent_ipc.port cannnot be <= 0")
+		}
+
+		return net.JoinHostPort(config.GetString("agent_ipc.host"), strconv.Itoa(port)), nil
 	},
 	CoreExpvar: func() (string, error) {
 		config := pkgconfigsetup.Datadog()
@@ -131,6 +143,12 @@ var db = pathResolver{
 	},
 }
 
+func OverrideResolver(src, target string) {
+	db[src] = func() (string, error) {
+		return target, nil
+	}
+}
+
 type ClientBuilder struct {
 	tr      *http.Transport
 	timeout time.Duration
@@ -156,7 +174,7 @@ func (c ClientBuilder) WithTimeout(to time.Duration) ClientBuilder {
 }
 
 func (c ClientBuilder) WithResolver() ClientBuilder {
-	c.tr.DialContext = getDialContext()
+	c.tr.DialContext = newDialContext()
 
 	return c
 }

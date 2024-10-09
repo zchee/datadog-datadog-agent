@@ -3,8 +3,6 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-//go:build !windows
-
 package util
 
 import (
@@ -13,8 +11,8 @@ import (
 	"net"
 )
 
-// func getDialContext(config config.Reader) DialContext {
-func getDialContext() dialContext {
+// func newDialContext(config config.Reader) DialContext {
+func newDialContext() dialContext {
 	return func(_ context.Context, network string, addr string) (net.Conn, error) {
 		host, _, err := net.SplitHostPort(addr)
 		if err != nil {
@@ -28,10 +26,10 @@ func getDialContext() dialContext {
 				return nil, err
 			}
 
-			fmt.Printf("receive request for %v, reaching %v", host, path)
+			fmt.Printf("receive request for %v, reaching %v", addr, path)
 
 			return net.Dial("tcp", path)
 		}
-		return nil, fmt.Errorf("%v: unknown Agent address", host)
+		return nil, fmt.Errorf("%v: unknown Agent address", addr)
 	}
 }

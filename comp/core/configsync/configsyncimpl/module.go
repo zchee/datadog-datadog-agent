@@ -8,10 +8,8 @@ package configsyncimpl
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 
 	"go.uber.org/fx"
@@ -20,6 +18,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/configsync"
 	log "github.com/DataDog/datadog-agent/comp/core/log/def"
+	"github.com/DataDog/datadog-agent/pkg/api/util"
 	apiutil "github.com/DataDog/datadog-agent/pkg/api/util"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
@@ -72,18 +71,16 @@ func newOptionalConfigSync(deps dependencies) optional.Option[configsync.Compone
 		return optional.NewNoneOption[configsync.Component]()
 	}
 
-	configSync := newConfigSync(deps, agentIPCPort, configRefreshIntervalSec)
+	configSync := newConfigSync(deps, agentIPCPort)
 	return optional.NewOption(configSync)
 }
 
 // newConfigSync creates a new configSync component.
 // agentIPCPort and configRefreshIntervalSec must be strictly positive.
-func newConfigSync(deps dependencies, agentIPCPort int, configRefreshIntervalSec int) configsync.Component {
-	agentIPCHost := deps.Config.GetString("agent_ipc.host")
-
+func newConfigSync(deps dependencies, configRefreshIntervalSec int) configsync.Component {
 	url := &url.URL{
 		Scheme: "https",
-		Host:   net.JoinHostPort(agentIPCHost, strconv.Itoa(agentIPCPort)),
+		Host:   util.CoreIPC,
 		Path:   "/config/v1",
 	}
 

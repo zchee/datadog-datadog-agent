@@ -134,10 +134,6 @@ func getAndWriteStatus(log log.Component, statusURL string, w io.Writer) {
 }
 
 func getStatusURL() (string, error) {
-	// addressPort, err := pkgconfigsetup.GetProcessAPIAddressPort(pkgconfigsetup.Datadog())
-	// if err != nil {
-	// 	return "", fmt.Errorf("config error: %s", err.Error())
-	// }
 	return fmt.Sprintf("http://%v/agent/status", util.ProcessCmd), nil
 }
 

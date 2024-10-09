@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/DataDog/datadog-agent/pkg/config/model"
@@ -108,33 +107,31 @@ func TestDoGet(t *testing.T) {
 }
 
 // This test check that NewDialBookBuilder return an error when required config field are not set
-func TestDialBook(t *testing.T) {
+func TestResolver(t *testing.T) {
 
-	t.Run("missing config", func(t *testing.T) {
-		cfg := model.NewConfig("datadog", "test", strings.NewReplacer("_", "."))
+	t.Run("mocking helper", func(t *testing.T) {
+		handler := func(w http.ResponseWriter, _ *http.Request) {
+			w.Write([]byte("test"))
+		}
+		server := makeTestServer(t, http.HandlerFunc(handler))
+		OverrideResolver("test-cmd", server.Listener.Addr().String())
 
-		_, err := NewDialBookBuilder(cfg).WithCore().WithProcess().WithTrace().WithCluster().WithSecurity().Build()
-		assert.Error(t, err)
+		client := GetClient().WithNoVerify().WithResolver().Build()
+
+		data, err := DoGet(client, "http://test-cmd", CloseConnection)
+		require.NoError(t, err)
+		require.Equal(t, "test", string(data))
 	})
 
 	t.Run("unknown address", func(t *testing.T) {
-		cfg := model.NewConfig("datadog", "test", strings.NewReplacer("_", "."))
-
-		cfg.SetWithoutSource("cmd_host", "localhost")
-		cfg.SetWithoutSource("cmd_port", "1234")
-		cfg.SetWithoutSource("expvar_port", "5678")
-
-		dialBook, err := NewDialBookBuilder(cfg).WithCore().Build()
-		assert.Error(t, err)
-
-		client := GetClient().WithNoVerify().WithResolver(dialBook).Build()
+		client := GetClient().WithNoVerify().WithResolver().Build()
 
 		handler := func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte("test"))
 		}
 		server := makeTestServer(t, http.HandlerFunc(handler))
-		data, err := DoGet(client, server.URL, CloseConnection)
-		require.NoError(t, err)
-		require.Equal(t, "test", string(data))
+		_, err := DoGet(client, server.URL, CloseConnection)
+		require.ErrorContains(t, err, "unknown Agent address")
 	})
+
 }
