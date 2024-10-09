@@ -14,17 +14,22 @@ import (
 )
 
 // func getDialContext(config config.Reader) DialContext {
-func getDialContext(dialBookGetter func() dialBook) dialContext {
+func getDialContext() dialContext {
 	return func(_ context.Context, network string, addr string) (net.Conn, error) {
 		host, _, err := net.SplitHostPort(addr)
 		if err != nil {
 			return nil, err
 		}
 
-		dialBook := dialBookGetter()
+		if resolver, ok := db[host]; ok {
+			path, err := resolver()
 
-		if path, ok := dialBook[host]; ok {
+			if err != nil {
+				return nil, err
+			}
+
 			fmt.Printf("receive request for %v, reaching %v", host, path)
+
 			return net.Dial("tcp", path)
 		}
 		return nil, fmt.Errorf("%v: unknown Agent address", host)

@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/DataDog/datadog-agent/comp/core/config"
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 )
 
@@ -36,19 +35,7 @@ type ReqOptions struct {
 	Authtoken string
 }
 
-// type AgentAdress struct {
-// 	Cmd    string
-// 	Expvar string
-// }
-
-type DialBookBuilder struct {
-	config config.Reader
-	host   string
-	addr   map[string]string
-	err    error
-}
-
-type dialBook map[string]string
+type pathResolver map[string]func() (string, error)
 
 const (
 	CoreCmd    = "core-cmd"
@@ -68,98 +55,80 @@ const (
 
 type dialContext func(ctx context.Context, network string, addr string) (net.Conn, error)
 
-func NewDialBookBuilder(config config.Reader) DialBookBuilder {
-	coreAgentAddress, err := pkgconfigsetup.GetIPCAddress(config)
+var db = pathResolver{
+	CoreCmd: func() (string, error) {
+		config := pkgconfigsetup.Datadog()
+		host, err := pkgconfigsetup.GetIPCAddress(config)
 
-	return DialBookBuilder{
-		config: config,
-		host:   coreAgentAddress,
-		addr:   make(map[string]string),
-		err:    err,
-	}
-}
+		if err != nil {
+			return "", err
+		}
+		return net.JoinHostPort(host, config.GetString("cmd_port")), nil
+	},
+	CoreExpvar: func() (string, error) {
+		config := pkgconfigsetup.Datadog()
+		host, err := pkgconfigsetup.GetIPCAddress(config)
 
-func (a DialBookBuilder) WithCore() DialBookBuilder {
-	// If AgentAdress is erroneous, return
-	if a.err != nil {
-		return a
-	}
+		if err != nil {
+			return "", err
+		}
+		return net.JoinHostPort(host, config.GetString("expvar_port")), nil
+	},
 
-	a.addr[CoreCmd] = net.JoinHostPort(a.host, a.config.GetString("cmd_port"))
-	a.addr[CoreExpvar] = net.JoinHostPort(a.host, a.config.GetString("expvar_port"))
+	TraceCmd: func() (string, error) {
+		config := pkgconfigsetup.Datadog()
+		host, err := pkgconfigsetup.GetIPCAddress(config)
 
-	return a
-}
+		if err != nil {
+			return "", err
+		}
+		return net.JoinHostPort(host, config.GetString("apm_config.debug.port")), nil
+	},
+	TraceExpvar: func() (string, error) {
+		config := pkgconfigsetup.Datadog()
+		host, err := pkgconfigsetup.GetIPCAddress(config)
 
-func (a DialBookBuilder) WithTrace() DialBookBuilder {
-	// If AgentAdress is erroneous, return
-	if a.err != nil {
-		return a
-	}
+		if err != nil {
+			return "", err
+		}
+		return net.JoinHostPort(host, config.GetString("apm_config.debug.port")), nil
+	},
 
-	a.addr[TraceCmd] = net.JoinHostPort(a.host, a.config.GetString("apm_config.debug.port"))
-	a.addr[TraceExpvar] = net.JoinHostPort(a.host, a.config.GetString("apm_config.debug.port"))
+	ProcessCmd: func() (string, error) {
+		return pkgconfigsetup.GetProcessAPIAddressPort(pkgconfigsetup.Datadog())
+	},
+	ProcessExpvar: func() (string, error) {
+		config := pkgconfigsetup.Datadog()
+		host, err := pkgconfigsetup.GetIPCAddress(config)
 
-	return a
-}
+		if err != nil {
+			return "", err
+		}
+		return net.JoinHostPort(host, config.GetString("process_config.expvar_port")), nil
+	},
 
-func (a DialBookBuilder) WithProcess() DialBookBuilder {
-	// If AgentAdress is erroneous, return
-	if a.err != nil {
-		return a
-	}
+	SecurityCmd: func() (string, error) {
+		return pkgconfigsetup.GetSecurityAgentAPIAddressPort(pkgconfigsetup.Datadog())
+	},
+	SecurityExpvar: func() (string, error) {
+		config := pkgconfigsetup.Datadog()
+		host, err := pkgconfigsetup.GetIPCAddress(config)
 
-	processAgentAddressPort, err := pkgconfigsetup.GetProcessAPIAddressPort(a.config)
-	if err != nil {
-		a.err = err
-		return a
-	}
+		if err != nil {
+			return "", err
+		}
+		return net.JoinHostPort(host, config.GetString("security_agent.expvar_port")), nil
+	},
 
-	a.addr[ProcessCmd] = processAgentAddressPort
-	a.addr[ProcessExpvar] = net.JoinHostPort(a.host, a.config.GetString("process_config.expvar_port"))
+	ClusterAgent: func() (string, error) {
+		config := pkgconfigsetup.Datadog()
+		host, err := pkgconfigsetup.GetIPCAddress(config)
 
-	return a
-}
-
-func (a DialBookBuilder) WithSecurity() DialBookBuilder {
-	// If AgentAdress is erroneous, return
-	if a.err != nil {
-		return a
-	}
-
-	securityAgentAddressPort, err := pkgconfigsetup.GetSecurityAgentAPIAddressPort(a.config)
-	if err != nil {
-		a.err = err
-		return a
-	}
-
-	a.addr[SecurityCmd] = securityAgentAddressPort
-	a.addr[SecurityExpvar] = net.JoinHostPort(a.host, a.config.GetString("security_agent.expvar_port"))
-
-	return a
-}
-
-func (a DialBookBuilder) WithCluster() DialBookBuilder {
-	// If AgentAdress is erroneous, return
-	if a.err != nil {
-		return a
-	}
-
-	a.addr[ClusterAgent] = net.JoinHostPort(a.host, a.config.GetString("cluster_agent.cmd_port"))
-
-	return a
-}
-
-func (a DialBookBuilder) Build() (dialBook, error) {
-	if a.err != nil {
-		return nil, a.err
-	}
-
-	return a.addr, nil
-}
-
-func NewDefaultDialBook(config config.Reader) (dialBook, error) {
-	return NewDialBookBuilder(config).WithCore().WithTrace().WithProcess().WithSecurity().WithCluster().Build()
+		if err != nil {
+			return "", err
+		}
+		return net.JoinHostPort(host, config.GetString("cluster_agent.cmd_port")), nil
+	},
 }
 
 type ClientBuilder struct {
@@ -186,11 +155,8 @@ func (c ClientBuilder) WithTimeout(to time.Duration) ClientBuilder {
 	return c
 }
 
-func (c ClientBuilder) WithResolver(d dialBook) ClientBuilder {
-	c.tr.DialContext = getDialContext(
-		func() dialBook {
-			return d
-		})
+func (c ClientBuilder) WithResolver() ClientBuilder {
+	c.tr.DialContext = getDialContext()
 
 	return c
 }
