@@ -498,7 +498,6 @@ def filter_target_domains(vms: str, infra: dict[KMTArchNameOrLocal, HostInstance
             for domain in infra[vmset.arch].microvms:
                 if domain.tag == vm.version:
                     domains.append(domain)
-
     return domains
 
 
@@ -751,7 +750,7 @@ def prepare(
     domains = get_target_domains(ctx, stack, ssh_key, arch_obj, vms, alien_vms)
     assert len(domains) > 0, err_msg
 
-    _prepare(ctx, stack, component, arch, packages, verbose, ci, compile_only, domains=domains)
+    _prepare(ctx, stack, component, arch_obj, packages, verbose, ci, compile_only, domains=domains)
 
 
 def _prepare(
