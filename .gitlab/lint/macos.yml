@@ -7,6 +7,8 @@ include:
   extends: .macos_gitlab
   needs: ["go_deps", "go_tools_deps"]
   script:
+    - echo $CI_ENVIRONMENT_NAME
+    - echo $CI_ENVIRONMENT_SLUG
     - !reference [.retrieve_linux_go_deps]
     - !reference [.retrieve_linux_go_tools_deps]
     - inv -e linter.go --cpus 12 --timeout 60
