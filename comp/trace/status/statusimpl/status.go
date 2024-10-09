@@ -33,7 +33,7 @@ var (
 
 func client() *http.Client {
 	clientInitOnce.Do(func() {
-		httpClient = apiutil.GetClient(false)
+		httpClient = apiutil.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 	})
 
 	return httpClient

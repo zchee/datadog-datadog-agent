@@ -88,7 +88,7 @@ func newConfigSync(deps dependencies, agentIPCPort int, configRefreshIntervalSec
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	client := apiutil.GetClientWithTimeout(deps.SyncParams.Timeout, false)
+	client := apiutil.GetClient().WithTimeout(deps.SyncParams.Timeout).WithNoVerify().WithResolver().Build()
 	configRefreshInterval := time.Duration(configRefreshIntervalSec) * time.Second
 
 	configSync := configSync{

@@ -21,7 +21,7 @@ import (
 
 // GetClusterAgentConfigCheck gets config check from the server for cluster agent
 func GetClusterAgentConfigCheck(w io.Writer, withDebug bool) error {
-	c := util.GetClient(false) // FIX: get certificates right then make this true
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build() // FIX: get certificates right then make this true
 
 	// Set session token
 	err := util.SetAuthToken(pkgconfigsetup.Datadog())

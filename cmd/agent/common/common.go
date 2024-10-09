@@ -43,6 +43,6 @@ func GetVersion(w http.ResponseWriter, _ *http.Request) {
 
 // NewSettingsClient returns a configured runtime settings client.
 func NewSettingsClient() (settings.Client, error) {
-	hc := util.GetClient(false)
+	hc := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 	return settingshttp.NewClient(hc, fmt.Sprintf("https://%v/agent/config", util.CoreCmd), "agent", settingshttp.NewHTTPClientOptions(util.LeaveConnectionOpen)), nil
 }

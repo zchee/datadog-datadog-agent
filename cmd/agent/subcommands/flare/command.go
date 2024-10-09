@@ -163,7 +163,7 @@ func readProfileData(seconds int) (flare.ProfileData, error) {
 	type agentProfileCollector func(service string) error
 
 	pdata := flare.ProfileData{}
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 
 	type pprofGetter func(path string) ([]byte, error)
 
@@ -385,7 +385,7 @@ func makeFlare(flareComp flare.Component,
 
 func requestArchive(flareComp flare.Component, pdata flare.ProfileData) (string, error) {
 	fmt.Fprintln(color.Output, color.BlueString("Asking the agent to build the flare archive."))
-	c := util.GetClient(false) // FIX: get certificates right then make this true
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build() // FIX: get certificates right then make this true
 	// ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
 	// if err != nil {
 	// 	fmt.Fprintln(color.Output, color.RedString(fmt.Sprintf("Error getting IPC address for the agent: %s", err)))

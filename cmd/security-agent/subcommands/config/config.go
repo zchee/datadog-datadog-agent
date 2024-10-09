@@ -152,7 +152,7 @@ func getSettingsClient(_ *cobra.Command, _ []string) (settings.Client, error) {
 		return nil, err
 	}
 
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 	apiConfigURL := fmt.Sprintf("https://%v/agent/config", util.SecurityCmd)
 
 	return settingshttp.NewClient(c, apiConfigURL, "security-agent", settingshttp.NewHTTPClientOptions(util.LeaveConnectionOpen)), nil

@@ -107,7 +107,7 @@ func MakeCommand(globalParamsGetter func() GlobalParams) *cobra.Command {
 
 func readProfileData(seconds int) (flare.ProfileData, error) {
 	pdata := flare.ProfileData{}
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 
 	fmt.Fprintln(color.Output, color.BlueString("Getting a %ds profile snapshot from datadog-cluster-agent.", seconds))
 	pprofURL := fmt.Sprintf("http://%v/debug/pprof", util.CoreExpvar)
@@ -155,7 +155,7 @@ func run(cliParams *cliParams, _ config.Component) error {
 		profile flare.ProfileData
 		e       error
 	)
-	c := util.GetClient(false) // FIX: get certificates right then make this true
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build() // FIX: get certificates right then make this true
 	urlstr := fmt.Sprintf("https://%v/flare", util.ClusterAgent)
 
 	logFile := pkgconfigsetup.Datadog().GetString("log_file")
@@ -235,7 +235,7 @@ func run(cliParams *cliParams, _ config.Component) error {
 }
 
 func newSettingsClient() (settings.Client, error) {
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 
 	apiConfigURL := fmt.Sprintf(
 		"https://%v/config",

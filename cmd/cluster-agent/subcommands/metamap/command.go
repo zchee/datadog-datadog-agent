@@ -68,7 +68,7 @@ func run(log log.Component, config config.Component, cliParams *cliParams) error
 
 func getMetadataMap(nodeName string) error {
 	var e error
-	c := util.GetClient(false) // FIX: get certificates right then make this true
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build() // FIX: get certificates right then make this true
 	var urlstr string
 	if nodeName == "" {
 		urlstr = fmt.Sprintf("https://%v/api/v1/tags/pod", util.ClusterAgent)

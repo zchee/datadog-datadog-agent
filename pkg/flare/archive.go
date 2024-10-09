@@ -329,7 +329,7 @@ func getProcessAgentTaggerList() ([]byte, error) {
 }
 
 func getTaggerList(remoteURL string) ([]byte, error) {
-	c := apiutil.GetClient(false) // FIX: get certificates right then make this true
+	c := apiutil.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build() // FIX: get certificates right then make this true
 
 	r, err := apiutil.DoGet(c, remoteURL, apiutil.LeaveConnectionOpen)
 	if err != nil {
@@ -358,7 +358,7 @@ func getAgentWorkloadList() ([]byte, error) {
 }
 
 func getWorkloadList(url string) ([]byte, error) {
-	c := apiutil.GetClient(false) // FIX: get certificates right then make this true
+	c := apiutil.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build() // FIX: get certificates right then make this true
 
 	r, err := apiutil.DoGet(c, url, apiutil.LeaveConnectionOpen)
 	if err != nil {

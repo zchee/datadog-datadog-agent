@@ -180,18 +180,10 @@ func getConfigValue(deps dependencies, args []string) error {
 }
 
 func getClient(cfg model.Reader) (settings.Client, error) {
-	httpClient := apiutil.GetClient(false)
-	// ipcAddress, err := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
-
-	// port := cfg.GetInt("process_config.cmd_port")
-	// if port <= 0 {
-	// 	return nil, fmt.Errorf("invalid process_config.cmd_port -- %d", port)
-	// }
+	httpClient := apiutil.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 
 	ipcAddressWithPort := fmt.Sprintf("http://%v/config", util.ProcessCmd)
-	// if err != nil {
-	// 	return nil, err
-	// }
+
 	settingsClient := settingshttp.NewClient(httpClient, ipcAddressWithPort, "process-agent", settingshttp.NewHTTPClientOptions(util.LeaveConnectionOpen))
 	return settingsClient, nil
 }

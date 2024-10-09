@@ -35,7 +35,7 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 }
 
 func newSettingsClient() (settings.Client, error) {
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 
 	apiConfigURL := fmt.Sprintf(
 		"https://%v/config",

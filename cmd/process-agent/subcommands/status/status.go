@@ -28,7 +28,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 )
 
-var httpClient = apiutil.GetClient(false)
+var httpClient = apiutil.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 
 const (
 	notRunning = `

@@ -54,7 +54,7 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 }
 
 func workloadList(_ log.Component, config config.Component, cliParams *cliParams) error {
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 
 	// Set session token
 	err := util.SetAuthToken(config)

@@ -329,7 +329,7 @@ func printPayload(name payloadName, _ log.Component, config config.Component) er
 		return nil
 	}
 
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 	apiConfigURL := fmt.Sprintf("https://%v%s%s",
 		util.CoreCmd, metadataEndpoint, name)
 

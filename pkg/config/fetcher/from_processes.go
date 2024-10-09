@@ -22,7 +22,7 @@ func SecurityAgentConfig(config config.Reader) (string, error) {
 		return "", err
 	}
 
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 	c.Timeout = config.GetDuration("server_timeout") * time.Second
 
 	apiConfigURL := fmt.Sprintf("https://%v/agent/config", util.SecurityCmd)
@@ -37,7 +37,7 @@ func SecurityAgentConfigBySource(config config.Reader) (string, error) {
 		return "", err
 	}
 
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 	c.Timeout = config.GetDuration("server_timeout") * time.Second
 
 	apiConfigURL := fmt.Sprintf("https://%v/agent/config", util.SecurityCmd)
@@ -52,7 +52,7 @@ func TraceAgentConfig(config config.Reader) (string, error) {
 		return "", err
 	}
 
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 	c.Timeout = config.GetDuration("server_timeout") * time.Second
 
 	ipcAddressWithPort := fmt.Sprintf("http://%v/config", util.TraceCmd)
@@ -83,7 +83,7 @@ func ProcessAgentConfig(config config.Reader, getEntireConfig bool) (string, err
 		ipcAddressWithPort += "/all"
 	}
 
-	c := util.GetClient(false)
+	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
 	c.Timeout = config.GetDuration("server_timeout") * time.Second
 
 	client := settingshttp.NewClient(c, ipcAddressWithPort, "process-agent", settingshttp.NewHTTPClientOptions(util.CloseConnection))
