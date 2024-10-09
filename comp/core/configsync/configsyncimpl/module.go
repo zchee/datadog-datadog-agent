@@ -18,7 +18,6 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/configsync"
 	log "github.com/DataDog/datadog-agent/comp/core/log/def"
-	"github.com/DataDog/datadog-agent/pkg/api/util"
 	apiutil "github.com/DataDog/datadog-agent/pkg/api/util"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	"github.com/DataDog/datadog-agent/pkg/util/optional"
@@ -80,7 +79,7 @@ func newOptionalConfigSync(deps dependencies) optional.Option[configsync.Compone
 func newConfigSync(deps dependencies, configRefreshIntervalSec int) configsync.Component {
 	url := &url.URL{
 		Scheme: "https",
-		Host:   util.CoreIPC,
+		Host:   apiutil.CoreIPC,
 		Path:   "/config/v1",
 	}
 

@@ -13,7 +13,7 @@ import (
 
 // func newDialContext(config config.Reader) DialContext {
 func newDialContext() dialContext {
-	return func(_ context.Context, network string, addr string) (net.Conn, error) {
+	return func(_ context.Context, _ string, addr string) (net.Conn, error) {
 		host, _, err := net.SplitHostPort(addr)
 		if err != nil {
 			return nil, err

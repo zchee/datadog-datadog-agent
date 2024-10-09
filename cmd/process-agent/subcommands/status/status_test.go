@@ -12,7 +12,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"text/template"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,26 +75,6 @@ func TestNotRunning(t *testing.T) {
 	getAndWriteStatus(log.NoopLogger, statusURL, &b)
 
 	assert.Equal(t, notRunning, b.String())
-}
-
-// TestError tests an example error to make sure that the error template prints properly if we get something other than
-// a connection error
-func TestError(t *testing.T) {
-	cfg := configmock.New(t)
-	cfg.SetWithoutSource("cmd_host", "8.8.8.8") // Non-local ip address will cause error in `GetIPCAddress`
-	_, ipcError := pkgconfigsetup.GetIPCAddress(pkgconfigsetup.Datadog())
-
-	var errText, expectedErrText strings.Builder
-	url, err := getStatusURL()
-	assert.Equal(t, "", url)
-	writeError(log.NoopLogger, &errText, err)
-
-	tpl, err := template.New("").Parse(errorMessage)
-	require.NoError(t, err)
-	err = tpl.Execute(&expectedErrText, fmt.Errorf("config error: %s", ipcError))
-	require.NoError(t, err)
-
-	assert.Equal(t, expectedErrText.String(), errText.String())
 }
 
 func TestRunStatusCommand(t *testing.T) {

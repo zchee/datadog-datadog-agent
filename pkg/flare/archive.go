@@ -26,7 +26,6 @@ import (
 	flaretypes "github.com/DataDog/datadog-agent/comp/core/flare/types"
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/pkg/api/security"
-	"github.com/DataDog/datadog-agent/pkg/api/util"
 	apiutil "github.com/DataDog/datadog-agent/pkg/api/util"
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 	"github.com/DataDog/datadog-agent/pkg/diagnose"
@@ -319,12 +318,12 @@ func getDiagnoses(isFlareLocal bool, deps diagnose.SuitesDeps) func() ([]byte, e
 }
 
 func getAgentTaggerList() ([]byte, error) {
-	taggerListURL := fmt.Sprintf("https://%v/agent/tagger-list", util.CoreCmd)
+	taggerListURL := fmt.Sprintf("https://%v/agent/tagger-list", apiutil.CoreCmd)
 	return getTaggerList(taggerListURL)
 }
 
 func getProcessAgentTaggerList() ([]byte, error) {
-	taggerListURL := fmt.Sprintf("http://%v/agent/tagger-list", util.ProcessCmd)
+	taggerListURL := fmt.Sprintf("http://%v/agent/tagger-list", apiutil.ProcessCmd)
 	return getTaggerList(taggerListURL)
 }
 

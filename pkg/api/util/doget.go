@@ -37,8 +37,10 @@ type ReqOptions struct {
 	Authtoken string
 }
 
+// WIP Desc
 type AddrResolver map[string]func() (string, error)
 
+// WIP Desc
 const (
 	CoreCmd    = "core-cmd"
 	CoreIPC    = "core-ipc"
@@ -72,7 +74,7 @@ var db = AddrResolver{
 		config := pkgconfigsetup.Datadog()
 		port := config.GetInt("agent_ipc.port")
 		if port <= 0 {
-			return "", fmt.Errorf("agent_ipc.port cannnot be <= 0")
+			return "", fmt.Errorf("agent_ipc.port cannot be <= 0")
 		}
 
 		return net.JoinHostPort(config.GetString("agent_ipc.host"), strconv.Itoa(port)), nil
@@ -163,22 +165,26 @@ func GetClient() ClientBuilder {
 	}
 }
 
+// WIP Desc
 func (c ClientBuilder) WithNoVerify() ClientBuilder {
 	c.tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	return c
 }
 
+// WIP Desc
 func (c ClientBuilder) WithTimeout(to time.Duration) ClientBuilder {
 	c.timeout = to
 	return c
 }
 
+// WIP Desc
 func (c ClientBuilder) WithResolver() ClientBuilder {
 	c.tr.DialContext = newDialContext()
 
 	return c
 }
 
+// WIP Desc
 func (c ClientBuilder) Build() *http.Client {
 	return &http.Client{
 		Transport: c.tr,
