@@ -8,8 +8,7 @@
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_MEMORY_LIMIT: 16Gi
   script:
-    - echo $CI_ENVIRONMENT_NAME
-    - echo $CI_ENVIRONMENT_SLUG
+    - env
     - !reference [.retrieve_linux_go_deps]
     - !reference [.retrieve_linux_go_tools_deps]
     - inv -e rtloader.make --install-prefix=$CI_PROJECT_DIR/dev --python-runtimes "3"
