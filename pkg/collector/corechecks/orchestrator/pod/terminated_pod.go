@@ -172,8 +172,10 @@ func getSharedInformerFactory() (informers.SharedInformerFactory, error) {
 		return nil, err
 	}
 
+	nodeSelector := fields.OneTermEqualSelector("spec.nodeName", nodeName)
+	phaseSelector := fields.OneTermNotEqualSelector("status.phase", "Running")
 	tweakListOptions := func(options *metav1.ListOptions) {
-		options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
+		options.FieldSelector = fields.AndSelectors(nodeSelector, phaseSelector).String()
 	}
 	log.Infof("Creating pod informer for node %s", nodeName)
 
