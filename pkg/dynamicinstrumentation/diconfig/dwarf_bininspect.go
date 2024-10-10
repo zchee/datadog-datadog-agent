@@ -44,7 +44,7 @@ func (a *GoArch) PointerSize() uint {
 	}
 }
 
-func GetLocation2(d *dwarfInspector, funcName, varName string, pc uint64) (*ditypes.Location, error) {
+func GetLocation(d *dwarfInspector, funcName, varName string, pc uint64) (*ditypes.Location, error) {
 	r := d.dwarfData.Reader()
 	for {
 		entry, err := r.Next()
@@ -58,7 +58,7 @@ func GetLocation2(d *dwarfInspector, funcName, varName string, pc uint64) (*dity
 		if entry.Tag == dwarf.TagSubprogram {
 			nameAttr := entry.Val(dwarf.AttrName)
 			if nameAttr != nil && nameAttr.(string) == funcName {
-				loc, err := findVariableInFunction2(d, r, varName, pc)
+				loc, err := findVariableInFunction(d, r, varName, pc)
 				if err != nil {
 					fmt.Printf("Did not find variable %s in %s at 0x%x: %v\n", varName, funcName, pc, err)
 					return nil, err
@@ -76,7 +76,7 @@ func GetLocation2(d *dwarfInspector, funcName, varName string, pc uint64) (*dity
 	return nil, fmt.Errorf("Variable %s not found in function %s", varName, funcName)
 }
 
-func findVariableInFunction2(d *dwarfInspector, r *dwarf.Reader, varName string, pc uint64) (bininspect.ParameterMetadata, error) {
+func findVariableInFunction(d *dwarfInspector, r *dwarf.Reader, varName string, pc uint64) (bininspect.ParameterMetadata, error) {
 	for {
 		entry, err := r.Next()
 		if err != nil {
