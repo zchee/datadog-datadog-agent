@@ -4,11 +4,12 @@ import (
 	"debug/elf"
 	"testing"
 
+	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/ditypes"
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetLocation(t *testing.T) {
+func TestGetParameterAtPC(t *testing.T) {
 	curDir, err := pwd()
 	if err != nil {
 		t.Error(err)
@@ -35,23 +36,44 @@ func TestGetLocation(t *testing.T) {
 
 	prefix := "github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil/"
 
+	expectedB := &ditypes.Parameter{
+		Name:            "b",
+		ID:              "",
+		Type:            "struct []uint8",
+		TotalSize:       24,
+		Kind:            0x17,
+		Location:        ditypes.Location{InReg: false, StackOffset: -8},
+		ParameterPieces: []ditypes.Parameter{},
+	}
+
+	expectedN := &ditypes.Parameter{
+		Name:            "n",
+		ID:              "",
+		Type:            "uint64",
+		TotalSize:       8,
+		Kind:            0xb,
+		Location:        ditypes.Location{InReg: true},
+		ParameterPieces: []ditypes.Parameter{},
+	}
+
 	tcs := []struct {
 		funcName string
 		varName  string
 		pc       uint64
+
+		expected *ditypes.Parameter
 	}{
 		// b between 0x51858c and 0x518690 with several moves
-		{"sample.Return_goroutine_id", "b", 0x51858c},
+		{"sample.Return_goroutine_id", "b", 0x518600, expectedB},
 		// n between 0x518650 and 0x51865c
-		{"sample.Return_goroutine_id", "n", 0x518650},
-		{"sample.Return_goroutine_id", "n", 0x518658},
-		{"sample.Return_goroutine_id", "n", 0x51865b},
+		{"sample.Return_goroutine_id", "n", 0x518658, expectedN},
 	}
 	for _, tc := range tcs {
-		loc, err := GetLocation(d, prefix+tc.funcName, tc.varName, tc.pc)
+		param, err := GetParameterAtPC(d, prefix+tc.funcName, tc.varName, tc.pc)
 		assert.NoError(t, err)
-		assert.NotNil(t, loc)
+
+		assert.Equal(t, tc.expected, param)
 	}
 
-	t.Fatalf("Show me the output")
+	// t.Fatalf("Show me the output")
 }

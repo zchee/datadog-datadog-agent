@@ -44,7 +44,7 @@ func (a *GoArch) PointerSize() uint {
 	}
 }
 
-func GetLocation(d *dwarfInspector, funcName, varName string, pc uint64) (*ditypes.Location, error) {
+func GetParameterAtPC(d *dwarfInspector, funcName, varName string, pc uint64) (*ditypes.Parameter, error) {
 	r := d.dwarfData.Reader()
 	for {
 		entry, err := r.Next()
@@ -58,14 +58,14 @@ func GetLocation(d *dwarfInspector, funcName, varName string, pc uint64) (*dityp
 		if entry.Tag == dwarf.TagSubprogram {
 			nameAttr := entry.Val(dwarf.AttrName)
 			if nameAttr != nil && nameAttr.(string) == funcName {
-				loc, err := findVariableInFunction(d, r, varName, pc)
+				param, err := findVariableInFunction(d, r, varName, pc)
 				if err != nil {
 					fmt.Printf("Did not find variable %s in %s at 0x%x: %v\n", varName, funcName, pc, err)
 					return nil, err
 				}
 				fmt.Printf("Found variable %s in %s at 0x%x\n", varName, funcName, pc)
-				pretty.Log(loc)
-				return nil, nil
+				pretty.Log(param)
+				return param, nil
 			} else {
 				if entry.Children {
 					r.SkipChildren()
@@ -76,11 +76,11 @@ func GetLocation(d *dwarfInspector, funcName, varName string, pc uint64) (*dityp
 	return nil, fmt.Errorf("Variable %s not found in function %s", varName, funcName)
 }
 
-func findVariableInFunction(d *dwarfInspector, r *dwarf.Reader, varName string, pc uint64) (bininspect.ParameterMetadata, error) {
+func findVariableInFunction(d *dwarfInspector, r *dwarf.Reader, varName string, pc uint64) (*ditypes.Parameter, error) {
 	for {
 		entry, err := r.Next()
 		if err != nil {
-			return bininspect.ParameterMetadata{}, err
+			return nil, err
 		}
 		if entry == nil || entry.Tag == 0 {
 			break
@@ -89,12 +89,50 @@ func findVariableInFunction(d *dwarfInspector, r *dwarf.Reader, varName string, 
 		if entry.Tag == dwarf.TagFormalParameter || entry.Tag == dwarf.TagVariable {
 			nameAttr := entry.Val(dwarf.AttrName)
 			if nameAttr != nil && nameAttr.(string) == varName {
-				// Found the variable, now get it's location
-				return d.getParameterLocationAtPC(entry, pc)
+				// Found the variable, now get its location
+				paramMeta, err := d.getParameterLocationAtPC(entry, pc)
+				if err != nil {
+					return nil, err
+				}
+
+				// Get the type attribute
+				typeAttr := entry.Val(dwarf.AttrType)
+				if typeAttr == nil {
+					return nil, fmt.Errorf("Variable %s has no type attribute", varName)
+				}
+				typeOffset := typeAttr.(dwarf.Offset)
+				typeEntry, err := d.dwarfData.Type(typeOffset)
+				if err != nil {
+					return nil, fmt.Errorf("Could not find type for variable %s: %w", varName, err)
+				}
+				typeName := typeEntry.String()
+				return convertToParameter(varName, typeName, paramMeta)
 			}
 		}
 	}
-	return bininspect.ParameterMetadata{}, fmt.Errorf("Variable %s not found", varName)
+	return nil, fmt.Errorf("Variable %s not found", varName)
+}
+
+func convertToParameter(varName, typeName string, pm bininspect.ParameterMetadata) (*ditypes.Parameter, error) {
+	param := &ditypes.Parameter{
+		Name:      varName,
+		Type:      typeName,
+		TotalSize: pm.TotalSize,
+		Kind:      uint(pm.Kind),
+		Location: ditypes.Location{
+			InReg:       pm.Pieces[0].InReg,
+			Register:    pm.Pieces[0].Register,
+			StackOffset: pm.Pieces[0].StackOffset,
+
+			NeedsDereference: false,
+			PointerOffset:    0,
+		},
+
+		// TODO: handle complex types with pieces
+		ParameterPieces: []ditypes.Parameter{},
+	}
+
+	return param, nil
 }
 
 func (d dwarfInspector) getParameterLocationAtPC(parameterDIE *dwarf.Entry, pc uint64) (bininspect.ParameterMetadata, error) {
