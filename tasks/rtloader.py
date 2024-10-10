@@ -10,8 +10,7 @@ import sys
 from invoke import task
 from invoke.exceptions import Exit
 
-from tasks.libs.common.color import Color, color_message
-from tasks.libs.common.utils import gitlab_section
+from tasks.libs.common.utils import gitlab_section, warn_deprecated_parameter
 
 
 def get_rtloader_path():
@@ -34,13 +33,7 @@ def run_make_command(ctx, command=""):
 
 @task
 def make(ctx, install_prefix=None, python_runtimes=None, cmake_options=''):
-    if python_runtimes:
-        print(
-            color_message(
-                '--python-runtimes is deprecated and will always be 3. Please remove this parametes from your scripts',
-                Color.ORANGE,
-            )
-        )
+    warn_deprecated_parameter(python_runtimes, '--python-runtimes')
     dev_path = get_dev_path()
 
     if cmake_options.find("-G") == -1:
