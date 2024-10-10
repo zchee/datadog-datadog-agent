@@ -78,7 +78,7 @@ func (s SpecialKind) String() string {
 	}
 }
 
-// Location represents where a particular datatype is found on probe entry
+// Location represents where a particular parameter is located in memory
 type Location struct {
 	InReg            bool
 	StackOffset      int64
