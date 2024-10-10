@@ -1089,4 +1089,4 @@ exclude go.opentelemetry.io/proto/otlp v1.1.0
 
 replace github.com/google/gopacket v1.1.19 => github.com/DataDog/gopacket v0.0.0-20240626205202-4ac4cee31f14
 
-replace github.com/DataDog/nikos v1.12.5 => github.com/DataDog/nikos v1.12.6-0.20241009101836-a5ee5aaa5277
+replace github.com/DataDog/nikos v1.12.5 => github.com/DataDog/nikos v1.12.6-0.20241010130406-d2e3d3363936
