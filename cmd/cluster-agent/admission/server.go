@@ -62,6 +62,8 @@ type Request struct {
 	DynamicClient dynamic.Interface
 	// APIClient holds a Kubernetes client
 	APIClient kubernetes.Interface
+	// OldObject is the old object in the request
+	OldObject []byte
 }
 
 // WebhookFunc is the function that runs the webhook logic.
@@ -211,6 +213,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request, webhookName stri
 			UserInfo:      &admissionReviewReq.Request.UserInfo,
 			DynamicClient: dc,
 			APIClient:     apiClient,
+			OldObject:     admissionReviewReq.Request.OldObject.Raw,
 		}
 
 		// Generate admission response
@@ -237,6 +240,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request, webhookName stri
 			UserInfo:      &admissionReviewReq.Request.UserInfo,
 			DynamicClient: dc,
 			APIClient:     apiClient,
+			OldObject:     admissionReviewReq.Request.OldObject.Raw,
 		}
 
 		// Generate admission response

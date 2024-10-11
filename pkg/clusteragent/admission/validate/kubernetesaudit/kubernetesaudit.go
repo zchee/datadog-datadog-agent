@@ -15,14 +15,11 @@ import (
 
 	admiv1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/dynamic"
 
 	"github.com/DataDog/datadog-agent/cmd/cluster-agent/admission"
 	"github.com/DataDog/datadog-agent/comp/aggregator/demultiplexer"
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/common"
-	validatecommon "github.com/DataDog/datadog-agent/pkg/clusteragent/admission/validate/common"
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 	"github.com/DataDog/datadog-agent/pkg/metrics/event"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -107,12 +104,12 @@ func (w *Webhook) LabelSelectors(useNamespaceSelector bool) (namespaceSelector *
 func (w *Webhook) WebhookFunc() admission.WebhookFunc {
 	return func(request *admission.Request) *admiv1.AdmissionResponse {
 		fmt.Println("Kubernetes Audit Event:", *request)
-		fmt.Println("Kubernetes Audit Event Raw:", string(request.Raw))
+		fmt.Println("Kubernetes Audit Event Raw:", string(request.OldObject))
 
 		// Validation must always return success.
-		return common.ValidationResponse(validatecommon.Validate(request.Raw, request.Namespace, w.Name(), func(_ *corev1.Pod, _ string, _ dynamic.Interface) (bool, error) {
-			return true, nil
-		}, request.DynamicClient))
+		return &admiv1.AdmissionResponse{
+			Allowed: true,
+		}
 	}
 }
 
