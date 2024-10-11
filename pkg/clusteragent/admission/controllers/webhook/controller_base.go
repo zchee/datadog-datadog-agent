@@ -9,6 +9,7 @@ package webhook
 
 import (
 	"fmt"
+	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/validate/kubernetesaudit"
 
 	admiv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +23,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/DataDog/datadog-agent/cmd/cluster-agent/admission"
+	"github.com/DataDog/datadog-agent/comp/aggregator/demultiplexer"
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/common"
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/metrics"
@@ -52,11 +54,12 @@ func NewController(
 	config Config,
 	wmeta workloadmeta.Component,
 	pa workload.PodPatcher,
+	demultiplexer demultiplexer.Component,
 ) Controller {
 	if config.useAdmissionV1() {
-		return NewControllerV1(client, secretInformer, validatingInformers.V1().ValidatingWebhookConfigurations(), mutatingInformers.V1().MutatingWebhookConfigurations(), isLeaderFunc, isLeaderNotif, config, wmeta, pa)
+		return NewControllerV1(client, secretInformer, validatingInformers.V1().ValidatingWebhookConfigurations(), mutatingInformers.V1().MutatingWebhookConfigurations(), isLeaderFunc, isLeaderNotif, config, wmeta, pa, demultiplexer)
 	}
-	return NewControllerV1beta1(client, secretInformer, validatingInformers.V1beta1().ValidatingWebhookConfigurations(), mutatingInformers.V1beta1().MutatingWebhookConfigurations(), isLeaderFunc, isLeaderNotif, config, wmeta, pa)
+	return NewControllerV1beta1(client, secretInformer, validatingInformers.V1beta1().ValidatingWebhookConfigurations(), mutatingInformers.V1beta1().MutatingWebhookConfigurations(), isLeaderFunc, isLeaderNotif, config, wmeta, pa, demultiplexer)
 }
 
 // Webhook represents an admission webhook
@@ -71,7 +74,7 @@ type Webhook interface {
 	Endpoint() string
 	// Resources returns the kubernetes resources for which the webhook should
 	// be invoked
-	Resources() []string
+	Resources() map[string][]string
 	// Operations returns the operations on the resources specified for which
 	// the webhook should be invoked
 	Operations() []admiv1.OperationType
@@ -88,7 +91,7 @@ type Webhook interface {
 // The reason is that the volume mount for the APM socket added by the configWebhook webhook
 // doesn't always work on Fargate (one of the envs where we use an agent sidecar), and
 // the agent sidecar webhook needs to remove it.
-func (c *controllerBase) generateWebhooks(wmeta workloadmeta.Component, pa workload.PodPatcher) []Webhook {
+func (c *controllerBase) generateWebhooks(wmeta workloadmeta.Component, pa workload.PodPatcher, demultiplexer demultiplexer.Component) []Webhook {
 	// Note: the auto_instrumentation pod injection filter is used across
 	// multiple mutating webhooks, so we add it as a hard dependency to each
 	// of the components that use it via the injectionFilter parameter.
@@ -101,7 +104,9 @@ func (c *controllerBase) generateWebhooks(wmeta workloadmeta.Component, pa workl
 	// Add Validating webhooks.
 	if c.config.isValidationEnabled() {
 		// Future validating webhooks can be added here.
-		validatingWebhooks = []Webhook{}
+		validatingWebhooks = []Webhook{
+			kubernetesaudit.NewWebhook(demultiplexer),
+		}
 		webhooks = append(webhooks, validatingWebhooks...)
 	}
 

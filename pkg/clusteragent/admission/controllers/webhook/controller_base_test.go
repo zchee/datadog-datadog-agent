@@ -37,6 +37,7 @@ func TestNewController(t *testing.T) {
 		v1Cfg,
 		wmeta,
 		nil,
+		nil,
 	)
 
 	assert.IsType(t, &ControllerV1{}, controller)
@@ -51,6 +52,7 @@ func TestNewController(t *testing.T) {
 		make(chan struct{}),
 		v1beta1Cfg,
 		wmeta,
+		nil,
 		nil,
 	)
 
