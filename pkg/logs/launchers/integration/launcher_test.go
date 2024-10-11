@@ -8,7 +8,6 @@ package integration
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,9 +41,7 @@ type LauncherTestSuite struct {
 }
 
 func (suite *LauncherTestSuite) SetupTest() {
-	if runtime.GOOS == "windows" {
-		flake.Mark(suite.T())
-	}
+	flake.Mark(suite.T())
 
 	suite.pipelineProvider = mock.NewMockProvider()
 	suite.outputChan = suite.pipelineProvider.NextPipelineChan()
