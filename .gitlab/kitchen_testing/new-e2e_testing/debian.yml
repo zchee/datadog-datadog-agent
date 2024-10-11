@@ -56,53 +56,6 @@ new-e2e-agent-platform-install-script-debian-a6-arm64:
   variables:
     FLAVOR: datadog-agent
 
-new-e2e-agent-platform-install-script-debian-a7-x86_64:
-  stage: kitchen_testing
-  extends:
-    - .new_e2e_template
-    - .new-e2e_install_script
-    - .new-e2e_os_debian
-    - .new-e2e_debian_a7_x86_64
-    - .new-e2e_agent_a7
-  rules: !reference [.on_default_new-e2e_tests_a7]
-  variables:
-    FLAVOR: datadog-agent
-
-new-e2e-agent-platform-install-script-debian-a7-arm64:
-  stage: kitchen_testing
-  extends:
-    - .new_e2e_template
-    - .new-e2e_install_script
-    - .new-e2e_os_debian
-    - .new-e2e_debian_a7_arm64
-    - .new-e2e_agent_a7
-  rules: !reference [.on_all_new-e2e_tests_a7]
-  variables:
-    FLAVOR: datadog-agent
-
-new-e2e-agent-platform-install-script-debian-iot-agent-a7-x86_64:
-  stage: kitchen_testing
-  extends:
-    - .new_e2e_template
-    - .new-e2e_install_script
-    - .new-e2e_os_debian
-    - .new-e2e_debian_a7_x86_64
-    - .new-e2e_agent_a7
-  rules: !reference [.on_default_new-e2e_tests_a7]
-  variables:
-    FLAVOR: datadog-iot-agent
-
-new-e2e-agent-platform-install-script-debian-dogstatsd-a7-x86_64:
-  stage: kitchen_testing
-  extends:
-    - .new_e2e_template
-    - .new-e2e_install_script
-    - .new-e2e_os_debian
-    - .new-e2e_debian_a7_x86_64
-    - .new-e2e_agent_a7
-  variables:
-    FLAVOR: datadog-dogstatsd
-
 new-e2e-agent-platform-install-script-debian-heroku-agent-a6-x86_64:
   stage: kitchen_testing
   extends:
@@ -114,50 +67,13 @@ new-e2e-agent-platform-install-script-debian-heroku-agent-a6-x86_64:
   variables:
     FLAVOR: datadog-heroku-agent
 
-new-e2e-agent-platform-install-script-debian-heroku-agent-a7-x86_64:
+new-e2e-agent-platform-package-signing-debian-a6-x86_64:
   stage: kitchen_testing
   extends:
     - .new_e2e_template
-    - .new-e2e_install_script
-    - .new-e2e_os_debian
-    - .new-e2e_debian_a7_x86_64
-    - .new-e2e_agent_a7
-  variables:
-    FLAVOR: datadog-heroku-agent
-
-new-e2e-agent-platform-package-signing-debian-a7-x86_64:
-  stage: kitchen_testing
-  extends:
-    - .new_e2e_template
-    - .new-e2e_debian_a7_x86_64
+    - .new-e2e_debian_a6_x86_64
     - .new-e2e_package_signing
-  rules: !reference [.on_default_new-e2e_tests_a7]
-
-new-e2e-agent-platform-step-by-step-debian-a7-x64:
-  stage: kitchen_testing
-  extends:
-    - .new_e2e_template
-    - .new-e2e_step_by_step
-    - .new-e2e_os_debian
-    - .new-e2e_debian_a7_x86_64
-    - .new-e2e_agent_a7
-  rules:
-    !reference [.on_deploy_a7]
-  variables:
-    FLAVOR: datadog-agent
-
-new-e2e-agent-platform-step-by-step-debian-a7-arm64:
-  stage: kitchen_testing
-  extends:
-    - .new_e2e_template
-    - .new-e2e_step_by_step
-    - .new-e2e_os_debian
-    - .new-e2e_debian_a7_arm64
-    - .new-e2e_agent_a7
-  rules:
-    !reference [.on_deploy_a7]
-  variables:
-    FLAVOR: datadog-agent
+  rules: !reference [.on_default_new-e2e_tests_a6]
 
 new-e2e-agent-platform-step-by-step-debian-a6-x86_64:
   stage: kitchen_testing
@@ -206,18 +122,3 @@ new-e2e-agent-platform-install-script-upgrade7-debian-x86_64:
     - .new-e2e_agent_a7
   variables:
     FLAVOR: datadog-agent
-
-new-e2e-agent-platform-install-script-upgrade7-debian-iot-agent-x86_64:
-  stage: kitchen_testing
-  extends:
-    - .new_e2e_template
-    - .new-e2e_script_upgrade7
-    - .new-e2e_os_debian
-    - .new-e2e_debian_a7_x86_64
-    - .new-e2e_agent_a7
-  variables:
-    FLAVOR: datadog-iot-agent
-  parallel:
-    matrix:
-      - START_MAJOR_VERSION: [7]
-        END_MAJOR_VERSION: [7]
