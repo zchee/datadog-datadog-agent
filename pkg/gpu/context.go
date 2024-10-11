@@ -179,6 +179,8 @@ func (ctx *systemContext) getProcessMemoryMaps(pid int) (*kernel.ProcMapEntries,
 
 func (ctx *systemContext) cleanupDataForProcess(pid int) {
 	delete(ctx.pidMaps, pid)
+	delete(ctx.selectedDeviceByPIDAndTID, pid)
+	delete(ctx.visibleDevicesCache, pid)
 }
 
 func (ctx *systemContext) cleanupOldEntries() {
