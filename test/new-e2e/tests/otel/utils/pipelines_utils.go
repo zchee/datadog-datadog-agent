@@ -582,3 +582,54 @@ func getTagMapFromSlice(t *testing.T, tagSlice []string) map[string]string {
 	}
 	return m
 }
+
+// TestOTelFlareDDExporter tests that the OTel Agent flare functionality works as expected
+func TestOTelFlareDDExporter(s OTelTestSuite) {
+	err := s.Env().FakeIntake.Client().FlushServerAndResetAggregators()
+	require.NoError(s.T(), err)
+
+	s.T().Log("Starting flare")
+	agent := getAgentPod(s)
+	stdout, stderr, err := s.Env().KubernetesCluster.KubernetesClient.PodExec(
+		"datadog", agent.Name, "agent", []string{"agent", "flare", "--email", "e2e@test.com", "--send"})
+	require.NoError(s.T(), err, "Failed to execute flare")
+	require.Empty(s.T(), stderr)
+	require.NotNil(s.T(), stdout)
+
+	s.T().Log("Getting latest flare")
+	flare, err := s.Env().FakeIntake.Client().GetLatestFlare()
+	require.NoError(s.T(), err, "Failed to get latest flare")
+
+	// Verify OTel Agent flare file structure
+	otelFolder, otelFlareFolder := false, false
+	var otelResponse string
+	for _, filename := range flare.GetFilenames() {
+		if strings.Contains(filename, "/otel/") {
+			otelFolder = true
+		}
+		if strings.Contains(filename, "/otel/otel-flare/") {
+			otelFlareFolder = true
+		}
+		if strings.Contains(filename, "otel/otel-response.json") {
+			otelResponse = filename
+		}
+	}
+	assert.True(s.T(), otelFolder)
+	assert.True(s.T(), otelFlareFolder)
+	otelResponseContent, err := flare.GetFileContent(otelResponse)
+	s.T().Log("Got flare otel-response.json", otelResponseContent)
+	require.NoError(s.T(), err)
+
+	// Verify flare contains expected components
+	expectedContents := []string{
+		"otel-agent",
+		"ddflare/dd-autoconfigured:",
+		"health_check/dd-autoconfigured:",
+		"pprof/dd-autoconfigured:",
+		"zpages/dd-autoconfigured:",
+		"prometheus/dd-autoconfigured:",
+	}
+	for _, expected := range expectedContents {
+		assert.Contains(s.T(), otelResponseContent, expected)
+	}
+}
