@@ -6,10 +6,13 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/ditypes"
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil"
+	"github.com/DataDog/datadog-agent/pkg/network/go/bininspect"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetParameterAtPC(t *testing.T) {
+	// log.SetupLogger(seelog.Default, "debug")
+
 	curDir, err := pwd()
 	if err != nil {
 		t.Error(err)
@@ -26,12 +29,12 @@ func TestGetParameterAtPC(t *testing.T) {
 	elfFile, err := elf.Open(binaryPath)
 	assert.NoError(t, err)
 
-	d := &dwarfInspector{
-		elf: elfMetadata{
-			file: elfFile,
-			arch: GoArchARM64,
+	d := &bininspect.DwarfInspector{
+		Elf: bininspect.ElfMetadata{
+			File: elfFile,
+			Arch: bininspect.GoArchARM64,
 		},
-		dwarfData: dwarfData,
+		DwarfData: dwarfData,
 	}
 
 	prefix := "github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil/"
@@ -74,6 +77,4 @@ func TestGetParameterAtPC(t *testing.T) {
 
 		assert.Equal(t, tc.expected, param)
 	}
-
-	// t.Fatalf("Show me the output")
 }
