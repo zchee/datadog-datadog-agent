@@ -18,7 +18,7 @@ import (
 )
 
 type newProcessBinaryInspector struct {
-	elf       elfMetadata
+	elf       ElfMetadata
 	symbols   map[string]elf.Symbol
 	goVersion goversion.GoVersion
 }
@@ -57,9 +57,9 @@ func InspectNewProcessBinary(elfFile *elf.File, functions map[string]FunctionCon
 	}
 
 	inspector := newProcessBinaryInspector{
-		elf: elfMetadata{
-			file: elfFile,
-			arch: arch,
+		elf: ElfMetadata{
+			File: elfFile,
+			Arch: arch,
 		},
 		symbols:   symbols,
 		goVersion: goVersion,
@@ -99,7 +99,7 @@ func (i *newProcessBinaryInspector) findFunctions(functions map[string]FunctionC
 	functionMetadata := make(map[string]FunctionMetadata, len(functions))
 
 	for funcName, funcConfig := range functions {
-		offset, err := SymbolToOffset(i.elf.file, i.symbols[funcName])
+		offset, err := SymbolToOffset(i.elf.File, i.symbols[funcName])
 		if err != nil {
 			return nil, fmt.Errorf("could not find location for function %q: %w", funcName, err)
 		}
@@ -111,7 +111,7 @@ func (i *newProcessBinaryInspector) findFunctions(functions map[string]FunctionC
 				return nil, fmt.Errorf("could not find function %q in symbols", funcName)
 			}
 
-			locations, err := FindReturnLocations(i.elf.file, symbol, uint64(offset))
+			locations, err := FindReturnLocations(i.elf.File, symbol, uint64(offset))
 			if err != nil {
 				return nil, fmt.Errorf("could not find return locations for function %q: %w", funcName, err)
 			}
@@ -119,7 +119,7 @@ func (i *newProcessBinaryInspector) findFunctions(functions map[string]FunctionC
 			returnLocations = locations
 		}
 
-		parameters, err := funcConfig.ParamLookupFunction(i.goVersion.GoVersion, string(i.elf.arch))
+		parameters, err := funcConfig.ParamLookupFunction(i.goVersion.GoVersion, string(i.elf.Arch))
 		if err != nil {
 			return nil, fmt.Errorf("failed finding parameters of function %q: %w", funcName, err)
 		}
@@ -153,18 +153,18 @@ func (i *newProcessBinaryInspector) getRuntimeGAddrTLSOffset() (uint64, error) {
 	//   offset is calculated using runtime.tls_g and the formula is different.
 
 	var tls *elf.Prog
-	for _, prog := range i.elf.file.Progs {
+	for _, prog := range i.elf.File.Progs {
 		if prog.Type == elf.PT_TLS {
 			tls = prog
 			break
 		}
 	}
 
-	switch i.elf.arch {
+	switch i.elf.Arch {
 	case GoArchX86_64:
 		tlsg, ok := i.symbols["runtime.tlsg"]
 		if !ok || tls == nil {
-			return ^uint64(i.elf.arch.PointerSize()) + 1, nil //-ptrSize
+			return ^uint64(i.elf.Arch.PointerSize()) + 1, nil //-ptrSize
 		}
 
 		// According to https://reviews.llvm.org/D61824, linkers must pad the actual
@@ -180,10 +180,10 @@ func (i *newProcessBinaryInspector) getRuntimeGAddrTLSOffset() (uint64, error) {
 	case GoArchARM64:
 		tlsg, ok := i.symbols["runtime"]
 		if !ok || tls == nil {
-			return 2 * uint64(i.elf.arch.PointerSize()), nil
+			return 2 * uint64(i.elf.Arch.PointerSize()), nil
 		}
 
-		return tlsg.Value + uint64(i.elf.arch.PointerSize()*2) + ((tls.Vaddr - uint64(i.elf.arch.PointerSize()*2)) & (tls.Align - 1)), nil
+		return tlsg.Value + uint64(i.elf.Arch.PointerSize()*2) + ((tls.Vaddr - uint64(i.elf.Arch.PointerSize()*2)) & (tls.Align - 1)), nil
 
 	default:
 		return 0, errors.New("binary is for unsupported architecture")
@@ -207,7 +207,7 @@ func (i *newProcessBinaryInspector) getRuntimeGAddrTLSOffset() (uint64, error) {
 // - https://github.com/golang/go/blob/61011de1af0bc6ab286c4722632719d3da2cf746/src/runtime/runtime2.go#L403
 // - https://github.com/golang/go/blob/61011de1af0bc6ab286c4722632719d3da2cf746/src/runtime/runtime2.go#L436
 func (i *newProcessBinaryInspector) getGoroutineIDMetadata(abi GoABI) (GoroutineIDMetadata, error) {
-	goroutineIDOffset, err := goid.GetGoroutineIDOffset(i.goVersion.GoVersion, string(i.elf.arch))
+	goroutineIDOffset, err := goid.GetGoroutineIDOffset(i.goVersion.GoVersion, string(i.elf.Arch))
 	if err != nil {
 		return GoroutineIDMetadata{}, fmt.Errorf("could not find goroutine ID offset in goroutine context struct: %w", err)
 	}
@@ -219,14 +219,14 @@ func (i *newProcessBinaryInspector) getGoroutineIDMetadata(abi GoABI) (Goroutine
 	// On x86_64 pre-Go 1.17 and on x86 (in all Go versions),
 	// the runtime.g pointer is stored in the thread's thread-local-storage.
 	runtimeGInRegister := true
-	if i.elf.arch == GoArchX86_64 {
+	if i.elf.Arch == GoArchX86_64 {
 		runtimeGInRegister = abi == GoABIRegister
 	}
 
 	var runtimeGRegister int
 	var runtimeGTLSAddrOffset uint64
 	if runtimeGInRegister {
-		switch i.elf.arch {
+		switch i.elf.Arch {
 		case GoArchX86_64:
 			// https://go.googlesource.com/go/+/refs/heads/dev.regabi/src/cmd/compile/internal-abi.md#amd64-architecture
 			runtimeGRegister = 14

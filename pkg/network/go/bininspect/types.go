@@ -62,9 +62,9 @@ var StructOffsetLimitListenerConnNetConn = FieldIdentifier{
 	FieldName:  "Conn",
 }
 
-type elfMetadata struct {
-	file *elf.File
-	arch GoArch
+type ElfMetadata struct {
+	File *elf.File
+	Arch GoArch
 }
 
 // Result is the result of the binary inspection process.
