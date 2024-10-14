@@ -57,7 +57,6 @@
 
 k8s-e2e-cws-dev:
   extends: .k8s_e2e_template_dev_with_cws_cspm_init
-  rules: !reference [.on_dev_branch_manual]
   variables:
     ARGO_WORKFLOW: cws
 
@@ -70,7 +69,6 @@ k8s-e2e-cws-main:
 
 k8s-e2e-cspm-dev:
   extends: .k8s_e2e_template_dev_with_cws_cspm_init
-  rules: !reference [.on_dev_branch_manual]
   variables:
     ARGO_WORKFLOW: cspm
 
@@ -83,7 +81,6 @@ k8s-e2e-cspm-main:
 
 k8s-e2e-otlp-dev:
   extends: .k8s_e2e_template_dev
-  rules: !reference [.on_dev_branch_manual]
   variables:
     ARGO_WORKFLOW: otlp
 

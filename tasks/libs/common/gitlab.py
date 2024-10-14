@@ -494,7 +494,7 @@ def get_preset_contexts(required_tests):
         ("TESTING_CLEANUP", ["false"]),
     ]
     dev_contexts = [
-        ("BUCKET_BRANCH", ["nightly"]),  # ["dev", "nightly", "beta", "stable", "oldnightly"]
+        ("BUCKET_BRANCH", ["dev"]),  # ["dev", "nightly", "beta", "stable", "oldnightly"]
         (
             "CI_COMMIT_BRANCH",
             ["nschweitzer/remove7"],
@@ -504,6 +504,7 @@ def get_preset_contexts(required_tests):
         ("DEPLOY_AGENT", ["false"]),
         ("RUN_ALL_BUILDS", ["false"]),
         ("RUN_E2E_TESTS", ["auto"]),
+        ("RELEASE_VERSION_6", ["nightly"]),
         ("RUN_KMT_TESTS", ["on"]),
         ("RUN_UNIT_TESTS", ["on"]),
         ("TESTING_CLEANUP", ["true"]),
