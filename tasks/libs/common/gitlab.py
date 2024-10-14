@@ -460,7 +460,7 @@ def get_preset_contexts(required_tests):
         raise Exit(f"Invalid test required: {required_tests} must contain only values from {possible_tests}", 1)
     main_contexts = [
         ("BUCKET_BRANCH", ["nightly"]),  # ["dev", "nightly", "beta", "stable", "oldnightly"]
-        ("CI_COMMIT_BRANCH", ["main"]),  # ["main", "mq-working-branch-main", "7.42.x", "any/name"]
+        ("CI_COMMIT_BRANCH", ["6.53.x"]),  # ["main", "mq-working-branch-main", "7.42.x", "any/name"]
         ("CI_COMMIT_TAG", [""]),  # ["", "1.2.3-rc.4", "6.6.6"]
         ("CI_PIPELINE_SOURCE", ["pipeline"]),  # ["trigger", "pipeline", "schedule"]
         ("DEPLOY_AGENT", ["true"]),
@@ -497,13 +497,13 @@ def get_preset_contexts(required_tests):
         ("BUCKET_BRANCH", ["nightly"]),  # ["dev", "nightly", "beta", "stable", "oldnightly"]
         (
             "CI_COMMIT_BRANCH",
-            ["6.53.x", "nschweitzer/remove7"],
+            ["nschweitzer/remove7"],
         ),  # ["main", "mq-working-branch-main", "7.42.x", "any/name"]
         ("CI_COMMIT_TAG", [""]),  # ["", "1.2.3-rc.4", "6.6.6"]
         ("CI_PIPELINE_SOURCE", ["pipeline"]),  # ["trigger", "pipeline", "schedule"]
         ("DEPLOY_AGENT", ["false"]),
         ("RUN_ALL_BUILDS", ["false"]),
-        ("RUN_E2E_TESTS", ["on"]),
+        ("RUN_E2E_TESTS", ["auto"]),
         ("RUN_KMT_TESTS", ["on"]),
         ("RUN_UNIT_TESTS", ["on"]),
         ("TESTING_CLEANUP", ["true"]),
