@@ -24,7 +24,7 @@ dev_branch-a6:
 dev_branch_multiarch-a6:
   extends: .docker_publish_job_definition
   stage: dev_container_deploy
-  rules: !reference [.on_all_builds_a6_manual]
+  rules: !reference [.manual]
   needs:
     - docker_build_agent6
     - docker_build_agent6_arm64
