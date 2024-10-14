@@ -70,7 +70,7 @@ func newOptionalConfigSync(deps dependencies) optional.Option[configsync.Compone
 		return optional.NewNoneOption[configsync.Component]()
 	}
 
-	configSync := newConfigSync(deps, agentIPCPort)
+	configSync := newConfigSync(deps, configRefreshIntervalSec)
 	return optional.NewOption(configSync)
 }
 
