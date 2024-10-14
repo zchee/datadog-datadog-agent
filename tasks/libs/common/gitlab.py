@@ -454,7 +454,7 @@ def read_content(file_path):
 
 
 def get_preset_contexts(required_tests):
-    possible_tests = ["all", "main", "release", "mq"]
+    possible_tests = ["all", "main", "release", "mq", "dev"]
     required_tests = required_tests.casefold().split(",")
     if set(required_tests) | set(possible_tests) != set(possible_tests):
         raise Exit(f"Invalid test required: {required_tests} must contain only values from {possible_tests}", 1)
@@ -493,6 +493,21 @@ def get_preset_contexts(required_tests):
         ("RUN_UNIT_TESTS", ["off"]),
         ("TESTING_CLEANUP", ["false"]),
     ]
+    dev_contexts = [
+        ("BUCKET_BRANCH", ["nightly"]),  # ["dev", "nightly", "beta", "stable", "oldnightly"]
+        (
+            "CI_COMMIT_BRANCH",
+            ["6.53.x", "nschweitzer/remove7"],
+        ),  # ["main", "mq-working-branch-main", "7.42.x", "any/name"]
+        ("CI_COMMIT_TAG", [""]),  # ["", "1.2.3-rc.4", "6.6.6"]
+        ("CI_PIPELINE_SOURCE", ["pipeline"]),  # ["trigger", "pipeline", "schedule"]
+        ("DEPLOY_AGENT", ["false"]),
+        ("RUN_ALL_BUILDS", ["false"]),
+        ("RUN_E2E_TESTS", ["on"]),
+        ("RUN_KMT_TESTS", ["on"]),
+        ("RUN_UNIT_TESTS", ["on"]),
+        ("TESTING_CLEANUP", ["true"]),
+    ]
     all_contexts = []
     for test in required_tests:
         if test in ["all", "main"]:
@@ -501,6 +516,8 @@ def get_preset_contexts(required_tests):
             generate_contexts(release_contexts, [], all_contexts)
         if test in ["all", "mq"]:
             generate_contexts(mq_contexts, [], all_contexts)
+        if test in ["all", "dev"]:
+            generate_contexts(dev_contexts, [], all_contexts)
     return all_contexts
 
 

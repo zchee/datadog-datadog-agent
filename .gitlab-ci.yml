@@ -523,6 +523,7 @@ workflow:
 # rule to trigger job for internal image deployment if deploy is set or
 # manually if not
 .on_deploy_a6_internal_or_manual:
+  - !reference [.except_mergequeue]
   - <<: *if_not_version_6
     when: never
   - <<: *if_deploy
