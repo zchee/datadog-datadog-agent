@@ -1,6 +1,6 @@
 ---
 include:
-  - /.gitlab/common/container_publish_job_templates.yml
+  - .gitlab/common/container_publish_job_templates.yml
 
 dev_branch-a6:
   extends: .docker_publish_job_definition
@@ -149,8 +149,8 @@ qa_agent:
   needs:
     - docker_build_agent6
     - docker_build_agent6_arm64
-    - docker_build_agent6_windows1809
-    - docker_build_agent6_windows2022
+    - docker_build_agent6_windows1809_core
+    - docker_build_agent6_windows2022_core
   variables:
     IMG_REGISTRIES: agent-qa
     IMG_SOURCES: ${SRC_AGENT}:v${CI_PIPELINE_ID}-${CI_COMMIT_SHORT_SHA}-6-amd64,${SRC_AGENT}:v${CI_PIPELINE_ID}-${CI_COMMIT_SHORT_SHA}-6-arm64,${SRC_AGENT}:v${CI_PIPELINE_ID}-${CI_COMMIT_SHORT_SHA}-6-win1809-amd64,${SRC_AGENT}:v${CI_PIPELINE_ID}-${CI_COMMIT_SHORT_SHA}-6-winltsc2022-amd64
