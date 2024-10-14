@@ -37,25 +37,22 @@ type ReqOptions struct {
 	Authtoken string
 }
 
-// WIP Desc
+// AddrResolver is a map that provides, for a given Agent domain name, a function to retrieve its real transport address (e.g., "core-cmd" -> "127.0.0.1:5001").
+// The function can return either the address or an error.
 type AddrResolver map[string]func() (string, error)
 
-// WIP Desc
+// The following constant values represent the Agent domain names
 const (
-	CoreCmd    = "core-cmd"
-	CoreIPC    = "core-ipc"
-	CoreExpvar = "core-expvar"
-
-	TraceCmd    = "trace-cmd"
-	TraceExpvar = "trace-expvar"
-
-	SecurityCmd    = "security-cmd"
-	SecurityExpvar = "security-expvar"
-
-	ProcessCmd    = "process-agent"
-	ProcessExpvar = "process-expvar"
-
-	ClusterAgent = "cluster-agent"
+	CoreCmd        = "core-cmd"        // CoreCmd is the core Agent command endpoint
+	CoreIPC        = "core-ipc"        // CoreIPC is the core Agent configuration synchronisation endpoint
+	CoreExpvar     = "core-expvar"     // CoreExpvar is the core Agent expvar endpoint
+	TraceCmd       = "trace-cmd"       // TraceCmd is the trace Agent command endpoint
+	TraceExpvar    = "trace-expvar"    // TraceExpvar is the trace Agent expvar endpoint
+	SecurityCmd    = "security-cmd"    // SecurityCmd is the security Agent command endpoint
+	SecurityExpvar = "security-expvar" // SecurityExpvar is the security Agent expvar endpoint
+	ProcessCmd     = "process-agent"   // ProcessCmd is the process Agent command endpoint
+	ProcessExpvar  = "process-expvar"  // ProcessExpvar is the process Agent expvar endpoint
+	ClusterAgent   = "cluster-agent"   // ClusterAgent is the Cluster Agent command endpoint
 )
 
 type dialContext func(ctx context.Context, network string, addr string) (net.Conn, error)
@@ -145,46 +142,83 @@ var db = AddrResolver{
 	},
 }
 
+// OverrideResolver allows you to upsert a getter in the shared [AddrResolver].
+// This function is intended for testing purposes only.
 func OverrideResolver(src, target string) {
 	db[src] = func() (string, error) {
 		return target, nil
 	}
 }
 
+// ClientBuilder is a struct used to build an [*net/http.Client].
 type ClientBuilder struct {
 	tr      *http.Transport
 	timeout time.Duration
 }
 
-// GetClient is a convenience function returning an http client
-// `GetClient(false)` must be used only for HTTP requests whose destination is
-// localhost (ie, for Agent commands).
+// GetClient returns a ClientBuilder struct that lets you create an Agent-specific client.
+// To get an [*net/http.Client] object from the return value, call the Build() function.
+// To provide specific features to your client, call the related With...() functions.
+//
+// Note: The order in which the With functions are called does not affect the final configuration
+//
+// # Example usage
+//
+//	client := GetClient().WithNoVerify().WithResolver().Build()
+//
+// This example creates an HTTP client with no TLS verification and a custom resolver.
 func GetClient() ClientBuilder {
 	return ClientBuilder{
 		tr: &http.Transport{},
 	}
 }
 
-// WIP Desc
+// WithNoVerify configures the client to skip TLS verification.
+//
+// Example usage:
+//
+// # Example usage
+//
+//	client := GetClient().WithNoVerify().Build()
+//
+// This example creates an HTTP client that skips TLS verification.
 func (c ClientBuilder) WithNoVerify() ClientBuilder {
 	c.tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	return c
 }
 
-// WIP Desc
+// WithTimeout sets the timeout for the HTTP client.
+//
+// # Example usage
+//
+//	client := GetClient().WithTimeout(30 * time.Second).Build()
+//
+// This example creates an HTTP client with a 30-second timeout.
 func (c ClientBuilder) WithTimeout(to time.Duration) ClientBuilder {
 	c.timeout = to
 	return c
 }
 
-// WIP Desc
+// WithResolver configures the client to use a custom resolver.
+//
+// # Example usage
+//
+//	client := GetClient().WithResolver().Build()
+//
+// This example creates an HTTP client with a custom resolver.
 func (c ClientBuilder) WithResolver() ClientBuilder {
 	c.tr.DialContext = newDialContext()
 
 	return c
 }
 
-// WIP Desc
+// Build constructs the [*net/http.Client] with the configured options.
+//
+// # Example usage
+//
+//	client := GetClient().WithNoVerify().WithTimeout(30 * time.Second).WithResolver().Build()
+//
+// This example creates an HTTP client with no TLS verification, a 30-second timeout, and a custom resolver.
 func (c ClientBuilder) Build() *http.Client {
 	return &http.Client{
 		Transport: c.tr,
