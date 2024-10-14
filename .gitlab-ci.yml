@@ -252,10 +252,10 @@ variables:
 # Condition mixins for simplification of rules
 #
 .if_main_branch: &if_main_branch
-  if: $CI_COMMIT_BRANCH == "main"
+  if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "6.53.x"
 
 .if_not_main_branch: &if_not_main_branch
-  if: $CI_COMMIT_BRANCH != "main"
+  if: $CI_COMMIT_BRANCH != "main" && $CI_COMMIT_BRANCH != "6.53.x"
 
 .if_release_branch: &if_release_branch
   if: $CI_COMMIT_BRANCH =~ /^[0-9]+\.[0-9]+\.x$/
@@ -265,9 +265,6 @@ variables:
 
 .if_not_version_6: &if_not_version_6
   if: $RELEASE_VERSION_6 == ""
-
-.if_version_7: &if_version_7
-  if: $RELEASE_VERSION_7 != ""
 
 .if_not_version_7: &if_not_version_7
   if: $RELEASE_VERSION_7 == ""
@@ -423,26 +420,6 @@ workflow:
   - <<: *if_version_6
     when: manual
     allow_failure: true
-
-.on_a7:
-  - <<: *if_mergequeue
-    when: never
-  - <<: *if_version_7
-
-.on_a7_manual:
-  - <<: *if_mergequeue
-    when: never
-  - <<: *if_version_7
-    when: manual
-    allow_failure: true
-
-.except_no_a6_or_no_a7:
-  - <<: *if_mergequeue
-    when: never
-  - <<: *if_not_version_6
-    when: never
-  - <<: *if_not_version_7
-    when: never
 
 .on_dev_branch_manual:
   - <<: *if_mergequeue
@@ -627,13 +604,6 @@ workflow:
     when: never
   - <<: *if_deploy
 
-.on_deploy_nightly_repo_branch_a7:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_not_nightly_or_dev_repo_branch
-    when: never
-  - <<: *if_deploy
-
 .on_deploy_stable_or_beta_repo_branch:
   - <<: *if_not_stable_or_beta_repo_branch
     when: never
@@ -655,61 +625,6 @@ workflow:
     when: manual
     allow_failure: true
 
-.on_deploy_stable_or_beta_repo_branch_a7:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_not_stable_or_beta_repo_branch
-    when: never
-  - <<: *if_deploy
-
-.on_deploy_stable_or_beta_repo_branch_a7_manual:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_not_stable_or_beta_repo_branch
-    when: never
-  - <<: *if_deploy
-    when: manual
-    allow_failure: true
-
-.on_deploy_stable_or_rc_tag_on_beta_repo_branch_a7:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_not_stable_or_beta_repo_branch
-    when: never
-  - <<: *if_rc_tag_on_beta_repo_branch
-    when: on_success
-  - <<: *if_deploy_on_stable_repo_branch
-    when: on_success
-  - when: never
-
-.on_deploy_stable_or_rc_tag_on_beta_repo_branch_a7_manual_on_stable:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_not_stable_or_beta_repo_branch
-    when: never
-  - <<: *if_rc_tag_on_beta_repo_branch
-    when: on_success
-  - <<: *if_deploy_on_stable_repo_branch
-    when: manual
-    allow_failure: true
-  - when: never
-
-# This rule is a variation of on_deploy_stable_or_beta_repo_branch_a7_manual where
-# the job is usually run manually, except when the pipeline
-# builds an RC: in this case, the job is run automatically.
-# This is done to reduce the number of manual steps that have
-# to be done when creating RCs.
-.on_deploy_stable_or_beta_repo_branch_a7_manual_auto_on_rc:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_not_stable_or_beta_repo_branch
-    when: never
-  - <<: *if_rc_tag_on_beta_repo_branch
-    when: on_success
-  - <<: *if_deploy
-    when: manual
-    allow_failure: true
-
 # This rule will add the job as manual when running on beta deploy branch
 # and will add it as a regular automatically running job when running
 # on stable deploy branch.
@@ -723,15 +638,6 @@ workflow:
     allow_failure: true
   - when: on_success
 
-.on_deploy_stable_repo_branch_a7_manual:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_not_stable_repo_branch
-    when: never
-  - <<: *if_deploy
-    when: manual
-    allow_failure: true
-
 .except_deploy:
   - <<: *if_deploy
     when: never
@@ -743,13 +649,6 @@ workflow:
 
 .on_a6_except_deploy:
   - <<: *if_not_version_6
-    when: never
-  - <<: *if_deploy
-    when: never
-  - when: on_success
-
-.on_a7_except_deploy:
-  - <<: *if_not_version_7
     when: never
   - <<: *if_deploy
     when: never
@@ -798,18 +697,6 @@ workflow:
     when: manual
     allow_failure: true
 
-.on_all_builds_a7:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_run_all_builds
-
-.on_all_builds_a7_manual:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_run_all_builds
-    when: manual
-    allow_failure: true
-
 .on_kitchen_tests_a6:
   - <<: *if_not_version_6
     when: never
@@ -829,25 +716,6 @@ workflow:
     when: never
   - <<: *if_installer_tests
   - <<: *if_auto_e2e_tests
-
-.on_kitchen_tests_a7:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_installer_tests
-
-.on_all_kitchen_builds_a7:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_not_run_all_builds
-    when: never
-  - <<: *if_installer_tests
-
-.on_all_new-e2e_tests_a7:
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_not_run_all_builds
-    when: never
-  - <<: *if_installer_tests
 
 # Default kitchen tests are also run on dev branches
 # In that case, the target OS versions is a subset of the
@@ -873,18 +741,6 @@ workflow:
   - <<: *if_auto_e2e_tests
     variables:
       E2E_OSVERS: $E2E_BRANCH_OSVERS
-
-.on_default_kitchen_tests_a7_always:
-  - <<: *if_mergequeue
-    when: never
-  - <<: *if_not_version_7
-    when: never
-  - <<: *if_installer_tests
-    when: always
-  - <<: *if_auto_e2e_tests
-    when: always
-    variables:
-      KITCHEN_OSVERS: $DEFAULT_KITCHEN_OSVERS
 
 .on_main_or_testing_cleanup:
   - <<: *if_main_branch
