@@ -32,7 +32,6 @@ type Flushable interface {
 
 // EventHandler abstracts consuming data from a perf buffer or ring buffer (depending on availability and options).
 // It handles upgrading maps from a ring buffer is desired, and unmarshalling into the desired data type.
-// If you wish to use a channel, rather than a callback, see pkg/util/sync.NewCallbackChannel
 type EventHandler struct {
 	f    Flushable
 	opts EventHandlerOptions
