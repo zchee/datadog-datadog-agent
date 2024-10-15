@@ -3,6 +3,7 @@ package diconfig
 import (
 	"debug/dwarf"
 	"fmt"
+	"io"
 
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/ditypes"
 	"github.com/DataDog/datadog-agent/pkg/network/go/bininspect"
@@ -99,4 +100,50 @@ func convertToParameter(varName, typeName string, pm bininspect.ParameterMetadat
 	}
 
 	return param, nil
+}
+
+func GetPCAtLine(d *bininspect.DwarfInspector, fileName string, lineNo int) (uint64, error) {
+	r := d.DwarfData.Reader()
+	for {
+		entry, err := r.Next()
+		if err != nil {
+			return 0, err
+		}
+		if entry == nil {
+			break
+		}
+
+		if entry.Tag == dwarf.TagCompileUnit {
+			lineReader, err := d.DwarfData.LineReader(entry)
+			if lineReader == nil {
+				// No line number information for this compilation unit
+				continue
+			}
+			if err != nil {
+				return 0, err
+			}
+			lineReader.Reset()
+
+			var le dwarf.LineEntry
+			for {
+				err := lineReader.Next(&le)
+				if err != nil {
+					if err == io.EOF {
+						// End of line entries for this compilation unit
+						break
+					} else {
+						return 0, err
+					}
+				}
+
+				if le.File != nil && le.File.Name == fileName && le.Line == lineNo {
+					return le.Address, nil
+				}
+			}
+		} else {
+			// Skip non-compilation unit entries
+			r.SkipChildren()
+		}
+	}
+	return 0, fmt.Errorf("program counter not found for file %s and line %d", fileName, lineNo)
 }

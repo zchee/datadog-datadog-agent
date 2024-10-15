@@ -65,3 +65,20 @@ func TestGetParameterAtPC(t *testing.T) {
 		assert.Equal(t, tc.expected, param)
 	}
 }
+
+func TestGetPCAtLine(t *testing.T) {
+	curDir, err := pwd()
+	if err != nil {
+		t.Error(err)
+	}
+
+	binaryPath, err := testutil.BuildGoBinaryWrapper(curDir, "../testutil/sample/sample_service")
+	if err != nil {
+		t.Error(err)
+	}
+
+	inspector, err := loadDWARF(binaryPath)
+	pc, err := GetPCAtLine(inspector, "/git/datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 42)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(0x519eec), pc)
+}
