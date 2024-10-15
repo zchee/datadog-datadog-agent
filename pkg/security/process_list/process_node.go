@@ -51,6 +51,8 @@ type ProcessNode struct {
 	// onRelase CB?
 	// (would be great if we finally can get rid of it!)
 	UserData interface{}
+
+	IsKworker bool
 }
 
 // NewProcessExecNodeFromEvent returns a process node filled with an exec node corresponding to the given event
@@ -175,4 +177,9 @@ func (pn *ProcessNode) Debug(w io.Writer, prefix string) {
 	for _, child := range pn.Children {
 		child.Debug(w, prefix)
 	}
+}
+
+func (pn *ProcessNode) Equals(pn2 *ProcessNode) bool {
+
+	return true
 }

@@ -53,6 +53,7 @@ func NewExecNodeFromEvent(event *model.Event, key interface{}) *ExecNode {
 	}
 	exec := NewEmptyExecNode()
 	exec.Process = event.ProcessContext.Process
+
 	exec.Key = key
 	return exec
 }

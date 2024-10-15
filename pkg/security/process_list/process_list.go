@@ -9,18 +9,40 @@
 package processlist
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path"
 	"sync"
+	"syscall"
+	"time"
+
+	"github.com/DataDog/datadog-agent/pkg/security/probe/config"
 
 	cgroupModel "github.com/DataDog/datadog-agent/pkg/security/resolvers/cgroup/model"
+	"github.com/DataDog/datadog-agent/pkg/security/seclog"
+	"github.com/shirou/gopsutil/v3/process"
 
 	"github.com/DataDog/datadog-agent/pkg/process/procutil"
+	"github.com/DataDog/datadog-agent/pkg/security/resolvers/container"
+	"github.com/DataDog/datadog-agent/pkg/security/secl/containerutils"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
+	"github.com/DataDog/datadog-agent/pkg/security/utils"
 	"github.com/DataDog/datadog-go/v5/statsd"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sys/unix"
+
+	"github.com/DataDog/datadog-agent/pkg/security/resolvers/envvars"
+	"github.com/DataDog/datadog-agent/pkg/security/resolvers/mount"
+	"github.com/DataDog/datadog-agent/pkg/security/resolvers/usergroup"
+
+	lib "github.com/cilium/ebpf"
+)
+
+const (
+	procResolveMaxDepth = 16
 )
 
 // ProcessNodeIface is an interface used to identify the parent of a process context
@@ -110,6 +132,8 @@ type ProcessList struct {
 
 	owner Owner
 
+	config *config.Config
+
 	// internals
 	Stats        ProcessStats
 	statsdClient statsd.ClientInterface
@@ -121,11 +145,19 @@ type ProcessList struct {
 	processCache map[interface{}]*ProcessNode // not sure it's useful
 
 	rootNodes []*ProcessNode
+
+	containerResolver *container.Resolver
+	userGroupResolver *usergroup.Resolver
+	mountResolver     mount.ResolverInterface
+	envVarsResolver   *envvars.Resolver
+
+	execFileCacheMap *lib.Map
 }
 
 // NewProcessList returns a new process list
-func NewProcessList(selector cgroupModel.WorkloadSelector, validEventTypes []model.EventType, owner Owner,
-	/* resolvers *resolvers,  */ statsdClient statsd.ClientInterface, scrubber *procutil.DataScrubber) *ProcessList {
+func NewProcessList(selector cgroupModel.WorkloadSelector, config *config.Config, validEventTypes []model.EventType, owner Owner,
+	/* resolvers *resolvers,  */ statsdClient statsd.ClientInterface, scrubber *procutil.DataScrubber, containerResolver *container.Resolver, mountResolver mount.ResolverInterface,
+	userGroupResolver *usergroup.Resolver) *ProcessList {
 	execCache := make(map[interface{}]*ExecNode)
 	processCache := make(map[interface{}]*ProcessNode)
 	return &ProcessList{
@@ -133,11 +165,16 @@ func NewProcessList(selector cgroupModel.WorkloadSelector, validEventTypes []mod
 		validEventTypes: validEventTypes,
 		owner:           owner,
 		// resolvers:       resolvers,
-		statsdClient: statsdClient,
-		scrubber:     scrubber,
-		execCache:    execCache,
-		processCache: processCache,
+		statsdClient:      statsdClient,
+		scrubber:          scrubber,
+		execCache:         execCache,
+		processCache:      processCache,
+		containerResolver: containerResolver,
+		mountResolver:     mountResolver,
+		userGroupResolver: userGroupResolver,
+		envVarsResolver:   envvars.NewEnvVarsResolver(config),
 	}
+
 }
 
 // NewProcessListFromFile returns a new process list from a file
@@ -180,8 +217,8 @@ func (pl *ProcessList) isEventValid(event *model.Event) (bool, error) {
 
 // Insert tries to insert (or delete) the given event ot the process list graph, using cache if possible
 func (pl *ProcessList) Insert(event *model.Event, insertMissingProcesses bool, imageTag string) (newEntryAdded bool, err error) {
-	pl.Lock()
-	defer pl.Unlock()
+	// pl.Lock()
+	// defer pl.Unlock()
 
 	valid, err := pl.isEventValid(event)
 	if !valid || err != nil {
@@ -239,7 +276,7 @@ func (pl *ProcessList) findOrInsertExec(event *model.Event, insertMissingProcess
 	if processKey != nil {
 		process, ok := pl.processCache[processKey]
 		if ok {
-			exec := NewExecNodeFromEvent(event, processKey)
+			exec := NewExecNodeFromEvent(event, execKey)
 			process.AppendExec(exec, true)
 			pl.addExecToCache(exec)
 			return exec, true, nil
@@ -293,6 +330,7 @@ func (pl *ProcessList) GetCacheProcess(key interface{}) *ProcessNode {
 	if process, ok := pl.processCache[key]; ok {
 		return process
 	}
+
 	return nil
 }
 
@@ -370,14 +408,17 @@ func (pl *ProcessList) deleteCachedProcess(key interface{}, imageTag string) (en
 		return tag == imageTag
 	})
 
-	// recursively remove childs:
+	// The children will no longer have a parent
+	// We should use procFS to resolve the new parent
 	children := process.GetChildren()
 	if children != nil {
 		for _, child := range *children {
+
 			childkey := pl.owner.GetProcessCacheKey(&child.CurrentExec.Process)
-			if _, err := pl.deleteCachedProcess(childkey, imageTag); err != nil {
-				return false, err
-			}
+
+			childProcess := pl.GetCacheProcess(childkey)
+
+			pl.ResolveFromProcfs(childProcess)
 		}
 	}
 
@@ -450,12 +491,12 @@ func (pl *ProcessList) addProcessToCache(node *ProcessNode) {
 }
 
 func (pl *ProcessList) removeProcessFromCache(node *ProcessNode) {
-	// puts execs in cache
+	// remove execs from cache
 	for _, exec := range node.PossibleExecs {
 		pl.removeExecFromCache(exec)
 	}
 
-	// puts process in cache
+	// remove process from cache
 	key := pl.owner.GetProcessCacheKey(&node.CurrentExec.Process)
 	if key != nil {
 		delete(pl.processCache, key)
@@ -559,4 +600,296 @@ func (pl *ProcessList) Debug(w io.Writer) {
 		root.Debug(w, "")
 	}
 	fmt.Fprintf(w, "== /PROCESS LIST ==\n")
+}
+
+// ResolveFromProcfs resolves the entry from procfs
+func (pl *ProcessList) ResolveFromProcfs(process *ProcessNode) *ProcessNode {
+
+	pl.Lock()
+	defer pl.Unlock()
+
+	return pl.resolveFromProcfs(process, procResolveMaxDepth)
+}
+
+func (pl *ProcessList) resolveFromProcfs(processNode *ProcessNode, maxDepth int) *ProcessNode {
+
+	pid := processNode.CurrentExec.Process.Pid
+	if maxDepth < 1 {
+		seclog.Tracef("max depth reached during procfs resolution: %d", pid)
+		return nil
+	}
+
+	if pid == 0 {
+		seclog.Tracef("no pid: %d", pid)
+		return nil
+	}
+
+	proc, err := process.NewProcess(int32(pid))
+	if err != nil {
+		seclog.Tracef("unable to find pid: %d", pid)
+		return nil
+	}
+
+	filledProc, err := utils.GetFilledProcess(proc)
+	if err != nil {
+		seclog.Tracef("unable to get a filled process for pid %d: %d", pid, err)
+		return nil
+	}
+
+	// ignore kthreads
+	if IsKThread(uint32(filledProc.Ppid), uint32(filledProc.Pid)) {
+		return nil
+	}
+
+	entry := pl.syncCache(processNode, proc, filledProc, model.ProcessCacheEntryFromProcFS)
+	if entry != nil {
+		// consider kworker processes with 0 as ppid
+		entry.IsKworker = filledProc.Ppid == 0 && filledProc.Pid != 1
+		// Get parent process from entry
+		tmp := entry.GetCurrentParent().GetCurrentParent()
+		parent := pl.resolveFromProcfs(tmp.(*ProcessNode), maxDepth-1)
+		if parent != nil {
+			if parent.Equals(entry) {
+				parent.AppendExec(entry.CurrentExec, true)
+			} else {
+				parent.AppendChild(entry, true)
+			}
+		}
+	}
+
+	return entry
+}
+
+// syncCache snapshots /proc for the provided pid. This method returns true if it updated the process cache.
+func (pl *ProcessList) syncCache(processNode *ProcessNode, proc *process.Process, filledProc *utils.FilledProcess, source uint64) *ProcessNode {
+	pid := uint32(proc.Pid)
+
+	// update the cache entry
+	if err := pl.enrichEventFromProc(processNode, proc, filledProc); err != nil {
+
+		seclog.Trace(err)
+		return nil
+	}
+	tmp := processNode.GetCurrentParent().GetCurrentParent()
+	parent := tmp.(*ProcessNode)
+	if parent != nil {
+		if parent.Equals(processNode) {
+			parent.AppendExec(processNode.CurrentExec, true)
+		} else {
+			parent.AppendChild(processNode, true)
+		}
+	}
+
+	seclog.Tracef("New process cache entry added: %s %s %d/%d", processNode.CurrentExec.Comm, processNode.CurrentExec.FileEvent.PathnameStr, pid, processNode.CurrentExec.FileEvent.Inode)
+
+	return processNode
+}
+
+// enrichEventFromProc uses /proc to enrich a ProcessCacheEntry with additional metadata
+func (pl *ProcessList) enrichEventFromProc(processNode *ProcessNode, proc *process.Process, filledProc *utils.FilledProcess) error {
+	// the provided process is a kernel process if its virtual memory size is null
+	if filledProc.MemInfo.VMS == 0 {
+		return fmt.Errorf("cannot snapshot kernel threads")
+	}
+	pid := uint32(proc.Pid)
+
+	// Get process filename and pre-fill the cache
+	procExecPath := utils.ProcExePath(pid)
+	pathnameStr, err := os.Readlink(procExecPath)
+	if err != nil {
+		return fmt.Errorf("snapshot failed for %d: couldn't readlink binary: %w", pid, err)
+	}
+	if pathnameStr == "/ (deleted)" {
+		return fmt.Errorf("snapshot failed for %d: binary was deleted", pid)
+	}
+
+	// Get the file fields of the process binary
+	info, err := pl.retrieveExecFileFields(procExecPath)
+	if err != nil {
+		return fmt.Errorf("snapshot failed for %d: couldn't retrieve inode info: %w", proc.Pid, err)
+	}
+
+	// Retrieve the container ID of the process from /proc
+	containerID, containerFlags, err := pl.containerResolver.GetContainerContext(pid)
+	if err != nil {
+		return fmt.Errorf("snapshot failed for %d: couldn't parse container ID: %w", proc.Pid, err)
+	}
+
+	processNode.CurrentExec.FileEvent.FileFields = *info
+	SetPathname(&processNode.CurrentExec.FileEvent, pathnameStr)
+
+	// force mount from procfs/snapshot
+	processNode.CurrentExec.FileEvent.MountOrigin = model.MountOriginProcfs
+	processNode.CurrentExec.FileEvent.MountSource = model.MountSourceSnapshot
+
+	var id containerutils.CGroupID
+	id, processNode.CurrentExec.Process.ContainerID = containerutils.GetCGroupContext(containerID, containerFlags)
+	processNode.CurrentExec.Process.CGroup.CGroupID = id
+	processNode.CurrentExec.Process.CGroup.CGroupFlags = containerFlags
+	var fileStats unix.Statx_t
+
+	taskPath := utils.CgroupTaskPath(pid, pid)
+	if err := unix.Statx(unix.AT_FDCWD, taskPath, 0, unix.STATX_ALL, &fileStats); err == nil {
+		processNode.CurrentExec.Process.CGroup.CGroupFile.MountID = uint32(fileStats.Mnt_id)
+		processNode.CurrentExec.Process.CGroup.CGroupFile.Inode = fileStats.Ino
+	} else {
+		// Get the file fields of the cgroup file
+		info, err := pl.retrieveExecFileFields(taskPath)
+		if err != nil {
+			seclog.Debugf("snapshot failed for %d: couldn't retrieve inode info: %s", proc.Pid, err)
+		} else {
+			processNode.CurrentExec.Process.CGroup.CGroupFile.MountID = info.MountID
+		}
+	}
+
+	if processNode.CurrentExec.FileEvent.IsFileless() {
+		processNode.CurrentExec.FileEvent.Filesystem = model.TmpFS
+	} else {
+		// resolve container path with the MountEBPFResolver
+		processNode.CurrentExec.FileEvent.Filesystem, err = pl.mountResolver.ResolveFilesystem(processNode.CurrentExec.Process.FileEvent.MountID, processNode.CurrentExec.Process.FileEvent.Device, processNode.CurrentExec.Process.Pid, string(containerID))
+		if err != nil {
+			seclog.Debugf("snapshot failed for mount %d with pid %d : couldn't get the filesystem: %s", processNode.CurrentExec.Process.FileEvent.MountID, processNode.CurrentExec.Pid, err)
+		}
+	}
+
+	processNode.CurrentExec.ExecTime = time.Unix(0, filledProc.CreateTime*int64(time.Millisecond))
+	processNode.CurrentExec.ForkTime = processNode.CurrentExec.ExecTime
+	processNode.CurrentExec.Comm = filledProc.Name
+	processNode.CurrentExec.PPid = uint32(filledProc.Ppid)
+	processNode.CurrentExec.TTYName = utils.PidTTY(uint32(filledProc.Pid))
+	processNode.CurrentExec.Pid = pid
+	processNode.CurrentExec.Tid = pid
+	if len(filledProc.Uids) >= 4 {
+		processNode.CurrentExec.Credentials.UID = uint32(filledProc.Uids[0])
+		processNode.CurrentExec.Credentials.EUID = uint32(filledProc.Uids[1])
+		processNode.CurrentExec.Credentials.FSUID = uint32(filledProc.Uids[3])
+	}
+	if len(filledProc.Gids) >= 4 {
+		processNode.CurrentExec.Credentials.GID = uint32(filledProc.Gids[0])
+		processNode.CurrentExec.Credentials.EGID = uint32(filledProc.Gids[1])
+		processNode.CurrentExec.Credentials.FSGID = uint32(filledProc.Gids[3])
+	}
+	// fetch login_uid
+	processNode.CurrentExec.Credentials.AUID, err = utils.GetLoginUID(uint32(proc.Pid))
+	if err != nil {
+		return fmt.Errorf("snapshot failed for %d: couldn't get login UID: %w", processNode.CurrentExec.Pid, err)
+	}
+
+	processNode.CurrentExec.Credentials.CapEffective, processNode.CurrentExec.Credentials.CapPermitted, err = utils.CapEffCapEprm(uint32(proc.Pid))
+	if err != nil {
+		return fmt.Errorf("snapshot failed for %d: couldn't parse kernel capabilities: %w", proc.Pid, err)
+	}
+	pl.SetProcessUsersGroups(processNode.CurrentExec)
+
+	// args and envs
+	processNode.CurrentExec.ArgsEntry = &model.ArgsEntry{}
+	if len(filledProc.Cmdline) > 0 {
+		processNode.CurrentExec.ArgsEntry.Values = filledProc.Cmdline
+	}
+
+	processNode.CurrentExec.EnvsEntry = &model.EnvsEntry{}
+	if envs, truncated, err := pl.envVarsResolver.ResolveEnvVars(uint32(proc.Pid)); err == nil {
+		processNode.CurrentExec.EnvsEntry.Values = envs
+		processNode.CurrentExec.EnvsEntry.Truncated = truncated
+	}
+
+	// Heuristic to detect likely interpreter event
+	// Cannot detect when a script if as follows:
+	// perl <<__HERE__
+	// #!/usr/bin/perl
+	//
+	// sleep 10;
+	//
+	// print "Hello from Perl\n";
+	// __HERE__
+	// Because the entry only has 1 argument (perl in this case). But can detect when a script is as follows:
+	// cat << EOF > perlscript.pl
+	// #!/usr/bin/perl
+	//
+	// sleep 15;
+	//
+	// print "Hello from Perl\n";
+	//
+	// EOF
+	if values := processNode.CurrentExec.ArgsEntry.Values; len(values) > 1 {
+		firstArg := values[0]
+		lastArg := values[len(values)-1]
+		// Example result: comm value: pyscript.py | args: [/usr/bin/python3 ./pyscript.py]
+		if path.Base(lastArg) == processNode.CurrentExec.Comm && path.IsAbs(firstArg) {
+			processNode.CurrentExec.LinuxBinprm.FileEvent = processNode.CurrentExec.FileEvent
+		}
+	}
+
+	if !processNode.CurrentExec.HasInterpreter() {
+		// mark it as resolved to avoid abnormal path later in the call flow
+		processNode.CurrentExec.LinuxBinprm.FileEvent.SetPathnameStr("")
+		processNode.CurrentExec.LinuxBinprm.FileEvent.SetBasenameStr("")
+	}
+
+	// add netns
+	processNode.CurrentExec.NetNS, _ = utils.NetNSPathFromPid(pid).GetProcessNetworkNamespace()
+
+	if pl.config.NetworkEnabled {
+		// snapshot pid routes in kernel space
+		_, _ = proc.OpenFiles()
+	}
+
+	return nil
+}
+
+// retrieveExecFileFields fetches inode metadata from kernel space
+func (pl *ProcessList) retrieveExecFileFields(procExecPath string) (*model.FileFields, error) {
+	fi, err := os.Stat(procExecPath)
+	if err != nil {
+		return nil, fmt.Errorf("snapshot failed for `%s`: couldn't stat binary: %w", procExecPath, err)
+	}
+	stat, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return nil, fmt.Errorf("snapshot failed for `%s`: couldn't stat binary", procExecPath)
+	}
+	inode := stat.Ino
+
+	inodeb := make([]byte, 8)
+	binary.NativeEndian.PutUint64(inodeb, inode)
+
+	data, err := pl.execFileCacheMap.LookupBytes(inodeb)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get filename for inode `%d`: %v", inode, err)
+	}
+
+	var fileFields model.FileFields
+	if _, err := fileFields.UnmarshalBinary(data); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal entry for inode `%d`", inode)
+	}
+
+	if fileFields.Inode == 0 {
+		return nil, errors.New("not found")
+	}
+
+	return &fileFields, nil
+}
+
+// IsKThread returns whether given pids are from kthreads
+func IsKThread(ppid, pid uint32) bool {
+	return ppid == 2 || pid == 2
+}
+
+func SetPathname(fileEvent *model.FileEvent, pathnameStr string) {
+	if fileEvent.FileFields.IsFileless() {
+		fileEvent.SetPathnameStr("")
+	} else {
+		fileEvent.SetPathnameStr(pathnameStr)
+	}
+	fileEvent.SetBasenameStr(path.Base(pathnameStr))
+}
+
+// SetProcessUsersGroups resolves and set users and groups
+func (pl *ProcessList) SetProcessUsersGroups(execNode *ExecNode) {
+	execNode.User, _ = pl.userGroupResolver.ResolveUser(int(execNode.Credentials.UID), string(execNode.ContainerID))
+	execNode.EUser, _ = pl.userGroupResolver.ResolveUser(int(execNode.Credentials.EUID), string(execNode.ContainerID))
+	execNode.FSUser, _ = pl.userGroupResolver.ResolveUser(int(execNode.Credentials.FSUID), string(execNode.ContainerID))
+
+	execNode.Group, _ = pl.userGroupResolver.ResolveGroup(int(execNode.Credentials.GID), string(execNode.ContainerID))
+	execNode.EGroup, _ = pl.userGroupResolver.ResolveGroup(int(execNode.Credentials.EGID), string(execNode.ContainerID))
+	execNode.FSGroup, _ = pl.userGroupResolver.ResolveGroup(int(execNode.Credentials.FSGID), string(execNode.ContainerID))
 }

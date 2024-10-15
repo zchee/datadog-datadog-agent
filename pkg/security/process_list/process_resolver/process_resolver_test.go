@@ -98,11 +98,13 @@ func checkParentality(pl *processlist.ProcessList, pc *ProcessResolver, parent, 
 	if cachedExecChild == nil {
 		return false
 	}
+
 	if !slices.ContainsFunc(cachedProcessChild.PossibleExecs, func(e *processlist.ExecNode) bool {
 		return pc.ExecMatches(e, cachedExecChild)
 	}) {
 		return false
 	}
+
 	if cachedExecChild.ProcessLink != cachedProcessChild {
 		return false
 	}
@@ -147,10 +149,19 @@ func isProcessOrExecPresent(pl *processlist.ProcessList, pc *ProcessResolver, ev
 	return false
 }
 
+func isExecOfProcess(pl *processlist.ProcessList, pc *ProcessResolver, process, exec *model.Event) bool {
+	cachedProcess := pl.GetCacheProcess(pc.GetProcessCacheKey(&process.ProcessContext.Process))
+	cachedExec := pl.GetCacheExec(pc.GetExecCacheKey(&exec.ProcessContext.Process))
+	if cachedProcess == nil || cachedExec == nil {
+		return false
+	}
+	return slices.Contains(cachedProcess.PossibleExecs, cachedExec)
+}
+
 func TestFork1st(t *testing.T) {
 	pc := NewProcessResolver()
-	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"},
-		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil)
+	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"}, nil, /* config  */
+		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil, nil, nil, nil)
 	stats := testStats{}
 
 	// parent
@@ -212,8 +223,9 @@ func TestFork1st(t *testing.T) {
 
 func TestFork2nd(t *testing.T) {
 	pc := NewProcessResolver()
-	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"},
-		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil)
+
+	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"}, nil, /* config  */
+		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil, nil, nil, nil)
 	stats := testStats{}
 
 	// parent
@@ -230,8 +242,8 @@ func TestFork2nd(t *testing.T) {
 		t.Fatal("didn't found cached parent")
 	}
 
-	// parent
-	//     \ child
+	// // parent
+	// //     \ child
 	child := newFakeExecEvent(1, 2, "/bin/child")
 	new, err = processList.Insert(child, true, "")
 	if err != nil {
@@ -244,8 +256,8 @@ func TestFork2nd(t *testing.T) {
 		t.Fatal("parent / child paternality not found")
 	}
 
-	// [parent]
-	//     \ [child]
+	// // [parent]
+	// //     \ [child]
 	parent.Type = uint32(model.ExitEventType)
 	deleted, err := processList.Insert(parent, true, "")
 	if err != nil {
@@ -255,22 +267,34 @@ func TestFork2nd(t *testing.T) {
 
 	// Parent process should be removed
 	stats.DeleteProcess(1)
-	// Child process should be removed
-	stats.DeleteProcess(1)
 	stats.ValidateCounters(t, processList)
+	// Child process should be attached to another process
+	if checkParentality(processList, pc, parent, child) == true {
+		t.Fatal("this process should no longer the parent")
+	}
+
 	if isProcessOrExecPresent(processList, pc, parent) {
 		t.Fatal("parent still present")
 	}
-	if isProcessOrExecPresent(processList, pc, child) {
-		t.Fatal("child still present")
+	if !isProcessOrExecPresent(processList, pc, child) {
+		t.Fatal("child should still be present")
 	}
 
+	child.Type = uint32(model.ExitEventType)
+	deleted, err = processList.Insert(child, true, "")
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(1)
+	stats.ValidateCounters(t, processList)
+	if isProcessOrExecPresent(processList, pc, child) {
+		t.Fatal("child shoul not be present")
+	}
 }
 func TestForkExec(t *testing.T) {
 
 	pc := NewProcessResolver()
-	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"},
-		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil)
+
+	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"}, nil, /* config  */
+		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil, nil, nil, nil)
 	stats := testStats{}
 
 	// parent
@@ -296,7 +320,7 @@ func TestForkExec(t *testing.T) {
 	assert.Equal(t, true, new)
 	stats.AddProcess(1)
 	stats.ValidateCounters(t, processList)
-	if checkParentality(processList, pc, parent, child) == false {
+	if !checkParentality(processList, pc, parent, child) {
 		t.Fatal("parent / child paternality not found")
 	}
 
@@ -308,27 +332,41 @@ func TestForkExec(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, true, new)
-	if checkParentality(processList, pc, parent, exec) == false {
+	if !checkParentality(processList, pc, parent, exec) {
 		t.Fatal("parent / exec paternality not found")
+	}
+	if !isExecOfProcess(processList, pc, child, exec) {
+		t.Fatal("process / exec relation not present")
 	}
 	stats.AddExec()
 	stats.ValidateCounters(t, processList)
 
 	// nothing
-	deleted, err := processList.DeleteProcess(pc.GetProcessCacheKey(&parent.ProcessContext.Process), "")
+	parent.Type = uint32(model.ExitEventType)
+	deleted, err := processList.Insert(parent, true, "")
 	assert.Equal(t, true, deleted)
-	stats.DeleteProcess(1) // For parent
-	stats.DeleteProcess(2) // For child
+	stats.DeleteProcess(1)
 	stats.ValidateCounters(t, processList)
 	if isProcessOrExecPresent(processList, pc, parent) {
 		t.Fatal("parent still present")
 	}
 
+	child.Type = uint32(model.ExitEventType)
+	deleted, err = processList.Insert(child, true, "")
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(2)
+	stats.ValidateCounters(t, processList)
+
+	if isProcessOrExecPresent(processList, pc, parent) {
+		t.Fatal("child still present")
+	}
+
 }
 func TestForkExecExec(t *testing.T) {
 	pc := NewProcessResolver()
-	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"},
-		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil)
+
+	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"}, nil, /* config  */
+		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil, nil, nil, nil)
 	stats := testStats{}
 
 	// parent
@@ -369,6 +407,9 @@ func TestForkExecExec(t *testing.T) {
 	if checkParentality(processList, pc, parent, exec1) == false {
 		t.Fatal("parent / exec paternality not found")
 	}
+	if !isExecOfProcess(processList, pc, child, exec1) {
+		t.Fatal("process / exec relation not present")
+	}
 	stats.AddExec()
 	stats.ValidateCounters(t, processList)
 
@@ -382,25 +423,39 @@ func TestForkExecExec(t *testing.T) {
 	if checkParentality(processList, pc, parent, exec2) == false {
 		t.Fatal("parent / exec paternality not found")
 	}
+	if !isExecOfProcess(processList, pc, child, exec2) {
+		t.Fatal("process / exec relation not present")
+	}
 	assert.Equal(t, true, new)
 	stats.AddExec()
 	stats.ValidateCounters(t, processList)
 
 	// nothing
-	deleted, err := processList.DeleteProcess(pc.GetProcessCacheKey(&parent.ProcessContext.Process), "")
+	parent.Type = uint32(model.ExitEventType)
+	deleted, err := processList.Insert(parent, true, "")
 	assert.Equal(t, true, deleted)
-	stats.DeleteProcess(1) // For parent
-	stats.DeleteProcess(3) // For child
+	stats.DeleteProcess(1)
 	stats.ValidateCounters(t, processList)
 	if isProcessOrExecPresent(processList, pc, parent) {
 		t.Fatal("parent still present")
+	}
+
+	child.Type = uint32(model.ExitEventType)
+	deleted, err = processList.Insert(child, true, "")
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(3)
+	stats.ValidateCounters(t, processList)
+
+	if isProcessOrExecPresent(processList, pc, parent) {
+		t.Fatal("child still present")
 	}
 }
 func TestOrphanExec(t *testing.T) {
 
 	pc := NewProcessResolver()
-	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"},
-		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil)
+
+	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"}, nil, /* config  */
+		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil, nil, nil, nil)
 	stats := testStats{}
 
 	// parent
@@ -431,128 +486,206 @@ func TestOrphanExec(t *testing.T) {
 	}
 
 	// [parent]
-	//     \ [child]
+	//     \ child
 
-	deleted, err := processList.DeleteProcess(pc.GetProcessCacheKey(&parent.ProcessContext.Process), "")
+	parent.Type = uint32(model.ExitEventType)
+	deleted, err := processList.Insert(parent, true, "")
+
 	assert.Equal(t, true, deleted)
 	stats.DeleteProcess(1) // For parent
-	stats.DeleteProcess(1) // For child
 	stats.ValidateCounters(t, processList)
 	if isProcessOrExecPresent(processList, pc, parent) {
 		t.Fatal("parent still present")
 	}
-	if isProcessOrExecPresent(processList, pc, child) {
-		t.Fatal("child still present")
+	if !isProcessAndExecPresent(processList, pc, child) {
+		t.Fatal("child should be  present")
+	}
+	if checkParentality(processList, pc, parent, child) {
+		t.Fatal("parent / child paternality still present")
 	}
 
 	// [parent]
-	//     \ [child] -> exec
+	//     \ child -> exec
 	exec := newFakeExecEvent(1, 2, "bin/exec")
 	new, err = processList.Insert(exec, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, false, new)
+	assert.Equal(t, true, new)
+	stats.AddExec()
+	stats.ValidateCounters(t, processList)
+	if !isExecOfProcess(processList, pc, child, exec) {
+		t.Fatal("process / exec relation not present")
+	}
+
+	child.Type = uint32(model.ExitEventType)
+	deleted, err = processList.Insert(child, true, "")
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(2) // For parent
+	stats.ValidateCounters(t, processList)
+	if isProcessOrExecPresent(processList, pc, child) {
+		t.Fatal("parent still present")
+	}
+	if isProcessOrExecPresent(processList, pc, exec) {
+		t.Fatal("child should be  present")
+	}
+
+	if isExecOfProcess(processList, pc, child, exec) {
+		t.Fatal("process / exec relation not present")
+	}
+
 }
 func TestForkReuse(t *testing.T) {
-	// resolver, err := NewEBPFResolver(nil, nil, &statsd.NoOpClient{}, nil, nil, nil, nil, nil, nil, nil, NewResolverOpts())
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
+	pc := NewProcessResolver()
 
-	// parent1 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 1, Tid: 1})
-	// parent1.ForkTime = time.Now()
+	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"}, nil, /* config  */
+		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil, nil, nil, nil)
+	stats := testStats{}
 
-	// child1 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 2, Tid: 2})
-	// child1.PPid = parent1.Pid
-	// child1.ForkTime = time.Now()
+	// parent1
+	parent1 := newFakeExecEvent(0, 1, "/bin/parent1")
+	new, err := processList.Insert(parent1, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, true, new)
+	stats.AddProcess(1)
+	stats.ValidateCounters(t, processList)
+	if !isProcessAndExecPresent(processList, pc, parent1) {
+		t.Fatal("didn't found cached parent")
+	}
 
-	// exec1 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: child1.Pid, Tid: child1.Pid})
-	// exec1.PPid = child1.PPid
-	// exec1.FileEvent.Inode = 123
-	// exec1.ExecTime = time.Now()
+	// parent1
+	//     \ child1
+	child1 := newFakeExecEvent(1, 2, "/bin/child1")
+	new, err = processList.Insert(child1, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, true, new)
+	stats.AddProcess(1)
+	stats.ValidateCounters(t, processList)
+	if checkParentality(processList, pc, parent1, child1) == false {
+		t.Fatal("parent / child paternality not found")
+	}
 
-	// parent2 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 1, Tid: 1})
-	// parent2.ForkTime = time.Now()
+	// [parent1]
+	//     \ child1 -> exec1
+	parent1.Type = uint32(model.ExitEventType)
+	deleted, err := processList.Insert(parent1, true, "")
 
-	// child2 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 3, Tid: 3})
-	// child2.PPid = parent2.Pid
-	// child2.ForkTime = time.Now()
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(1) // For parent
+	stats.ValidateCounters(t, processList)
+	if isProcessOrExecPresent(processList, pc, parent1) {
+		t.Fatal("parent still present")
+	}
+	if !isProcessAndExecPresent(processList, pc, child1) {
+		t.Fatal("child should be  present")
+	}
+	if checkParentality(processList, pc, parent1, child1) {
+		t.Fatal("parent / child paternality still present")
+	}
 
-	// // parent1
-	// resolver.AddForkEntry(parent1, 0)
-	// assert.Equal(t, parent1, resolver.entryCache[parent1.Pid])
-	// assert.Equal(t, 1, len(resolver.entryCache))
-	// assert.EqualValues(t, 1, resolver.cacheSize.Load())
+	// [parent1]
+	//     \ child1 -> exec1
+	exec1 := newFakeExecEvent(1, 2, "bin/exec1")
+	new, err = processList.Insert(exec1, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, true, new)
+	if !isExecOfProcess(processList, pc, child1, exec1) {
+		t.Fatal("process / exec relation not present")
+	}
+	stats.AddExec()
+	stats.ValidateCounters(t, processList)
 
-	// // parent1
-	// //     \ child1
-	// resolver.AddForkEntry(child1, 0)
-	// assert.Equal(t, child1, resolver.entryCache[child1.Pid])
-	// assert.Equal(t, 2, len(resolver.entryCache))
-	// assert.Equal(t, parent1, child1.Ancestor)
-	// assert.EqualValues(t, 2, resolver.cacheSize.Load())
+	// [parent1:pid1]
+	//     \ child1 -> exec1
+	//
+	// parent2:pid1
+	parent2 := newFakeExecEvent(0, 1, "/bin/parent2")
+	new, err = processList.Insert(parent2, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, true, new)
+	stats.AddProcess(1)
+	stats.ValidateCounters(t, processList)
+	if !isProcessAndExecPresent(processList, pc, parent2) {
+		t.Fatal("didn't found cached parent")
+	}
 
-	// // [parent1]
-	// //     \ child1
-	// resolver.DeleteEntry(parent1.Pid, time.Now())
-	// assert.Nil(t, resolver.entryCache[parent1.Pid])
-	// assert.Equal(t, 1, len(resolver.entryCache))
-	// assert.Equal(t, parent1, child1.Ancestor)
+	// [parent1:pid1]
+	//     \ child1 -> exec1
+	//
+	// parent2:pid1
+	//     \ child2
+	child2 := newFakeExecEvent(1, 3, "/bin/child1")
+	new, err = processList.Insert(child2, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, true, new)
+	stats.AddProcess(1)
+	stats.ValidateCounters(t, processList)
+	if checkParentality(processList, pc, parent2, child2) == false {
+		t.Fatal("parent / child paternality not found")
+	}
 
-	// // [parent1]
-	// //     \ [child1] -> exec1
-	// resolver.AddExecEntry(exec1, 0)
-	// assert.Equal(t, exec1, resolver.entryCache[exec1.Pid])
-	// assert.Equal(t, 1, len(resolver.entryCache))
-	// assert.Equal(t, child1, exec1.Ancestor)
-	// assert.Equal(t, parent1, exec1.Ancestor.Ancestor)
-	// assert.EqualValues(t, 3, resolver.cacheSize.Load())
+	// parent2:pid1
+	//     \ child2
+	child1.Type = uint32(model.ExitEventType)
+	deleted, err = processList.Insert(child1, true, "")
 
-	// // [parent1:pid1]
-	// //     \ [child1] -> exec1
-	// //
-	// // parent2:pid1
-	// resolver.AddForkEntry(parent2, 0)
-	// assert.Equal(t, parent2, resolver.entryCache[parent2.Pid])
-	// assert.Equal(t, 2, len(resolver.entryCache))
-	// assert.EqualValues(t, 4, resolver.cacheSize.Load())
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(2) // For parent
+	stats.ValidateCounters(t, processList)
+	if isProcessOrExecPresent(processList, pc, child1) {
+		t.Fatal("child1 should not be  present")
+	}
+	if isExecOfProcess(processList, pc, child1, exec1) {
+		t.Fatal("process / exec relation still present")
+	}
 
-	// // [parent1:pid1]
-	// //     \ [child1] -> exec1
-	// //
-	// // parent2:pid1
-	// //     \ child2
-	// resolver.AddForkEntry(child2, 0)
-	// assert.Equal(t, child2, resolver.entryCache[child2.Pid])
-	// assert.Equal(t, 3, len(resolver.entryCache))
-	// assert.Equal(t, parent2, child2.Ancestor)
-	// assert.EqualValues(t, 5, resolver.cacheSize.Load())
+	// [parent2:pid1]
+	//     \ child2
+	parent2.Type = uint32(model.ExitEventType)
+	deleted, err = processList.Insert(parent2, true, "")
 
-	// // parent2:pid1
-	// //     \ child2
-	// resolver.DeleteEntry(exec1.Pid, time.Now())
-	// assert.Nil(t, resolver.entryCache[exec1.Pid])
-	// assert.Equal(t, 2, len(resolver.entryCache))
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(1) // For parent
+	stats.ValidateCounters(t, processList)
+	if isProcessOrExecPresent(processList, pc, parent2) {
+		t.Fatal("parent still present")
+	}
+	if !isProcessAndExecPresent(processList, pc, child2) {
+		t.Fatal("child should be  present")
+	}
+	if checkParentality(processList, pc, parent2, child2) {
+		t.Fatal("parent / child paternality still present")
+	}
 
-	// // [parent2:pid1]
-	// //     \ child2
-	// resolver.DeleteEntry(parent2.Pid, time.Now())
-	// assert.Nil(t, resolver.entryCache[parent2.Pid])
-	// assert.Equal(t, 1, len(resolver.entryCache))
-	// assert.Equal(t, parent2, child2.Ancestor)
+	// nothing
+	child2.Type = uint32(model.ExitEventType)
+	deleted, err = processList.Insert(child2, true, "")
 
-	// // nothing
-	// resolver.DeleteEntry(child2.Pid, time.Now())
-	// assert.Zero(t, len(resolver.entryCache))
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(1)
+	stats.ValidateCounters(t, processList)
+	if isProcessOrExecPresent(processList, pc, child2) {
+		t.Fatal("child1 should not be  present")
+	}
 
-	// testCacheSize(t, resolver)
 }
+
 func TestForkForkExec(t *testing.T) {
 
 	pc := NewProcessResolver()
-	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"},
-		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil)
+
+	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"}, nil, /* config  */
+		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil, nil, nil, nil)
 	stats := testStats{}
 
 	// parent
@@ -598,7 +731,7 @@ func TestForkForkExec(t *testing.T) {
 	}
 
 	// parent
-	//     \ child -> childEdex
+	//     \ child -> childExec
 	//          \ grandChild
 	childExec := newFakeExecEvent(1, 2, "bin/childExec")
 	new, err = processList.Insert(childExec, true, "")
@@ -609,248 +742,128 @@ func TestForkForkExec(t *testing.T) {
 	if checkParentality(processList, pc, parent, childExec) == false {
 		t.Fatal("parent / childExec paternality not found")
 	}
+	if !isExecOfProcess(processList, pc, child, childExec) {
+		t.Fatal("process / exec relation not found")
+	}
 	stats.AddExec()
 	stats.ValidateCounters(t, processList)
 
-	// nothing
-	deleted, err := processList.DeleteProcess(pc.GetProcessCacheKey(&parent.ProcessContext.Process), "")
+	// [parent]
+	//     \ child -> childExec
+	//          \ grandChild
+	parent.Type = uint32(model.ExitEventType)
+	deleted, err := processList.Insert(parent, true, "")
 	assert.Equal(t, true, deleted)
 	stats.DeleteProcess(1) // For parent
-	stats.DeleteProcess(2) // For child
-	stats.DeleteProcess(1) // For grandChild
 	stats.ValidateCounters(t, processList)
 	if isProcessOrExecPresent(processList, pc, parent) {
 		t.Fatal("parent still present")
 	}
+	if !isProcessAndExecPresent(processList, pc, child) {
+		t.Fatal("child still present")
+	}
+	if !isProcessOrExecPresent(processList, pc, grandChild) {
+		t.Fatal("grandChild still present")
+	}
+
+	// [parent]
+	//     \ [child] -> childExec
+	//          \ grandChild
+	child.Type = uint32(model.ExitEventType)
+	deleted, err = processList.Insert(child, true, "")
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(2) // For parent
+	stats.ValidateCounters(t, processList)
 	if isProcessOrExecPresent(processList, pc, child) {
 		t.Fatal("child still present")
 	}
+	if !isProcessOrExecPresent(processList, pc, grandChild) {
+		t.Fatal("grandChild still present")
+	}
+
+	// nothing
+	grandChild.Type = uint32(model.ExitEventType)
+	deleted, err = processList.Insert(grandChild, true, "")
+	assert.Equal(t, true, deleted)
+	stats.DeleteProcess(1) // For parent
+	stats.ValidateCounters(t, processList)
 	if isProcessOrExecPresent(processList, pc, grandChild) {
 		t.Fatal("grandChild still present")
 	}
-	if isProcessOrExecPresent(processList, pc, childExec) {
-		t.Fatal("childExec still present")
-	}
+
 }
 func TestExecBomb(t *testing.T) {
-	// resolver, err := NewEBPFResolver(nil, nil, &statsd.NoOpClient{}, nil, nil, nil, nil, nil, nil, nil, NewResolverOpts())
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
+	pc := NewProcessResolver()
 
-	// parent := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 1, Tid: 1})
-	// parent.ForkTime = time.Now()
+	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"}, nil, /* config  */
+		[]model.EventType{model.ExecEventType, model.ForkEventType, model.ExitEventType}, pc /* ,nil  */, nil, nil, nil, nil, nil)
+	stats := testStats{}
 
-	// child := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 2, Tid: 2})
-	// child.PPid = parent.Pid
-	// child.ForkTime = time.Now()
+	// parent
+	parent := newFakeExecEvent(0, 1, "/bin/parent")
+	new, err := processList.Insert(parent, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, true, new)
+	stats.AddProcess(1)
+	stats.ValidateCounters(t, processList)
+	if !isProcessAndExecPresent(processList, pc, parent) {
+		t.Fatal("didn't found cached parent")
+	}
 
-	// exec1 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: child.Pid, Tid: child.Pid})
-	// exec1.PPid = child.PPid
-	// exec1.FileEvent.Inode = 123
-	// exec1.ExecTime = time.Now()
+	// parent
+	//     \ child
+	child := newFakeExecEvent(1, 2, "/bin/child")
+	new, err = processList.Insert(child, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, true, new)
+	stats.AddProcess(1)
+	stats.ValidateCounters(t, processList)
+	if checkParentality(processList, pc, parent, child) == false {
+		t.Fatal("parent / child paternality not found")
+	}
 
-	// exec2 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: child.Pid, Tid: child.Pid})
-	// exec2.Pid = child.Pid
-	// exec2.PPid = child.PPid
-	// exec2.FileEvent.Inode = 123
-	// exec2.ExecTime = time.Now()
+	// parent
+	//     \ child -> exec1
+	exec1 := newFakeExecEvent(1, 2, "bin/exec1")
+	new, err = processList.Insert(exec1, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, true, new)
+	if checkParentality(processList, pc, parent, exec1) == false {
+		t.Fatal("parent / exec paternality not found")
+	}
+	if !isExecOfProcess(processList, pc, child, exec1) {
+		t.Fatal("process / exec relation not present")
+	}
+	stats.AddExec()
+	stats.ValidateCounters(t, processList)
 
-	// // parent
-	// resolver.AddForkEntry(parent, 0)
-	// assert.Equal(t, parent, resolver.entryCache[parent.Pid])
-	// assert.Equal(t, 1, len(resolver.entryCache))
-	// assert.EqualValues(t, 1, resolver.cacheSize.Load())
+	// parent
+	//     \ child -> exec1 -> exec2
+	exec2 := newFakeExecEvent(1, 2, "bin/exec1")
+	new, err = processList.Insert(exec2, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, false, new) // should already be present
+	if checkParentality(processList, pc, parent, exec2) == false {
+		t.Fatal("parent / exec paternality not found")
+	}
+	if !isExecOfProcess(processList, pc, child, exec2) {
+		t.Fatal("process / exec relation not present")
+	}
+	// Should not need to increment the number of execs
+	stats.ValidateCounters(t, processList)
 
-	// // parent
-	// //     \ child
-	// resolver.AddForkEntry(child, 0)
-	// assert.Equal(t, child, resolver.entryCache[child.Pid])
-	// assert.Equal(t, 2, len(resolver.entryCache))
-	// assert.Equal(t, parent, child.Ancestor)
-	// assert.EqualValues(t, 2, resolver.cacheSize.Load())
-
-	// // [parent]
-	// //     \ child
-	// resolver.DeleteEntry(parent.Pid, time.Now())
-	// assert.Nil(t, resolver.entryCache[parent.Pid])
-	// assert.Equal(t, 1, len(resolver.entryCache))
-	// assert.Equal(t, parent, child.Ancestor)
-
-	// // [parent]
-	// //     \ [child] -> exec1
-	// resolver.AddExecEntry(exec1, 0)
-	// assert.Equal(t, exec1, resolver.entryCache[exec1.Pid])
-	// assert.Equal(t, 1, len(resolver.entryCache))
-	// assert.Equal(t, child, exec1.Ancestor)
-	// assert.Equal(t, parent, exec1.Ancestor.Ancestor)
-	// assert.EqualValues(t, 3, resolver.cacheSize.Load())
-
-	// // [parent]
-	// //     \ [child] -> [exec1] -> exec2
-	// resolver.AddExecEntry(exec2, 0)
-	// assert.Equal(t, exec1, resolver.entryCache[exec2.Pid])
-	// assert.Equal(t, 1, len(resolver.entryCache))
-	// assert.Equal(t, exec1.ExecTime, exec2.ExecTime)
-	// assert.EqualValues(t, 3, resolver.cacheSize.Load())
-
-	// // nothing
-	// resolver.DeleteEntry(exec1.Pid, time.Now())
-	// assert.Zero(t, len(resolver.entryCache))
-
-	// testCacheSize(t, resolver)
 }
 func TestExecLostFork(t *testing.T) {
-	// resolver, err := NewEBPFResolver(nil, nil, &statsd.NoOpClient{}, nil, nil, nil, nil, nil, nil, nil, NewResolverOpts())
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
 
-	// parent := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 11, Tid: 11})
-	// parent.FileEvent.BasenameStr = "agent"
-	// parent.ForkTime = time.Now()
-	// parent.FileEvent.Inode = 1
-	// parent.ExecInode = 1
-
-	// // parent
-	// resolver.AddForkEntry(parent, 0)
-
-	// child := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 22, Tid: 22})
-	// child.PPid = parent.Pid
-	// child.FileEvent.Inode = 1
-
-	// // parent
-	// //     \ child
-	// resolver.AddForkEntry(child, parent.ExecInode)
-
-	// assert.Equal(t, "agent", child.FileEvent.BasenameStr)
-	// assert.False(t, child.IsParentMissing)
-
-	// // exec loss with inode 2
-
-	// child1 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 33, Tid: 33})
-	// child1.FileEvent.BasenameStr = "sh"
-	// child1.PPid = child.Pid
-	// child1.ExecInode = 2
-
-	// // parent
-	// //     \ child
-	// //		\ child1
-	// resolver.AddForkEntry(child1, child1.ExecInode)
-
-	// assert.Equal(t, "agent", child1.FileEvent.BasenameStr)
-	// assert.True(t, child1.IsParentMissing)
 }
-func TestExecLostExec(t *testing.T) {}
-func TestIsExecExecRuntime(t *testing.T) {
+func TestExecLostExec(t *testing.T) {
 
-	// resolver, err := NewEBPFResolver(nil, nil, &statsd.NoOpClient{}, nil, nil, nil, nil, nil, nil, nil, NewResolverOpts())
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-
-	// parent := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 1, Tid: 1})
-	// parent.ForkTime = time.Now()
-	// parent.FileEvent.Inode = 1
-
-	// // parent
-	// resolver.AddForkEntry(parent, 0)
-
-	// child := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 2, Tid: 2})
-	// child.PPid = parent.Pid
-	// child.FileEvent.Inode = 1
-
-	// // parent
-	// //     \ child
-	// resolver.AddForkEntry(child, 0)
-
-	// // parent
-	// //     \ child
-	// //      \ child2
-
-	// child2 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 2, Tid: 2})
-	// child2.FileEvent.Inode = 2
-	// child2.PPid = child.Pid
-	// resolver.AddExecEntry(child2, 0)
-
-	// // parent
-	// //     \ child a
-	// //      \ child2
-	// //       \ child3
-
-	// child3 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 2, Tid: 2})
-	// child3.FileEvent.Inode = 3
-	// child3.PPid = child2.Pid
-	// resolver.AddExecEntry(child3, 0)
-
-	// assert.False(t, parent.IsExecExec)
-	// assert.False(t, parent.IsThread) // root node, no fork
-
-	// assert.False(t, child.IsExecExec)
-	// assert.True(t, child.IsThread)
-
-	// assert.False(t, child2.IsExecExec)
-	// assert.False(t, child2.IsThread)
-
-	// assert.True(t, child3.IsExecExec)
-	// assert.False(t, child3.IsThread)
-
-	// child4 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 2, Tid: 2})
-	// child4.FileEvent.Inode = 3
-	// child4.PPid = child3.Pid
-	// resolver.AddExecEntry(child4, 0)
-
-	// assert.True(t, child3.IsExecExec)
-	// assert.False(t, child3.IsThread)
-}
-func TestIsExecExecSnapshot(t *testing.T) {
-	// resolver, err := NewEBPFResolver(nil, nil, &statsd.NoOpClient{}, nil, nil, nil, nil, nil, nil, nil, NewResolverOpts())
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-
-	// parent := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 1, Tid: 1})
-	// parent.ForkTime = time.Now()
-	// parent.FileEvent.Inode = 1
-	// parent.IsThread = true
-
-	// // parent
-	// resolver.insertEntry(parent, nil, model.ProcessCacheEntryFromSnapshot)
-
-	// child := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 2, Tid: 2})
-	// child.PPid = parent.Pid
-	// child.FileEvent.Inode = 2
-	// child.IsThread = true
-
-	// // parent
-	// //     \ child
-
-	// resolver.setAncestor(child)
-	// resolver.insertEntry(child, nil, model.ProcessCacheEntryFromSnapshot)
-
-	// assert.False(t, parent.IsExecExec)
-	// assert.True(t, parent.IsThread) // root node, no fork
-
-	// assert.False(t, child.IsExecExec)
-	// assert.True(t, child.IsThread)
-
-	// // parent
-	// //     \ child
-	// //      \ child2
-
-	// child2 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 2, Tid: 2})
-	// child2.FileEvent.Inode = 3
-	// child2.PPid = child.Pid
-	// resolver.AddExecEntry(child2, 0)
-
-	// assert.False(t, child2.IsExecExec)
-	// assert.False(t, child2.IsThread)
-
-	// child3 := resolver.NewProcessCacheEntry(model.PIDContext{Pid: 2, Tid: 2})
-	// child3.FileEvent.Inode = 4
-	// child3.PPid = child2.Pid
-	// resolver.AddExecEntry(child3, 0)
-
-	// assert.True(t, child3.IsExecExec)
-	// assert.False(t, child3.IsThread)
 }
