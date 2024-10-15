@@ -22,7 +22,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/ebpf/uprobes"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
-	ddsync "github.com/DataDog/datadog-agent/pkg/util/sync"
 )
 
 // TODO: Set a minimum kernel version
@@ -155,6 +154,9 @@ func (p *Probe) GetAndFlush() (*model.GPUStats, error) {
 		return nil, fmt.Errorf("getting current time: %w", err)
 	}
 
+	p.consumer.mtx.Lock()
+	defer p.consumer.mtx.Unlock()
+
 	stats := model.GPUStats{}
 	for key, handler := range p.consumer.streamHandlers {
 		currData := handler.getCurrentData(uint64(now))
@@ -187,12 +189,12 @@ func (p *Probe) startEventConsumer(mgr *manager.Manager, mgrOpts *manager.Option
 		ringbufSize = (minRingbufSize/pagesize + 1) * pagesize
 	}
 
-	callback, callbackCh := ddsync.CallbackChannel[[]byte](consumerChannelSize)
+	p.consumer = newCudaEventConsumer(p.cfg)
 	ehopts := perf.EventHandlerOptions{
 		MapName:          cudaEventMap,
 		TelemetryEnabled: false,
 		UseRingBuffer:    true,
-		Handler:          callback,
+		Handler:          p.consumer.callback,
 		RingBufOptions: perf.RingBufferOptions{
 			BufferSize: ringbufSize,
 		},
@@ -205,7 +207,6 @@ func (p *Probe) startEventConsumer(mgr *manager.Manager, mgrOpts *manager.Option
 		return err
 	}
 
-	p.consumer = NewCudaEventConsumer(callbackCh, p.cfg)
 	p.consumer.Start()
 	return nil
 }

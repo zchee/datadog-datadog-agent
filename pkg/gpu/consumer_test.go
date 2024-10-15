@@ -15,9 +15,8 @@ import (
 )
 
 func TestConsumerCanStartAndStop(t *testing.T) {
-	handler := make(chan []byte)
 	cfg := NewConfig()
-	consumer := NewCudaEventConsumer(handler, cfg)
+	consumer := newCudaEventConsumer(cfg)
 
 	consumer.Start()
 	require.Eventually(t, func() bool { return consumer.running.Load() }, 100*time.Millisecond, 10*time.Millisecond)
