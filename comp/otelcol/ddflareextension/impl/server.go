@@ -32,10 +32,8 @@ type server struct {
 // validateToken - validates token for legacy API
 func validateToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if util.GetAuthToken() != "" {
-			if err := util.Validate(w, r); err != nil {
-				return
-			}
+		if err := util.Validate(w, r); err != nil {
+			return
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -114,7 +112,9 @@ func newServer(endpoint string, handler http.Handler) (*server, error) {
 	r := mux.NewRouter()
 	r.Handle("/", handler)
 
-	r.Use(validateToken)
+	if util.GetAuthToken() != "" {
+		r.Use(validateToken)
+	}
 
 	s := &http.Server{
 		Addr:      endpoint,

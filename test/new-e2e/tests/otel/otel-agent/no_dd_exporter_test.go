@@ -27,7 +27,6 @@ var noDDExporterConfig string
 
 func (s *noDDExporterTestSuite) SetupSuite() {
 	s.BaseSuite.SetupSuite()
-	utils.TestCalendarApp(s)
 }
 
 func TestOTelAgentWithNoDDExporter(t *testing.T) {
