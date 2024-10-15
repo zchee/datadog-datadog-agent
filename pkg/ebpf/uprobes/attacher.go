@@ -399,7 +399,7 @@ func (ua *UprobeAttacher) Start() error {
 			return errors.New("shared libraries tracing not supported for this platform")
 		}
 
-		ua.soWatcher = sharedlibraries.NewEBPFProgram(ua.config.EbpfConfig)
+		ua.soWatcher = sharedlibraries.NewEBPFProgram(ua.config.EbpfConfig, ua.handleLibraryOpen)
 
 		err := ua.soWatcher.Init()
 		if err != nil {
@@ -439,12 +439,6 @@ func (ua *UprobeAttacher) Start() error {
 			log.Infof("uprobe attacher %s stopped", ua.name)
 		}()
 
-		var sharedLibDataChan <-chan *sharedlibraries.LibPath
-
-		if ua.soWatcher != nil {
-			sharedLibDataChan = ua.soWatcher.GetPerfHandler()
-		}
-
 		for {
 			select {
 			case <-ua.done:
@@ -452,11 +446,6 @@ func (ua *UprobeAttacher) Start() error {
 			case <-processSync.C:
 				// We always track process deletions in the scan, to avoid memory leaks.
 				_ = ua.Sync(ua.config.EnablePeriodicScanNewProcesses, true)
-			case lib, ok := <-sharedLibDataChan:
-				if !ok {
-					return
-				}
-				_ = ua.handleLibraryOpen(lib)
 			}
 		}
 	}()
@@ -530,10 +519,10 @@ func (ua *UprobeAttacher) handleProcessExit(pid uint32) {
 	_ = ua.DetachPID(pid)
 }
 
-func (ua *UprobeAttacher) handleLibraryOpen(libpath *sharedlibraries.LibPath) error {
-	// TODO release libpath back into pool
+func (ua *UprobeAttacher) handleLibraryOpen(libpath *sharedlibraries.LibPath) {
+	defer sharedlibraries.LibPathPool.Put(libpath)
 	path := sharedlibraries.ToBytes(libpath)
-	return ua.AttachLibrary(string(path), libpath.Pid)
+	_ = ua.AttachLibrary(string(path), libpath.Pid)
 }
 
 func (ua *UprobeAttacher) buildRegisterCallbacks(matchingRules []*AttachRule, procInfo *ProcInfo) (func(utils.FilePath) error, func(utils.FilePath) error) {

@@ -41,7 +41,7 @@ const (
 
 var traceTypes = []string{"enter", "exit"}
 
-var libPathPool = ddsync.NewDefaultTypedPool[LibPath]()
+var LibPathPool = ddsync.NewDefaultTypedPool[LibPath]()
 
 // EbpfProgram represents the shared libraries eBPF program.
 type EbpfProgram struct {
@@ -72,10 +72,10 @@ func NewEBPFProgram(c *ddebpf.Config, callback func(*LibPath)) *EbpfProgram {
 		MapName:          sharedLibrariesPerfMap,
 		TelemetryEnabled: c.InternalTelemetryEnabled,
 		UseRingBuffer:    false,
-		Handler: encoding.BinaryUnmarshalCallback(libPathPool.Get, func(b *LibPath, err error) {
+		Handler: encoding.BinaryUnmarshalCallback(LibPathPool.Get, func(b *LibPath, err error) {
 			if err != nil {
 				if b != nil {
-					libPathPool.Put(b)
+					LibPathPool.Put(b)
 				}
 				log.Debug(err.Error())
 				return

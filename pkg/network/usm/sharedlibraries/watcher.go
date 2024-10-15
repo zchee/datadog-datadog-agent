@@ -106,7 +106,7 @@ func (w *Watcher) Stop() {
 }
 
 func (w *Watcher) callback(lib *LibPath) {
-	defer libPathPool.Put(lib)
+	defer LibPathPool.Put(lib)
 
 	if int(lib.Pid) == w.thisPID {
 		// don't scan ourself
