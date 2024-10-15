@@ -7,6 +7,8 @@ package sample
 
 import (
 	"bytes"
+	"fmt"
+	"math/rand"
 	"runtime"
 	"strconv"
 )
@@ -32,6 +34,17 @@ func Return_goroutine_id() uint64 {
 
 //nolint:all
 //go:noinline
+func test_capture_variables() int {
+	a := 123
+	boo_boo := rand.Intn(100)
+	fmt.Println(boo_boo)
+	a = 42
+	return a * boo_boo
+}
+
+//nolint:all
+//go:noinline
 func ExecuteOther() {
 	test_trigger_verifier_error(1)
+	test_capture_variables()
 }

@@ -261,6 +261,12 @@ func mergeMaps(maps ...fixtures) fixtures {
 	return result
 }
 
+var offsetCaptures = fixtures{
+	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil/sample.test_capture_variables": {
+		"boo_boo": {Type: "int", Value: strPtr("99")},
+	},
+}
+
 var expectedCaptures = mergeMaps(
 	basicCaptures,
 	stringCaptures,

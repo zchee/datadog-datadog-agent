@@ -1,12 +1,10 @@
 package diconfig
 
 import (
-	"debug/elf"
 	"testing"
 
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/ditypes"
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil"
-	"github.com/DataDog/datadog-agent/pkg/network/go/bininspect"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,19 +21,8 @@ func TestGetParameterAtPC(t *testing.T) {
 		t.Error(err)
 	}
 
-	dwarfData, err := loadDWARF(binaryPath)
+	inspector, err := loadDWARF(binaryPath)
 	assert.NoError(t, err)
-
-	elfFile, err := elf.Open(binaryPath)
-	assert.NoError(t, err)
-
-	d := &bininspect.DwarfInspector{
-		Elf: bininspect.ElfMetadata{
-			File: elfFile,
-			Arch: bininspect.GoArchARM64,
-		},
-		DwarfData: dwarfData,
-	}
 
 	prefix := "github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil/"
 
@@ -72,7 +59,7 @@ func TestGetParameterAtPC(t *testing.T) {
 		{"sample.Return_goroutine_id", "n", 0x518658, expectedN},
 	}
 	for _, tc := range tcs {
-		param, err := GetParameterAtPC(d, prefix+tc.funcName, tc.varName, tc.pc)
+		param, err := GetParameterAtPC(inspector, prefix+tc.funcName, tc.varName, tc.pc)
 		assert.NoError(t, err)
 
 		assert.Equal(t, tc.expected, param)

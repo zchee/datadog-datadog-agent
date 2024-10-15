@@ -42,12 +42,12 @@ func AnalyzeBinary(procInfo *ditypes.ProcessInfo) error {
 		targetFunctions[probe.FuncName] = true
 	}
 
-	dwarfData, err := loadDWARF(procInfo.BinaryPath)
+	inspector, err := loadDWARF(procInfo.BinaryPath)
 	if err != nil {
 		return fmt.Errorf("could not retrieve debug information from binary: %w", err)
 	}
 
-	typeMap, err := getTypeMap(dwarfData, targetFunctions)
+	typeMap, err := getTypeMap(inspector, targetFunctions)
 	if err != nil {
 		return fmt.Errorf("could not retrieve type information from binary %w", err)
 	}
@@ -59,7 +59,7 @@ func AnalyzeBinary(procInfo *ditypes.ProcessInfo) error {
 		return fmt.Errorf("could not open elf file %w", err)
 	}
 
-	procInfo.DwarfData = dwarfData
+	procInfo.DwarfData = inspector.DwarfData
 
 	fieldIDs := make([]bininspect.FieldIdentifier, 0)
 	for _, funcParams := range typeMap.Functions {

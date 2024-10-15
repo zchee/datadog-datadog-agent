@@ -16,17 +16,18 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/DataDog/datadog-agent/pkg/network/go/bininspect"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/ditypes"
 	"github.com/go-delve/delve/pkg/dwarf/godwarf"
 )
 
-func getTypeMap(dwarfData *dwarf.Data, targetFunctions map[string]bool) (*ditypes.TypeMap, error) {
-	return loadFunctionDefinitions(dwarfData, targetFunctions)
+func getTypeMap(inspector *bininspect.DwarfInspector, targetFunctions map[string]bool) (*ditypes.TypeMap, error) {
+	return loadFunctionDefinitions(inspector, targetFunctions)
 }
 
-var dwarfMap = make(map[string]*dwarf.Data)
+var dwarfMap = make(map[string]*bininspect.DwarfInspector)
 
 type seenTypeCounter struct {
 	parameter *ditypes.Parameter
@@ -35,9 +36,9 @@ type seenTypeCounter struct {
 
 var seenTypes = make(map[string]*seenTypeCounter)
 
-func loadFunctionDefinitions(dwarfData *dwarf.Data, targetFunctions map[string]bool) (*ditypes.TypeMap, error) {
-	entryReader := dwarfData.Reader()
-	typeReader := dwarfData.Reader()
+func loadFunctionDefinitions(inspector *bininspect.DwarfInspector, targetFunctions map[string]bool) (*ditypes.TypeMap, error) {
+	entryReader := inspector.DwarfData.Reader()
+	typeReader := inspector.DwarfData.Reader()
 	readingAFunction := false
 	var funcName string
 
@@ -69,7 +70,7 @@ entryLoop:
 			if !ok {
 				continue entryLoop
 			}
-			ranges, err := dwarfData.Ranges(entry)
+			ranges, err := inspector.DwarfData.Ranges(entry)
 			if err != nil {
 				log.Infof("couldnt retrieve ranges for compile unit %s: %s", name, err)
 				continue entryLoop
@@ -153,11 +154,10 @@ entryLoop:
 					return nil, err
 				}
 
-				typeFields, err = expandTypeData(typeEntry.Offset, dwarfData)
+				typeFields, err = expandTypeData(typeEntry.Offset, inspector.DwarfData)
 				if err != nil {
 					return nil, fmt.Errorf("error while parsing debug information: %w", err)
 				}
-
 			}
 		}
 
@@ -180,9 +180,9 @@ entryLoop:
 	return &result, nil
 }
 
-func loadDWARF(binaryPath string) (*dwarf.Data, error) {
-	if dwarfData, ok := dwarfMap[binaryPath]; ok {
-		return dwarfData, nil
+func loadDWARF(binaryPath string) (*bininspect.DwarfInspector, error) {
+	if inspector, ok := dwarfMap[binaryPath]; ok {
+		return inspector, nil
 	}
 	elfFile, err := elf.Open(binaryPath)
 	if err != nil {
@@ -193,8 +193,15 @@ func loadDWARF(binaryPath string) (*dwarf.Data, error) {
 	if err != nil {
 		return nil, fmt.Errorf("couldn't retrieve debug info from elf: %w", err)
 	}
-	dwarfMap[binaryPath] = dwarfData
-	return dwarfData, nil
+	inspector := &bininspect.DwarfInspector{
+		Elf: bininspect.ElfMetadata{
+			File: elfFile,
+			Arch: bininspect.GoArchARM64,
+		},
+		DwarfData: dwarfData,
+	}
+	dwarfMap[binaryPath] = inspector
+	return inspector, nil
 }
 
 func expandTypeData(offset dwarf.Offset, dwarfData *dwarf.Data) (*ditypes.Parameter, error) {
