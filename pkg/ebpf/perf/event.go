@@ -98,13 +98,13 @@ func (e *EventHandler) Init(mgr *manager.Manager, mgrOpts *manager.Options) erro
 			if ms.Type != ebpf.PerfEventArray {
 				return fmt.Errorf("map %q is not a perf buffer, got %q instead", e.opts.MapName, ms.Type.String())
 			}
-			upgradePerfBuffer(mgr, mgrOpts, e.opts.MapName)
+			UpgradePerfBuffer(mgr, mgrOpts, e.opts.MapName)
 		} else if ms.Type != ebpf.RingBuf {
 			return fmt.Errorf("map %q is not a ring buffer, got %q instead", e.opts.MapName, ms.Type.String())
 		}
 
 		if ms.MaxEntries != uint32(e.opts.RingBufOptions.BufferSize) {
-			resizeRingBuffer(mgrOpts, e.opts.MapName, e.opts.RingBufOptions.BufferSize)
+			ResizeRingBuffer(mgrOpts, e.opts.MapName, e.opts.RingBufOptions.BufferSize)
 		}
 		e.initRingBuffer(mgr)
 		return nil
@@ -135,7 +135,8 @@ func (e *EventHandler) Flush() {
 	e.f.Flush()
 }
 
-func resizeRingBuffer(mgrOpts *manager.Options, mapName string, bufferSize int) {
+// ResizeRingBuffer resizes the ring buffer by creating/updating a map spec editor
+func ResizeRingBuffer(mgrOpts *manager.Options, mapName string, bufferSize int) {
 	if mgrOpts.MapSpecEditors == nil {
 		mgrOpts.MapSpecEditors = make(map[string]manager.MapSpecEditor)
 	}
@@ -189,16 +190,18 @@ func (e *EventHandler) initRingBuffer(mgr *manager.Manager) {
 	e.f = rb
 }
 
-func upgradePerfBuffer(mgr *manager.Manager, mgrOpts *manager.Options, mapName string) {
+// UpgradePerfBuffer upgrades a perf buffer to a ring buffer by creating a map spec editor
+func UpgradePerfBuffer(mgr *manager.Manager, mgrOpts *manager.Options, mapName string) {
 	if mgrOpts.MapSpecEditors == nil {
 		mgrOpts.MapSpecEditors = make(map[string]manager.MapSpecEditor)
 	}
-	mgrOpts.MapSpecEditors[mapName] = manager.MapSpecEditor{
-		Type:       ebpf.RingBuf,
-		KeySize:    0,
-		ValueSize:  0,
-		EditorFlag: manager.EditType | manager.EditKeyValue,
-	}
+	specEditor := mgrOpts.MapSpecEditors[mapName]
+	specEditor.Type = ebpf.RingBuf
+	specEditor.KeySize = 0
+	specEditor.ValueSize = 0
+	specEditor.EditorFlag |= manager.EditType | manager.EditKeyValue
+	mgrOpts.MapSpecEditors[mapName] = specEditor
+
 	mgr.PerfMaps = slices.DeleteFunc(mgr.PerfMaps, func(perfMap *manager.PerfMap) bool {
 		return perfMap.Name == mapName
 	})

@@ -10,6 +10,7 @@ package kprobe
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	manager "github.com/DataDog/ebpf-manager"
 	"github.com/cilium/ebpf"
@@ -224,12 +225,18 @@ func loadTracerFromAsset(buf bytecode.AssetReader, runtimeTracer, coreTracer boo
 	if err := connCloseEventHandler.Init(m.Manager, &mgrOpts); err != nil {
 		return nil, nil, fmt.Errorf("error initializing closed connections event handler: %w", err)
 	}
+	usingRingBuffers := connCloseEventHandler.MapType() == ebpf.RingBuf
 	if failedConnsHandler != nil {
 		if err := failedConnsHandler.Init(m.Manager, &mgrOpts); err != nil {
 			return nil, nil, fmt.Errorf("error initializing failed connections event handler: %w", err)
 		}
+	} else if usingRingBuffers {
+		// we must upgrade the failed connections perf buffer, even though the feature is disabled
+		// otherwise we get a verifier error about the mismatch between bpf_ringbuf_output and the map type
+		perf.UpgradePerfBuffer(m.Manager, &mgrOpts, probes.FailedConnEventMap)
+		perf.ResizeRingBuffer(&mgrOpts, probes.FailedConnEventMap, os.Getpagesize()) // minimum size allowed
 	}
-	util.AddBoolConst(&mgrOpts, "ringbuffers_enabled", connCloseEventHandler.MapType() == ebpf.RingBuf)
+	util.AddBoolConst(&mgrOpts, "ringbuffers_enabled", usingRingBuffers)
 	if features.HaveMapType(ebpf.RingBuf) != nil {
 		m.EnabledModifiers = append(m.EnabledModifiers, ddebpf.NewHelperCallRemover(asm.FnRingbufOutput))
 	}
