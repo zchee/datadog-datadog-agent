@@ -9,7 +9,6 @@ package gpu
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
@@ -151,102 +150,40 @@ func (sp *StatsProcessor) setGPUUtilizationNormalizationFactor(factor float64) {
 	sp.utilizationNormFactor = factor
 }
 
-func (sp *StatsProcessor) markInterval() error {
+func (sp *StatsProcessor) markInterval() {
+	tags := sp.getTags()
+
 	intervalSecs := sp.measuredInterval.Seconds()
 	if intervalSecs > 0 {
 		utilization := sp.getGPUUtilization() / sp.utilizationNormFactor
-
-		// if this is the first event, we need to send it with the timestamp of the first kernel start so that we have a complete series
-		if sp.sentEvents == 0 {
-			err := sp.sender.GaugeWithTimestamp(metricNameUtil, utilization, "", sp.getTags(), float64(sp.firstKernelStart.Unix()))
-			if err != nil {
-				return fmt.Errorf("cannot send metric: %w", err)
-			}
-		}
-
-		// aftewards, we only need to update the utilization at the point of the last kernel end
-		err := sp.sender.GaugeWithTimestamp(metricNameUtil, utilization, "", sp.getTags(), float64(sp.lastKernelEnd.Unix()))
-		if err != nil {
-			return fmt.Errorf("cannot send metric: %w", err)
-		}
-
-		if sp.lastKernelEnd.After(sp.maxTimestampLastMetric) {
-			sp.maxTimestampLastMetric = sp.lastKernelEnd
-		}
+		sp.sender.Gauge(metricNameUtil, utilization, "", tags)
 	}
 
 	var memTsBuilder tseriesBuilder
 
-	firstUnfreedAllocKTime := uint64(math.MaxUint64)
-
 	for _, alloc := range sp.currentAllocs {
-		firstUnfreedAllocKTime = min(firstUnfreedAllocKTime, alloc.StartKtime)
+		startEpoch := sp.timeResolver.ResolveMonotonicTimestamp(alloc.StartKtime).Unix()
+		memTsBuilder.AddEventStart(uint64(startEpoch), int64(alloc.Size))
 	}
 
 	for _, alloc := range sp.pastAllocs {
-		// Only build the timeseries up until the point of the first unfreed allocation. After that, the timeseries is still incomplete
-		// until all those allocations are freed.
-		if alloc.EndKtime < firstUnfreedAllocKTime {
-			startEpoch := sp.timeResolver.ResolveMonotonicTimestamp(alloc.StartKtime).Unix()
-			endEpoch := sp.timeResolver.ResolveMonotonicTimestamp(alloc.EndKtime).Unix()
-			memTsBuilder.AddEvent(uint64(startEpoch), uint64(endEpoch), int64(alloc.Size))
-		}
+		startEpoch := sp.timeResolver.ResolveMonotonicTimestamp(alloc.StartKtime).Unix()
+		endEpoch := sp.timeResolver.ResolveMonotonicTimestamp(alloc.EndKtime).Unix()
+		memTsBuilder.AddEvent(uint64(startEpoch), uint64(endEpoch), int64(alloc.Size))
 	}
 
-	points, maxValue := memTsBuilder.Build()
-	tags := sp.getTags()
-	sentPoints := false
-
-	for _, point := range points {
-		// Do not send points that are before the last check, those have been already sent
-		// Also do not send points that are 0, unless we have already sent some points, in which case
-		// we need them to close the series
-		if point.time > sp.lastMemPointEpoch && (point.value > 0 || sentPoints) {
-			err := sp.sender.GaugeWithTimestamp(metricNameMemory, float64(point.value), "", tags, float64(point.time))
-			if err != nil {
-				return fmt.Errorf("cannot send metric: %w", err)
-			}
-
-			if int64(point.time) > sp.maxTimestampLastMetric.Unix() {
-				sp.maxTimestampLastMetric = time.Unix(int64(point.time), 0)
-			}
-
-			sentPoints = true
-		}
-	}
-
-	if len(points) > 0 {
-		sp.lastMemPointEpoch = points[len(points)-1].time
-	}
-
+	lastValue, maxValue := memTsBuilder.GetLastAndMax()
+	sp.sender.Gauge(metricNameMemory, float64(lastValue), "", tags)
 	sp.sender.Gauge(metricNameMaxMem, float64(maxValue), "", tags)
-	sp.sentEvents++
-	fmt.Println(sp.sentEvents)
 
-	return nil
+	// We do not need the allocations anymore
+	sp.currentAllocs = sp.currentAllocs[:0]
+	sp.pastAllocs = sp.pastAllocs[:0]
 }
 
 // finish ensures that all metrics sent by this processor are properly closed with a 0 value
-func (sp *StatsProcessor) finish(now time.Time) error {
-	lastTs := now
-
-	// Don't mark events as lasting more than what they should.
-	if !sp.maxTimestampLastMetric.IsZero() {
-		lastTs = sp.maxTimestampLastMetric.Add(time.Second)
-	}
-
-	err := sp.sender.GaugeWithTimestamp(metricNameMemory, 0, "", sp.getTags(), float64(lastTs.Unix()))
-	if err != nil {
-		return fmt.Errorf("cannot send metric: %w", err)
-	}
-	err = sp.sender.GaugeWithTimestamp(metricNameMaxMem, 0, "", sp.getTags(), float64(lastTs.Unix()))
-	if err != nil {
-		return fmt.Errorf("cannot send metric: %w", err)
-	}
-	err = sp.sender.GaugeWithTimestamp(metricNameUtil, 0, "", sp.getTags(), float64(lastTs.Unix()))
-	if err != nil {
-		return fmt.Errorf("cannot send metric: %w", err)
-	}
-
-	return nil
+func (sp *StatsProcessor) finish() {
+	sp.sender.Gauge(metricNameMemory, 0, "", sp.getTags())
+	sp.sender.Gauge(metricNameMaxMem, 0, "", sp.getTags())
+	sp.sender.Gauge(metricNameUtil, 0, "", sp.getTags())
 }
