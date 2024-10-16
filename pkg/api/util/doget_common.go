@@ -7,16 +7,21 @@ package util
 
 import (
 	"context"
-	"fmt"
 	"net"
+
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
+
+// Mimicking default behaviour of [net/http.Transport] dial() function
+var zeroDialer net.Dialer
 
 // func newDialContext(config config.Reader) DialContext {
 func newDialContext() dialContext {
-	return func(_ context.Context, _ string, addr string) (net.Conn, error) {
+	return func(ctx context.Context, network string, addr string) (net.Conn, error) {
 		host, _, err := net.SplitHostPort(addr)
 		if err != nil {
-			return nil, err
+			log.Warnf("unable to split host:port of %s", addr)
+			return zeroDialer.DialContext(ctx, network, addr)
 		}
 
 		if resolver, ok := db[host]; ok {
@@ -26,10 +31,12 @@ func newDialContext() dialContext {
 				return nil, err
 			}
 
-			fmt.Printf("receive request for %v, reaching %v", addr, path)
+			log.Debugf("address %s registered in the Agent name resolver, reaching: %s", addr, path)
 
 			return net.Dial("tcp", path)
 		}
-		return nil, fmt.Errorf("%v: unknown Agent address", addr)
+
+		log.Warnf("address not registered in the Agent name resolver: %s", addr)
+		return zeroDialer.DialContext(ctx, network, addr)
 	}
 }

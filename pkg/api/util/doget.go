@@ -142,19 +142,13 @@ var db = AddrResolver{
 	},
 }
 
-// OverrideResolver allows you to upsert a getter in the shared [AddrResolver].
-// This function is intended for testing purposes only.
-func OverrideResolver(src, target string) {
-	db[src] = func() (string, error) {
-		return target, nil
-	}
-}
-
 // ClientBuilder is a struct used to build an [*net/http.Client].
 type ClientBuilder struct {
 	tr      *http.Transport
 	timeout time.Duration
 }
+
+type ClientOption func(*http.Client)
 
 // GetClient returns a ClientBuilder struct that lets you create an Agent-specific client.
 // To get an [*net/http.Client] object from the return value, call the Build() function.
@@ -167,10 +161,18 @@ type ClientBuilder struct {
 //	client := GetClient().WithNoVerify().WithResolver().Build()
 //
 // This example creates an HTTP client with no TLS verification and a custom resolver.
-func GetClient() ClientBuilder {
-	return ClientBuilder{
-		tr: &http.Transport{},
+func GetClient(options ...ClientOption) *http.Client {
+	client := http.Client{
+		Transport: &http.Transport{
+			DialContext: newDialContext(),
+		},
 	}
+
+	for _, opt := range options {
+		opt(&client)
+	}
+
+	return &client
 }
 
 // WithNoVerify configures the client to skip TLS verification.
@@ -182,9 +184,14 @@ func GetClient() ClientBuilder {
 //	client := GetClient().WithNoVerify().Build()
 //
 // This example creates an HTTP client that skips TLS verification.
-func (c ClientBuilder) WithNoVerify() ClientBuilder {
-	c.tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	return c
+func WithNoVerify() func(c *http.Client) {
+	return func(c *http.Client) {
+		if tr, ok := c.Transport.(*http.Transport); ok {
+			tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		} else {
+			// TODO
+		}
+	}
 }
 
 // WithTimeout sets the timeout for the HTTP client.
@@ -194,35 +201,9 @@ func (c ClientBuilder) WithNoVerify() ClientBuilder {
 //	client := GetClient().WithTimeout(30 * time.Second).Build()
 //
 // This example creates an HTTP client with a 30-second timeout.
-func (c ClientBuilder) WithTimeout(to time.Duration) ClientBuilder {
-	c.timeout = to
-	return c
-}
-
-// WithResolver configures the client to use a custom resolver.
-//
-// # Example usage
-//
-//	client := GetClient().WithResolver().Build()
-//
-// This example creates an HTTP client with a custom resolver.
-func (c ClientBuilder) WithResolver() ClientBuilder {
-	c.tr.DialContext = newDialContext()
-
-	return c
-}
-
-// Build constructs the [*net/http.Client] with the configured options.
-//
-// # Example usage
-//
-//	client := GetClient().WithNoVerify().WithTimeout(30 * time.Second).WithResolver().Build()
-//
-// This example creates an HTTP client with no TLS verification, a 30-second timeout, and a custom resolver.
-func (c ClientBuilder) Build() *http.Client {
-	return &http.Client{
-		Transport: c.tr,
-		Timeout:   c.timeout,
+func WithTimeout(to time.Duration) func(c *http.Client) {
+	return func(c *http.Client) {
+		c.Timeout = to
 	}
 }
 
