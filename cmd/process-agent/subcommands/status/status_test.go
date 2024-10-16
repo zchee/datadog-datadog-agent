@@ -51,7 +51,9 @@ func TestStatus(t *testing.T) {
 
 	server := fakeStatusServer(t, statusInfo)
 	defer server.Close()
-	apiutil.OverrideResolver(apiutil.ProcessCmd, server.Listener.Addr().String())
+
+	cfg := configmock.New(t)
+	cfg.SetWithoutSource("process_config.cmd_port", server.Listener.Addr().String())
 
 	// Build the actual status
 	var statusBuilder strings.Builder

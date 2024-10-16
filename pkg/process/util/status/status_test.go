@@ -100,7 +100,7 @@ func TestGetStatus(t *testing.T) {
 	expVarSrv := fakeExpVarServer(t, expectedExpVars)
 	defer expVarSrv.Close()
 
-	util.OverrideResolver(util.CoreExpvar, expVarSrv.Listener.Addr().String())
+	cfg.SetWithoutSource("expvar_port", expVarSrv.Listener.Addr().String()) // Prevents panic since feature detection has not run
 
 	stats, err := GetStatus(cfg, fmt.Sprintf("http://%v", util.CoreExpvar))
 	require.NoError(t, err)

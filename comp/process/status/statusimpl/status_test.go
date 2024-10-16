@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/DataDog/datadog-agent/comp/core/config"
-	"github.com/DataDog/datadog-agent/pkg/api/util"
 )
 
 //go:embed fixtures
@@ -45,10 +44,8 @@ func TestStatus(t *testing.T) {
 	server := fakeStatusServer(t, 200, jsonBytes)
 	defer server.Close()
 
-	// This is used to register the test server as `core-expvar`
-	util.OverrideResolver(util.ProcessExpvar, server.Listener.Addr().String())
-
 	configComponent := config.NewMock(t)
+	configComponent.SetWithoutSource("process_config.expvar_port", server.Listener.Addr().String())
 
 	headerProvider := statusProvider{
 		testServerURL: server.URL,

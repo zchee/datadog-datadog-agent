@@ -7,6 +7,7 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -114,11 +115,13 @@ func TestResolver(t *testing.T) {
 			w.Write([]byte("test"))
 		}
 		server := makeTestServer(t, http.HandlerFunc(handler))
-		OverrideResolver("test-cmd", server.Listener.Addr().String())
+
+		cfg := model.NewConfig("datadog", "test", strings.NewReplacer("_", "."))
+		cfg.SetWithoutSource("cmd_port", server.Listener.Addr().String())
 
 		client := GetClient().WithNoVerify().WithResolver().Build()
 
-		data, err := DoGet(client, "http://test-cmd", CloseConnection)
+		data, err := DoGet(client, fmt.Sprintf("http://%v", CoreCmd), CloseConnection)
 		require.NoError(t, err)
 		require.Equal(t, "test", string(data))
 	})
