@@ -25,9 +25,6 @@ type noDDExporterTestSuite struct {
 //go:embed config/no-dd-exporter.yml
 var noDDExporterConfig string
 
-func (s *noDDExporterTestSuite) SetupSuite() {
-	s.BaseSuite.SetupSuite()
-}
 
 func TestOTelAgentWithNoDDExporter(t *testing.T) {
 	values := `
