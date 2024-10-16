@@ -156,7 +156,7 @@ func TestStartBothServersWithObservability(t *testing.T) {
 			require.NoError(t, err)
 
 			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authTokenValue))
-			resp, err := util.GetClient().WithNoVerify().WithTimeout(0).Build().Do(req)
+			resp, err := util.GetClient(util.WithNoVerify(), util.WithTimeout(0)).Do(req)
 			require.NoError(t, err)
 			defer resp.Body.Close()
 

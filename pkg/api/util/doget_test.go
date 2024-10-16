@@ -119,7 +119,7 @@ func TestResolver(t *testing.T) {
 		cfg := model.NewConfig("datadog", "test", strings.NewReplacer("_", "."))
 		cfg.SetWithoutSource("cmd_port", server.Listener.Addr().String())
 
-		client := GetClient().WithNoVerify().WithResolver().Build()
+		client := GetClient(WithNoVerify())
 
 		data, err := DoGet(client, fmt.Sprintf("http://%v", CoreCmd), CloseConnection)
 		require.NoError(t, err)
@@ -127,7 +127,7 @@ func TestResolver(t *testing.T) {
 	})
 
 	t.Run("unknown address", func(t *testing.T) {
-		client := GetClient().WithNoVerify().WithResolver().Build()
+		client := GetClient(WithNoVerify())
 
 		handler := func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte("test"))
