@@ -68,7 +68,7 @@ func run(log log.Component, config config.Component, cliParams *cliParams) error
 	}
 	var e error
 	var s string
-	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build() // FIX: get certificates right then make this true
+	c := util.GetClient(util.WithNoVerify(), util.WithTimeout(0)) // FIX: get certificates right then make this true
 
 	v := url.Values{}
 	if cliParams.prettyPrintJSON || cliParams.jsonStatus {

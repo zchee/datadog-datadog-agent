@@ -84,7 +84,7 @@ func newConfigSync(deps dependencies, configRefreshIntervalSec int) configsync.C
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	client := apiutil.GetClient().WithTimeout(deps.SyncParams.Timeout).WithNoVerify().WithResolver().Build()
+	client := apiutil.GetClient(apiutil.WithTimeout(deps.SyncParams.Timeout), apiutil.WithNoVerify())
 	configRefreshInterval := time.Duration(configRefreshIntervalSec) * time.Second
 
 	configSync := configSync{

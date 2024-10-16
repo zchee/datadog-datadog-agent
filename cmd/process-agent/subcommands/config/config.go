@@ -180,7 +180,7 @@ func getConfigValue(deps dependencies, args []string) error {
 }
 
 func getClient(cfg model.Reader) (settings.Client, error) {
-	httpClient := apiutil.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
+	httpClient := apiutil.GetClient(apiutil.WithNoVerify(), apiutil.WithTimeout(0))
 
 	ipcAddressWithPort := fmt.Sprintf("http://%v/config", util.ProcessCmd)
 

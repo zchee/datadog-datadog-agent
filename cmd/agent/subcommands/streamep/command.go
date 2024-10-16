@@ -75,7 +75,7 @@ func streamEventPlatform(_ log.Component, config config.Component, cliParams *cl
 
 func streamRequest(url string, body []byte, onChunk func([]byte)) error {
 	var e error
-	c := util.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
+	c := util.GetClient(util.WithNoVerify(), util.WithTimeout(0))
 
 	// Set session token
 	e = util.SetAuthToken(pkgconfigsetup.Datadog())

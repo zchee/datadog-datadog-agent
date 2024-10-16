@@ -29,7 +29,7 @@ var (
 
 func getHTTPClient() *http.Client {
 	clientInitOnce.Do(func() {
-		httpClient = apiutil.GetClient().WithNoVerify().WithTimeout(0).WithResolver().Build()
+		httpClient = apiutil.GetClient(apiutil.WithNoVerify(), apiutil.WithTimeout(0))
 	})
 
 	return httpClient
