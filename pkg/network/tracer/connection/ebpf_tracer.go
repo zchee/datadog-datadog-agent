@@ -144,7 +144,6 @@ type ebpfTracer struct {
 
 	// tcp failure events
 	failedConnConsumer *failure.TCPFailedConnConsumer
-	failedCallback     func(*netebpf.FailedConn)
 
 	// periodically clean the ongoing connection pid map
 	ongoingConnectCleaner *ddebpf.MapCleaner[netebpf.SkpConn, netebpf.PidTs]
@@ -216,9 +215,8 @@ func newEbpfTracer(config *config.Config, _ telemetryComponent.Component) (Trace
 	}
 
 	tr := &ebpfTracer{
-		removeTuple:    &netebpf.ConnTuple{},
-		failedCallback: func(*netebpf.FailedConn) {},
-		ch:             newCookieHasher(),
+		removeTuple: &netebpf.ConnTuple{},
+		ch:          newCookieHasher(),
 	}
 
 	connCloseEventHandler, err := initClosedConnEventHandler(config, tr.closedPerfCallback, connPool, extractor)
@@ -226,7 +224,7 @@ func newEbpfTracer(config *config.Config, _ telemetryComponent.Component) (Trace
 		return nil, err
 	}
 
-	failedConnPool := ddsync.NewDefaultTypedPool[netebpf.FailedConn]()
+	failedConnPool := ddsync.NewDefaultTypedPool[failure.Conn]()
 	failedConnsHandler, err := initFailedConnEventHandler(config, tr.failedPerfCallback, failedConnPool)
 	if err != nil {
 		return nil, err
@@ -271,7 +269,6 @@ func newEbpfTracer(config *config.Config, _ telemetryComponent.Component) (Trace
 	}
 	if config.FailedConnectionsSupported() {
 		failedConnConsumer = failure.NewFailedConnConsumer(failedConnPool, failure.NewFailedConns(m, config.MaxFailedConnectionsBuffered))
-		tr.failedCallback = failedConnConsumer.Callback
 	}
 
 	tr.m = m
@@ -302,14 +299,14 @@ func newEbpfTracer(config *config.Config, _ telemetryComponent.Component) (Trace
 	return tr, nil
 }
 
-func initFailedConnEventHandler(config *config.Config, failedCallback func(*netebpf.FailedConn), pool ddsync.Pool[netebpf.FailedConn]) (*perf.EventHandler, error) {
+func initFailedConnEventHandler(config *config.Config, failedCallback func(*failure.Conn), pool ddsync.Pool[failure.Conn]) (*perf.EventHandler, error) {
 	if !config.FailedConnectionsSupported() {
 		return nil, nil
 	}
 
 	fcopts := perf.EventHandlerOptions{
 		MapName: probes.FailedConnEventMap,
-		Handler: encoding.BinaryUnmarshalCallback(pool.Get, func(b *netebpf.FailedConn, err error) {
+		Handler: encoding.BinaryUnmarshalCallback(pool.Get, func(b *failure.Conn, err error) {
 			if err != nil {
 				if b != nil {
 					pool.Put(b)
@@ -407,12 +404,11 @@ func (t *ebpfTracer) closedPerfCallback(c *network.ConnectionStats) {
 	t.closeConsumer.Callback(c)
 }
 
-func (t *ebpfTracer) failedPerfCallback(fc *netebpf.FailedConn) {
-	// we cannot directly use failedCallback in the constructor because it can get changed during init
-	t.failedCallback(fc)
+func (t *ebpfTracer) failedPerfCallback(fc *failure.Conn) {
+	t.failedConnConsumer.Callback(fc)
 }
 
-func (t *ebpfTracer) Start(callback func(*network.ConnectionStats)) (err error) {
+func (t *ebpfTracer) Start(callback func(*network.ConnectionStats), failedCallback func(conn *failure.Conn)) (err error) {
 	defer func() {
 		if err != nil {
 			t.Stop()
@@ -429,6 +425,7 @@ func (t *ebpfTracer) Start(callback func(*network.ConnectionStats)) (err error) 
 	}
 
 	t.closeConsumer.Start(callback)
+	t.failedConnConsumer.Start(failedCallback)
 	return nil
 }
 
@@ -579,7 +576,7 @@ func removeConnectionFromTelemetry(conn *network.ConnectionStats) {
 }
 
 func (t *ebpfTracer) Remove(conn *network.ConnectionStats) error {
-	util.ConnStatsToTuple(conn, t.removeTuple)
+	util.ConnTupleToEBPFTuple(&conn.ConnectionTuple, t.removeTuple)
 
 	err := t.conns.Delete(t.removeTuple)
 	if err != nil {

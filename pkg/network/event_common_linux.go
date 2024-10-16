@@ -81,12 +81,14 @@ func (c *ConnectionStats) FromConn(ct *netebpf.Conn) {
 // FromTupleAndStats populates relevant fields on ConnectionStats from the arguments
 func (c *ConnectionStats) FromTupleAndStats(t *netebpf.ConnTuple, s *netebpf.ConnStats) {
 	*c = ConnectionStats{
-		Pid:    t.Pid,
-		NetNS:  t.Netns,
-		Source: t.SourceAddress(),
-		Dest:   t.DestAddress(),
-		SPort:  t.Sport,
-		DPort:  t.Dport,
+		ConnectionTuple: ConnectionTuple{
+			Pid:    t.Pid,
+			NetNS:  t.Netns,
+			Source: t.SourceAddress(),
+			Dest:   t.DestAddress(),
+			SPort:  t.Sport,
+			DPort:  t.Dport,
+		},
 		Monotonic: StatCounters{
 			SentBytes:   s.Sent_bytes,
 			RecvBytes:   s.Recv_bytes,
