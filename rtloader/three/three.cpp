@@ -44,10 +44,9 @@ Three::Three(const char *python_home, const char *python_exe, cb_memory_tracker_
 {
     initPythonHome(python_home);
 
-    // If not empty, set our Python interpreter path
-    if (python_exe && strlen(python_exe) > 0) {
-        initPythonExe(python_exe);
-    }
+    // Py_SetProgramName stores a pointer to the string we pass to it, so we must keep it in memory
+    _pythonExeArg = Py_DecodeLocale(python_exe, NULL);
+
 }
 
 Three::~Three()
@@ -72,26 +71,14 @@ void Three::initPythonHome(const char *pythonHome)
     PyMem_RawFree((void *)oldPythonHome);
 }
 
-void Three::initPythonExe(const char *python_exe)
-{
-    // Py_SetProgramName stores a pointer to the string we pass to it, so we must keep it in memory
-    wchar_t *oldPythonExe = _pythonExe;
-    _pythonExe = Py_DecodeLocale(python_exe, NULL);
-
-    Py_SetProgramName(_pythonExe);
-
-    // HACK: This extra internal API invocation is due to the workaround for an upstream bug on
-    // Windows (https://bugs.python.org/issue34725) where just using `Py_SetProgramName` is
-    // ineffective. The workaround API call will be removed at some point in the future (Python
-    // 3.12+) so we should convert this initialization to the new`PyConfig API`
-    // (https://docs.python.org/3.11/c-api/init_config.html#c.PyConfig) before then.
-    _Py_SetProgramFullPath(_pythonExe);
-
-    PyMem_RawFree((void *)oldPythonExe);
-}
-
 bool Three::init()
 {
+
+    PyStatus status;
+
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+
     // we want the checks to be runned with the standard encoding utf-8
     // setting this var to 1 forces the UTF8 mode for CPython >= 3.7
     // See:
@@ -110,36 +97,35 @@ bool Three::init()
     PyImport_AppendInittab(KUBEUTIL_MODULE_NAME, PyInit_kubeutil);
     PyImport_AppendInittab(CONTAINERS_MODULE_NAME, PyInit_containers);
 
-    Py_Initialize();
+    // If not empty, set our Python interpreter path
+    if (_pythonExeArg && wcslen(_pythonExeArg) > 0) {
+        _pythonExe = _pythonExeArg;
 
-    if (!Py_IsInitialized()) {
-        setError("Python not initialized");
-        return false;
+        /* Override executable computed by PyConfig_Read() */
+        status = PyConfig_SetString(&config, &config.executable, _pythonExe);
+        if (PyStatus_Exception(status)) {
+            goto done;
+        }
     }
 
     // Set PYTHONPATH
     if (!_pythonPaths.empty()) {
-        char pathchr[] = "path";
-        PyObject *path = PySys_GetObject(pathchr); // borrowed
-        if (path == NULL) {
-            // sys.path doesn't exist, which should never happen.
-            // No exception is set on the interpreter, so no need to handle any.
-            setError("could not access sys.path");
-            goto done;
-        }
         for (PyPaths::iterator pit = _pythonPaths.begin(); pit != _pythonPaths.end(); ++pit) {
-            PyObject *p = PyUnicode_FromString(pit->c_str());
-            if (p == NULL) {
-                setError("could not set pythonPath: " + _fetchPythonError());
-                goto done;
-            }
-            int retval = PyList_Append(path, p);
-            Py_XDECREF(p);
-            if (retval == -1) {
-                setError("could not append path to pythonPath: " + _fetchPythonError());
+            wchar_t *path = Py_DecodeLocale(pit->c_str(), NULL);
+            status = PyWideStringList_Append(&config.module_search_paths, path);
+            if (PyStatus_Exception(status)) {
                 goto done;
             }
         }
+    }
+
+    Py_InitializeFromConfig(&config);
+    PyConfig_Clear(&config);
+
+
+    if (!Py_IsInitialized()) {
+        setError("Python not initialized");
+        return false;
     }
 
     if (init_stringutils() != EXIT_SUCCESS) {
@@ -154,6 +140,8 @@ bool Three::init()
     }
 
 done:
+    PyConfig_Clear(&config);
+
     // save thread state and release the GIL
     _threadState = PyEval_SaveThread();
 
