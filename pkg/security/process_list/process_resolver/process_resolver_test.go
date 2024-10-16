@@ -78,7 +78,6 @@ func checkParentality(pl *processlist.ProcessList, pc *ProcessResolver, parent, 
 	}
 
 	// validate process / exec links
-
 	// 1/ for parent
 	cachedExecParent := pl.GetCacheExec(pc.GetExecCacheKey(&parent.ProcessContext.Process))
 	if cachedExecParent == nil {
@@ -158,6 +157,13 @@ func isExecOfProcess(pl *processlist.ProcessList, pc *ProcessResolver, process, 
 	return slices.Contains(cachedProcess.PossibleExecs, cachedExec)
 }
 
+func isParentMissing(pl *processlist.ProcessList, pc *ProcessResolver, event *model.Event) bool {
+	cachedProcess := pl.GetCacheProcess(pc.GetProcessCacheKey(&event.ProcessContext.Process))
+	cachedParent := pl.GetCacheProcess(pc.GetParentProcessCacheKey(event))
+
+	return cachedParent.CurrentExec == cachedProcess.CurrentExec
+}
+
 func TestFork1st(t *testing.T) {
 	pc := NewProcessResolver()
 	processList := processlist.NewProcessList(cgroupModel.WorkloadSelector{Image: "*", Tag: "*"}, nil, /* config  */
@@ -189,6 +195,10 @@ func TestFork1st(t *testing.T) {
 	stats.ValidateCounters(t, processList)
 	if checkParentality(processList, pc, parent, child) == false {
 		t.Fatal("parent / child paternality not found")
+	}
+
+	if isParentMissing(processList, pc, child) {
+		t.Fatal("lost parent")
 	}
 
 	// parent
