@@ -4,6 +4,7 @@ import (
 	"debug/dwarf"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/ditypes"
 	"github.com/DataDog/datadog-agent/pkg/network/go/bininspect"
@@ -140,7 +141,7 @@ func GetPCAtLine(d *bininspect.DwarfInspector, fileName string, lineNo int) (uin
 				}
 
 				// TODO: exact matches at line number don't always work, probably because the compiler optimizes out some statements
-				if le.File != nil && le.File.Name == fileName && le.Line == lineNo {
+				if le.File != nil && strings.HasSuffix(le.File.Name, fileName) && le.Line == lineNo {
 					return le.Address, nil
 				}
 			}

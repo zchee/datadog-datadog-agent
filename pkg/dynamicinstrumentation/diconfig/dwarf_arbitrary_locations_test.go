@@ -21,7 +21,7 @@ func TestGetPCAtLine(t *testing.T) {
 	}
 
 	inspector, err := loadDWARF(binaryPath)
-	pc, err := GetPCAtLine(inspector, "/git/datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 42)
+	pc, err := GetPCAtLine(inspector, "datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 42)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(0x519eec), pc)
 }
@@ -46,7 +46,7 @@ func TestGetParameterAtPC(t *testing.T) {
 
 	// sample.Return_goroutine_id is other.go and returns at line 31
 	// TODO: resolve files by suffix match instead of full path
-	pc, err := GetPCAtLine(inspector, "/git/datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 32)
+	pc, err := GetPCAtLine(inspector, "datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 32)
 	assert.NoError(t, err)
 
 	tcs := []struct {
@@ -99,7 +99,7 @@ func TestGetVariablesAtPC(t *testing.T) {
 	inspector, err := loadDWARF(binaryPath)
 
 	// same line used as in TestGetPCAtLine, last line in test_variable_capture
-	pc, err := GetPCAtLine(inspector, "/git/datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 42)
+	pc, err := GetPCAtLine(inspector, "datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 42)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(0x519eec), pc)
 
