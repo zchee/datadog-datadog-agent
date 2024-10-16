@@ -25,7 +25,6 @@ type noDDExporterTestSuite struct {
 //go:embed config/no-dd-exporter.yml
 var noDDExporterConfig string
 
-
 func TestOTelAgentWithNoDDExporter(t *testing.T) {
 	values := `
 datadog:
@@ -50,5 +49,14 @@ func (s *noDDExporterTestSuite) TestOTelAgentInstalled() {
 }
 
 func (s *noDDExporterTestSuite) TestFlare() {
-	utils.TestOTelFlareDDExporter(s)
+	expectedContents := []string{
+		"otel-agent",
+		"ddflare/dd-autoconfigured:",
+		"health_check/dd-autoconfigured:",
+		"pprof/dd-autoconfigured:",
+		"zpages/dd-autoconfigured:",
+		"infraattributes/dd-autoconfigured:",
+		"prometheus/dd-autoconfigured:",
+	}
+	utils.TestOTelFlare(s, expectedContents)
 }
