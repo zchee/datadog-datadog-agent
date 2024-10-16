@@ -8,6 +8,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGetPCAtLine(t *testing.T) {
+	// log.SetupLogger(seelog.Default, "debug")
+	curDir, err := pwd()
+	if err != nil {
+		t.Error(err)
+	}
+
+	binaryPath, err := testutil.BuildGoBinaryWrapper(curDir, "../testutil/sample/sample_service")
+	if err != nil {
+		t.Error(err)
+	}
+
+	inspector, err := loadDWARF(binaryPath)
+	pc, err := GetPCAtLine(inspector, "/git/datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 42)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(0x519eec), pc)
+}
+
 func TestGetParameterAtPC(t *testing.T) {
 	// log.SetupLogger(seelog.Default, "debug")
 
@@ -26,25 +44,10 @@ func TestGetParameterAtPC(t *testing.T) {
 
 	prefix := "github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil/"
 
-	expectedB := &ditypes.Parameter{
-		Name:            "b",
-		ID:              "",
-		Type:            "struct []uint8",
-		TotalSize:       24,
-		Kind:            0x17,
-		Location:        ditypes.Location{InReg: false, StackOffset: -8},
-		ParameterPieces: []ditypes.Parameter{},
-	}
-
-	expectedN := &ditypes.Parameter{
-		Name:            "n",
-		ID:              "",
-		Type:            "uint64",
-		TotalSize:       8,
-		Kind:            0xb,
-		Location:        ditypes.Location{InReg: true},
-		ParameterPieces: []ditypes.Parameter{},
-	}
+	// sample.Return_goroutine_id is other.go and returns at line 31
+	// TODO: resolve files by suffix match instead of full path
+	pc, err := GetPCAtLine(inspector, "/git/datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 32)
+	assert.NoError(t, err)
 
 	tcs := []struct {
 		funcName string
@@ -53,10 +56,24 @@ func TestGetParameterAtPC(t *testing.T) {
 
 		expected *ditypes.Parameter
 	}{
-		// b between 0x51858c and 0x518690 with several moves
-		{"sample.Return_goroutine_id", "b", 0x518600, expectedB},
-		// n between 0x518650 and 0x51865c
-		{"sample.Return_goroutine_id", "n", 0x518658, expectedN},
+		{"sample.Return_goroutine_id", "b", pc, &ditypes.Parameter{
+			Name:            "b",
+			ID:              "",
+			Type:            "struct []uint8",
+			TotalSize:       24,
+			Kind:            0x17,
+			Location:        ditypes.Location{InReg: false, StackOffset: -16},
+			ParameterPieces: []ditypes.Parameter{},
+		}},
+		{"sample.Return_goroutine_id", "n", pc, &ditypes.Parameter{
+			Name:            "n",
+			ID:              "",
+			Type:            "uint64",
+			TotalSize:       8,
+			Kind:            0xb,
+			Location:        ditypes.Location{InReg: true},
+			ParameterPieces: []ditypes.Parameter{},
+		}},
 	}
 	for _, tc := range tcs {
 		param, err := GetParameterAtPC(inspector, prefix+tc.funcName, tc.varName, tc.pc)
@@ -66,7 +83,9 @@ func TestGetParameterAtPC(t *testing.T) {
 	}
 }
 
-func TestGetPCAtLine(t *testing.T) {
+func TestGetVariablesAtPC(t *testing.T) {
+	// log.SetupLogger(seelog.Default, "info")
+
 	curDir, err := pwd()
 	if err != nil {
 		t.Error(err)
@@ -78,7 +97,23 @@ func TestGetPCAtLine(t *testing.T) {
 	}
 
 	inspector, err := loadDWARF(binaryPath)
+
+	// same line used as in TestGetPCAtLine, last line in test_variable_capture
 	pc, err := GetPCAtLine(inspector, "/git/datadog-agent/pkg/dynamicinstrumentation/testutil/sample/other.go", 42)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(0x519eec), pc)
+
+	vars, err := GetVariablesAtPC(inspector, pc)
+	assert.NoError(t, err)
+
+	assert.NoError(t, err)
+	expected := []*ditypes.Parameter{{
+		Name:            "localVariable",
+		Type:            "int",
+		TotalSize:       8,
+		Kind:            0x2,
+		Location:        ditypes.Location{InReg: false, StackOffset: -32},
+		ParameterPieces: []ditypes.Parameter{},
+	}}
+	assert.Equal(t, expected, vars)
 }

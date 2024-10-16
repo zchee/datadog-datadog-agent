@@ -36,10 +36,10 @@ func Return_goroutine_id() uint64 {
 //go:noinline
 func test_capture_variables() int {
 	a := 123
-	boo_boo := rand.Intn(100)
-	fmt.Println(boo_boo)
+	localVariable := rand.Intn(100)
+	fmt.Println(localVariable)
 	a = 42
-	return a * boo_boo
+	return a * localVariable
 }
 
 type Receiver struct {

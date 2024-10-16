@@ -271,7 +271,8 @@ func mergeMaps(maps ...fixtures) fixtures {
 
 var offsetCaptures = fixtures{
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil/sample.test_capture_variables": {
-		"boo_boo": {Type: "int", Value: strPtr("99")},
+		// TODO: the variable is initialized to a random value, so this assertion will fail
+		"localVariable": {Type: "int", Value: strPtr("99")},
 	},
 }
 

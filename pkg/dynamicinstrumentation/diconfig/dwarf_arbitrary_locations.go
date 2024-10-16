@@ -81,6 +81,9 @@ func findVariableInFunction(d *bininspect.DwarfInspector, r *dwarf.Reader, varNa
 }
 
 func convertToParameter(varName, typeName string, pm bininspect.ParameterMetadata) (*ditypes.Parameter, error) {
+	if len(pm.Pieces) == 0 {
+		return nil, fmt.Errorf("no location information for %s", varName)
+	}
 	param := &ditypes.Parameter{
 		Name:      varName,
 		Type:      typeName,
@@ -136,6 +139,7 @@ func GetPCAtLine(d *bininspect.DwarfInspector, fileName string, lineNo int) (uin
 					}
 				}
 
+				// TODO: exact matches at line number don't always work, probably because the compiler optimizes out some statements
 				if le.File != nil && le.File.Name == fileName && le.Line == lineNo {
 					return le.Address, nil
 				}
@@ -147,3 +151,8 @@ func GetPCAtLine(d *bininspect.DwarfInspector, fileName string, lineNo int) (uin
 	}
 	return 0, fmt.Errorf("program counter not found for file %s and line %d", fileName, lineNo)
 }
+
+// given file + line, get PC at line
+// then get variables at PC
+// then generate code using variable locations
+// then add a uprobe at specific PC
