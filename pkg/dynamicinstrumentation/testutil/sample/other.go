@@ -42,9 +42,22 @@ func test_capture_variables() int {
 	return a * boo_boo
 }
 
+type Receiver struct {
+	num int
+}
+
+//nolint:all
+//go:noinline
+func (r *Receiver) test_method_with_receiver() {
+	fmt.Println(r.num)
+}
+
+var r = &Receiver{42}
+
 //nolint:all
 //go:noinline
 func ExecuteOther() {
 	test_trigger_verifier_error(1)
 	test_capture_variables()
+	r.test_method_with_receiver()
 }

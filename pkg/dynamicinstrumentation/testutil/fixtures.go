@@ -224,6 +224,14 @@ var structCaptures = fixtures{
 	}}},
 }
 
+var otherCaptures = fixtures{
+	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/testutil/sample.(*Receiver).test_method_with_receiver": {
+		"r": {Type: "struct", Fields: fieldMap{
+			"num": capturedValue("int", "42"),
+		}},
+	},
+}
+
 // TODO: this doesn't work yet:
 // could not determine locations of variables from debug information could not inspect param "x" on function: no location field in parameter entry
 var genericCaptures = fixtures{

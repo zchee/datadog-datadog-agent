@@ -31,6 +31,7 @@ import (
 )
 
 func TestGoDI(t *testing.T) {
+	// log.SetupLogger(seelog.Default, "debug")
 	if err := rlimit.RemoveMemlock(); err != nil {
 		require.NoError(t, rlimit.RemoveMemlock())
 	}
@@ -64,7 +65,13 @@ func TestGoDI(t *testing.T) {
 
 	require.NoError(t, cmd.Start())
 	t.Cleanup(func() {
-		t.Log(cmd.Process.Kill())
+		err := cmd.Process.Kill()
+		if err != nil {
+			t.Log(err)
+		} else {
+			t.Log("Process killed")
+		}
+
 	})
 
 	eventOutputWriter := &eventOutputTestWriter{
