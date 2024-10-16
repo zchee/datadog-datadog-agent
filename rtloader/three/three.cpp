@@ -46,7 +46,6 @@ Three::Three(const char *python_home, const char *python_exe, cb_memory_tracker_
 
     // Py_SetProgramName stores a pointer to the string we pass to it, so we must keep it in memory
     _pythonExeArg = Py_DecodeLocale(python_exe, NULL);
-
 }
 
 Three::~Three()
@@ -121,7 +120,6 @@ bool Three::init()
 
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
-
 
     if (!Py_IsInitialized()) {
         setError("Python not initialized");
