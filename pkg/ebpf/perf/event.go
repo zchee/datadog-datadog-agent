@@ -156,18 +156,20 @@ func (e *EventHandler) initPerfBuffer(mgr *manager.Manager) {
 			PerfRingBufferSize: e.opts.PerfOptions.BufferSize,
 			Watermark:          e.opts.PerfOptions.Watermark,
 			WakeupEvents:       e.opts.PerfOptions.WakeupEvents,
-			RecordHandler: func(record *perf.Record, perfMap *manager.PerfMap, manager *manager.Manager) {
-				defer perfPool.Put(record)
-				e.opts.Handler(record.RawSample)
-			},
-			LostHandler:      nil, // TODO do we need support for Lost?
-			RecordGetter:     perfPool.Get,
-			TelemetryEnabled: e.opts.TelemetryEnabled,
+			RecordHandler:      e.perfRecordHandler,
+			LostHandler:        nil, // TODO do we need support for Lost?
+			RecordGetter:       perfPool.Get,
+			TelemetryEnabled:   e.opts.TelemetryEnabled,
 		},
 	}
 	mgr.PerfMaps = append(mgr.PerfMaps, pm)
 	ebpfTelemetry.ReportPerfMapTelemetry(pm)
 	e.f = pm
+}
+
+func (e *EventHandler) perfRecordHandler(record *perf.Record, _ *manager.PerfMap, _ *manager.Manager) {
+	defer perfPool.Put(record)
+	e.opts.Handler(record.RawSample)
 }
 
 func (e *EventHandler) initRingBuffer(mgr *manager.Manager) {
@@ -177,10 +179,7 @@ func (e *EventHandler) initRingBuffer(mgr *manager.Manager) {
 	rb := &manager.RingBuffer{
 		Map: manager.Map{Name: e.opts.MapName},
 		RingBufferOptions: manager.RingBufferOptions{
-			RecordHandler: func(record *ringbuf.Record, ringBuffer *manager.RingBuffer, manager *manager.Manager) {
-				defer ringbufPool.Put(record)
-				e.opts.Handler(record.RawSample)
-			},
+			RecordHandler:    e.ringRecordHandler,
 			RecordGetter:     ringbufPool.Get,
 			TelemetryEnabled: e.opts.TelemetryEnabled,
 		},
@@ -188,6 +187,11 @@ func (e *EventHandler) initRingBuffer(mgr *manager.Manager) {
 	mgr.RingBuffers = append(mgr.RingBuffers, rb)
 	ebpfTelemetry.ReportRingBufferTelemetry(rb)
 	e.f = rb
+}
+
+func (e *EventHandler) ringRecordHandler(record *ringbuf.Record, _ *manager.RingBuffer, _ *manager.Manager) {
+	defer ringbufPool.Put(record)
+	e.opts.Handler(record.RawSample)
 }
 
 // UpgradePerfBuffer upgrades a perf buffer to a ring buffer by creating a map spec editor
