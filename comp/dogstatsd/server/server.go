@@ -574,7 +574,7 @@ func dropCR(data []byte) []byte {
 
 // ScanLines is an almost identical reimplementation of bufio.ScanLines, but also
 // reports if the returned line is newline-terminated
-func ScanLines(data []byte, atEOF bool) (advance int, token []byte, eol bool, err error) {
+func scanLines(data []byte, atEOF bool) (advance int, token []byte, eol bool, err error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, false, nil
 	}
@@ -595,7 +595,7 @@ func nextMessage(packet *[]byte, eolTermination bool) (message []byte) {
 		return nil
 	}
 
-	advance, message, eol, err := ScanLines(*packet, true)
+	advance, message, eol, err := scanLines(*packet, true)
 	if err != nil {
 		return nil
 	}
@@ -634,7 +634,7 @@ func (s *server) errLog(format string, params ...interface{}) {
 }
 
 // workers are running this function in their goroutine
-func (s *server) parsePackets(batcher *batcher, parser *parser, packets []*packets.Packet, samples metrics.MetricSampleBatch) metrics.MetricSampleBatch {
+func (s *server) parsePackets(batcher dogstatsdBatcher, parser *parser, packets []*packets.Packet, samples metrics.MetricSampleBatch) metrics.MetricSampleBatch {
 	for _, packet := range packets {
 		s.log.Tracef("Dogstatsd receive: %q", packet.Contents)
 		for {
@@ -816,6 +816,7 @@ func (s *server) parseServiceCheckMessage(parser *parser, message []byte, origin
 	return serviceCheck, nil
 }
 
+// Ryan - never individually called, revisit
 func getBuckets(cfg model.Reader, logger log.Component, option string) []float64 {
 	if !cfg.IsSet(option) {
 		return nil
