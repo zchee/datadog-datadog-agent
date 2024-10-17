@@ -608,9 +608,10 @@ func (ns *networkState) FirstClosedConnection(tup *ConnectionTuple) []*Connectio
 
 	var conns []*ConnectionStats
 	for _, client := range ns.clients {
-		for _, c := range client.closed.conns {
+		for i := range client.closed.conns {
+			c := &client.closed.conns[i]
 			if c.ConnectionTuple == *tup {
-				conns = append(conns, &c)
+				conns = append(conns, c)
 				break
 			}
 		}
