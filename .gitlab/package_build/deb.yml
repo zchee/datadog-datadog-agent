@@ -254,7 +254,7 @@ updater_deb-arm64:
   tags: ["arch:arm64"]
   needs: ["go_mod_tidy_check", "go_deps", "generate_minimized_btfs_arm64"]
   variables:
-    AGENT_MAJOR_VERSION: 7
+    AGENT_MAJOR_VERSION: 6
     PACKAGE_ARCH: arm64
     DESTINATION_DEB: "datadog-updater_6_arm64.deb"
     DESTINATION_DBG_DEB: "datadog-updater-dbg_6_arm64.deb"
