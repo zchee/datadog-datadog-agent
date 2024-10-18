@@ -68,7 +68,7 @@ func (c *TCPFailedConnConsumer) extractConn(data []byte) {
 }
 
 // Start starts the consumer
-func (c *TCPFailedConnConsumer) Start() {
+func (c *TCPFailedConnConsumer) Start(callback func(conn *Conn)) {
 	if c == nil {
 		return
 	}
@@ -89,7 +89,9 @@ func (c *TCPFailedConnConsumer) Start() {
 				l := len(dataEvent.Data)
 				switch {
 				case l >= netebpf.SizeofFailedConn:
-					c.extractConn(dataEvent.Data)
+					failedConn := (*Conn)(unsafe.Pointer(&dataEvent.Data[0]))
+					failedConnConsumerTelemetry.eventsReceived.Inc()
+					callback(failedConn)
 				default:
 					log.Errorf("unknown type received from buffer, skipping. data size=%d, expecting %d", len(dataEvent.Data), netebpf.SizeofFailedConn)
 					continue

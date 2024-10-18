@@ -34,6 +34,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/events"
 	"github.com/DataDog/datadog-agent/pkg/network/netlink"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer/connection"
+	"github.com/DataDog/datadog-agent/pkg/network/tracer/connection/failure"
 	"github.com/DataDog/datadog-agent/pkg/network/usm"
 	usmconfig "github.com/DataDog/datadog-agent/pkg/network/usm/config"
 	"github.com/DataDog/datadog-agent/pkg/process/procutil"
@@ -221,7 +222,7 @@ func newTracer(cfg *config.Config, telemetryComponent telemetryComponent.Compone
 // start starts the tracer. This function is present to separate
 // the creation from the start of the tracer for tests
 func (t *Tracer) start() error {
-	err := t.ebpfTracer.Start(t.storeClosedConnection)
+	err := t.ebpfTracer.Start(t.storeClosedConnection, t.storeFailedConnection)
 	if err != nil {
 		t.Stop()
 		return fmt.Errorf("could not start ebpf tracer: %s", err)
@@ -316,6 +317,19 @@ func (t *Tracer) storeClosedConnection(cs *network.ConnectionStats) {
 	t.ebpfTracer.GetFailedConnections().MatchFailedConn(cs)
 
 	t.state.StoreClosedConnection(cs)
+}
+
+func (t *Tracer) storeFailedConnection(failedConn *failure.Conn) {
+	failedConns := t.ebpfTracer.GetFailedConnections()
+	tup := failedConn.Tuple()
+	matchingConns := t.state.FirstClosedConnection(&tup)
+	if len(matchingConns) > 0 {
+		for _, conn := range matchingConns {
+			conn.TCPFailures = map[uint32]uint32{failedConn.Reason: 1}
+		}
+	} else {
+		failedConns.UpsertConn(failedConn)
+	}
 }
 
 func (t *Tracer) addProcessInfo(c *network.ConnectionStats) {

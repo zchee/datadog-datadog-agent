@@ -113,6 +113,9 @@ type State interface {
 	// StoreClosedConnection stores a batch of closed connections
 	StoreClosedConnection(connection *ConnectionStats)
 
+	// FirstClosedConnection returns the first closed connection of each client that matches the provided tuple
+	FirstClosedConnection(*ConnectionTuple) []*ConnectionStats
+
 	// GetStats returns a map of statistics about the current network state
 	GetStats() map[string]interface{}
 
@@ -596,6 +599,24 @@ func (ns *networkState) StoreClosedConnection(closed *ConnectionStats) {
 	defer ns.Unlock()
 
 	ns.storeClosedConnection(closed)
+}
+
+// FirstClosedConnection returns the first closed connection of each client that matches the provided tuple
+func (ns *networkState) FirstClosedConnection(tup *ConnectionTuple) []*ConnectionStats {
+	ns.Lock()
+	defer ns.Unlock()
+
+	var conns []*ConnectionStats
+	for _, client := range ns.clients {
+		for i := range client.closed.conns {
+			c := &client.closed.conns[i]
+			if c.ConnectionTuple == *tup {
+				conns = append(conns, c)
+				break
+			}
+		}
+	}
+	return conns
 }
 
 // storeClosedConnection stores the given connection for every client

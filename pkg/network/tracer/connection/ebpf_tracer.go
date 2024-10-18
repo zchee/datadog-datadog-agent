@@ -302,7 +302,7 @@ func boolConst(name string, value bool) manager.ConstantEditor {
 	return c
 }
 
-func (t *ebpfTracer) Start(callback func(*network.ConnectionStats)) (err error) {
+func (t *ebpfTracer) Start(callback func(*network.ConnectionStats), failedCallback func(conn *failure.Conn)) (err error) {
 	defer func() {
 		if err != nil {
 			t.Stop()
@@ -315,7 +315,7 @@ func (t *ebpfTracer) Start(callback func(*network.ConnectionStats)) (err error) 
 	}
 
 	t.closeConsumer.Start(callback)
-	t.failedConnConsumer.Start()
+	t.failedConnConsumer.Start(failedCallback)
 
 	if err := t.m.Start(); err != nil {
 		t.closeConsumer.Stop()

@@ -97,7 +97,7 @@ func newEbpfLessTracer(cfg *config.Config) (*ebpfLessTracer, error) {
 }
 
 // Start begins collecting network connection data.
-func (t *ebpfLessTracer) Start(_ func(*network.ConnectionStats)) error {
+func (t *ebpfLessTracer) Start(_ func(*network.ConnectionStats), _ func(*failure.Conn)) error {
 	if err := t.boundPorts.Start(); err != nil {
 		return fmt.Errorf("could not update bound ports: %w", err)
 	}
