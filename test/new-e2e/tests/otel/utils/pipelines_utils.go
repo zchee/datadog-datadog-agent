@@ -582,3 +582,75 @@ func getTagMapFromSlice(t *testing.T, tagSlice []string) map[string]string {
 	}
 	return m
 }
+
+// TestTraces tests that OTLP traces are received through OTel pipelines as expected
+func TestTracesWithSpanReceiverV2(s OTelTestSuite, iaParams IAParams) {
+	err := s.Env().FakeIntake.Client().FlushServerAndResetAggregators()
+	require.NoError(s.T(), err)
+
+	var traces []*aggregator.TracePayload
+	s.T().Log("Waiting for traces")
+	require.EventuallyWithT(s.T(), func(c *assert.CollectT) {
+		traces, err = s.Env().FakeIntake.Client().GetTraces()
+		if !assert.NoError(c, err) {
+			return
+		}
+		if !assert.NotEmpty(c, traces) {
+			return
+		}
+		trace := traces[0]
+		if !assert.NotEmpty(s.T(), trace.TracerPayloads) {
+			return
+		}
+		tp := trace.TracerPayloads[0]
+		if !assert.NotEmpty(s.T(), tp.Chunks) {
+			return
+		}
+		if !assert.NotEmpty(s.T(), tp.Chunks[0].Spans) {
+			return
+		}
+		assert.Equal(s.T(), calendarService, tp.Chunks[0].Spans[0].Service)
+		if iaParams.InfraAttributes {
+			ctags, ok := getContainerTags(s.T(), tp)
+			assert.True(s.T(), ok)
+			assert.NotNil(s.T(), ctags["kube_ownerref_kind"])
+		}
+	}, 5*time.Minute, 10*time.Second)
+	require.NotEmpty(s.T(), traces)
+	s.T().Log("Got traces", s.T().Name(), traces)
+
+	// Verify tags on traces and spans
+	tp := traces[0].TracerPayloads[0]
+	assert.Equal(s.T(), env, tp.Env)
+	assert.Equal(s.T(), version, tp.AppVersion)
+	require.NotEmpty(s.T(), tp.Chunks)
+	require.NotEmpty(s.T(), tp.Chunks[0].Spans)
+	spans := tp.Chunks[0].Spans
+	ctags, ok := getContainerTags(s.T(), tp)
+	for _, sp := range spans {
+		assert.Equal(s.T(), calendarService, sp.Service)
+		assert.Equal(s.T(), env, sp.Meta["env"])
+		assert.Equal(s.T(), version, sp.Meta["version"])
+		assert.Equal(s.T(), customAttributeValue, sp.Meta[customAttribute])
+		// XXX for the next few, these are placeholders with the right key; figure out the actual values
+		assert.Equal(s.T(), "name", sp.Name)
+		assert.Equal(s.T(), "resource", sp.Resource)
+		assert.Equal(s.T(), "type", sp.Type)
+		assert.Equal(s.T(), "2594128270069917171", sp.TraceID)
+		assert.Equal(s.T(), "2594128270069917171", sp.SpanID)
+		assert.Equal(s.T(), "0000000000000000000", sp.ParentID)
+		// XXX end placeholders
+		assert.Equal(s.T(), "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp", sp.Meta["otel.library.name"])
+		assert.Equal(s.T(), sp.Meta["k8s.node.name"], tp.Hostname)
+		assert.True(s.T(), ok)
+		assert.Equal(s.T(), sp.Meta["k8s.container.name"], ctags["kube_container_name"])
+		assert.Equal(s.T(), sp.Meta["k8s.namespace.name"], ctags["kube_namespace"])
+		assert.Equal(s.T(), sp.Meta["k8s.pod.name"], ctags["pod_name"])
+
+		// Verify container tags from infraattributes processor
+		if iaParams.InfraAttributes {
+			maps.Copy(ctags, sp.Meta)
+			testInfraTags(s.T(), ctags, iaParams)
+		}
+	}
+}

@@ -42,6 +42,37 @@ agents:
 	e2e.Run(t, &completeTestSuite{}, e2e.WithProvisioner(awskubernetes.KindProvisioner(awskubernetes.WithAgentOptions(kubernetesagentparams.WithoutDualShipping(), kubernetesagentparams.WithHelmValues(values), kubernetesagentparams.WithOTelAgent(), kubernetesagentparams.WithOTelConfig(completeConfig)))))
 }
 
+type completeTestSuiteWithSpanReceiverV2 struct {
+	e2e.BaseSuite[environments.Kubernetes]
+}
+
+func TestOTelAgentCompleteWithSpanReceiverV2(t *testing.T) {
+	values := `
+datadog:
+  logs:
+    containerCollectAll: false
+    containerCollectUsingFiles: false
+agents:
+  containers:
+    otelAgent:
+      env:
+        - name: DD_OTELCOLLECTOR_CONVERTER_ENABLED
+          value: 'false'
+        - name: DD_APM_FEATURES
+          value: 'enable_receive_resource_spans_v2'
+`
+	e2e.Run(t, &completeTestSuiteWithSpanReceiverV2{}, e2e.WithProvisioner(awskubernetes.KindProvisioner(awskubernetes.WithAgentOptions(kubernetesagentparams.WithoutDualShipping(), kubernetesagentparams.WithHelmValues(values), kubernetesagentparams.WithOTelAgent(), kubernetesagentparams.WithOTelConfig(completeConfig)))))
+}
+
+func (s *completeTestSuiteWithSpanReceiverV2) SetupSuite() {
+	s.BaseSuite.SetupSuite()
+	utils.TestCalendarApp(s)
+}
+
+func (s *completeTestSuiteWithSpanReceiverV2) TestOTLPTracesWithReceiveResourceSpansV2() {
+	utils.TestTracesWithSpanReceiverV2(s, minimalParams)
+}
+
 func (s *completeTestSuite) SetupSuite() {
 	s.BaseSuite.SetupSuite()
 	utils.TestCalendarApp(s)

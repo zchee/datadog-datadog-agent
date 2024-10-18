@@ -126,6 +126,7 @@ func NewServer(options ...Option) *Server {
 	mux.HandleFunc("/fakeintake/health", fi.handleFakeHealth)
 	mux.HandleFunc("/fakeintake/routestats", fi.handleGetRouteStats)
 	mux.HandleFunc("/fakeintake/flushPayloads", fi.handleFlushPayloads)
+	mux.HandleFunc("/fakeintake/flushPayloads", fi.handleFlushPayloads)
 
 	mux.HandleFunc("/fakeintake/configure/override", fi.handleConfigureOverride)
 
