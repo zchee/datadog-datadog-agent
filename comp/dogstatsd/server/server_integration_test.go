@@ -8,6 +8,7 @@
 package server
 
 import (
+	"context"
 	"net"
 	"path/filepath"
 	"testing"
@@ -47,18 +48,16 @@ func TestUDPForward(t *testing.T) {
 	defer conn.Close()
 
 	// Check if message is forwarded
-	message := []byte("daemon:666|g|#sometag1:somevalue1,sometag2:somevalue2")
-
-	_, err = conn.Write(message)
+	_, err = conn.Write(defaultMetricInput)
 	require.NoError(t, err, "cannot write to DSD socket")
 
 	_ = pc.SetReadDeadline(time.Now().Add(4 * time.Second))
 
-	buffer := make([]byte, len(message))
+	buffer := make([]byte, len(defaultMetricInput))
 	_, _, err = pc.ReadFrom(buffer)
 	require.NoError(t, err)
 
-	assert.Equal(t, message, buffer)
+	assert.Equal(t, defaultMetricInput, buffer)
 }
 
 func TestUDPConn(t *testing.T) {
@@ -67,13 +66,31 @@ func TestUDPConn(t *testing.T) {
 	cfg["dogstatsd_port"] = listeners.RandomPortName
 
 	deps := fulfillDepsWithConfigOverride(t, cfg)
-	requireStart(t, deps.Server)
+	s := deps.Server.(*server)
+	requireStart(t, s)
 
-	conn, err := net.Dial("udp", deps.Server.UDPLocalAddr())
+	conn, err := net.Dial("udp", s.UDPLocalAddr())
 	require.NoError(t, err, "cannot connect to DSD socket")
 	defer conn.Close()
 
 	runConnTest(t, conn, deps)
+
+	s.stop(context.TODO())
+
+	// check that the port can be bound, try for 100 ms
+	address, err := net.ResolveUDPAddr("udp", s.UDPLocalAddr())
+	require.NoError(t, err, "cannot resolve address")
+
+	for i := 0; i < 10; i++ {
+		var conn net.Conn
+		conn, err = net.ListenUDP("udp", address)
+		if err == nil {
+			conn.Close()
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	require.NoError(t, err, "port is not available, it should be")
 }
 
 func runConnTest(t *testing.T, conn net.Conn, deps serverDeps) {
@@ -81,30 +98,28 @@ func runConnTest(t *testing.T, conn net.Conn, deps serverDeps) {
 	eventOut, serviceOut := demux.GetEventsAndServiceChecksChannels()
 
 	// Test metric
-	conn.Write([]byte("daemon:666|g|#foo:bar\niDaemon:777|g|#foo:bar,sometag:tag"))
+	conn.Write(defaultMetricInput)
 	samples, timedSamples := demux.WaitForSamples(time.Second * 2)
 
-	assert.Equal(t, 2, len(samples), "expected two metric entries after 2 seconds")
+	assert.Equal(t, 1, len(samples), "expected one metric entries after 2 seconds")
 	assert.Equal(t, 0, len(timedSamples), "did not expect any timed metrics")
 
-	m1 := samples[0]
-	eMetricName(t, m1, "daemon")
-	m2 := samples[1]
-	eMetricName(t, m2, "iDaemon")
+	defaultMetric().testMetric(t, samples[0])
 
-	// Test servce check
-	conn.Write(healthyService)
+	// Test servce checks
+	conn.Write(defaultServiceInput)
 	select {
 	case servL := <-serviceOut:
 		assert.Equal(t, 1, len(servL))
-		healthyServiceTest.test(t, servL[0])
+		defaultServiceCheck().testService(t, servL[0])
 	}
 
 	// Test event
-	conn.Write([]byte("_e{10,10}:test title|test\\ntext|t:warning|d:12345|p:low|h:some.host|k:aggKey|s:source test|#tag1,tag2:test"))
+	conn.Write(defaultEventInput)
 	select {
 	case eventL := <-eventOut:
 		assert.Equal(t, 1, len(eventL))
+		defaultEvent().testEvent(t, eventL[0])
 	}
 }
 
@@ -128,5 +143,20 @@ func TestUDSConn(t *testing.T) {
 	s := deps.Server.(*server)
 	s.Stop()
 	_, err = net.Dial("unixgram", socketPath)
+	require.Error(t, err, "UDS listener should be closed")
+}
+
+func TestUDSReceiverNoDir(t *testing.T) {
+	socketPath := filepath.Join(t.TempDir(), "nonexistent", "dsd.socket") // nonexistent dir, listener should not be set
+
+	cfg := make(map[string]interface{})
+	cfg["dogstatsd_port"] = listeners.RandomPortName
+	cfg["dogstatsd_no_aggregation_pipeline"] = true // another test may have turned it off
+	cfg["dogstatsd_socket"] = socketPath
+
+	deps := fulfillDepsWithConfigOverride(t, cfg)
+	require.False(t, deps.Server.UdsListenerRunning())
+
+	_, err := net.Dial("unixgram", socketPath)
 	require.Error(t, err, "UDS listener should be closed")
 }

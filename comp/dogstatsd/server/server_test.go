@@ -8,251 +8,256 @@
 package server
 
 import (
-	"runtime"
+	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/DataDog/datadog-agent/pkg/metrics/event"
-	"github.com/DataDog/datadog-agent/pkg/metrics/servicecheck"
-	"github.com/DataDog/datadog-agent/pkg/util/testutil/flake"
-
-	"go.uber.org/fx"
-
-	"github.com/DataDog/datadog-agent/comp/aggregator/demultiplexer"
-	"github.com/DataDog/datadog-agent/comp/aggregator/demultiplexer/demultiplexerimpl"
-	"github.com/DataDog/datadog-agent/comp/core"
-	configComponent "github.com/DataDog/datadog-agent/comp/core/config"
-	"github.com/DataDog/datadog-agent/comp/core/hostname/hostnameimpl"
-	log "github.com/DataDog/datadog-agent/comp/core/log/def"
-	logmock "github.com/DataDog/datadog-agent/comp/core/log/mock"
-	"github.com/DataDog/datadog-agent/comp/core/telemetry"
-	"github.com/DataDog/datadog-agent/comp/core/telemetry/telemetryimpl"
-	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
-	workloadmetafxmock "github.com/DataDog/datadog-agent/comp/core/workloadmeta/fx-mock"
-	"github.com/DataDog/datadog-agent/comp/dogstatsd/pidmap"
-	"github.com/DataDog/datadog-agent/comp/dogstatsd/pidmap/pidmapimpl"
-	replay "github.com/DataDog/datadog-agent/comp/dogstatsd/replay/def"
-	replaymock "github.com/DataDog/datadog-agent/comp/dogstatsd/replay/fx-mock"
-	serverdebug "github.com/DataDog/datadog-agent/comp/dogstatsd/serverDebug"
-	"github.com/DataDog/datadog-agent/comp/dogstatsd/serverDebug/serverdebugimpl"
-	"github.com/DataDog/datadog-agent/comp/serializer/compression/compressionimpl"
+	"github.com/DataDog/datadog-agent/comp/dogstatsd/listeners"
+	"github.com/DataDog/datadog-agent/comp/dogstatsd/mapper"
+	"github.com/DataDog/datadog-agent/pkg/config/env"
+	configmock "github.com/DataDog/datadog-agent/pkg/config/mock"
+	"github.com/DataDog/datadog-agent/pkg/config/model"
 	"github.com/DataDog/datadog-agent/pkg/metrics"
-	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
-	"github.com/DataDog/datadog-agent/pkg/util/optional"
 )
 
-// This is a copy of the serverDeps struct, but without the server field.
-// We need this to avoid starting multiple server with the same test.
-type depsWithoutServer struct {
-	fx.In
-
-	Config        configComponent.Component
-	Log           log.Component
-	Demultiplexer demultiplexer.FakeSamplerMock
-	Replay        replay.Component
-	PidMap        pidmap.Component
-	Debug         serverdebug.Component
-	WMeta         optional.Option[workloadmeta.Component]
-	Telemetry     telemetry.Component
+func requireStart(t *testing.T, s Component) {
+	assert.NotNil(t, s)
+	assert.True(t, s.IsRunning(), "server was not running")
 }
 
-type serverDeps struct {
-	fx.In
+func TestNewServer(t *testing.T) {
+	cfg := make(map[string]interface{})
+	cfg["dogstatsd_port"] = listeners.RandomPortName
 
-	Config        configComponent.Component
-	Log           log.Component
-	Demultiplexer demultiplexer.FakeSamplerMock
-	Replay        replay.Component
-	PidMap        pidmap.Component
-	Debug         serverdebug.Component
-	WMeta         optional.Option[workloadmeta.Component]
-	Telemetry     telemetry.Component
-	Server        Component
+	deps := fulfillDepsWithConfigOverride(t, cfg)
+	requireStart(t, deps.Server)
 }
 
-func fulfillDeps(t testing.TB) serverDeps {
-	return fulfillDepsWithConfigOverride(t, map[string]interface{}{})
+func TestNoMappingsConfig(t *testing.T) {
+	cfg := make(map[string]interface{})
+	cfg["dogstatsd_port"] = listeners.RandomPortName
+	deps := fulfillDepsWithConfigOverride(t, cfg)
+	s := deps.Server.(*server)
+	cw := deps.Config.(model.Writer)
+	cw.SetWithoutSource("dogstatsd_port", listeners.RandomPortName)
+
+	samples := []metrics.MetricSample{}
+
+	requireStart(t, s)
+
+	assert.Nil(t, s.mapper)
+
+	parser := newParser(deps.Config, s.sharedFloat64List, 1, deps.WMeta, s.stringInternerTelemetry)
+	samples, err := s.parseMetricMessage(samples, parser, []byte("test.metric:666|g"), "", "", false)
+	assert.NoError(t, err)
+	assert.Len(t, samples, 1)
 }
 
-func fulfillDepsWithConfigOverride(t testing.TB, overrides map[string]interface{}) serverDeps {
-	// TODO: https://datadoghq.atlassian.net/browse/AMLII-1948
-	if runtime.GOOS == "darwin" {
-		flake.Mark(t)
+func TestUDSReceiverDisabled(t *testing.T) {
+	cfg := make(map[string]interface{})
+	cfg["dogstatsd_port"] = listeners.RandomPortName
+	cfg["dogstatsd_no_aggregation_pipeline"] = true // another test may have turned it off
+	cfg["dogstatsd_socket"] = ""                    // disabled
+
+	deps := fulfillDepsWithConfigOverride(t, cfg)
+	require.False(t, deps.Server.UdsListenerRunning())
+}
+
+// This test is proving that no data race occurred on the `cachedTlmOriginIds` map.
+// It should not fail since `cachedTlmOriginIds` and `cachedOrder` should be
+// properly protected from multiple accesses by `cachedTlmLock`.
+// The main purpose of this test is to detect early if a future code change is
+// introducing a data race.
+func TestNoRaceOriginTagMaps(t *testing.T) {
+	const N = 100
+	cfg := make(map[string]interface{})
+
+	cfg["dogstatsd_port"] = listeners.RandomPortName
+
+	_, s := fulfillDepsWithInactiveServer(t, cfg)
+
+	sync := make(chan struct{})
+	done := make(chan struct{}, N)
+	for i := 0; i < N; i++ {
+		id := fmt.Sprintf("%d", i)
+		go func() {
+			defer func() { done <- struct{}{} }()
+			<-sync
+			s.getOriginCounter(id)
+		}()
 	}
-	return fxutil.Test[serverDeps](t, fx.Options(
-		core.MockBundle(),
-		serverdebugimpl.MockModule(),
-		fx.Replace(configComponent.MockParams{
-			Overrides: overrides,
-		}),
-		replaymock.MockModule(),
-		compressionimpl.MockModule(),
-		pidmapimpl.Module(),
-		demultiplexerimpl.FakeSamplerMockModule(),
-		workloadmetafxmock.MockModule(workloadmeta.NewParams()),
-		Module(Params{Serverless: false}),
-	))
-}
-
-func fulfillDepsWithConfigYaml(t testing.TB, yaml string) serverDeps {
-	return fxutil.Test[serverDeps](t, fx.Options(
-		fx.Provide(func(t testing.TB) log.Component { return logmock.New(t) }),
-		fx.Provide(func(t testing.TB) configComponent.Component { return configComponent.NewMockFromYAML(t, yaml) }),
-		telemetryimpl.MockModule(),
-		hostnameimpl.MockModule(),
-		serverdebugimpl.MockModule(),
-		replaymock.MockModule(),
-		compressionimpl.MockModule(),
-		pidmapimpl.Module(),
-		demultiplexerimpl.FakeSamplerMockModule(),
-		workloadmetafxmock.MockModule(workloadmeta.NewParams()),
-		Module(Params{Serverless: false}),
-	))
-}
-
-// Returns a server that is not started along with associated dependencies
-// Be careful when using this functionality, as server start instantiates many internal components
-func fulfillDepsWithInactiveServer(t *testing.T, cfg map[string]interface{}) (depsWithoutServer, *server) {
-	deps := fxutil.Test[depsWithoutServer](t, fx.Options(
-		core.MockBundle(),
-		serverdebugimpl.MockModule(),
-		fx.Replace(configComponent.MockParams{
-			Overrides: cfg,
-		}),
-		fx.Supply(Params{Serverless: false}),
-		replaymock.MockModule(),
-		compressionimpl.MockModule(),
-		pidmapimpl.Module(),
-		demultiplexerimpl.FakeSamplerMockModule(),
-		workloadmetafxmock.MockModule(workloadmeta.NewParams()),
-	))
-
-	s := newServerCompat(deps.Config, deps.Log, deps.Replay, deps.Debug, false, deps.Demultiplexer, deps.WMeta, deps.PidMap, deps.Telemetry)
-
-	return deps, s
-}
-
-type MetricSample struct {
-	Name  string
-	Value float64
-	Tags  []string
-	Mtype metrics.MetricType
-}
-
-var healthyMetricTest = eqTest[metrics.MetricSample]{
-	{eMetricName, "daemon1"},
-	{eMetricValue, 666.0},
-	{eMetricType, metrics.CounterType},
-}
-var healthyMetricAltTest = eqTest[metrics.MetricSample]{
-	{eMetricName, "daemon1"},
-	{eMetricValue, 123.0},
-	{eMetricType, metrics.CounterType},
-}
-var healthyMetricTaggedTest = eqTest[metrics.MetricSample]{
-	{eMetricName, "daemon2"},
-	{eMetricValue, 1000.0},
-	{eMetricType, metrics.CounterType},
-}
-
-var healthyService = []byte("_sc|agent.up|0|d:12345|h:localhost|m:this is fine|#sometag1:somevalyyue1,sometag2:somevalue2")
-var healthyServiceTest = eqTest[*servicecheck.ServiceCheck]{
-	{eServiceCheckName, "agent.up"},
-	{eServiceHostname, "localhost"},
-	{eServiceMessage, "this is fine"},
-	{eServiceTags, []string{"sometag1:somevalyyue1", "sometag2:somevalue2"}},
-	{eServiceStatus, 0},
-	{eServiceTs, 12345},
-}
-
-type eqSingleTest[T any] struct {
-	testFunc      func(*testing.T, T, interface{})
-	expectedValue interface{}
-}
-
-type eqTest[T any] []eqSingleTest[T]
-
-func (test eqTest[T]) test(t *testing.T, entity T) {
-	assert.NotNil(t, entity, "Attempted to run a test on a nil entity")
-	for _, singleTest := range test {
-		singleTest.testFunc(t, entity, singleTest.expectedValue)
+	close(sync)
+	for i := 0; i < N; i++ {
+		<-done
 	}
 }
 
-func (test eqTest[T]) addTest(testFunc func(*testing.T, T, interface{}), expectedValue interface{}) eqTest[T] {
-	newTest := append([]eqSingleTest[T]{}, test...)
-	return append(newTest, eqSingleTest[T]{testFunc, expectedValue})
+func TestNewServerExtraTags(t *testing.T) {
+	cfg := make(map[string]interface{})
+
+	require := require.New(t)
+	cfg["dogstatsd_port"] = listeners.RandomPortName
+
+	deps := fulfillDepsWithConfigOverride(t, cfg)
+	s := deps.Server.(*server)
+	requireStart(t, s)
+	require.Len(s.extraTags, 0, "no tags should have been read")
+
+	// when not running in fargate, the tags entry is not used
+	cfg["tags"] = "hello:world"
+	deps = fulfillDepsWithConfigOverride(t, cfg)
+	s = deps.Server.(*server)
+	requireStart(t, s)
+	require.Len(s.extraTags, 0, "no tags should have been read")
+
+	// dogstatsd_tag is always pulled in to extra tags
+	cfg["dogstatsd_tags"] = "hello:world2 extra:tags"
+	deps = fulfillDepsWithConfigOverride(t, cfg)
+	s = deps.Server.(*server)
+	requireStart(t, s)
+	require.ElementsMatch([]string{"extra:tags", "hello:world2"}, s.extraTags, "two tags should have been read")
+	require.Len(s.extraTags, 2, "two tags should have been read")
+	require.Equal(s.extraTags[0], "extra:tags", "the tag extra:tags should be set")
+	require.Equal(s.extraTags[1], "hello:world2", "the tag hello:world should be set")
+
+	// when running in fargate, "tags" and "dogstatsd_tag" configs are conjoined
+	env.SetFeatures(t, env.EKSFargate)
+	deps = fulfillDepsWithConfigOverride(t, cfg)
+	s = deps.Server.(*server)
+	requireStart(t, s)
+
+	require.ElementsMatch(
+		[]string{"hello:world", "extra:tags", "hello:world2"},
+		s.extraTags,
+		"both tag sources should have been combined",
+	)
+
 }
 
-type eMetricTest eqTest[metrics.MetricSample]
+func TestDogstatsdMappingProfilesOk(t *testing.T) {
+	datadogYaml := `
+dogstatsd_mapper_profiles:
+  - name: "airflow"
+    prefix: "airflow."
+    mappings:
+      - match: 'airflow\.job\.duration_sec\.(.*)'
+        name: "airflow.job.duration"
+        match_type: "regex"
+        tags:
+          job_type: "$1"
+          job_name: "$2"
+      - match: "airflow.job.size.*.*"
+        name: "airflow.job.size"
+        tags:
+          foo: "$1"
+          bar: "$2"
+  - name: "profile2"
+    prefix: "profile2."
+    mappings:
+      - match: "profile2.hello.*"
+        name: "profile2.hello"
+        tags:
+          foo: "$1"
+`
+	testConfig := configmock.New(t)
+	testConfig.SetConfigType("yaml")
+	err := testConfig.ReadConfig(bytes.NewBuffer([]byte(datadogYaml)))
+	require.NoError(t, err)
 
-func eMetricName(t *testing.T, metric metrics.MetricSample, name interface{}) {
-	assert.Equal(t, name, metric.Name, "metric name was expected to match")
-}
-func eMetricValue(t *testing.T, metric metrics.MetricSample, value interface{}) {
-	assert.EqualValues(t, value, metric.Value, "metric value was expected to match")
-}
-func eMetricType(t *testing.T, metric metrics.MetricSample, mtype interface{}) {
-	assert.Equal(t, mtype, metric.Mtype, "metric type was expected to match")
-}
-func eMetricTags(t *testing.T, metric metrics.MetricSample, tags interface{}) {
-	assert.ElementsMatch(t, tags, metric.Tags, "metric tags was expected to match")
-}
-func eMetricSampleRate(t *testing.T, metric metrics.MetricSample, sampleRate interface{}) {
-	assert.Equal(t, sampleRate, metric.SampleRate, "metric sample rate was expected to match")
-}
-func eMetricRawValue(t *testing.T, metric metrics.MetricSample, rawValue interface{}) {
-	assert.Equal(t, rawValue, metric.RawValue, "metric raw value was expected to match")
-}
-func eMetricTimestamp(t *testing.T, metric metrics.MetricSample, timestamp interface{}) {
-	assert.EqualValues(t, timestamp, metric.Timestamp, "metric timestamp was expected to match")
+	profiles, err := getDogstatsdMappingProfiles(testConfig)
+	require.NoError(t, err)
+
+	expectedProfiles := []mapper.MappingProfileConfig{
+		{
+			Name:   "airflow",
+			Prefix: "airflow.",
+			Mappings: []mapper.MetricMappingConfig{
+				{
+					Match:     "airflow\\.job\\.duration_sec\\.(.*)",
+					MatchType: "regex",
+					Name:      "airflow.job.duration",
+					Tags:      map[string]string{"job_type": "$1", "job_name": "$2"},
+				},
+				{
+					Match: "airflow.job.size.*.*",
+					Name:  "airflow.job.size",
+					Tags:  map[string]string{"foo": "$1", "bar": "$2"},
+				},
+			},
+		},
+		{
+			Name:   "profile2",
+			Prefix: "profile2.",
+			Mappings: []mapper.MetricMappingConfig{
+				{
+					Match: "profile2.hello.*",
+					Name:  "profile2.hello",
+					Tags:  map[string]string{"foo": "$1"},
+				},
+			},
+		},
+	}
+	assert.EqualValues(t, expectedProfiles, profiles)
 }
 
-type eServiceTest eqTest[*servicecheck.ServiceCheck]
+func TestDogstatsdMappingProfilesEmpty(t *testing.T) {
+	datadogYaml := `
+dogstatsd_mapper_profiles:
+`
+	testConfig := configmock.New(t)
+	testConfig.SetConfigType("yaml")
+	err := testConfig.ReadConfig(bytes.NewBuffer([]byte(datadogYaml)))
+	require.NoError(t, err)
 
-func eServiceCheckName(t *testing.T, sc *servicecheck.ServiceCheck, checkName interface{}) {
-	assert.Equal(t, checkName, sc.CheckName, "service check name was expected to match")
-}
-func eServiceHostname(t *testing.T, sc *servicecheck.ServiceCheck, hostname interface{}) {
-	assert.Equal(t, hostname, sc.Host, "service hostname was expected to match")
-}
-func eServiceMessage(t *testing.T, sc *servicecheck.ServiceCheck, message interface{}) {
-	assert.Equal(t, message, sc.Message, "service message was expected to match")
-}
-func eServiceTs(t *testing.T, sc *servicecheck.ServiceCheck, ts interface{}) {
-	assert.Equal(t, ts, sc.Ts, "servic timestamp was expected to match")
-}
-func eServiceTags(t *testing.T, sc *servicecheck.ServiceCheck, tags interface{}) {
-	assert.ElementsMatch(t, tags, sc.Tags, "service tags were expected to match")
-}
-func eServiceStatus(t *testing.T, sc *servicecheck.ServiceCheck, status interface{}) {
-	assert.EqualValues(t, status, sc.Status, "service status was expected to match")
+	profiles, err := getDogstatsdMappingProfiles(testConfig)
+
+	var expectedProfiles []mapper.MappingProfileConfig
+
+	assert.NoError(t, err)
+	assert.EqualValues(t, expectedProfiles, profiles)
 }
 
-type eEventTest eqTest[*event.Event]
+func TestDogstatsdMappingProfilesError(t *testing.T) {
+	datadogYaml := `
+dogstatsd_mapper_profiles:
+  - abc
+`
+	testConfig := configmock.New(t)
+	testConfig.SetConfigType("yaml")
+	err := testConfig.ReadConfig(bytes.NewBuffer([]byte(datadogYaml)))
+	require.NoError(t, err)
 
-func eEventTitle(t *testing.T, e event.Event, title interface{}) {
-	assert.Equal(t, title, e.Title, "event title was expected to match")
+	profiles, err := getDogstatsdMappingProfiles(testConfig)
+
+	expectedErrorMsg := "Could not parse dogstatsd_mapper_profiles"
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), expectedErrorMsg)
+	assert.Empty(t, profiles)
 }
-func eEventText(t *testing.T, e event.Event, text interface{}) {
-	assert.Equal(t, text, e.Text, "event text was expected to match")
-}
-func eEventTags(t *testing.T, e event.Event, tags interface{}) {
-	assert.ElementsMatch(t, tags, e.Tags, "event tags were expected to match")
-}
-func eEventHost(t *testing.T, e event.Event, host interface{}) {
-	assert.Equal(t, host, e.Host, "event host was expected to match")
-}
-func eEventTs(t *testing.T, e event.Event, ts interface{}) {
-	assert.Equal(t, ts, e.Ts, "event timestamp was expected to match")
-}
-func eEventAlertT(t *testing.T, e event.Event, atype interface{}) {
-	assert.Equal(t, atype, e.AlertType, "event alert type was expected to match")
-}
-func eEventType(t *testing.T, e event.Event, etype interface{}) {
-	assert.Equal(t, etype, e.EventType, "event type was expected to match")
-}
-func eEventPrio(t *testing.T, e event.Event, prio interface{}) {
-	assert.Equal(t, prio, e.Priority, "event priority was expected to match")
+
+func TestDogstatsdMappingProfilesEnv(t *testing.T) {
+	env := "DD_DOGSTATSD_MAPPER_PROFILES"
+	t.Setenv(env, `[
+{"name":"another_profile","prefix":"abcd","mappings":[
+	{
+		"match":"airflow\\.dag_processing\\.last_runtime\\.(.*)",
+		"match_type":"regex","name":"foo",
+		"tags":{"a":"$1","b":"$2"}
+	}]},
+{"name":"some_other_profile","prefix":"some_other_profile.","mappings":[{"match":"some_other_profile.*","name":"some_other_profile.abc","tags":{"a":"$1"}}]}
+]`)
+	expected := []mapper.MappingProfileConfig{
+		{Name: "another_profile", Prefix: "abcd", Mappings: []mapper.MetricMappingConfig{
+			{Match: "airflow\\.dag_processing\\.last_runtime\\.(.*)", MatchType: "regex", Name: "foo", Tags: map[string]string{"a": "$1", "b": "$2"}},
+		}},
+		{Name: "some_other_profile", Prefix: "some_other_profile.", Mappings: []mapper.MetricMappingConfig{
+			{Match: "some_other_profile.*", Name: "some_other_profile.abc", Tags: map[string]string{"a": "$1"}},
+		}},
+	}
+	cfg := configmock.New(t)
+	mappings, _ := getDogstatsdMappingProfiles(cfg)
+	assert.Equal(t, expected, mappings)
 }

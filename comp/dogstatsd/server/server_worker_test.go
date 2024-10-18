@@ -8,7 +8,6 @@
 package server
 
 import (
-	"sort"
 	"strings"
 	"testing"
 
@@ -17,33 +16,9 @@ import (
 
 	"github.com/DataDog/datadog-agent/comp/core/telemetry"
 	"github.com/DataDog/datadog-agent/comp/dogstatsd/listeners"
-	"github.com/DataDog/datadog-agent/comp/dogstatsd/packets"
 	"github.com/DataDog/datadog-agent/pkg/metrics"
 	"github.com/DataDog/datadog-agent/pkg/metrics/event"
-	"github.com/DataDog/datadog-agent/pkg/metrics/servicecheck"
 )
-
-/*var basicMetric = ""
-var basicMetricTest = []eMetricTest{{
-	{eMetricName, "daemon"},
-	{eMetricValue, 666.0},
-	{eMetricType, metrics.GaugeType},
-	{eMetricTags, []string{}},
-}}
-
-var basicMetricTagged = ""
-var basicMetricTaggedTest = []eMetricTest{{
-	{eMetricName, "daemon"},
-	{eMetricValue, 666.0},
-	{eMetricType, metrics.GaugeType},
-	{eMetricTags, []string{"sometag1:somevalue1", "sometag2:somevalue2", "sometag3:somevalue3"}},
-}}
-
-var basicMetricAlt = ""
-var basicMetricAltTest = []eMetricTest{}
-
-var basicMetricTwo = ""
-var basicMetricTwoTest = []eMetricTest{}*/
 
 // Run through all of the major metric types and verify both the default and the timestamped flows
 func TestMetricTypes(t *testing.T) {
@@ -51,64 +26,44 @@ func TestMetricTypes(t *testing.T) {
 	cfg["dogstatsd_port"] = listeners.RandomPortName
 	deps := fulfillDepsWithConfigOverride(t, cfg)
 
-	baseTest := eMetricTest{
-		{eMetricName, "daemon"},
-		{eMetricSampleRate, 0.5},
-		{eMetricTags, []string{"sometag1:somevalue1", "sometag2:somevalue2"}},
-	}
-
 	scenarios := []struct {
 		name  string
 		input []byte
-		value interface{}
-		mType metrics.MetricType
+		test  *tMetricSample
 	}{
 		{
 			name:  "Test Gauge",
 			input: []byte("daemon:666|g|@0.5|#sometag1:somevalue1,sometag2:somevalue2"),
-			value: 666.0,
-			mType: metrics.GaugeType,
+			test:  defaultMetric().withType(metrics.GaugeType).withSampleRate(0.5),
 		},
 		{
 			name:  "Test Counter",
 			input: []byte("daemon:666|c|@0.5|#sometag1:somevalue1,sometag2:somevalue2"),
-			value: 666.0,
-			mType: metrics.CounterType,
+			test:  defaultMetric().withType(metrics.CounterType).withSampleRate(0.5),
 		},
 		{
 			name:  "Test Histogram",
 			input: []byte("daemon:666|h|@0.5|#sometag1:somevalue1,sometag2:somevalue2"),
-			value: 666.0,
-			mType: metrics.HistogramType,
+			test:  defaultMetric().withType(metrics.HistogramType).withSampleRate(0.5),
 		},
 		{
 			name:  "Test Timing",
 			input: []byte("daemon:666|ms|@0.5|#sometag1:somevalue1,sometag2:somevalue2"),
-			value: 666.0,
-			mType: metrics.HistogramType,
-		},
+			test:  defaultMetric().withType(metrics.HistogramType).withSampleRate(0.5)},
 		{
 			name:  "Test Set",
 			input: []byte("daemon:abc|s|@0.5|#sometag1:somevalue1,sometag2:somevalue2"),
-			value: "abc",
-			mType: metrics.SetType,
+			test:  defaultMetric().withType(metrics.SetType).withSampleRate(0.5).withValue(0).withRawValue("abc"),
 		},
 	}
 
 	for _, s := range scenarios {
 		t.Run(s.name, func(t *testing.T) {
-			test := baseTest.addTest(eMetricType, s.mType)
+			runTestMetrics(t, deps, s.input, []*tMetricSample{s.test}, []*tMetricSample{})
 
-			if _, ok := s.value.(float64); ok {
-				test = test.addTest(eMetricValue, s.value)
-			} else {
-				test = test.addTest(eMetricRawValue, s.value)
-			}
-			fullInput := append(append(s.input, []byte("|T1658328888\n")...), s.input...)
-
-			timeTest := test.addTest(eMetricTimestamp, 1658328888)
-			test = test.addTest(eMetricTimestamp, 0)
-			runTestMetrics(t, deps, fullInput, []eMetricTest{test}, []eMetricTest{timeTest})
+			timedInput := append(s.input, []byte("|T1658328888\n")...)
+			s.test.withTimestamp(1658328888)
+			runTestMetrics(t, deps, timedInput, []*tMetricSample{}, []*tMetricSample{s.test})
 		})
 	}
 }
@@ -118,62 +73,50 @@ func TestMetricPermutations(t *testing.T) {
 	cfg["dogstatsd_port"] = listeners.RandomPortName
 	deps := fulfillDepsWithConfigOverride(t, cfg)
 
-	packet1Test := eMetricTest{
-		{eMetricName, "daemon1"},
-		{eMetricValue, 666.0},
-		{eMetricType, metrics.CounterType},
-	}
-	packet1AltTest := eMetricTest{
-		{eMetricName, "daemon1"},
-		{eMetricValue, 123.0},
-		{eMetricType, metrics.CounterType},
-	}
-	packet2Test := eMetricTest{
-		{eMetricName, "daemon2"},
-		{eMetricValue, 1000.0},
-		{eMetricType, metrics.CounterType},
-	}
+	packet1Test := defaultMetric().withTags(nil).withType(metrics.CounterType)
+	packet1AltTest := defaultMetric().withValue(123.0).withTags(nil).withType(metrics.CounterType)
+	packet2Test := defaultMetric().withName("daemon2").withValue(1000.0).withType(metrics.CounterType)
 
 	scenarios := []struct {
 		name  string
 		input []byte
-		tests []eMetricTest
+		tests []*tMetricSample
 	}{
 		{
 			name:  "Base multi-metric packet",
-			input: []byte("daemon1:666|c\ndaemon2:1000|c"),
-			tests: []eMetricTest{packet1Test, packet2Test},
+			input: []byte("daemon:666|c\ndaemon2:1000|c|#sometag1:somevalue1,sometag2:somevalue2"),
+			tests: []*tMetricSample{packet1Test, packet2Test},
 		},
 		{
 			name:  "Multi-value packet",
-			input: []byte("daemon1:666:123|c\ndaemon2:1000|c"),
-			tests: []eMetricTest{packet1Test, packet1AltTest, packet2Test},
+			input: []byte("daemon:666:123|c\ndaemon2:1000|c|#sometag1:somevalue1,sometag2:somevalue2"),
+			tests: []*tMetricSample{packet1Test, packet1AltTest, packet2Test},
 		},
 		{
 			name:  "Multi-value packet with skip empty",
-			input: []byte("daemon1::666::123::::|c\ndaemon2:1000|c"),
-			tests: []eMetricTest{packet1Test, packet1AltTest, packet2Test},
+			input: []byte("daemon::666::123::::|c\ndaemon2:1000|c|#sometag1:somevalue1,sometag2:somevalue2"),
+			tests: []*tMetricSample{packet1Test, packet1AltTest, packet2Test},
 		},
 		{
 			name:  "Malformed packet",
-			input: []byte("daemon1:666|c\n\ndaemon2:1000|c\n"),
-			tests: []eMetricTest{packet1Test, packet2Test},
+			input: []byte("daemon:666|c\n\ndaemon2:1000|c|#sometag1:somevalue1,sometag2:somevalue2\n"),
+			tests: []*tMetricSample{packet1Test, packet2Test},
 		},
 		{
 			name:  "Malformed metric",
-			input: []byte("daemon1:666a|g\ndaemon2:1000|c|#sometag1:somevalue1,sometag2:somevalue2"),
-			tests: []eMetricTest{packet2Test},
+			input: []byte("daemon:666a|g\ndaemon2:1000|c|#sometag1:somevalue1,sometag2:somevalue2"),
+			tests: []*tMetricSample{packet2Test},
 		},
 		{
 			name:  "Empty metric",
-			input: []byte("daemon1:|g\ndaemon2:1000|c|#sometag1:somevalue1,sometag2:somevalue2\ndaemon3: :1:|g"),
-			tests: []eMetricTest{packet2Test},
+			input: []byte("daemon:|g\ndaemon2:1000|c|#sometag1:somevalue1,sometag2:somevalue2\ndaemon3: :1:|g"),
+			tests: []*tMetricSample{packet2Test},
 		},
 	}
 
 	for _, s := range scenarios {
 		t.Run(s.name, func(t *testing.T) {
-			runTestMetrics(t, deps, s.input, s.tests, []eMetricTest{})
+			runTestMetrics(t, deps, s.input, s.tests, []*tMetricSample{})
 		})
 	}
 }
@@ -188,19 +131,10 @@ func TestHistToDist(t *testing.T) {
 	// Test metric
 	input := []byte("daemon:666|h|#sometag1:somevalue1,sometag2:somevalue2")
 
-	test1 := eMetricTest{
-		{eMetricName, "daemon"},
-		{eMetricValue, 666.0},
-		{eMetricType, metrics.HistogramType},
-	}
+	test1 := defaultMetric().withType(metrics.HistogramType)
+	test2 := defaultMetric().withName("dist.daemon").withType(metrics.DistributionType)
 
-	test2 := eMetricTest{
-		{eMetricName, "dist.daemon"},
-		{eMetricValue, 666.0},
-		{eMetricType, metrics.DistributionType},
-	}
-
-	runTestMetrics(t, deps, input, []eMetricTest{test1, test2}, []eMetricTest{})
+	runTestMetrics(t, deps, input, []*tMetricSample{test1, test2}, []*tMetricSample{})
 }
 
 func TestExtraTags(t *testing.T) {
@@ -210,79 +144,17 @@ func TestExtraTags(t *testing.T) {
 	deps := fulfillDepsWithConfigOverride(t, cfg)
 	deps.Server.SetExtraTags([]string{"sometag3:somevalue3"})
 
-	tests := []eMetricTest{{
-		{eMetricName, "daemon"},
-		{eMetricValue, 666.0},
-		{eMetricType, metrics.GaugeType},
-		{eMetricTags, []string{"sometag1:somevalue1", "sometag2:somevalue2", "sometag3:somevalue3"}},
-	}}
-
+	test := defaultMetric().withTags([]string{"sometag1:somevalue1", "sometag2:somevalue2", "sometag3:somevalue3"})
 	// Test single metric
-	input := []byte("daemon:666|g|#sometag1:somevalue1,sometag2:somevalue2")
-	runTestMetrics(t, deps, input, tests, []eMetricTest{})
+	runTestMetrics(t, deps, defaultMetricInput, []*tMetricSample{test}, []*tMetricSample{})
 
 	// Test multivalue metric
-	tests = append(tests, eMetricTest{
-		{eMetricName, "daemon"},
-		{eMetricValue, 500.0},
-		{eMetricType, metrics.GaugeType},
-		{eMetricTags, []string{"sometag1:somevalue1", "sometag2:somevalue2", "sometag3:somevalue3"}},
-	})
-
-	input = []byte("daemon:666:500|g|#sometag1:somevalue1,sometag2:somevalue2")
-	runTestMetrics(t, deps, input, tests, []eMetricTest{})
+	test2 := defaultMetric().withValue(500.0).withTags([]string{"sometag1:somevalue1", "sometag2:somevalue2", "sometag3:somevalue3"})
+	input := []byte("daemon:666:500|g|#sometag1:somevalue1,sometag2:somevalue2")
+	runTestMetrics(t, deps, input, []*tMetricSample{test, test2}, []*tMetricSample{})
 }
 
-type batcherMock struct {
-	serviceChecks []*servicecheck.ServiceCheck
-	events        []*event.Event
-	lateSamples   []metrics.MetricSample
-	samples       []metrics.MetricSample
-}
-
-func (b *batcherMock) appendServiceCheck(serviceCheck *servicecheck.ServiceCheck) {
-	b.serviceChecks = append(b.serviceChecks, serviceCheck)
-}
-
-func (b *batcherMock) appendEvent(event *event.Event) {
-	b.events = append(b.events, event)
-}
-
-func (b *batcherMock) appendLateSample(sample metrics.MetricSample) {
-	b.lateSamples = append(b.lateSamples, sample)
-}
-
-func (b *batcherMock) appendSample(sample metrics.MetricSample) {
-	b.samples = append(b.samples, sample)
-}
-
-func (b *batcherMock) flush() {
-	return
-}
-
-func (b *batcherMock) clear() {
-	b.serviceChecks = b.serviceChecks[0:0]
-	b.events = b.events[0:0]
-	b.lateSamples = b.lateSamples[0:0]
-	b.samples = b.samples[0:0]
-}
-
-func genTestPackets(inputs ...[]byte) []*packets.Packet {
-	packetSet := make([]*packets.Packet, len(inputs))
-	for idx, input := range inputs {
-		packet := &packets.Packet{
-			Contents:   input,
-			Origin:     "test-origin",
-			ListenerID: "noop-listener",
-			Source:     packets.UDP,
-		}
-		packetSet[idx] = packet
-	}
-
-	return packetSet
-}
-
-func runTestMetrics(t *testing.T, deps serverDeps, input []byte, expTests []eMetricTest, expTimeTests []eMetricTest) {
+func runTestMetrics(t *testing.T, deps serverDeps, input []byte, expTests []*tMetricSample, expTimeTests []*tMetricSample) {
 	s := deps.Server.(*server)
 
 	var b batcherMock
@@ -296,10 +168,10 @@ func runTestMetrics(t *testing.T, deps serverDeps, input []byte, expTests []eMet
 	assert.Equal(t, len(expTimeTests), len(timedSamples))
 
 	for idx, samp := range samples {
-		expTests[idx].test(t, samp)
+		expTests[idx].testMetric(t, samp)
 	}
 	for idx, tSamp := range timedSamples {
-		expTimeTests[idx].test(t, tSamp)
+		expTimeTests[idx].testMetric(t, tSamp)
 	}
 }
 
@@ -312,44 +184,41 @@ func TestEvents(t *testing.T) {
 	parser := newParser(deps.Config, s.sharedFloat64List, 1, deps.WMeta, s.stringInternerTelemetry)
 	var b batcherMock
 
-	input1 := []byte("_e{10,10}:test title|test\\ntext|t:warning|d:12345|p:low|h:some.host|k:aggKey|s:source test|#tag1,tag2:test")
-	input2 := []byte("_e{10,10}:test title2|test\\ntextntext|t:notice|d:12346|p:normal|h:some.otherhost|k:aggKeyAlt|s:source investigation|#tag1,tag2:test,tag3:resolved")
+	input1 := defaultEventInput
+	test1 := defaultEvent()
+	input2 := []byte("_e{11,15}:test titled|test\\ntextntext|t:info|d:12346|p:normal|h:some.otherhost|k:aggKeyAlt|s:source investigation|#tag1,tag2:test,tag3:resolved")
+	test2 := tEvent{
+		Title:          "test titled",
+		Text:           "test\ntextntext",
+		Tags:           []string{"tag1", "tag2:test", "tag3:resolved"},
+		Host:           "some.otherhost",
+		Ts:             12346,
+		AlertType:      event.AlertTypeInfo,
+		Priority:       event.PriorityNormal,
+		AggregationKey: "aggKeyAlt",
+		SourceTypeName: "source investigation",
+	}
+
 	s.parsePackets(&b, parser, genTestPackets(input1, input2), metrics.MetricSampleBatch{})
 
 	assert.Equal(t, 2, len(b.events))
 
-	res1 := b.events[0]
-	res2 := b.events[1]
-
-	assert.NotNil(t, res1)
-	assert.NotNil(t, res2)
+	test1.testEvent(t, b.events[0])
+	test2.testEvent(t, b.events[1])
 
 	b.clear()
-	// Test erroneous Events
+	// Test incomplete Events
 	input := []byte("_e{0,9}:|test text\n" +
-		"_e{-5,2}:abc\n" +
-		"_e{11,10}:test title2|test\\ntext|" +
-		"t:warning|d:12345|p:low|h:some.host|k:aggKey|s:source test|#tag1,tag2:test",
+		string(defaultEventInput) + "\n" +
+		"_e{-5,2}:abc\n",
 	)
 
 	s.parsePackets(&b, parser, genTestPackets(input), metrics.MetricSampleBatch{})
 	assert.Equal(t, 1, len(b.events))
-	event := b.events[0]
-	assert.NotNil(t, event)
-	assert.Equal(t, event.Title, "test title2")
+	defaultEvent().testEvent(t, b.events[0])
 }
 
-var healthyService = []byte("_sc|agent.up|0|d:12345|h:localhost|m:this is fine|#sometag1:somevalyyue1,sometag2:somevalue2")
-var healthyServiceTest = eServiceTest{
-	{eServiceCheckName, "agent.up"},
-	{eServiceHostname, "localhost"},
-	{eServiceMessage, "this is fine"},
-	{eServiceTags, []string{"sometag1:somevalyyue1", "sometag2:somevalue2"}},
-	{eServiceStatus, 0},
-	{eServiceTs, 12345},
-}
-
-func TestServiceCheks(t *testing.T) {
+func TestServiceChecks(t *testing.T) {
 	cfg := make(map[string]interface{})
 	cfg["dogstatsd_port"] = listeners.RandomPortName
 
@@ -358,32 +227,27 @@ func TestServiceCheks(t *testing.T) {
 	parser := newParser(deps.Config, s.sharedFloat64List, 1, deps.WMeta, s.stringInternerTelemetry)
 	var b batcherMock
 
-	s.parsePackets(&b, parser, genTestPackets(healthyService), metrics.MetricSampleBatch{})
+	s.parsePackets(&b, parser, genTestPackets(defaultServiceInput), metrics.MetricSampleBatch{})
 
-	assert.Equal(t, 1, b.serviceChecks)
-	healthyServiceTest.test(t, b.serviceChecks[0])
+	assert.Equal(t, 1, len(b.serviceChecks))
+	defaultServiceCheck().testService(t, b.serviceChecks[0])
 
 	b.clear()
 
-	// Test erroneous Service Check
-	input := []byte("_sc|agen.down\n_sc|agent.up|0|d:12345|h:localhost|m:this is fine|#sometag1:somevalyyue1,sometag2:somevalue2")
+	// Test incomplete Service Check
+	input := append([]byte("_sc|agen.down\n"), defaultServiceInput...)
 	s.parsePackets(&b, parser, genTestPackets(input), metrics.MetricSampleBatch{})
 
 	assert.Equal(t, 1, len(b.serviceChecks))
-	healthyServiceTest.test(t, b.serviceChecks[0])
+	defaultServiceCheck().testService(t, b.serviceChecks[0])
 }
 
-// Ryan - this seems to go a bit overboard, as mapper has its own tests and we just need to make sure that
-// we are calling it when appropriate.
-// Update: Sadly it seems I was incorrect about the above. There doesn't seem to be a good way to verify mapper
-// was called and tags were integrated outside of what the below is doing. One thing I might be able to squeeze away
-// is the test for cache size. TODO revisit
 func TestMappingCases(t *testing.T) {
 	scenarios := []struct {
 		name              string
 		config            string
-		packets           []string
-		expectedSamples   []MetricSample
+		packets           [][]byte
+		expectedSamples   []*tMetricSample
 		expectedCacheSize int
 	}{
 		{
@@ -405,15 +269,15 @@ dogstatsd_mapper_profiles:
           foo: "$1"
           bar: "$2"
 `,
-			packets: []string{
-				"test.job.duration.my_job_type.my_job_name:666|g",
-				"test.job.size.my_job_type.my_job_name:666|g",
-				"test.job.size.not_match:666|g",
+			packets: [][]byte{
+				[]byte("test.job.duration.my_job_type.my_job_name:666|g"),
+				[]byte("test.job.size.my_job_type.my_job_name:666|g"),
+				[]byte("test.job.size.not_match:666|g"),
 			},
-			expectedSamples: []MetricSample{
-				{Name: "test.job.duration", Tags: []string{"job_type:my_job_type", "job_name:my_job_name"}, Mtype: metrics.GaugeType, Value: 666.0},
-				{Name: "test.job.size", Tags: []string{"foo:my_job_type", "bar:my_job_name"}, Mtype: metrics.GaugeType, Value: 666.0},
-				{Name: "test.job.size.not_match", Tags: nil, Mtype: metrics.GaugeType, Value: 666.0},
+			expectedSamples: []*tMetricSample{
+				defaultMetric().withName("test.job.duration").withTags([]string{"job_type:my_job_type", "job_name:my_job_name"}),
+				defaultMetric().withName("test.job.size").withTags([]string{"foo:my_job_type", "bar:my_job_name"}),
+				defaultMetric().withName("test.job.size.not_match").withTags(nil),
 			},
 			expectedCacheSize: 1000,
 		},
@@ -431,15 +295,15 @@ dogstatsd_mapper_profiles:
           job_type: "$1"
           job_name: "$2"
 `,
-			packets: []string{
-				"test.job.duration.my_job_type.my_job_name:666|g",
-				"test.job.duration.my_job_type.my_job_name:666|g|#some:tag",
-				"test.job.duration.my_job_type.my_job_name:666|g|#some:tag,more:tags",
+			packets: [][]byte{
+				[]byte("test.job.duration.my_job_type.my_job_name:666|g"),
+				[]byte("test.job.duration.my_job_type.my_job_name:666|g|#some:tag"),
+				[]byte("test.job.duration.my_job_type.my_job_name:666|g|#some:tag,more:tags"),
 			},
-			expectedSamples: []MetricSample{
-				{Name: "test.job.duration", Tags: []string{"job_type:my_job_type", "job_name:my_job_name"}, Mtype: metrics.GaugeType, Value: 666.0},
-				{Name: "test.job.duration", Tags: []string{"job_type:my_job_type", "job_name:my_job_name", "some:tag"}, Mtype: metrics.GaugeType, Value: 666.0},
-				{Name: "test.job.duration", Tags: []string{"job_type:my_job_type", "job_name:my_job_name", "some:tag", "more:tags"}, Mtype: metrics.GaugeType, Value: 666.0},
+			expectedSamples: []*tMetricSample{
+				defaultMetric().withName("test.job.duration").withTags([]string{"job_type:my_job_type", "job_name:my_job_name"}),
+				defaultMetric().withName("test.job.duration").withTags([]string{"job_type:my_job_type", "job_name:my_job_name", "some:tag"}),
+				defaultMetric().withName("test.job.duration").withTags([]string{"job_type:my_job_type", "job_name:my_job_name", "some:tag", "more:tags"}),
 			},
 			expectedCacheSize: 1000,
 		},
@@ -458,13 +322,12 @@ dogstatsd_mapper_profiles:
           job_type: "$1"
           job_name: "$2"
 `,
-			packets:           []string{},
+			packets:           [][]byte{},
 			expectedSamples:   nil,
 			expectedCacheSize: 999,
 		},
 	}
 
-	samples := []metrics.MetricSample{}
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
 			deps := fulfillDepsWithConfigYaml(t, scenario.config)
@@ -475,22 +338,13 @@ dogstatsd_mapper_profiles:
 
 			assert.Equal(t, deps.Config.Get("dogstatsd_mapper_cache_size"), scenario.expectedCacheSize, "Case `%s` failed. cache_size `%s` should be `%s`", scenario.name, deps.Config.Get("dogstatsd_mapper_cache_size"), scenario.expectedCacheSize)
 
-			var actualSamples []MetricSample
-			for _, p := range scenario.packets {
-				parser := newParser(deps.Config, s.sharedFloat64List, 1, deps.WMeta, s.stringInternerTelemetry)
-				samples, err := s.parseMetricMessage(samples, parser, []byte(p), "", "", false)
-				assert.NoError(t, err, "Case `%s` failed. parseMetricMessage should not return error %v", err)
-				for _, sample := range samples {
-					actualSamples = append(actualSamples, MetricSample{Name: sample.Name, Tags: sample.Tags, Mtype: sample.Mtype, Value: sample.Value})
-				}
+			parser := newParser(deps.Config, s.sharedFloat64List, 1, deps.WMeta, s.stringInternerTelemetry)
+			var b batcherMock
+			s.parsePackets(&b, parser, genTestPackets(scenario.packets...), metrics.MetricSampleBatch{})
+
+			for idx, sample := range b.samples {
+				scenario.expectedSamples[idx].testMetric(t, sample)
 			}
-			for _, sample := range scenario.expectedSamples {
-				sort.Strings(sample.Tags)
-			}
-			for _, sample := range actualSamples {
-				sort.Strings(sample.Tags)
-			}
-			assert.Equal(t, scenario.expectedSamples, actualSamples, "Case `%s` failed. `%s` should be `%s`", scenario.name, actualSamples, scenario.expectedSamples)
 		})
 	}
 }
@@ -717,117 +571,3 @@ func TestNextMessage(t *testing.T) {
 		})
 	}
 }
-
-type eqSingleTest[T any] struct {
-	testFunc      func(*testing.T, T, interface{})
-	expectedValue interface{}
-}
-
-type eqTest[T any] []eqSingleTest[T]
-
-func (test eqTest[T]) test(t *testing.T, entity T) {
-	assert.NotNil(t, entity, "Attempted to run a test on a nil entity")
-	for _, singleTest := range test {
-		singleTest.testFunc(t, entity, singleTest.expectedValue)
-	}
-}
-
-func (test eqTest[T]) addTest(testFunc func(*testing.T, T, interface{}), expectedValue interface{}) eqTest[T] {
-	newTest := append([]eqSingleTest[T]{}, test...)
-	return append(newTest, eqSingleTest[T]{testFunc, expectedValue})
-}
-
-type eMetricTest eqTest[metrics.MetricSample]
-
-func eMetricName(t *testing.T, metric metrics.MetricSample, name interface{}) {
-	assert.Equal(t, name, metric.Name, "metric name was expected to match")
-}
-func eMetricValue(t *testing.T, metric metrics.MetricSample, value interface{}) {
-	assert.EqualValues(t, value, metric.Value, "metric value was expected to match")
-}
-func eMetricType(t *testing.T, metric metrics.MetricSample, mtype interface{}) {
-	assert.Equal(t, mtype, metric.Mtype, "metric type was expected to match")
-}
-func eMetricTags(t *testing.T, metric metrics.MetricSample, tags interface{}) {
-	assert.ElementsMatch(t, tags, metric.Tags, "metric tags was expected to match")
-}
-func eMetricSampleRate(t *testing.T, metric metrics.MetricSample, sampleRate interface{}) {
-	assert.Equal(t, sampleRate, metric.SampleRate, "metric sample rate was expected to match")
-}
-func eMetricRawValue(t *testing.T, metric metrics.MetricSample, rawValue interface{}) {
-	assert.Equal(t, rawValue, metric.RawValue, "metric raw value was expected to match")
-}
-func eMetricTimestamp(t *testing.T, metric metrics.MetricSample, timestamp interface{}) {
-	assert.EqualValues(t, timestamp, metric.Timestamp, "metric timestamp was expected to match")
-}
-
-type eServiceTest eqTest[*servicecheck.ServiceCheck]
-
-func eServiceCheckName(t *testing.T, sc *servicecheck.ServiceCheck, checkName interface{}) {
-	assert.Equal(t, checkName, sc.CheckName, "service check name was expected to match")
-}
-func eServiceHostname(t *testing.T, sc *servicecheck.ServiceCheck, hostname interface{}) {
-	assert.Equal(t, hostname, sc.Host, "service hostname was expected to match")
-}
-func eServiceMessage(t *testing.T, sc *servicecheck.ServiceCheck, message interface{}) {
-	assert.Equal(t, message, sc.Message, "service message was expected to match")
-}
-func eServiceTs(t *testing.T, sc *servicecheck.ServiceCheck, ts interface{}) {
-	assert.Equal(t, ts, sc.Ts, "servic timestamp was expected to match")
-}
-func eServiceTags(t *testing.T, sc *servicecheck.ServiceCheck, tags interface{}) {
-	assert.ElementsMatch(t, tags, sc.Tags, "service tags were expected to match")
-}
-func eServiceStatus(t *testing.T, sc *servicecheck.ServiceCheck, status interface{}) {
-	assert.EqualValues(t, status, sc.Status, "service status was expected to match")
-}
-
-type eEventTest eqTest[*event.Event]
-
-func eEventTitle(t *testing.T, e event.Event, title interface{}) {
-	assert.Equal(t, title, e.Title, "event title was expected to match")
-}
-func eEventText(t *testing.T, e event.Event, text interface{}) {
-	assert.Equal(t, text, e.Text, "event text was expected to match")
-}
-func eEventTags(t *testing.T, e event.Event, tags interface{}) {
-	assert.ElementsMatch(t, tags, e.Tags, "event tags were expected to match")
-}
-func eEventHost(t *testing.T, e event.Event, host interface{}) {
-	assert.Equal(t, host, e.Host, "event host was expected to match")
-}
-func eEventTs(t *testing.T, e event.Event, ts interface{}) {
-	assert.Equal(t, ts, e.Ts, "event timestamp was expected to match")
-}
-func eEventAlertT(t *testing.T, e event.Event, atype interface{}) {
-	assert.Equal(t, atype, e.AlertType, "event alert type was expected to match")
-}
-func eEventType(t *testing.T, e event.Event, etype interface{}) {
-	assert.Equal(t, etype, e.EventType, "event type was expected to match")
-}
-func eEventPrio(t *testing.T, e event.Event, prio interface{}) {
-	assert.Equal(t, prio, e.Priority, "event priority was expected to match")
-}
-
-// Merged with the eolparsing test, now in TestNextMessage
-//func TestScanLines(t *testing.T)
-
-// Merged with the scanlines test, now in TestNextMessage
-//func TestEOLParsing(t *testing.T)
-
-// Origin from message id is extracted via the parser and passed into the enricher for parseMetricMessage,
-// but both events and service checks rely on the underlying enrich functions to pull that information.
-// This seems to be cuttable, since the parser output not being passed to enrich seems fully covered. TODO revisit
-//func TestOrigin(t *testing.T)
-
-// dogstatsd_origin_optout_enabled interactibility is buried deep within the tagger
-// and called from the aggregator end of the pipeline. Test shouldn't be necessary
-//func TestContainerIDParsing(t *testing.T)
-//func testContainerIDParsing(t *testing.T, cfg map[string]interface{})
-
-// TestNewServerExtraTags tests to confirm the pickup of the "tags" field in fargate and its inclusion in extra tags
-// TestExtraTags tests to confirm that extra tags is utilized when it should be
-//func TestStaticTags(t *testing.T)
-
-// Not a unit test and far too detailed for an integration test
-//func TestUDSReceiver(t *testing.T)
