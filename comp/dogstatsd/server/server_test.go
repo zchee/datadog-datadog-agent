@@ -11,6 +11,10 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
+	"github.com/DataDog/datadog-agent/pkg/metrics/event"
+	"github.com/DataDog/datadog-agent/pkg/metrics/servicecheck"
 	"github.com/DataDog/datadog-agent/pkg/util/testutil/flake"
 
 	"go.uber.org/fx"
@@ -134,4 +138,121 @@ type MetricSample struct {
 	Value float64
 	Tags  []string
 	Mtype metrics.MetricType
+}
+
+var healthyMetricTest = eqTest[metrics.MetricSample]{
+	{eMetricName, "daemon1"},
+	{eMetricValue, 666.0},
+	{eMetricType, metrics.CounterType},
+}
+var healthyMetricAltTest = eqTest[metrics.MetricSample]{
+	{eMetricName, "daemon1"},
+	{eMetricValue, 123.0},
+	{eMetricType, metrics.CounterType},
+}
+var healthyMetricTaggedTest = eqTest[metrics.MetricSample]{
+	{eMetricName, "daemon2"},
+	{eMetricValue, 1000.0},
+	{eMetricType, metrics.CounterType},
+}
+
+var healthyService = []byte("_sc|agent.up|0|d:12345|h:localhost|m:this is fine|#sometag1:somevalyyue1,sometag2:somevalue2")
+var healthyServiceTest = eqTest[*servicecheck.ServiceCheck]{
+	{eServiceCheckName, "agent.up"},
+	{eServiceHostname, "localhost"},
+	{eServiceMessage, "this is fine"},
+	{eServiceTags, []string{"sometag1:somevalyyue1", "sometag2:somevalue2"}},
+	{eServiceStatus, 0},
+	{eServiceTs, 12345},
+}
+
+type eqSingleTest[T any] struct {
+	testFunc      func(*testing.T, T, interface{})
+	expectedValue interface{}
+}
+
+type eqTest[T any] []eqSingleTest[T]
+
+func (test eqTest[T]) test(t *testing.T, entity T) {
+	assert.NotNil(t, entity, "Attempted to run a test on a nil entity")
+	for _, singleTest := range test {
+		singleTest.testFunc(t, entity, singleTest.expectedValue)
+	}
+}
+
+func (test eqTest[T]) addTest(testFunc func(*testing.T, T, interface{}), expectedValue interface{}) eqTest[T] {
+	newTest := append([]eqSingleTest[T]{}, test...)
+	return append(newTest, eqSingleTest[T]{testFunc, expectedValue})
+}
+
+type eMetricTest eqTest[metrics.MetricSample]
+
+func eMetricName(t *testing.T, metric metrics.MetricSample, name interface{}) {
+	assert.Equal(t, name, metric.Name, "metric name was expected to match")
+}
+func eMetricValue(t *testing.T, metric metrics.MetricSample, value interface{}) {
+	assert.EqualValues(t, value, metric.Value, "metric value was expected to match")
+}
+func eMetricType(t *testing.T, metric metrics.MetricSample, mtype interface{}) {
+	assert.Equal(t, mtype, metric.Mtype, "metric type was expected to match")
+}
+func eMetricTags(t *testing.T, metric metrics.MetricSample, tags interface{}) {
+	assert.ElementsMatch(t, tags, metric.Tags, "metric tags was expected to match")
+}
+func eMetricSampleRate(t *testing.T, metric metrics.MetricSample, sampleRate interface{}) {
+	assert.Equal(t, sampleRate, metric.SampleRate, "metric sample rate was expected to match")
+}
+func eMetricRawValue(t *testing.T, metric metrics.MetricSample, rawValue interface{}) {
+	assert.Equal(t, rawValue, metric.RawValue, "metric raw value was expected to match")
+}
+func eMetricTimestamp(t *testing.T, metric metrics.MetricSample, timestamp interface{}) {
+	assert.EqualValues(t, timestamp, metric.Timestamp, "metric timestamp was expected to match")
+}
+
+type eServiceTest eqTest[*servicecheck.ServiceCheck]
+
+func eServiceCheckName(t *testing.T, sc *servicecheck.ServiceCheck, checkName interface{}) {
+	assert.Equal(t, checkName, sc.CheckName, "service check name was expected to match")
+}
+func eServiceHostname(t *testing.T, sc *servicecheck.ServiceCheck, hostname interface{}) {
+	assert.Equal(t, hostname, sc.Host, "service hostname was expected to match")
+}
+func eServiceMessage(t *testing.T, sc *servicecheck.ServiceCheck, message interface{}) {
+	assert.Equal(t, message, sc.Message, "service message was expected to match")
+}
+func eServiceTs(t *testing.T, sc *servicecheck.ServiceCheck, ts interface{}) {
+	assert.Equal(t, ts, sc.Ts, "servic timestamp was expected to match")
+}
+func eServiceTags(t *testing.T, sc *servicecheck.ServiceCheck, tags interface{}) {
+	assert.ElementsMatch(t, tags, sc.Tags, "service tags were expected to match")
+}
+func eServiceStatus(t *testing.T, sc *servicecheck.ServiceCheck, status interface{}) {
+	assert.EqualValues(t, status, sc.Status, "service status was expected to match")
+}
+
+type eEventTest eqTest[*event.Event]
+
+func eEventTitle(t *testing.T, e event.Event, title interface{}) {
+	assert.Equal(t, title, e.Title, "event title was expected to match")
+}
+func eEventText(t *testing.T, e event.Event, text interface{}) {
+	assert.Equal(t, text, e.Text, "event text was expected to match")
+}
+func eEventTags(t *testing.T, e event.Event, tags interface{}) {
+	assert.ElementsMatch(t, tags, e.Tags, "event tags were expected to match")
+}
+func eEventHost(t *testing.T, e event.Event, host interface{}) {
+	assert.Equal(t, host, e.Host, "event host was expected to match")
+}
+func eEventTs(t *testing.T, e event.Event, ts interface{}) {
+	assert.Equal(t, ts, e.Ts, "event timestamp was expected to match")
+}
+func eEventAlertT(t *testing.T, e event.Event, atype interface{}) {
+	assert.Equal(t, atype, e.AlertType, "event alert type was expected to match")
+}
+func eEventType(t *testing.T, e event.Event, etype interface{}) {
+	assert.Equal(t, etype, e.EventType, "event type was expected to match")
+}
+func eEventPrio(t *testing.T, e event.Event, prio interface{}) {
+	assert.Equal(t, prio, e.Priority, "event priority was expected to match")
 }

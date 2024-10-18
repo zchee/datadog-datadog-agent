@@ -9,6 +9,7 @@ package server
 
 import (
 	"net"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -18,11 +19,6 @@ import (
 	"github.com/DataDog/datadog-agent/comp/dogstatsd/listeners"
 )
 
-// Ryan - The unit test way to do this is to abstract the net.Dial call and the listener creation calls
-// to factories, the mocks of which can be sent in via test. That seems like a bit heavier of an
-// overhaul than the ticket necessarily expects. Alternatives that don't require production code change
-// revolve around pulling the input packet array directly from the first instantiated listener, which is a bit
-// fragile. Note that if the mac problem is indeed a network layer oops, then an alteration to production code is almost required.
 func TestUDPForward(t *testing.T) {
 	cfg := make(map[string]interface{})
 
@@ -65,43 +61,72 @@ func TestUDPForward(t *testing.T) {
 	assert.Equal(t, message, buffer)
 }
 
-func TestE2EParsing(t *testing.T) {
+func TestUDPConn(t *testing.T) {
 	cfg := make(map[string]interface{})
 
 	cfg["dogstatsd_port"] = listeners.RandomPortName
 
 	deps := fulfillDepsWithConfigOverride(t, cfg)
-	demux := deps.Demultiplexer
 	requireStart(t, deps.Server)
 
 	conn, err := net.Dial("udp", deps.Server.UDPLocalAddr())
 	require.NoError(t, err, "cannot connect to DSD socket")
 	defer conn.Close()
 
+	runConnTest(t, conn, deps)
+}
+
+func runConnTest(t *testing.T, conn net.Conn, deps serverDeps) {
+	demux := deps.Demultiplexer
+	eventOut, serviceOut := demux.GetEventsAndServiceChecksChannels()
+
 	// Test metric
-	conn.Write([]byte("daemon:666|g|#foo:bar\ndaemon:666|g|#foo:bar"))
+	conn.Write([]byte("daemon:666|g|#foo:bar\niDaemon:777|g|#foo:bar,sometag:tag"))
 	samples, timedSamples := demux.WaitForSamples(time.Second * 2)
-	assert.Equal(t, 2, len(samples))
-	assert.Equal(t, 0, len(timedSamples))
-	demux.Reset()
-	demux.Stop(false)
 
-	// EOL enabled
-	cfg["dogstatsd_eol_required"] = []string{"udp"}
+	assert.Equal(t, 2, len(samples), "expected two metric entries after 2 seconds")
+	assert.Equal(t, 0, len(timedSamples), "did not expect any timed metrics")
 
-	deps = fulfillDepsWithConfigOverride(t, cfg)
-	demux = deps.Demultiplexer
-	requireStart(t, deps.Server)
+	m1 := samples[0]
+	eMetricName(t, m1, "daemon")
+	m2 := samples[1]
+	eMetricName(t, m2, "iDaemon")
 
-	conn, err = net.Dial("udp", deps.Server.UDPLocalAddr())
+	// Test servce check
+	conn.Write(healthyService)
+	select {
+	case servL := <-serviceOut:
+		assert.Equal(t, 1, len(servL))
+		healthyServiceTest.test(t, servL[0])
+	}
+
+	// Test event
+	conn.Write([]byte("_e{10,10}:test title|test\\ntext|t:warning|d:12345|p:low|h:some.host|k:aggKey|s:source test|#tag1,tag2:test"))
+	select {
+	case eventL := <-eventOut:
+		assert.Equal(t, 1, len(eventL))
+	}
+}
+
+func TestUDSConn(t *testing.T) {
+	socketPath := filepath.Join(t.TempDir(), "dsd.socket")
+
+	cfg := make(map[string]interface{})
+	cfg["dogstatsd_port"] = listeners.RandomPortName
+	cfg["dogstatsd_no_aggregation_pipeline"] = true // another test may have turned it off
+	cfg["dogstatsd_socket"] = socketPath
+
+	deps := fulfillDepsWithConfigOverride(t, cfg)
+	require.True(t, deps.Server.UdsListenerRunning())
+
+	conn, err := net.Dial("unixgram", socketPath)
 	require.NoError(t, err, "cannot connect to DSD socket")
 	defer conn.Close()
 
-	// Test metric expecting an EOL
-	_, err = conn.Write([]byte("daemon:666|g|#foo:bar\ndaemon:666|g|#foo:bar"))
-	require.NoError(t, err, "cannot write to DSD socket")
-	samples, timedSamples = demux.WaitForSamples(time.Second * 2)
-	require.Equal(t, 1, len(samples))
-	assert.Equal(t, 0, len(timedSamples))
-	demux.Reset()
+	runConnTest(t, conn, deps)
+
+	s := deps.Server.(*server)
+	s.Stop()
+	_, err = net.Dial("unixgram", socketPath)
+	require.Error(t, err, "UDS listener should be closed")
 }

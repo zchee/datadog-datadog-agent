@@ -23,6 +23,28 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/metrics/servicecheck"
 )
 
+/*var basicMetric = ""
+var basicMetricTest = []eMetricTest{{
+	{eMetricName, "daemon"},
+	{eMetricValue, 666.0},
+	{eMetricType, metrics.GaugeType},
+	{eMetricTags, []string{}},
+}}
+
+var basicMetricTagged = ""
+var basicMetricTaggedTest = []eMetricTest{{
+	{eMetricName, "daemon"},
+	{eMetricValue, 666.0},
+	{eMetricType, metrics.GaugeType},
+	{eMetricTags, []string{"sometag1:somevalue1", "sometag2:somevalue2", "sometag3:somevalue3"}},
+}}
+
+var basicMetricAlt = ""
+var basicMetricAltTest = []eMetricTest{}
+
+var basicMetricTwo = ""
+var basicMetricTwoTest = []eMetricTest{}*/
+
 // Run through all of the major metric types and verify both the default and the timestamped flows
 func TestMetricTypes(t *testing.T) {
 	cfg := make(map[string]interface{})
@@ -238,17 +260,34 @@ func (b *batcherMock) flush() {
 	return
 }
 
+func (b *batcherMock) clear() {
+	b.serviceChecks = b.serviceChecks[0:0]
+	b.events = b.events[0:0]
+	b.lateSamples = b.lateSamples[0:0]
+	b.samples = b.samples[0:0]
+}
+
+func genTestPackets(inputs ...[]byte) []*packets.Packet {
+	packetSet := make([]*packets.Packet, len(inputs))
+	for idx, input := range inputs {
+		packet := &packets.Packet{
+			Contents:   input,
+			Origin:     "test-origin",
+			ListenerID: "noop-listener",
+			Source:     packets.UDP,
+		}
+		packetSet[idx] = packet
+	}
+
+	return packetSet
+}
+
 func runTestMetrics(t *testing.T, deps serverDeps, input []byte, expTests []eMetricTest, expTimeTests []eMetricTest) {
 	s := deps.Server.(*server)
-	packet := &packets.Packet{
-		Contents:   input,
-		Origin:     "test-origin",
-		ListenerID: "noop-listener",
-		Source:     packets.UDP,
-	}
+
 	var b batcherMock
 	parser := newParser(deps.Config, s.sharedFloat64List, 1, deps.WMeta, s.stringInternerTelemetry)
-	s.parsePackets(&b, parser, []*packets.Packet{packet}, make([]metrics.MetricSample, 0))
+	s.parsePackets(&b, parser, genTestPackets(input), metrics.MetricSampleBatch{})
 
 	samples := b.samples
 	timedSamples := b.lateSamples
@@ -257,84 +296,82 @@ func runTestMetrics(t *testing.T, deps serverDeps, input []byte, expTests []eMet
 	assert.Equal(t, len(expTimeTests), len(timedSamples))
 
 	for idx, samp := range samples {
-		assert.NotNil(t, samp)
-		for _, test := range expTests[idx] {
-			test.testFunc(t, samp, test.expectedValue)
-		}
+		expTests[idx].test(t, samp)
 	}
 	for idx, tSamp := range timedSamples {
-		assert.NotNil(t, tSamp)
-		for _, test := range expTimeTests[idx] {
-			test.testFunc(t, tSamp, test.expectedValue)
-		}
+		expTimeTests[idx].test(t, tSamp)
 	}
 }
 
-/*
 func TestEvents(t *testing.T) {
 	cfg := make(map[string]interface{})
 	cfg["dogstatsd_port"] = listeners.RandomPortName
 
 	deps := fulfillDepsWithConfigOverride(t, cfg)
-	demux := deps.Demultiplexer
+	s := deps.Server.(*server)
+	parser := newParser(deps.Config, s.sharedFloat64List, 1, deps.WMeta, s.stringInternerTelemetry)
+	var b batcherMock
 
-	eventOut, _ := demux.GetEventsAndServiceChecksChannels()
-	input = []byte("_e{10,10}:test title|test\\ntext|t:warning|d:12345|p:low|h:some.host|k:aggKey|s:source test|#tag1,tag2:test")
-	select {
-	case res := <-eventOut:
-		event := res[0]
-		assert.NotNil(t, event)
-		assert.ElementsMatch(t, event.Tags, []string{"tag1", "tag2:test"})
-	case <-time.After(2 * time.Second):
-		assert.FailNow(t, "Timeout on receive channel")
-	}
+	input1 := []byte("_e{10,10}:test title|test\\ntext|t:warning|d:12345|p:low|h:some.host|k:aggKey|s:source test|#tag1,tag2:test")
+	input2 := []byte("_e{10,10}:test title2|test\\ntextntext|t:notice|d:12346|p:normal|h:some.otherhost|k:aggKeyAlt|s:source investigation|#tag1,tag2:test,tag3:resolved")
+	s.parsePackets(&b, parser, genTestPackets(input1, input2), metrics.MetricSampleBatch{})
 
+	assert.Equal(t, 2, len(b.events))
+
+	res1 := b.events[0]
+	res2 := b.events[1]
+
+	assert.NotNil(t, res1)
+	assert.NotNil(t, res2)
+
+	b.clear()
 	// Test erroneous Events
-	input = []byte("_e{0,9}:|test text\n" +
-			"_e{-5,2}:abc\n" +
-			"_e{11,10}:test title2|test\\ntext|" +
-			"t:warning|d:12345|p:low|h:some.host|k:aggKey|s:source test|#tag1,tag2:test",
-		)
+	input := []byte("_e{0,9}:|test text\n" +
+		"_e{-5,2}:abc\n" +
+		"_e{11,10}:test title2|test\\ntext|" +
+		"t:warning|d:12345|p:low|h:some.host|k:aggKey|s:source test|#tag1,tag2:test",
+	)
 
-	select {
-	case res := <-eventOut:
-		assert.Equal(t, 1, len(res))
-		event := res[0]
-		assert.NotNil(t, event)
-		assert.Equal(t, event.Title, "test title2")
-	case <-time.After(2 * time.Second):
-		assert.FailNow(t, "Timeout on receive channel")
-	}
+	s.parsePackets(&b, parser, genTestPackets(input), metrics.MetricSampleBatch{})
+	assert.Equal(t, 1, len(b.events))
+	event := b.events[0]
+	assert.NotNil(t, event)
+	assert.Equal(t, event.Title, "test title2")
 }
 
+var healthyService = []byte("_sc|agent.up|0|d:12345|h:localhost|m:this is fine|#sometag1:somevalyyue1,sometag2:somevalue2")
+var healthyServiceTest = eServiceTest{
+	{eServiceCheckName, "agent.up"},
+	{eServiceHostname, "localhost"},
+	{eServiceMessage, "this is fine"},
+	{eServiceTags, []string{"sometag1:somevalyyue1", "sometag2:somevalue2"}},
+	{eServiceStatus, 0},
+	{eServiceTs, 12345},
+}
 
-[]byte("_sc|agent.up|0|d:12345|h:localhost|m:this is fine|#sometag1:somevalyyue1,sometag2:somevalue2")
-	select {
-	case res := <-serviceOut:
-		assert.NotNil(t, res)
-	case <-time.After(2 * time.Second):
-		assert.FailNow(t, "Timeout on receive channel")
-	}
+func TestServiceCheks(t *testing.T) {
+	cfg := make(map[string]interface{})
+	cfg["dogstatsd_port"] = listeners.RandomPortName
 
+	deps := fulfillDepsWithConfigOverride(t, cfg)
+	s := deps.Server.(*server)
+	parser := newParser(deps.Config, s.sharedFloat64List, 1, deps.WMeta, s.stringInternerTelemetry)
+	var b batcherMock
+
+	s.parsePackets(&b, parser, genTestPackets(healthyService), metrics.MetricSampleBatch{})
+
+	assert.Equal(t, 1, b.serviceChecks)
+	healthyServiceTest.test(t, b.serviceChecks[0])
+
+	b.clear()
 
 	// Test erroneous Service Check
-	_, err = conn.Write([]byte("_sc|agen.down\n_sc|agent.up|0|d:12345|h:localhost|m:this is fine|#sometag1:somevalyyue1,sometag2:somevalue2"))
-	require.NoError(t, err, "cannot write to DSD socket")
-	select {
-	case res := <-serviceOut:
-		assert.Equal(t, 1, len(res))
-		serviceCheck := res[0]
-		assert.NotNil(t, serviceCheck)
-		assert.Equal(t, serviceCheck.CheckName, "agent.up")
-	case <-time.After(2 * time.Second):
-		assert.FailNow(t, "Timeout on receive channel")
-	}
+	input := []byte("_sc|agen.down\n_sc|agent.up|0|d:12345|h:localhost|m:this is fine|#sometag1:somevalyyue1,sometag2:somevalue2")
+	s.parsePackets(&b, parser, genTestPackets(input), metrics.MetricSampleBatch{})
 
-	// Test Event
-	// ----------
-
-
-}*/
+	assert.Equal(t, 1, len(b.serviceChecks))
+	healthyServiceTest.test(t, b.serviceChecks[0])
+}
 
 // Ryan - this seems to go a bit overboard, as mapper has its own tests and we just need to make sure that
 // we are calling it when appropriate.
@@ -681,44 +718,95 @@ func TestNextMessage(t *testing.T) {
 	}
 }
 
-type eSingleTest struct {
-	testFunc      func(*testing.T, metrics.MetricSample, interface{})
+type eqSingleTest[T any] struct {
+	testFunc      func(*testing.T, T, interface{})
 	expectedValue interface{}
 }
 
-type eMetricTest []eSingleTest
+type eqTest[T any] []eqSingleTest[T]
 
-func (test eMetricTest) addTest(testFunc func(*testing.T, metrics.MetricSample, interface{}), expectedValue interface{}) eMetricTest {
-	newTest := append([]eSingleTest{}, test...)
-	return append(newTest, eSingleTest{testFunc, expectedValue})
+func (test eqTest[T]) test(t *testing.T, entity T) {
+	assert.NotNil(t, entity, "Attempted to run a test on a nil entity")
+	for _, singleTest := range test {
+		singleTest.testFunc(t, entity, singleTest.expectedValue)
+	}
 }
+
+func (test eqTest[T]) addTest(testFunc func(*testing.T, T, interface{}), expectedValue interface{}) eqTest[T] {
+	newTest := append([]eqSingleTest[T]{}, test...)
+	return append(newTest, eqSingleTest[T]{testFunc, expectedValue})
+}
+
+type eMetricTest eqTest[metrics.MetricSample]
 
 func eMetricName(t *testing.T, metric metrics.MetricSample, name interface{}) {
 	assert.Equal(t, name, metric.Name, "metric name was expected to match")
 }
-
 func eMetricValue(t *testing.T, metric metrics.MetricSample, value interface{}) {
 	assert.EqualValues(t, value, metric.Value, "metric value was expected to match")
 }
-
 func eMetricType(t *testing.T, metric metrics.MetricSample, mtype interface{}) {
 	assert.Equal(t, mtype, metric.Mtype, "metric type was expected to match")
 }
-
 func eMetricTags(t *testing.T, metric metrics.MetricSample, tags interface{}) {
 	assert.ElementsMatch(t, tags, metric.Tags, "metric tags was expected to match")
 }
-
 func eMetricSampleRate(t *testing.T, metric metrics.MetricSample, sampleRate interface{}) {
-	assert.Equal(t, sampleRate, metric.SampleRate, "sample rate was expected to match")
+	assert.Equal(t, sampleRate, metric.SampleRate, "metric sample rate was expected to match")
 }
-
 func eMetricRawValue(t *testing.T, metric metrics.MetricSample, rawValue interface{}) {
 	assert.Equal(t, rawValue, metric.RawValue, "metric raw value was expected to match")
 }
-
 func eMetricTimestamp(t *testing.T, metric metrics.MetricSample, timestamp interface{}) {
 	assert.EqualValues(t, timestamp, metric.Timestamp, "metric timestamp was expected to match")
+}
+
+type eServiceTest eqTest[*servicecheck.ServiceCheck]
+
+func eServiceCheckName(t *testing.T, sc *servicecheck.ServiceCheck, checkName interface{}) {
+	assert.Equal(t, checkName, sc.CheckName, "service check name was expected to match")
+}
+func eServiceHostname(t *testing.T, sc *servicecheck.ServiceCheck, hostname interface{}) {
+	assert.Equal(t, hostname, sc.Host, "service hostname was expected to match")
+}
+func eServiceMessage(t *testing.T, sc *servicecheck.ServiceCheck, message interface{}) {
+	assert.Equal(t, message, sc.Message, "service message was expected to match")
+}
+func eServiceTs(t *testing.T, sc *servicecheck.ServiceCheck, ts interface{}) {
+	assert.Equal(t, ts, sc.Ts, "servic timestamp was expected to match")
+}
+func eServiceTags(t *testing.T, sc *servicecheck.ServiceCheck, tags interface{}) {
+	assert.ElementsMatch(t, tags, sc.Tags, "service tags were expected to match")
+}
+func eServiceStatus(t *testing.T, sc *servicecheck.ServiceCheck, status interface{}) {
+	assert.EqualValues(t, status, sc.Status, "service status was expected to match")
+}
+
+type eEventTest eqTest[*event.Event]
+
+func eEventTitle(t *testing.T, e event.Event, title interface{}) {
+	assert.Equal(t, title, e.Title, "event title was expected to match")
+}
+func eEventText(t *testing.T, e event.Event, text interface{}) {
+	assert.Equal(t, text, e.Text, "event text was expected to match")
+}
+func eEventTags(t *testing.T, e event.Event, tags interface{}) {
+	assert.ElementsMatch(t, tags, e.Tags, "event tags were expected to match")
+}
+func eEventHost(t *testing.T, e event.Event, host interface{}) {
+	assert.Equal(t, host, e.Host, "event host was expected to match")
+}
+func eEventTs(t *testing.T, e event.Event, ts interface{}) {
+	assert.Equal(t, ts, e.Ts, "event timestamp was expected to match")
+}
+func eEventAlertT(t *testing.T, e event.Event, atype interface{}) {
+	assert.Equal(t, atype, e.AlertType, "event alert type was expected to match")
+}
+func eEventType(t *testing.T, e event.Event, etype interface{}) {
+	assert.Equal(t, etype, e.EventType, "event type was expected to match")
+}
+func eEventPrio(t *testing.T, e event.Event, prio interface{}) {
+	assert.Equal(t, prio, e.Priority, "event priority was expected to match")
 }
 
 // Merged with the eolparsing test, now in TestNextMessage
@@ -740,3 +828,6 @@ func eMetricTimestamp(t *testing.T, metric metrics.MetricSample, timestamp inter
 // TestNewServerExtraTags tests to confirm the pickup of the "tags" field in fargate and its inclusion in extra tags
 // TestExtraTags tests to confirm that extra tags is utilized when it should be
 //func TestStaticTags(t *testing.T)
+
+// Not a unit test and far too detailed for an integration test
+//func TestUDSReceiver(t *testing.T)
