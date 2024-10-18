@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DataDog/datadog-agent/comp/core/status"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/DataDog/datadog-agent/comp/core/status"
 )
 
 func TestRender(t *testing.T) {
