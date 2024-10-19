@@ -123,50 +123,52 @@ func NewConsumer[V any](proto string, ebpf *manager.Manager, callback func([]V))
 
 // Start consumption of eBPF events
 func (c *Consumer[V]) Start() {
-	c.eventLoopWG.Add(1)
-	go func() {
-		defer c.eventLoopWG.Done()
-		dataChannel := c.handler.DataChannel()
-		lostChannel := c.handler.LostChannel()
-		for {
-			select {
-			case dataEvent, ok := <-dataChannel:
-				if !ok {
-					return
-				}
+	c.eventLoopWG.Add(20)
+	for i := 0; i < 20; i++ {
+		go func() {
+			defer c.eventLoopWG.Done()
+			dataChannel := c.handler.DataChannel()
+			lostChannel := c.handler.LostChannel()
+			for {
+				select {
+				case dataEvent, ok := <-dataChannel:
+					if !ok {
+						return
+					}
 
-				b, err := batchFromEventData(dataEvent.Data)
+					b, err := batchFromEventData(dataEvent.Data)
 
-				if err != nil {
-					c.invalidEventsCount.Add(1)
+					if err != nil {
+						c.invalidEventsCount.Add(1)
+						dataEvent.Done()
+						break
+					}
+
+					c.failedFlushesCount.Add(int64(b.Failed_flushes))
+					c.kernelDropsCount.Add(int64(b.Dropped_events))
+					c.process(b, false)
 					dataEvent.Done()
-					break
-				}
+				case _, ok := <-lostChannel:
+					if !ok {
+						return
+					}
 
-				c.failedFlushesCount.Add(int64(b.Failed_flushes))
-				c.kernelDropsCount.Add(int64(b.Dropped_events))
-				c.process(b, false)
-				dataEvent.Done()
-			case _, ok := <-lostChannel:
-				if !ok {
-					return
-				}
+					// we have our own telemetry to track failed flushes so we don't
+					// do anything here other than draining this channel
+				case done, ok := <-c.syncRequest:
+					if !ok {
+						return
+					}
 
-				// we have our own telemetry to track failed flushes so we don't
-				// do anything here other than draining this channel
-			case done, ok := <-c.syncRequest:
-				if !ok {
-					return
+					c.batchReader.ReadAll(func(_ int, b *batch) {
+						c.process(b, true)
+					})
+					log.Debugf("usm events summary: name=%q %s", c.proto, c.metricGroup.Summary())
+					close(done)
 				}
-
-				c.batchReader.ReadAll(func(_ int, b *batch) {
-					c.process(b, true)
-				})
-				log.Debugf("usm events summary: name=%q %s", c.proto, c.metricGroup.Summary())
-				close(done)
 			}
-		}
-	}()
+		}()
+	}
 }
 
 // Sync userpace with kernelspace by fetching all buffered data on eBPF
