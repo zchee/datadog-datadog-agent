@@ -32,14 +32,13 @@ func NewStatkeeper(c *config.Config) *StatKeeper {
 
 // Process processes the postgres transaction
 func (s *StatKeeper) Process(tx *EventWrapper) {
-	s.statsMutex.Lock()
-	defer s.statsMutex.Unlock()
-
 	key := Key{
 		Operation:     tx.Operation(),
 		Parameters:    tx.Parameters(),
 		ConnectionKey: tx.ConnTuple(),
 	}
+	s.statsMutex.Lock()
+	defer s.statsMutex.Unlock()
 	requestStats, ok := s.stats[key]
 	if !ok {
 		if len(s.stats) >= s.maxEntries {
