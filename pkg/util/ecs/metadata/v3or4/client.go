@@ -9,9 +9,11 @@
 package v3or4
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -134,6 +136,10 @@ func (c *client) get(ctx context.Context, path string, v interface{}) error {
 		if resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("Unexpected HTTP status code in metadata %s reply: %d", c.apiVersion, resp.StatusCode)
 		}
+
+		body, _ := io.ReadAll(resp.Body)
+		log.Debugf("raw task data: %s", body)
+		resp.Body = io.NopCloser(bytes.NewBuffer(body))
 
 		if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
 			return fmt.Errorf("Failed to decode metadata %s JSON payload to type %s: %s", c.apiVersion, reflect.TypeOf(v), err)

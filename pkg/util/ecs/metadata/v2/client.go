@@ -9,6 +9,7 @@
 package v2
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/util/ecs/common"
 	"github.com/DataDog/datadog-agent/pkg/util/ecs/telemetry"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 const (
@@ -112,6 +114,10 @@ func (c *client) get(ctx context.Context, path string, v interface{}) error {
 		}
 		return fmt.Errorf("Unexpected HTTP status code in metadata v2 reply: [%s]: %d - %s", url, resp.StatusCode, msg)
 	}
+
+	body, _ := io.ReadAll(resp.Body)
+	log.Debugf("raw task data: %s", body)
+	resp.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
 		return fmt.Errorf("Failed to decode metadata v2 JSON payload to type %s: %s", reflect.TypeOf(v), err)
