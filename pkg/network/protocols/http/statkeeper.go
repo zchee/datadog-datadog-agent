@@ -64,6 +64,9 @@ func NewStatkeeper(c *config.Config, telemetry *Telemetry, incompleteBuffer Inco
 
 // Process processes a transaction and updates the stats accordingly.
 func (h *StatKeeper) Process(tx Transaction) {
+	h.mux.Lock()
+	defer h.mux.Unlock()
+
 	if tx.Incomplete() {
 		h.incomplete.Add(tx)
 		return
@@ -146,8 +149,6 @@ func (h *StatKeeper) add(tx Transaction) {
 		key.ConnectionKey = h.connectionAggregator.RollupKey(key.ConnectionKey)
 	}
 
-	h.mux.Lock()
-	defer h.mux.Unlock()
 	stats, ok := h.stats[key]
 	if !ok {
 		if len(h.stats) >= h.maxEntries {
