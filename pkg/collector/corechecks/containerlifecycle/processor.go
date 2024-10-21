@@ -164,6 +164,8 @@ func (p *processor) processTask(task *workloadmeta.ECSTask) error {
 	ts := time.Now().Unix()
 	event.withTaskExitTimestamp(&ts)
 
+	log.Debugf("adding event for ecs task to queue: %v", event)
+
 	return p.tasksQueue.add(event)
 }
 
