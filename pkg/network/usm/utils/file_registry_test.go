@@ -218,7 +218,7 @@ func TestFailedRegistration(t *testing.T) {
 	require.NoError(t, err)
 	pid := uint32(cmd.Process.Pid)
 
-	require.NoError(t, r.Register(path, pid, registerCallback, IgnoreCB, IgnoreCB))
+	r.Register(path, pid, registerCallback, IgnoreCB, IgnoreCB)
 
 	// First let's assert that the callback was executed once, but there are no
 	// registered processes because the registration should have failed

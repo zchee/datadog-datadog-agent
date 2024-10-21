@@ -177,9 +177,7 @@ func (pm *ProcessMonitor) handleProcessExec(pid uint32) {
 			continue
 		default:
 			pm.tel.processExecChannelIsFull.Add(1)
-			if log.ShouldLog(seelog.DebugLvl) && pm.oversizedLogLimit.ShouldLog() {
-				log.Debug("can't send exec callback to callbackRunner, channel is full")
-			}
+			log.Info("can't send exec callback (pid %v) to callbackRunner, channel is full", pid)
 		}
 	}
 }
@@ -578,6 +576,7 @@ func (ec *EventConsumer) HandleEvent(event any) {
 	processMonitor.tel.events.Add(1)
 	switch sevent.Type {
 	case model.ExecEventType:
+		log.Infof("process monitor exec event received pid %v", sevent.Pid)
 		processMonitor.tel.exec.Add(1)
 		if processMonitor.hasExecCallbacks.Load() {
 			processMonitor.handleProcessExec(sevent.Pid)

@@ -478,7 +478,13 @@ func (p *goTLSProgram) handleProcessExit(pid pid) {
 }
 
 func (p *goTLSProgram) handleProcessStart(pid pid) {
-	_ = p.AttachPID(pid)
+	err := p.AttachPID(pid)
+	if err != nil {
+		log.Infof("go-tls failed to attach to pid %v: %v", pid, err)
+	} else {
+		log.Infof("go-tls succeeded? to attach to pid %v", pid)
+	}
+
 }
 
 // addInspectionResultToMap runs a binary inspection and adds the result to the
