@@ -369,6 +369,7 @@ func (pm *ProcessMonitor) Initialize2(useEventStream bool, chanLen int) error {
 		func() {
 			method := "netlink"
 			if useEventStream {
+				log.Info("process monitor event consumer channel len", (&EventConsumer{}).ChanSize())
 				method = "event stream"
 			}
 			log.Infof("initializing process monitor (%s)", method)
@@ -541,7 +542,7 @@ func NewProcessMonitorEventConsumer(em *eventmonitor.EventMonitor) (*EventConsum
 
 // ChanSize returns the channel size used by this consumer
 func (ec *EventConsumer) ChanSize() int {
-	return 100
+	return 500
 }
 
 // ID returns the ID of this consumer
