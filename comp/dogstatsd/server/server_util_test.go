@@ -157,9 +157,7 @@ func (b *batcherMock) appendSample(sample metrics.MetricSample) {
 	b.samples = append(b.samples, sample)
 }
 
-func (b *batcherMock) flush() {
-	return
-}
+func (b *batcherMock) flush() {}
 
 func (b *batcherMock) clear() {
 	b.serviceChecks = b.serviceChecks[0:0]
@@ -235,15 +233,15 @@ type tMetricSample struct {
 	Timestamp  float64
 }
 
-func (expected tMetricSample) testMetric(t *testing.T, actual metrics.MetricSample) {
+func (m tMetricSample) testMetric(t *testing.T, actual metrics.MetricSample) {
 	s := "metric %s was expected to match"
-	assert.Equal(t, expected.Name, actual.Name, s, "name")
-	assert.Equal(t, expected.Value, actual.Value, s, "value")
-	assert.Equal(t, expected.Mtype, actual.Mtype, s, "type")
-	assert.ElementsMatch(t, expected.Tags, actual.Tags, s, "tags")
-	assert.Equal(t, expected.SampleRate, actual.SampleRate, s, "sample rate")
-	assert.Equal(t, expected.RawValue, actual.RawValue, s, "raw value")
-	assert.Equal(t, expected.Timestamp, actual.Timestamp, s, "timestamp")
+	assert.Equal(t, m.Name, actual.Name, s, "name")
+	assert.Equal(t, m.Value, actual.Value, s, "value")
+	assert.Equal(t, m.Mtype, actual.Mtype, s, "type")
+	assert.ElementsMatch(t, m.Tags, actual.Tags, s, "tags")
+	assert.Equal(t, m.SampleRate, actual.SampleRate, s, "sample rate")
+	assert.Equal(t, m.RawValue, actual.RawValue, s, "raw value")
+	assert.Equal(t, m.Timestamp, actual.Timestamp, s, "timestamp")
 }
 
 func (m *tMetricSample) withName(n string) *tMetricSample {

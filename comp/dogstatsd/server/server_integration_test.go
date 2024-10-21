@@ -112,6 +112,8 @@ func runConnTest(t *testing.T, conn net.Conn, deps serverDeps) {
 	case servL := <-serviceOut:
 		assert.Equal(t, 1, len(servL))
 		defaultServiceCheck().testService(t, servL[0])
+	case <-time.After(2 * time.Second):
+		assert.FailNow(t, "Timeout on service channel")
 	}
 
 	// Test event
@@ -120,6 +122,8 @@ func runConnTest(t *testing.T, conn net.Conn, deps serverDeps) {
 	case eventL := <-eventOut:
 		assert.Equal(t, 1, len(eventL))
 		defaultEvent().testEvent(t, eventL[0])
+	case <-time.After(2 * time.Second):
+		assert.FailNow(t, "Timeout on event channel")
 	}
 }
 
