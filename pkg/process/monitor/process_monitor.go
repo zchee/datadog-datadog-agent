@@ -28,7 +28,7 @@ import (
 
 const (
 	// The size of the process events queue of netlink.
-	processMonitorEventQueueSize = 2048
+	processMonitorEventQueueSize = 2048 * 3
 	// The size of the callbacks queue for pending tasks.
 	pendingCallbacksQueueSize = 4000
 )
@@ -388,6 +388,7 @@ func (pm *ProcessMonitor) Initialize2(useEventStream bool, chanLen int) error {
 			pm.netlinkDoneChannel = make(chan struct{})
 			pm.netlinkErrorsChannel = make(chan error, 10)
 			pm.netlinkEventsChannel = make(chan netlink.ProcEvent, processMonitorEventQueueSize)
+			log.Info("process monitor netlink channel len", processMonitorEventQueueSize)
 
 			go pm.mainEventLoop()
 
