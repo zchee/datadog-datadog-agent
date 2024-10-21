@@ -17,6 +17,7 @@ import (
 	"time"
 
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 // ShouldCloseConnection is an option to DoGet to indicate whether to close the underlying
@@ -142,12 +143,7 @@ var db = AddrResolver{
 	},
 }
 
-// ClientBuilder is a struct used to build an [*net/http.Client].
-type ClientBuilder struct {
-	tr      *http.Transport
-	timeout time.Duration
-}
-
+// ClientOption allows configuration of the *http.Client during construction
 type ClientOption func(*http.Client)
 
 // GetClient returns a ClientBuilder struct that lets you create an Agent-specific client.
@@ -189,7 +185,7 @@ func WithNoVerify() func(c *http.Client) {
 		if tr, ok := c.Transport.(*http.Transport); ok {
 			tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		} else {
-			// TODO
+			log.Warn("unable to update Client transport: transport is not of type http.Transport")
 		}
 	}
 }
