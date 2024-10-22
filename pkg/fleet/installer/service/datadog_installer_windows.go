@@ -19,7 +19,7 @@ const (
 
 // SetupInstaller installs and starts the installer
 func SetupInstaller(ctx context.Context) (err error) {
-	span, _ := tracer.StartSpanFromContext(ctx, "setup_installer")
+	span, ctx := tracer.StartSpanFromContext(ctx, "setup_installer")
 	defer func() {
 		if err != nil {
 			log.Errorf("Failed to setup installer: %s", err)
@@ -37,20 +37,23 @@ func SetupInstaller(ctx context.Context) (err error) {
 
 // RemoveInstaller removes the installer
 func RemoveInstaller(ctx context.Context) (err error) {
-	span, _ := tracer.StartSpanFromContext(ctx, "remove_installer")
+	span, ctx := tracer.StartSpanFromContext(ctx, "remove_installer")
 	defer func() {
 		if err != nil {
 			log.Errorf("Failed to remove installer: %s", err)
 		}
 		span.Finish(tracer.WithError(err))
 	}()
-	err = removeProduct("Datadog Installer")
-	return err
+	cmd, err := removeProduct("Datadog Installer")
+	if err != nil {
+		return err
+	}
+	return cmd.Run()
 }
 
 // StartInstallerExperiment starts the installer experiment
 func StartInstallerExperiment(ctx context.Context) (err error) {
-	span, _ := tracer.StartSpanFromContext(ctx, "start_installer_experiment")
+	span, ctx := tracer.StartSpanFromContext(ctx, "start_installer_experiment")
 	defer func() {
 		if err != nil {
 			log.Errorf("Failed to start installer experiment: %s", err)
@@ -67,7 +70,7 @@ func StartInstallerExperiment(ctx context.Context) (err error) {
 
 // StopInstallerExperiment stops the installer experiment
 func StopInstallerExperiment(ctx context.Context) (err error) {
-	span, _ := tracer.StartSpanFromContext(ctx, "stop_installer_experiment")
+	span, ctx := tracer.StartSpanFromContext(ctx, "stop_installer_experiment")
 	defer func() {
 		if err != nil {
 			log.Errorf("Failed to stop installer experiment: %s", err)

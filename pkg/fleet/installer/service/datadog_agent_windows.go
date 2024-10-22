@@ -11,6 +11,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/DataDog/datadog-agent/pkg/fleet/internal/msilogparser"
+	"github.com/DataDog/datadog-agent/pkg/fleet/internal/paths"
+	"os"
+	"path"
 
 	"github.com/DataDog/datadog-agent/pkg/fleet/internal/winregistry"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -24,7 +28,7 @@ const (
 
 // SetupAgent installs and starts the agent
 func SetupAgent(ctx context.Context, args []string) (err error) {
-	span, _ := tracer.StartSpanFromContext(ctx, "setup_agent")
+	span, ctx := tracer.StartSpanFromContext(ctx, "setup_agent")
 	defer func() {
 		if err != nil {
 			log.Errorf("Failed to setup agent: %s", err)
@@ -39,7 +43,7 @@ func SetupAgent(ctx context.Context, args []string) (err error) {
 
 // StartAgentExperiment starts the agent experiment
 func StartAgentExperiment(ctx context.Context) (err error) {
-	span, _ := tracer.StartSpanFromContext(ctx, "start_experiment")
+	span, ctx := tracer.StartSpanFromContext(ctx, "start_experiment")
 	defer func() {
 		if err != nil {
 			log.Errorf("Failed to start agent experiment: %s", err)
@@ -62,7 +66,7 @@ func StartAgentExperiment(ctx context.Context) (err error) {
 
 // StopAgentExperiment stops the agent experiment, i.e. removes/uninstalls it.
 func StopAgentExperiment(ctx context.Context) (err error) {
-	span, _ := tracer.StartSpanFromContext(ctx, "stop_experiment")
+	span, ctx := tracer.StartSpanFromContext(ctx, "stop_experiment")
 	defer func() {
 		if err != nil {
 			log.Errorf("Failed to stop agent experiment: %s", err)
@@ -75,7 +79,7 @@ func StopAgentExperiment(ctx context.Context) (err error) {
 		return err
 	}
 
-	err = installAgentPackage("stable", nil)
+	err = installAgentPackage(ctx, "stable", nil)
 	if err != nil {
 		// if we cannot restore the stable Agent, the system is left without an Agent
 		return err
@@ -98,7 +102,19 @@ func RemoveAgent(ctx context.Context) (err error) {
 	return removeAgentIfInstalled(ctx)
 }
 
-func installAgentPackage(target string, args []string) error {
+func getMsiLogParser(logfileName string, args *[]string) (*msilogparser.MsiLogParser, string, error) {
+	msiLogsDir, err := os.MkdirTemp(paths.RootTmpDir, "agent_msi_logs")
+	if err != nil {
+		return nil, "", err
+	}
+	// Don't delete dir in case we want to collect it for postmortem analysis
+	//defer os.RemoveAll(msiLogsDir)
+	msiLogFile := path.Join(msiLogsDir, logfileName)
+	*args = append(*args, fmt.Sprintf("/log %s", msiLogFile))
+	return msilogparser.NewMsiLogParser(), msiLogFile, nil
+}
+
+func installAgentPackage(ctx context.Context, target string, args []string) error {
 	// Lookup stored Agent user and pass it to the Agent MSI
 	// TODO: bootstrap doesn't have a command-line agent user parameter yet,
 	//       might need to update this when it does.
@@ -108,12 +124,21 @@ func installAgentPackage(target string, args []string) error {
 	}
 	args = append(args, fmt.Sprintf("DDAGENTUSER_NAME=%s", agentUser))
 
-	cmd, err := msiexec(target, datadogAgent, "/i", args)
-	if err == nil {
-		err = cmd.Run()
-	}
+	logParser, file, err := getMsiLogParser("install.log", &args)
 	if err != nil {
-		return fmt.Errorf("failed to install Agent %s: %w", target, err)
+		return err
+	}
+	cmd, err := msiexec(target, datadogAgent, "/i", args)
+	if err != nil {
+		return err
+	}
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+	err = logParser.Parse(ctx, file)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -129,7 +154,21 @@ func removeAgentIfInstalled(ctx context.Context) (err error) {
 			}
 			span.Finish(tracer.WithError(err))
 		}()
-		err := removeProduct("Datadog Agent")
+
+		var args []string
+		logParser, file, err := getMsiLogParser("uninstall.log", &args)
+		if err != nil {
+			return err
+		}
+		cmd, err := removeProduct("Datadog Agent", args)
+		if err != nil {
+			return err
+		}
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+		err = logParser.Parse(ctx, file)
 		if err != nil {
 			return err
 		}
