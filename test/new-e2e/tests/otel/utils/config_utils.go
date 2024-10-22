@@ -41,6 +41,7 @@ func TestOTelFlare(s OTelTestSuite, expectedContents []string) {
 	otelFolder, otelFlareFolder := false, false
 	var otelResponse string
 	for _, filename := range flare.GetFilenames() {
+		s.T().Log("flare file: ", filename)
 		if strings.Contains(filename, "/otel/") {
 			otelFolder = true
 		}
