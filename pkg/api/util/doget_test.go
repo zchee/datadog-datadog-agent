@@ -182,6 +182,7 @@ func TestResolver(t *testing.T) {
 		}
 		server := makeTestServer(t, http.HandlerFunc(handler))
 		data, err := DoGet(client, server.URL, CloseConnection)
+		require.NoError(t, err)
 		require.Equal(t, "test", string(data))
 
 		seelog.Flush()
