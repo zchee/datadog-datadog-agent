@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"runtime"
@@ -100,7 +101,11 @@ func TestGetStatus(t *testing.T) {
 	expVarSrv := fakeExpVarServer(t, expectedExpVars)
 	defer expVarSrv.Close()
 
-	cfg.SetWithoutSource("expvar_port", expVarSrv.Listener.Addr().String()) // Prevents panic since feature detection has not run
+	// Overriding cmd host port with test server values
+	host, port, err := net.SplitHostPort(expVarSrv.Listener.Addr().String())
+	require.NoError(t, err)
+	cfg.SetWithoutSource("cmd_host", host)
+	cfg.SetWithoutSource("expvar_port", port)
 
 	stats, err := GetStatus(cfg, fmt.Sprintf("http://%v", util.CoreExpvar))
 	require.NoError(t, err)
