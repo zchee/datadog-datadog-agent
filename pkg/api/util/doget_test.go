@@ -6,8 +6,11 @@
 package util
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,7 +19,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/cihub/seelog"
+
+	configmock "github.com/DataDog/datadog-agent/pkg/config/mock"
 	"github.com/DataDog/datadog-agent/pkg/config/model"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 func makeTestServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request)) *httptest.Server {
@@ -107,6 +114,39 @@ func TestDoGet(t *testing.T) {
 	})
 }
 
+// setupMockLogger initializes and sets up a mock logger for testing purposes.
+// It returns a buffer that captures the log output and an error if any occurs
+// during the setup process.
+//
+// Returns:
+// - *bytes.Buffer: A buffer that captures the log output.
+// - error: An error if any occurs during the setup process.
+func setupMockLogger(t *testing.T) (*bytes.Buffer, error) {
+	innerB := bytes.NewBuffer(make([]byte, 0, 1024))
+	b := bufio.NewWriter(innerB)
+
+	bufferedWriter, err := seelog.NewBufferedWriter(b, 1024, 0)
+	require.NoError(t, err)
+	formatter, err := seelog.NewFormatter("%Level %Msg %File%n")
+	require.NoError(t, err)
+	root, err := seelog.NewSplitDispatcher(formatter, []interface{}{bufferedWriter})
+	require.NoError(t, err)
+	constraints, err := seelog.NewMinMaxConstraints(seelog.TraceLvl, seelog.CriticalLvl)
+	require.NoError(t, err)
+	specificConstraints, err := seelog.NewListConstraints([]seelog.LogLevel{seelog.InfoLvl, seelog.ErrorLvl})
+	require.NoError(t, err)
+	ex, err := seelog.NewLogLevelException("*", "*main.go", specificConstraints)
+	require.NoError(t, err)
+	exceptions := []*seelog.LogLevelException{ex}
+
+	logger := seelog.NewAsyncLoopLogger(seelog.NewLoggerConfig(constraints, exceptions, root))
+
+	seelog.ReplaceLogger(logger)
+	log.SetupLogger(logger, "trace")
+
+	return innerB, nil
+}
+
 // This test check that NewDialBookBuilder return an error when required config field are not set
 func TestResolver(t *testing.T) {
 
@@ -116,8 +156,12 @@ func TestResolver(t *testing.T) {
 		}
 		server := makeTestServer(t, http.HandlerFunc(handler))
 
-		cfg := model.NewConfig("datadog", "test", strings.NewReplacer("_", "."))
-		cfg.SetWithoutSource("cmd_port", server.Listener.Addr().String())
+		// Overriding cmd host port with test server values
+		cfg := configmock.New(t)
+		host, port, err := net.SplitHostPort(server.Listener.Addr().String())
+		require.NoError(t, err)
+		cfg.SetWithoutSource("cmd_host", host)
+		cfg.SetWithoutSource("cmd_port", port)
 
 		client := GetClient(WithNoVerify())
 
@@ -126,15 +170,23 @@ func TestResolver(t *testing.T) {
 		require.Equal(t, "test", string(data))
 	})
 
+	// This test check that unknown domain name are bypassed and logged
 	t.Run("unknown address", func(t *testing.T) {
+		loggerWritter, err := setupMockLogger(t)
+		require.NoError(t, err)
+
 		client := GetClient(WithNoVerify())
 
 		handler := func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte("test"))
 		}
 		server := makeTestServer(t, http.HandlerFunc(handler))
-		_, err := DoGet(client, server.URL, CloseConnection)
-		require.ErrorContains(t, err, "unknown Agent address")
+		data, err := DoGet(client, server.URL, CloseConnection)
+		require.Equal(t, "test", string(data))
+
+		seelog.Flush()
+
+		require.Contains(t, loggerWritter.String(), "address not registered in the Agent name resolver")
 	})
 
 }

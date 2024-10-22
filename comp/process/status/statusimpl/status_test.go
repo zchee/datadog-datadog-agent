@@ -8,6 +8,7 @@ package statusimpl
 import (
 	"bytes"
 	"embed"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -44,8 +45,12 @@ func TestStatus(t *testing.T) {
 	server := fakeStatusServer(t, 200, jsonBytes)
 	defer server.Close()
 
+	// Overriding cmd host port with test server values
 	configComponent := config.NewMock(t)
-	configComponent.SetWithoutSource("process_config.expvar_port", server.Listener.Addr().String())
+	host, port, err := net.SplitHostPort(server.Listener.Addr().String())
+	require.NoError(t, err)
+	configComponent.SetWithoutSource("cmd_host", host)
+	configComponent.SetWithoutSource("process_config.expvar_port", port)
 
 	headerProvider := statusProvider{
 		testServerURL: server.URL,

@@ -8,6 +8,7 @@ package status
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -52,8 +53,12 @@ func TestStatus(t *testing.T) {
 	server := fakeStatusServer(t, statusInfo)
 	defer server.Close()
 
+	// Overriding cmd host port with test server values
 	cfg := configmock.New(t)
-	cfg.SetWithoutSource("process_config.cmd_port", server.Listener.Addr().String())
+	host, port, err := net.SplitHostPort(server.Listener.Addr().String())
+	require.NoError(t, err)
+	cfg.SetWithoutSource("cmd_host", host)
+	cfg.SetWithoutSource("process_config.cmd_port", port)
 
 	// Build the actual status
 	var statusBuilder strings.Builder
