@@ -86,7 +86,7 @@ const (
 	OpReadUserRegister
 	OpReadUserStack
 	OpDereference
-	OpAdd
+	OpApplyOffset
 	OpPop
 )
 

@@ -78,7 +78,7 @@ func ExecutePointerFuncs() {
 	r := "abc"
 	z := spws{3, &r}
 
-	var uintToPointTo uint = 123
+	var uintToPointTo uint = 1
 	test_uint_pointer(&uintToPointTo)
 
 	n := nStruct{true, 1, 2}
@@ -111,3 +111,9 @@ func ExecutePointerFuncs() {
 
 	test_unsafe_pointer(unsafe.Pointer(&b))
 }
+
+/*
+
+[22 8 0 7 8 0 144 29 175 0 64 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+[22 8 0 7 8 0 0 0 0 64 0 175 29 144 0 0 0 0 0 0 0 0 0 0 0]
+*/

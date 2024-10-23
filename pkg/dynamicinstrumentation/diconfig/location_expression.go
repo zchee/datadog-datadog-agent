@@ -36,8 +36,39 @@ func GenerateLocationExpression(parameterMetadata bininspect.ParameterMetadata) 
 				},
 			)
 		}
+	} else if parameterMetadata.Kind == reflect.Pointer {
+		if parameterMetadata.Pieces[0].InReg {
+			expressions = append(expressions,
+				ditypes.LocationExpression{
+					Opcode:        ditypes.OpReadUserRegister,
+					Arg1:          uint(parameterMetadata.Pieces[0].Register),
+					Arg2:          8,
+					InstructionID: randomID(),
+				},
+				ditypes.LocationExpression{
+					Opcode:        ditypes.OpDereference,
+					Arg1:          8,
+					InstructionID: randomID(),
+				},
+				ditypes.LocationExpression{
+					Opcode:        ditypes.OpPop,
+					Arg1:          8,
+					InstructionID: randomID(),
+				},
+				ditypes.LocationExpression{
+					Opcode:        ditypes.OpReadUserRegister,
+					Arg1:          uint(parameterMetadata.Pieces[0].Register),
+					Arg2:          8,
+					InstructionID: randomID(),
+				},
+				ditypes.LocationExpression{
+					Opcode:        ditypes.OpPop,
+					Arg1:          8,
+					InstructionID: randomID(),
+				},
+			)
+		}
 	}
-
 	return expressions
 }
 

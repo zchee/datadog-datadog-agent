@@ -38,7 +38,6 @@ func GenerateBPFParamsCode(procInfo *ditypes.ProcessInfo, probe *ditypes.Probe) 
 			if err != nil {
 				return err
 			}
-			// err = generateParametersText(flattenedParams, out)
 			err = generateParametersTextViaLocationExpressions(flattenedParams, out)
 			if err != nil {
 				return err
@@ -166,6 +165,12 @@ func resolveLocationExpressionTemplate(locationExpression ditypes.LocationExpres
 	}
 	if locationExpression.Opcode == ditypes.OpPop {
 		return template.New("pop_location_expression").Parse(popTemplateText)
+	}
+	if locationExpression.Opcode == ditypes.OpDereference {
+		return template.New("dereference_location_expression").Parse(dereferenceTemplateText)
+	}
+	if locationExpression.Opcode == ditypes.OpApplyOffset {
+		return template.New("apply_offset_location_expression").Parse(applyOffsetTemplateText)
 	}
 	return nil, errors.New("invalid location expression opcode")
 }
