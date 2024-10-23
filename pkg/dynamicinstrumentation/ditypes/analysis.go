@@ -34,14 +34,15 @@ type TypeMap struct {
 
 // Parameter represents a function parameter as read from DWARF info
 type Parameter struct {
-	Name             string
-	ID               string
-	Type             string
-	TotalSize        int64
-	Kind             uint
-	Location         Location
-	NotCaptureReason NotCaptureReason
-	ParameterPieces  []Parameter
+	Name                string
+	ID                  string
+	Type                string
+	TotalSize           int64
+	Kind                uint
+	Location            Location
+	LocationExpressions []LocationExpression
+	NotCaptureReason    NotCaptureReason
+	ParameterPieces     []Parameter
 }
 
 func (p Parameter) String() string {
@@ -76,6 +77,24 @@ func (s SpecialKind) String() string {
 	default:
 		return fmt.Sprintf("%d", s)
 	}
+}
+
+type LocationExpressionOpcode uint
+
+const (
+	OpInvalid LocationExpressionOpcode = iota
+	OpReadUserRegister
+	OpReadUserStack
+	OpDereference
+	OpAdd
+	OpPop
+)
+
+type LocationExpression struct {
+	Opcode        LocationExpressionOpcode
+	Arg1          uint
+	Arg2          uint
+	InstructionID string
 }
 
 // Location represents where a particular datatype is found on probe entry

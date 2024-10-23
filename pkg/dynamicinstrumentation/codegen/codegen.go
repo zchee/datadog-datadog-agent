@@ -17,9 +17,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/DataDog/datadog-agent/pkg/util/log"
-
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/ditypes"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
+	"github.com/kr/pretty"
 )
 
 // GenerateBPFParamsCode generates the source code associated with the probe and data
@@ -33,13 +33,13 @@ func GenerateBPFParamsCode(procInfo *ditypes.ProcessInfo, probe *ditypes.Probe) 
 		applyFieldCountLimit(params)
 		for i := range params {
 			flattenedParams := flattenParameters([]ditypes.Parameter{params[i]})
-
+			pretty.Log(flattenedParams)
 			err := generateHeadersText(flattenedParams, out)
 			if err != nil {
 				return err
 			}
-
-			err = generateParametersText(flattenedParams, out)
+			// err = generateParametersText(flattenedParams, out)
+			err = generateParametersTextViaLocationExpressions(flattenedParams, out)
 			if err != nil {
 				return err
 			}
@@ -48,6 +48,7 @@ func GenerateBPFParamsCode(procInfo *ditypes.ProcessInfo, probe *ditypes.Probe) 
 		log.Info("Not capturing parameters")
 	}
 
+	fmt.Println(">", out.String())
 	probe.InstrumentationInfo.BPFParametersSourceCode = out.String()
 	return nil
 }
@@ -119,6 +120,14 @@ func generateParameterText(param *ditypes.Parameter, out io.Writer) error {
 		// a header for them for the sake of event parsing.
 		// - Pointers do have actual values, but they're captured when the
 		// underlying value is also captured.
+
+		//FIXME:
+		// This doesn't work because in the case of pointers to structs,
+		// all fields are dereferenced, and would the address would be written
+		// multiple times, however they're overwritten because the output buffer
+		// index isn't being incremented properly anyway.
+		// So, a seperate template should be used for the address at the end
+		// of the parameter (not parameter piece)
 		return nil
 	}
 
@@ -133,6 +142,32 @@ func generateParameterText(param *ditypes.Parameter, out io.Writer) error {
 	}
 
 	return nil
+}
+
+func generateParametersTextViaLocationExpressions(params []ditypes.Parameter, out io.Writer) error {
+	for i := range params {
+		for _, locationExpression := range params[i].LocationExpressions {
+			template, err := resolveLocationExpressionTemplate(locationExpression)
+			if err != nil {
+				return err
+			}
+			err = template.Execute(out, locationExpression)
+			if err != nil {
+				return fmt.Errorf("could not execute template for generating location expression: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+func resolveLocationExpressionTemplate(locationExpression ditypes.LocationExpression) (*template.Template, error) {
+	if locationExpression.Opcode == ditypes.OpReadUserRegister {
+		return template.New("read_location_expression").Parse(readRegisterTemplateText)
+	}
+	if locationExpression.Opcode == ditypes.OpPop {
+		return template.New("pop_location_expression").Parse(popTemplateText)
+	}
+	return nil, errors.New("invalid location expression opcode")
 }
 
 func resolveParameterTemplate(param *ditypes.Parameter) (*template.Template, error) {
@@ -165,11 +200,10 @@ func resolveRegisterParameterTemplate(param *ditypes.Parameter) (*template.Templ
 	} else if sliceType {
 		// Register Slice
 		return template.New("slice_register_template").Parse(sliceRegisterTemplateText)
-	} else if !needsDereference {
+	} else {
 		// Register Normal Value
 		return template.New("register_template").Parse(normalValueRegisterTemplateText)
 	}
-	return nil, errors.New("no template created: invalid or unsupported type")
 }
 
 func resolveStackParameterTemplate(param *ditypes.Parameter) (*template.Template, error) {
@@ -186,11 +220,10 @@ func resolveStackParameterTemplate(param *ditypes.Parameter) (*template.Template
 	} else if sliceType {
 		// Stack Slice
 		return template.New("slice_stack_template").Parse(sliceStackTemplateText)
-	} else if !needsDereference {
+	} else {
 		// Stack Normal Value
 		return template.New("stack_template").Parse(normalValueStackTemplateText)
 	}
-	return nil, errors.New("no template created: invalid or unsupported type")
 }
 
 func cleanupTypeName(s string) string {

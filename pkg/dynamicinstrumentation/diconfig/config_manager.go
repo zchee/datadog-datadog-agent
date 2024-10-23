@@ -258,6 +258,8 @@ generateCompileAttach:
 		return
 	}
 
+	log.Info(probe.InstrumentationInfo.BPFParametersSourceCode)
+
 	err = ebpf.CompileBPFProgram(procInfo, probe)
 	if err != nil {
 		// TODO: Emit diagnostic?

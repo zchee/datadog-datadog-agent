@@ -9,8 +9,11 @@ package diconfig
 
 import (
 	"debug/elf"
+	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/kr/pretty"
 
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 
@@ -78,8 +81,12 @@ func AnalyzeBinary(procInfo *ditypes.ProcessInfo) error {
 	r.StructOffsets[stringPtrIdentifier] = 0
 	r.StructOffsets[stringLenIdentifier] = 8
 
+	pretty.Log(r.Functions)
+	pretty.Log(procInfo.TypeMap.Functions)
+
 	// Use the result from InspectWithDWARF to populate the locations of parameters
 	for functionName, functionMetadata := range r.Functions {
+		populateLocationExpressions(r.Functions, procInfo.TypeMap.Functions)
 		putLocationsInParams(functionMetadata.Parameters, r.StructOffsets, procInfo.TypeMap.Functions, functionName)
 		correctStructSizes(procInfo.TypeMap.Functions[functionName])
 	}
@@ -124,6 +131,26 @@ func collectFieldIDs(param ditypes.Parameter) []bininspect.FieldIdentifier {
 		}
 	}
 	return fieldIDs
+}
+
+func populateLocationExpressions(
+	metadata map[string]bininspect.FunctionMetadata,
+	functions map[string][]ditypes.Parameter) error {
+
+	for funcName, parameters := range functions {
+		funcMetadata, ok := metadata[funcName]
+		if !ok {
+			return fmt.Errorf("no function metadata for function %s", funcName)
+		}
+
+		for i := range parameters {
+			if i >= len(funcMetadata.Parameters) {
+				return errors.New("parameter metadata does not line up with parameter itself")
+			}
+			parameters[i].LocationExpressions = GenerateLocationExpression(funcMetadata.Parameters[i])
+		}
+	}
+	return nil
 }
 
 func putLocationsInParams(

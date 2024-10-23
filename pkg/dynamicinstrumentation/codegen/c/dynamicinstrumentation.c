@@ -22,6 +22,12 @@ struct {
     __uint(max_entries, 1);
 } zeroval SEC(".maps");
 
+struct {
+	__uint(type, BPF_MAP_TYPE_STACK);
+	__uint(max_entries, 2048);
+	__type(value, char);
+} param_stack SEC(".maps");
+
 struct event {
     struct base_event base;
     char output[PARAM_BUFFER_SIZE];
