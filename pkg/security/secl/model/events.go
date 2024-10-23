@@ -106,7 +106,7 @@ const (
 	FirstEventType = FileOpenEventType
 
 	// LastEventType is the last valid event type
-	LastEventType = SyscallsEventType
+	LastEventType = RawPacketEventType
 
 	// FirstDiscarderEventType first event that accepts discarders
 	FirstDiscarderEventType = FileOpenEventType
@@ -269,6 +269,8 @@ func (t EventType) String() string {
 		return "change_permission"
 	case LoginUIDWriteEventType:
 		return "login_uid_write"
+	case CgroupWriteEventType:
+		return "cgroup_write"
 	default:
 		return "unknown"
 	}
