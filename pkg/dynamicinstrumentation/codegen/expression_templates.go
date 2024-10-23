@@ -58,7 +58,7 @@ bpf_probe_read_user(valueHolder_{{.InstructionID}}, {{.Arg1}}, (void*)addressHol
 
 // Push dereferenced value onto stack
 #pragma unroll
-for(i = {{.Arg1}}; i >= 0; i--){
+for(i = 0; i < {{.Arg1}}; i++){
 	bpf_map_push_elem(&param_stack, &valueHolder_{{.InstructionID}}[i], 0);
 }
 `
