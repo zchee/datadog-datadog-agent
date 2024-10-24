@@ -59,6 +59,10 @@ func shouldHaveDeploymentStore(cfg config.Reader) bool {
 }
 
 func shouldHaveTerminatedPodStore(cfg config.Reader) bool {
+	// If we have a pod store, we don't need a terminated pod store
+	if shouldHavePodStore(cfg) {
+		return false
+	}
 	return cfg.GetBool("orchestrator_explorer.terminated_resources.enabled")
 }
 

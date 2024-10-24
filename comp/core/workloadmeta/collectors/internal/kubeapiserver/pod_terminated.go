@@ -51,7 +51,7 @@ func newTerminatedPodStore(ctx context.Context, wlm workloadmeta.Component, _ co
 		podStore,
 		noResync,
 	)
-	log.Debug("terminated pod reflector enabled")
+	log.Info("terminated pod reflector enabled")
 	return podReflector, podStore
 }
 
