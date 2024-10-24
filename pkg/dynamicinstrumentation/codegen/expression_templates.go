@@ -8,12 +8,27 @@
 package codegen
 
 var readRegisterTemplateText = `
-// Arg1 = reigster
+// Arg1 = register
 // Arg2 = size of element
-bpf_printk("Reading");
+bpf_printk("Reading from register");
 
 char valueHolder_{{.InstructionID}}[{{.Arg2}}];
 bpf_probe_read(&valueHolder_{{.InstructionID}}, {{.Arg2}}, &ctx->DWARF_REGISTER({{.Arg1}}));
+
+#pragma unroll
+for(i = 0; i < {{.Arg2}}; i++){
+	bpf_printk("\t%d", valueHolder_{{.InstructionID}}[i]);
+	bpf_map_push_elem(&param_stack, valueHolder_{{.InstructionID}}+i, 0);
+}
+`
+
+var readStackTemplateText = `
+// Arg1 = stack offset
+// Arg2 = size of element
+bpf_printk("Reading from stack");
+
+char valueHolder_{{.InstructionID}}[{{.Arg2}}];
+bpf_probe_read(&valueHolder_{{.InstructionID}}, {{.Arg2}}, &ctx->DWARF_STACK_REGISTER+{{.Arg1}});
 
 #pragma unroll
 for(i = 0; i < {{.Arg2}}; i++){

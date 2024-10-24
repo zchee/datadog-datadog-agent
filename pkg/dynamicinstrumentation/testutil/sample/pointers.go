@@ -123,9 +123,3 @@ func ExecutePointerFuncs() {
 
 	test_unsafe_pointer(unsafe.Pointer(&b))
 }
-
-/*
-
-[22 8 0 7 8 0 144 29 175 0 64 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-[22 8 0 7 8 0 0 0 0 64 0 175 29 144 0 0 0 0 0 0 0 0 0 0 0]
-*/

@@ -98,6 +98,12 @@ func ReadRegisterLocationExpression(register, size uint) LocationExpression {
 	return LocationExpression{Opcode: OpReadUserRegister, Arg1: register, Arg2: size, InstructionID: randomID()}
 }
 
+// Arg1 = stack offset
+// Arg2 = size of element
+func ReadStackLocationExpression(offset, size uint) LocationExpression {
+	return LocationExpression{Opcode: OpReadUserStack, Arg1: offset, Arg2: size, InstructionID: randomID()}
+}
+
 // Arg1 = size of value we're reading from the 8 byte address at the top of the stack
 func DereferenceLocationExpression(valueSize uint) LocationExpression {
 	return LocationExpression{Opcode: OpDereference, Arg1: valueSize, InstructionID: randomID()}
