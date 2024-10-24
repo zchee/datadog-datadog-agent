@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
@@ -120,8 +122,51 @@ func NewDiskSender(outputDir string) (*DiskSender, error) {
 
 func (ds *DiskSender) Send(msg *api.SecurityEventMessage, _ func(*api.SecurityEventMessage)) {
 	fileName := fmt.Sprintf("%s", time.Now().Format(time.RFC3339Nano))
-	fileName = filepath.Join(ds.outputDir, fileName) + ".json"
-	err := os.WriteFile(fileName, msg.Data, 0666)
+	filePath := ""
+
+	// append event type to output file name
+	eventType := ""
+	if slices.ContainsFunc(msg.Tags, func(tag string) bool {
+		if strings.HasPrefix(tag, "type:") {
+			eventType = strings.TrimPrefix(tag, "type:")
+			return true
+		}
+		return false
+	}) {
+		fileName += "_" + eventType + ".json"
+	} else {
+		fileName += ".json"
+	}
+
+	// prepend containerID if any to output path
+	containerID := ""
+	if slices.ContainsFunc(msg.Tags, func(tag string) bool {
+		if strings.HasPrefix(tag, "container_id:") {
+			containerID = strings.TrimPrefix(tag, "container_id:")
+			return true
+		}
+		return false
+	}) {
+		newOutputDir := filepath.Join(ds.outputDir, containerID)
+		// create container output dir if doesnt exist
+		_, err := os.Stat(newOutputDir)
+		if os.IsNotExist(err) {
+			err := os.MkdirAll(newOutputDir, 0755)
+			if err != nil {
+				log.Errorf("Failed to create output directory %s: %w", newOutputDir, err)
+				return
+			}
+		} else if err != nil {
+			log.Errorf("Failed to stat output directory %s: %w", newOutputDir, err)
+			return
+		}
+		filePath = filepath.Join(newOutputDir, fileName)
+	} else {
+		filePath = filepath.Join(ds.outputDir, fileName)
+	}
+
+	// dump the event as json file
+	err := os.WriteFile(filePath, msg.Data, 0666)
 	if err != nil {
 		log.Errorf("Failed to log event: %w", err)
 	}

@@ -370,6 +370,12 @@ func (a *APIServer) SendEvent(rule *rules.Rule, event events.Event, extTagsCb fu
 			actionReports:   actionReports,
 		}
 
+		if rules.StreamAllEvents {
+			if ev.ContainerContext != nil && ev.ContainerContext.ContainerID != "" {
+				msg.tags = append(msg.tags, "container_id:"+string(ev.ContainerContext.ContainerID))
+			}
+		}
+
 		a.enqueue(msg)
 	} else {
 		if rules.StreamAllEvents {
