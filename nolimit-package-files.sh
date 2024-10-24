@@ -5,10 +5,8 @@ die() {
     exit 0
 }
 
-if [ ! -e ./bin/system-probe/system-probe ]; then
-    echo "# compiling system-probe"
-    inv -e system-probe.build --static --bundle-ebpf --no-bundle || die "compilation failed"
-fi
+echo "# compiling system-probe"
+inv -e system-probe.build --static --bundle-ebpf --no-bundle || die "compilation failed"
 
 echo "# creating the final 'package'"
 tar cvzf system-probe-nolimit.tgz system-probe.sh -C ./bin/system-probe/ system-probe
