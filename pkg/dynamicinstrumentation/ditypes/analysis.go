@@ -88,11 +88,13 @@ const (
 	OpReadUserRegister
 	OpReadUserStack
 	OpDereference
+	OpDereferenceVariableLength
 	OpApplyOffset
 	OpPop
+	OpPopVariableLength
 )
 
-// Arg1 = reigster
+// Arg1 = register
 // Arg2 = size of element
 func ReadRegisterLocationExpression(register, size uint) LocationExpression {
 	return LocationExpression{Opcode: OpReadUserRegister, Arg1: register, Arg2: size, InstructionID: randomID()}
@@ -109,14 +111,14 @@ func DereferenceLocationExpression(valueSize uint) LocationExpression {
 	return LocationExpression{Opcode: OpDereference, Arg1: valueSize, InstructionID: randomID()}
 }
 
-// Arg1 = number of bytes to pop
-func PopLocationExpression(bytesToPop uint) LocationExpression {
-	return LocationExpression{Opcode: OpPop, Arg1: bytesToPop, InstructionID: randomID()}
-}
-
 // Arg1 = uint value (offset) we're adding to the 8-byte address on top of the stack
 func ApplyOffsetLocationExpression(offset uint) LocationExpression {
 	return LocationExpression{Opcode: OpApplyOffset, Arg1: offset, InstructionID: randomID()}
+}
+
+// Arg1 = number of bytes to pop
+func PopLocationExpression(bytesToPop uint) LocationExpression {
+	return LocationExpression{Opcode: OpPop, Arg1: bytesToPop, InstructionID: randomID()}
 }
 
 type LocationExpression struct {

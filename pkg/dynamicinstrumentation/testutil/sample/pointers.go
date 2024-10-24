@@ -116,7 +116,10 @@ func ExecutePointerFuncs() {
 		val: 1,
 		b: &node{
 			val: 2,
-			b:   nil,
+			b: &node{
+				val: 3,
+				b:   nil,
+			},
 		},
 	}
 	test_linked_list(b)

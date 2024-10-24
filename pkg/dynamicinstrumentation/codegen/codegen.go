@@ -100,49 +100,6 @@ func generateHeaderText(param ditypes.Parameter, out io.Writer) error {
 	return nil
 }
 
-func generateParametersText(params []ditypes.Parameter, out io.Writer) error {
-	for i := range params {
-		err := generateParameterText(&params[i], out)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func generateParameterText(param *ditypes.Parameter, out io.Writer) error {
-
-	if param.Kind == uint(reflect.Array) ||
-		param.Kind == uint(reflect.Struct) ||
-		param.Kind == uint(reflect.Pointer) {
-		// - Arrays/structs don't have actual values, we just want to generate
-		// a header for them for the sake of event parsing.
-		// - Pointers do have actual values, but they're captured when the
-		// underlying value is also captured.
-
-		//FIXME:
-		// This doesn't work because in the case of pointers to structs,
-		// all fields are dereferenced, and would the address would be written
-		// multiple times, however they're overwritten because the output buffer
-		// index isn't being incremented properly anyway.
-		// So, a seperate template should be used for the address at the end
-		// of the parameter (not parameter piece)
-		return nil
-	}
-
-	template, err := resolveParameterTemplate(param)
-	if err != nil {
-		return err
-	}
-	param.Type = cleanupTypeName(param.Type)
-	err = template.Execute(out, param)
-	if err != nil {
-		return fmt.Errorf("could not execute template for generating read of parameter: %w", err)
-	}
-
-	return nil
-}
-
 func generateParametersTextViaLocationExpressions(params []ditypes.Parameter, out io.Writer) error {
 	for i := range params {
 		for _, locationExpression := range params[i].LocationExpressions {
@@ -166,69 +123,20 @@ func resolveLocationExpressionTemplate(locationExpression ditypes.LocationExpres
 	if locationExpression.Opcode == ditypes.OpPop {
 		return template.New("pop_location_expression").Parse(popTemplateText)
 	}
+	if locationExpression.Opcode == ditypes.OpPopVariableLength {
+		return template.New("pop_variable_length_location_expression").Parse(variablePopTemplateText)
+	}
 	if locationExpression.Opcode == ditypes.OpDereference {
 		return template.New("dereference_location_expression").Parse(dereferenceTemplateText)
+	}
+	if locationExpression.Opcode == ditypes.OpDereferenceVariableLength {
+		return template.New("dereference_variable_length_location_expression").Parse(variableDereferenceTemplateText)
 	}
 	if locationExpression.Opcode == ditypes.OpApplyOffset {
 		return template.New("apply_offset_location_expression").Parse(applyOffsetTemplateText)
 	}
+
 	return nil, errors.New("invalid location expression opcode")
-}
-
-func resolveParameterTemplate(param *ditypes.Parameter) (*template.Template, error) {
-	notSupported := param.NotCaptureReason == ditypes.Unsupported
-	cutForFieldLimit := param.NotCaptureReason == ditypes.FieldLimitReached
-
-	if notSupported {
-		return template.New("unsupported_type_template").Parse(unsupportedTypeTemplateText)
-	} else if cutForFieldLimit {
-		return template.New("cut_field_limit_template").Parse(cutForFieldLimitTemplateText)
-	}
-
-	if param.Location.InReg {
-		return resolveRegisterParameterTemplate(param)
-	}
-	return resolveStackParameterTemplate(param)
-}
-
-func resolveRegisterParameterTemplate(param *ditypes.Parameter) (*template.Template, error) {
-	needsDereference := param.Location.NeedsDereference
-	stringType := param.Kind == uint(reflect.String)
-	sliceType := param.Kind == uint(reflect.Slice)
-
-	if needsDereference {
-		// Register Pointer
-		return template.New("pointer_register_template").Parse(pointerRegisterTemplateText)
-	} else if stringType {
-		// Register String
-		return template.New("string_register_template").Parse(stringRegisterTemplateText)
-	} else if sliceType {
-		// Register Slice
-		return template.New("slice_register_template").Parse(sliceRegisterTemplateText)
-	} else {
-		// Register Normal Value
-		return template.New("register_template").Parse(normalValueRegisterTemplateText)
-	}
-}
-
-func resolveStackParameterTemplate(param *ditypes.Parameter) (*template.Template, error) {
-	needsDereference := param.Location.NeedsDereference
-	stringType := param.Kind == uint(reflect.String)
-	sliceType := param.Kind == uint(reflect.Slice)
-
-	if needsDereference {
-		// Stack Pointer
-		return template.New("pointer_stack_template").Parse(pointerStackTemplateText)
-	} else if stringType {
-		// Stack String
-		return template.New("string_stack_template").Parse(stringStackTemplateText)
-	} else if sliceType {
-		// Stack Slice
-		return template.New("slice_stack_template").Parse(sliceStackTemplateText)
-	} else {
-		// Stack Normal Value
-		return template.New("stack_template").Parse(normalValueStackTemplateText)
-	}
 }
 
 func cleanupTypeName(s string) string {
