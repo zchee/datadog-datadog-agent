@@ -12,4 +12,4 @@ echo "# creating the final 'package'"
 tar cvzf system-probe-nolimit.tgz system-probe.sh -C ./bin/system-probe/ system-probe
 
 echo ""
-echo "Package system-probe-nolimit.tgz has been created. To use, copy/untar it somewhere, run ./prepare.sh, then you can execute ./system-probe"
+echo "Package system-probe-nolimit.tgz has been created. To use, copy/untar it somewhere, then run ./system-probe.sh"
