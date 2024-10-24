@@ -59,6 +59,7 @@ type subsystemBuilder func(lib nvml.Interface, device nvml.Device, tags []string
 var allSubsystems = map[string]subsystemBuilder{
 	fieldsMetricsCollectorName:       newFieldsMetricsCollector,
 	deviceCollectorName:              newDeviceMetricsCollector,
+	gpmMetricsCollectorName:          newGpmMetricsCollector,
 	remappedRowsMetricsCollectorName: newRemappedRowsMetricsCollector,
 	clocksMetricsCollectorName:       newClocksMetricsCollector,
 }
