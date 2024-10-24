@@ -29,8 +29,13 @@ configure_make(
         "pip3",
         "python3.11",
     ],
+    out_shared_libs = [ 
+	"libpython3.so",
+	"libpython3.11.so",
+	"libpython3.11.so.1.0",
+    ],
     out_data_dirs = [
-        "lib",
+        "lib/python3.11",
     ],
     visibility = ["//visibility:public"],
 )
