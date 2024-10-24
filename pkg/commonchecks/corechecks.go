@@ -73,7 +73,7 @@ func RegisterChecks(store workloadmeta.Component, cfg config.Component, telemetr
 	corecheckLoader.RegisterCheck(kubernetesapiserver.CheckName, kubernetesapiserver.Factory())
 	corecheckLoader.RegisterCheck(ksm.CheckName, ksm.Factory())
 	corecheckLoader.RegisterCheck(helm.CheckName, helm.Factory())
-	corecheckLoader.RegisterCheck(pod.CheckName, pod.Factory())
+	corecheckLoader.RegisterCheck(pod.CheckName, pod.Factory(store))
 	corecheckLoader.RegisterCheck(ebpf.CheckName, ebpf.Factory())
 	corecheckLoader.RegisterCheck(ecs.CheckName, ecs.Factory(store))
 	corecheckLoader.RegisterCheck(oomkill.CheckName, oomkill.Factory())

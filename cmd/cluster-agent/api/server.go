@@ -24,6 +24,7 @@ import (
 	"time"
 
 	languagedetection "github.com/DataDog/datadog-agent/cmd/cluster-agent/api/v1/languagedetection"
+	workloadmetaServer "github.com/DataDog/datadog-agent/comp/core/workloadmeta/server"
 
 	"github.com/cihub/seelog"
 	"github.com/gorilla/mux"
@@ -129,7 +130,8 @@ func StartServer(ctx context.Context, w workloadmeta.Component, taggerComp tagge
 
 	grpcSrv := grpc.NewServer(opts...)
 	pb.RegisterAgentSecureServer(grpcSrv, &serverSecure{
-		taggerServer: taggerserver.NewServer(taggerComp),
+		taggerServer:       taggerserver.NewServer(taggerComp),
+		workloadmetaServer: workloadmetaServer.NewServer(w),
 	})
 
 	timeout := pkgconfig.Datadog().GetDuration("cluster_agent.server.idle_timeout_seconds") * time.Second

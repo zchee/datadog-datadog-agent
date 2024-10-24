@@ -173,6 +173,8 @@ func toProtoSource(source workloadmeta.Source) (pb.WorkloadmetaSource, error) {
 		return pb.WorkloadmetaSource_NODE_ORCHESTRATOR, nil
 	case workloadmeta.SourceClusterOrchestrator:
 		return pb.WorkloadmetaSource_CLUSTER_ORCHESTRATOR, nil
+	case workloadmeta.SourceKubeAPISever:
+		return pb.WorkloadmetaSource_KUBE_API_SEVER, nil
 	}
 
 	return pb.WorkloadmetaSource_ALL, fmt.Errorf("unknown source: %s", source)
@@ -347,6 +349,8 @@ func protoKubernetesPodFromWorkloadmetaKubernetesPod(kubernetesPod *workloadmeta
 		RuntimeClass:               kubernetesPod.RuntimeClass,
 		KubeServices:               kubernetesPod.KubeServices,
 		NamespaceLabels:            kubernetesPod.NamespaceLabels,
+		NodeName:                   kubernetesPod.NodeName,
+		Manifest:                   kubernetesPod.Manifest,
 	}, nil
 }
 
@@ -452,6 +456,20 @@ func toProtoLaunchType(launchType workloadmeta.ECSLaunchType) (pb.ECSLaunchType,
 
 // Conversions from protobuf to Workloadmeta types
 
+var preRegisteredFilterFunc = map[workloadmeta.PreRegisteredFilterID]map[workloadmeta.Kind]func([]string) func(entity workloadmeta.Entity) bool{
+	workloadmeta.TerminatedPodFilter: {
+		workloadmeta.KindKubernetesPod: func(params []string) func(entity workloadmeta.Entity) bool {
+			nodeName := params[0]
+			return func(entity workloadmeta.Entity) bool {
+				if pod, ok := entity.(*workloadmeta.KubernetesPod); ok {
+					return pod.NodeName == nodeName
+				}
+				return false
+			}
+		},
+	},
+}
+
 // WorkloadmetaFilterFromProtoFilter converts the given protobuf filter into a workloadmeta.Filter
 func WorkloadmetaFilterFromProtoFilter(protoFilter *pb.WorkloadmetaFilter) (*workloadmeta.Filter, error) {
 	if protoFilter == nil {
@@ -467,6 +485,10 @@ func WorkloadmetaFilterFromProtoFilter(protoFilter *pb.WorkloadmetaFilter) (*wor
 			return nil, err
 		}
 		filterBuilder = filterBuilder.AddKind(kind)
+	}
+
+	for kind, filterFuncBuilder := range preRegisteredFilterFunc[workloadmeta.PreRegisteredFilterID(protoFilter.GetPreRegisteredFilterId())] {
+		filterBuilder.AddKindWithEntityFilter(kind, filterFuncBuilder(protoFilter.GetFilterFuncParams()))
 	}
 
 	source, err := toWorkloadmetaSource(protoFilter.Source)
@@ -556,6 +578,8 @@ func toWorkloadmetaSource(protoSource pb.WorkloadmetaSource) (workloadmeta.Sourc
 		return workloadmeta.SourceNodeOrchestrator, nil
 	case pb.WorkloadmetaSource_CLUSTER_ORCHESTRATOR:
 		return workloadmeta.SourceClusterOrchestrator, nil
+	case pb.WorkloadmetaSource_KUBE_API_SEVER:
+		return workloadmeta.SourceKubeAPISever, nil
 	}
 
 	return workloadmeta.SourceAll, fmt.Errorf("unknown source: %s", protoSource)
@@ -768,6 +792,8 @@ func toWorkloadmetaKubernetesPod(protoKubernetesPod *pb.KubernetesPod) (*workloa
 		RuntimeClass:               protoKubernetesPod.RuntimeClass,
 		KubeServices:               protoKubernetesPod.KubeServices,
 		NamespaceLabels:            protoKubernetesPod.NamespaceLabels,
+		NodeName:                   protoKubernetesPod.NodeName,
+		Manifest:                   protoKubernetesPod.Manifest,
 	}, nil
 }
 

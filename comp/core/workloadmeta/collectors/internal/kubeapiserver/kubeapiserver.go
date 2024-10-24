@@ -58,6 +58,10 @@ func shouldHaveDeploymentStore(cfg config.Reader) bool {
 	return cfg.GetBool("language_detection.enabled") && cfg.GetBool("language_detection.reporting.enabled") || hasDeploymentsLabelsAsTags || hasDeploymentsAnnotationsAsTags
 }
 
+func shouldHaveTerminatedPodStore(cfg config.Reader) bool {
+	return cfg.GetBool("orchestrator_explorer.terminated_resources.enabled")
+}
+
 func storeGenerators(cfg config.Reader) []storeGenerator {
 	var generators []storeGenerator
 
@@ -67,6 +71,10 @@ func storeGenerators(cfg config.Reader) []storeGenerator {
 
 	if shouldHaveDeploymentStore(cfg) {
 		generators = append(generators, newDeploymentStore)
+	}
+
+	if shouldHaveTerminatedPodStore(cfg) {
+		generators = append(generators, newTerminatedPodStore)
 	}
 
 	return generators

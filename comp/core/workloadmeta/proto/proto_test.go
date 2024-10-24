@@ -417,3 +417,47 @@ func TestWorkloadmetaFilterFromProtoFilter(t *testing.T) {
 	assert.Equal(t, workloadmeta.SourceRuntime, resultFilter.Source())
 	assert.Equal(t, workloadmeta.EventTypeSet, resultFilter.EventType())
 }
+
+func TestWorkloadmetaFilterFromProtoFilterWithPreRegisteredFilterFunc(t *testing.T) {
+	protoFilter := pb.WorkloadmetaFilter{
+		Kinds: []pb.WorkloadmetaKind{
+			pb.WorkloadmetaKind_KUBERNETES_POD,
+		},
+		Source:                pb.WorkloadmetaSource_KUBE_API_SEVER,
+		EventType:             pb.WorkloadmetaEventType_EVENT_TYPE_UNSET,
+		PreRegisteredFilterId: 1,
+		FilterFuncParams:      []string{"node1"},
+	}
+
+	resultFilter, err := WorkloadmetaFilterFromProtoFilter(&protoFilter)
+	assert.NoError(t, err)
+
+	assert.True(t, resultFilter.MatchKind(workloadmeta.KindKubernetesPod))
+	assert.False(t, resultFilter.MatchKind(workloadmeta.KindContainer))
+	assert.False(t, resultFilter.MatchKind(workloadmeta.KindECSTask))
+
+	assert.Equal(t, workloadmeta.SourceKubeAPISever, resultFilter.Source())
+	assert.Equal(t, workloadmeta.EventTypeUnset, resultFilter.EventType())
+
+	pod := func() workloadmeta.Entity {
+		return &workloadmeta.KubernetesPod{
+			EntityID: workloadmeta.EntityID{
+				Kind: workloadmeta.KindKubernetesPod,
+			},
+			NodeName: "node1",
+		}
+	}()
+
+	assert.True(t, resultFilter.MatchEntity(&pod))
+
+	pod = func() workloadmeta.Entity {
+		return &workloadmeta.KubernetesPod{
+			EntityID: workloadmeta.EntityID{
+				Kind: workloadmeta.KindKubernetesPod,
+			},
+			NodeName: "node2",
+		}
+	}()
+
+	assert.False(t, resultFilter.MatchEntity(&pod))
+}

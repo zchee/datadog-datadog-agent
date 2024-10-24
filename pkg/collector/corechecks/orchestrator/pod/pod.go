@@ -16,6 +16,7 @@ import (
 
 	model "github.com/DataDog/agent-payload/v5/process"
 	"github.com/DataDog/datadog-agent/comp/core/autodiscovery/integration"
+	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 	"github.com/DataDog/datadog-agent/pkg/collector/check"
 	core "github.com/DataDog/datadog-agent/pkg/collector/corechecks"
@@ -44,23 +45,26 @@ func nextGroupID() int32 {
 // Check doesn't need additional fields
 type Check struct {
 	core.CheckBase
-	hostName   string
-	clusterID  string
-	sender     sender.Sender
-	processor  *processors.Processor
-	config     *oconfig.OrchestratorConfig
-	systemInfo *model.SystemInfo
+	hostName               string
+	clusterID              string
+	sender                 sender.Sender
+	processor              *processors.Processor
+	config                 *oconfig.OrchestratorConfig
+	systemInfo             *model.SystemInfo
+	terminatedPodCollector *TerminatedPodCollector
+	workloadmetaStore      workloadmeta.Component
 }
 
 // Factory creates a new check factory
-func Factory() optional.Option[func() check.Check] {
-	return optional.NewOption(newCheck)
+func Factory(store workloadmeta.Component) optional.Option[func() check.Check] {
+	return optional.NewOption(func() check.Check { return newCheck(store) })
 }
 
-func newCheck() check.Check {
+func newCheck(store workloadmeta.Component) check.Check {
 	return &Check{
-		CheckBase: core.NewCheckBase(CheckName),
-		config:    oconfig.NewDefaultOrchestratorConfig(),
+		CheckBase:         core.NewCheckBase(CheckName),
+		config:            oconfig.NewDefaultOrchestratorConfig(),
+		workloadmetaStore: store,
 	}
 }
 
@@ -114,11 +118,15 @@ func (c *Check) Configure(
 		log.Warnf("Failed to collect system info: %s", err)
 	}
 
+	c.terminatedPodCollector = NewTerminatedPodCollector(c.hostName, c.clusterID, c.sender, c.processor, c.config, c.systemInfo, c.workloadmetaStore)
+
 	return nil
 }
 
 // Run executes the check
 func (c *Check) Run() error {
+	c.terminatedPodCollector.Run()
+
 	if c.clusterID == "" {
 		clusterID, err := clustername.GetClusterID()
 		if err != nil {
@@ -162,4 +170,9 @@ func (c *Check) Run() error {
 	c.sender.OrchestratorManifest(processResult.ManifestMessages, c.clusterID)
 
 	return nil
+}
+
+// Stop stops the check
+func (c *Check) Stop() {
+	c.terminatedPodCollector.Stop()
 }

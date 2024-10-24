@@ -20,6 +20,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/internal/remote"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/util"
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
+	"github.com/DataDog/datadog-agent/pkg/api/security"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/languagedetection/languagemodels"
 	pbgo "github.com/DataDog/datadog-agent/pkg/proto/pbgo/process"
@@ -136,12 +137,20 @@ func init() {
 	grpclog.SetLoggerV2(grpcutil.NewLogger())
 }
 
+func (s *streamHandler) Endpoint() string {
+	return ""
+}
+
 func (s *streamHandler) Port() int {
 	if s.port == 0 {
 		return s.Reader.GetInt("process_config.language_detection.grpc_port")
 	}
 	// for test purposes
 	return s.port
+}
+
+func (s *streamHandler) TokenFetcher() (string, error) {
+	return security.FetchAuthToken(config.Datadog())
 }
 
 func (s *streamHandler) IsEnabled() bool {

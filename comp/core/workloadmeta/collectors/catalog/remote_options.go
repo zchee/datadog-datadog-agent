@@ -13,6 +13,7 @@ package catalog
 import (
 	"go.uber.org/fx"
 
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/internal/remote/terminatedpod"
 	remoteworkloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/internal/remote/workloadmeta"
 )
 
@@ -23,5 +24,6 @@ func getCollectorOptions() []fx.Option {
 	return []fx.Option{
 		remoteworkloadmeta.GetFxOptions(),
 		remoteWorkloadmetaParams(),
+		terminatedpod.GetFxOptions(),
 	}
 }

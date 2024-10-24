@@ -61,14 +61,15 @@ type OrchestratorInformerFactory struct {
 }
 
 // NewK8sProcessorContext creates a new processor context for k8s resources.
-func NewK8sProcessorContext(rcfg *CollectorRunConfig, metadata *CollectorMetadata) *processors.K8sProcessorContext {
+func NewK8sProcessorContext(rcfg *CollectorRunConfig, metadata *CollectorMetadata, isTerminatedResource bool) *processors.K8sProcessorContext {
 	return &processors.K8sProcessorContext{
 		BaseProcessorContext: processors.BaseProcessorContext{
-			Cfg:              rcfg.Config,
-			MsgGroupID:       rcfg.MsgGroupRef.Inc(),
-			NodeType:         metadata.NodeType,
-			ManifestProducer: true,
-			ClusterID:        rcfg.ClusterID,
+			Cfg:                  rcfg.Config,
+			MsgGroupID:           rcfg.MsgGroupRef.Inc(),
+			NodeType:             metadata.NodeType,
+			ManifestProducer:     true,
+			ClusterID:            rcfg.ClusterID,
+			IsTerminatedResource: isTerminatedResource,
 		},
 		APIClient:          rcfg.APIClient,
 		ApiGroupVersionTag: fmt.Sprintf("kube_api_version:%s", metadata.Version),

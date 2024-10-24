@@ -8,6 +8,7 @@
 package kubeapiserver
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -18,6 +19,7 @@ import (
 
 	kubernetesresourceparsers "github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/util/kubernetes_resource_parsers"
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 // entityUID glue together a WLM Entity and a Kube UID
@@ -142,12 +144,24 @@ func (r *reflectorStore) Delete(obj interface{}) error {
 	defer r.mu.Unlock()
 
 	var uid types.UID
-	var entity workloadmeta.Entity
+
+	entity := r.parser.Parse(obj)
+
 	switch v := obj.(type) {
 	// All the supported objects need to be in this switch statement to be able
 	// to be deleted.
 	case *corev1.Pod:
 		uid = v.UID
+
+		manifest, err := json.Marshal(v)
+		if err != nil {
+			log.Errorf("failed to marshal pod manifest: %s", err.Error())
+		}
+
+		// Set the source to the entity before deleting it
+		if _, ok := entity.(*workloadmeta.KubernetesPod); ok {
+			entity.(*workloadmeta.KubernetesPod).Manifest = manifest
+		}
 	case *appsv1.Deployment:
 		uid = v.UID
 	case *metav1.PartialObjectMetadata:
@@ -159,8 +173,6 @@ func (r *reflectorStore) Delete(obj interface{}) error {
 	r.hasSynced = true
 	delete(r.seen, string(uid))
 
-	entity = r.parser.Parse(obj)
-
 	if r.filter != nil && r.filter.filteredOut(entity) {
 		return nil
 	}
@@ -168,7 +180,7 @@ func (r *reflectorStore) Delete(obj interface{}) error {
 	r.wlmetaStore.Notify([]workloadmeta.CollectorEvent{
 		{
 			Type:   workloadmeta.EventTypeUnset,
-			Source: collectorID,
+			Source: workloadmeta.SourceKubeAPISever,
 			Entity: entity,
 		},
 	})

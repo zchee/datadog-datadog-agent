@@ -24,7 +24,6 @@ import (
 
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/telemetry"
-	"github.com/DataDog/datadog-agent/pkg/api/security"
 	pkgconfig "github.com/DataDog/datadog-agent/pkg/config"
 	grpcutil "github.com/DataDog/datadog-agent/pkg/util/grpc"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -51,8 +50,12 @@ type Stream interface {
 
 // StreamHandler is an interface that defines a gRPC stream handler.
 type StreamHandler interface {
+	// Endpoint returns the targeted endpoint
+	Endpoint() string
 	// Port returns the targeted port
 	Port() int
+	// TokenFetcher returns a function that fetches a token for the gRPC server
+	TokenFetcher() (string, error)
 	// IsEnabled returns if the feature is enabled
 	IsEnabled() bool
 	// NewClient returns a client to connect to a remote gRPC server.
@@ -115,7 +118,7 @@ func (c *GenericCollector) Start(ctx context.Context, store workloadmeta.Compone
 
 	conn, err := grpc.DialContext( //nolint:staticcheck // TODO (ASC) fix grpc.DialContext is deprecated
 		c.ctx,
-		fmt.Sprintf(":%v", c.StreamHandler.Port()),
+		fmt.Sprintf("%s:%v", c.StreamHandler.Endpoint(), c.StreamHandler.Port()),
 		opts...,
 	)
 	if err != nil {
@@ -148,7 +151,7 @@ func (c *GenericCollector) startWorkloadmetaStream(maxElapsed time.Duration) err
 		default:
 		}
 
-		token, err := security.FetchAuthToken(pkgconfig.Datadog())
+		token, err := c.StreamHandler.TokenFetcher()
 		if err != nil {
 			err = fmt.Errorf("unable to fetch authentication token: %w", err)
 			log.Warnf("unable to establish entity stream between agents, will possibly retry: %s", err)
@@ -180,6 +183,12 @@ func (c *GenericCollector) startWorkloadmetaStream(maxElapsed time.Duration) err
 // Run will run the generic collector streaming loop
 func (c *GenericCollector) Run() {
 	recvWithoutTimeout := pkgconfig.Datadog().GetBool("workloadmeta.remote.recv_without_timeout")
+
+	// remote-terminated-pod collector has low traffic
+	// having a timeout can avoid closing and reopening the connection too often
+	if c.CollectorID == workloadmeta.TerminatedPod {
+		recvWithoutTimeout = pkgconfig.Datadog().GetBool("workloadmeta.remote.terminated_pod_collector.recv_without_timeout")
+	}
 
 	for {
 		select {

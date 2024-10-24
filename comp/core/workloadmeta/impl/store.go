@@ -609,6 +609,12 @@ func (w *workloadmeta) pull(ctx context.Context) {
 	}
 }
 
+// onlyUnsetEventsAllowedCollectors is a map of collectors that are allowed to only send unset events.
+// Regular collectors should always send a set event before sending an unset event.
+var onlyUnsetEventsAllowedCollectors = map[wmdef.Source]struct{}{
+	wmdef.SourceRemoteTerminatedPodCollector: {},
+}
+
 func (w *workloadmeta) handleEvents(evs []wmdef.CollectorEvent) {
 	w.storeMut.Lock()
 	w.subscribersMut.Lock()
@@ -658,13 +664,15 @@ func (w *workloadmeta) handleEvents(evs []wmdef.CollectorEvent) {
 			// fixes an issue where collectors emit
 			// EventTypeUnset events for pause containers
 			// they never emitted a EventTypeSet for.
+			// Except for collectors listed in onlyUnsetEventsAllowedCollectors.
 
 			if !ok {
 				continue
 			}
 
 			_, sourceOk := cachedEntity.sources[ev.Source]
-			if !sourceOk {
+			_, allowed := onlyUnsetEventsAllowedCollectors[ev.Source]
+			if !sourceOk && !allowed {
 				continue
 			}
 
@@ -711,6 +719,13 @@ func (w *workloadmeta) handleEvents(evs []wmdef.CollectorEvent) {
 			}
 
 			entity := cachedEntity.get(filter.Source())
+			merge := true
+			// for collectors that only send unset events, entity will be nil as it's not stored in the cache
+			// in that case, we need to use the entity from the event and skip merging as it's not needed
+			if _, allowed := onlyUnsetEventsAllowedCollectors[ev.Source]; !isEventTypeSet && allowed {
+				merge = false
+				entity = ev.Entity
+			}
 			if !filter.MatchEntity(&entity) {
 				continue
 			}
@@ -721,11 +736,13 @@ func (w *workloadmeta) handleEvents(evs []wmdef.CollectorEvent) {
 					Entity: entity,
 				})
 			} else {
-				entity = entity.DeepCopy()
-				err := entity.Merge(ev.Entity)
-				if err != nil {
-					w.log.Errorf("cannot merge %+v into %+v: %s", entity, ev.Entity, err)
-					continue
+				if merge {
+					entity = entity.DeepCopy()
+					err := entity.Merge(ev.Entity)
+					if err != nil {
+						w.log.Errorf("cannot merge %+v into %+v: %s", entity, ev.Entity, err)
+						continue
+					}
 				}
 
 				filteredEvents[sub] = append(filteredEvents[sub], wmdef.Event{

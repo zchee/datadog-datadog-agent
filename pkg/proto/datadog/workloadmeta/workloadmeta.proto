@@ -15,6 +15,7 @@ enum WorkloadmetaSource {
   RUNTIME = 1;
   NODE_ORCHESTRATOR = 2;
   CLUSTER_ORCHESTRATOR = 3;
+  KUBE_API_SEVER = 4;
 }
 
 enum WorkloadmetaEventType {
@@ -27,10 +28,13 @@ message WorkloadmetaFilter {
   repeated WorkloadmetaKind kinds = 1;
   WorkloadmetaSource source = 2;
   WorkloadmetaEventType eventType = 3;
+  int32 preRegisteredFilterId = 4;
+  repeated string filterFuncParams = 5;
 }
 
 message WorkloadmetaStreamRequest {
   WorkloadmetaFilter filter = 1;
+  string requestId = 2;
 }
 
 message WorkloadmetaEntityId {
@@ -136,6 +140,8 @@ message KubernetesPod {
   map<string, string> namespaceLabels = 12;
   repeated OrchestratorContainer InitContainers = 13;
   string runtimeClass = 14;
+  string nodeName = 15;
+  bytes manifest = 16;
 }
 
 enum ECSLaunchType {

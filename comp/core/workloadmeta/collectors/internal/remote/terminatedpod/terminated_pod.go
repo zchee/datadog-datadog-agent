@@ -3,13 +3,16 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-// Package workloadmeta implements the remote workloadmeta Collector.
-package workloadmeta
+//go:build kubelet
+
+// Package terminatedpod implements the remote terminatedpod Collector.
+package terminatedpod
 
 import (
 	"context"
 	"fmt"
-	"slices"
+	"strconv"
+	"strings"
 
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
@@ -19,45 +22,20 @@ import (
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/proto"
 	"github.com/DataDog/datadog-agent/pkg/api/security"
-	"github.com/DataDog/datadog-agent/pkg/config"
+	"github.com/DataDog/datadog-agent/pkg/config/model"
+	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 	pb "github.com/DataDog/datadog-agent/pkg/proto/pbgo/core"
+	"github.com/DataDog/datadog-agent/pkg/util/clusteragent"
+	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 	grpcutil "github.com/DataDog/datadog-agent/pkg/util/grpc"
+	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
-
-const (
-	collectorID = "remote-workloadmeta"
-)
-
-// These are the workloadmeta kinds that are supported by the remote
-// workloadmeta collector.
-//
-// Not all of them are supported because the users of remote workloadmeta
-// (security-agent, process-agent) don't need them, so sending them would be a
-// waste of memory and bandwidth.
-//
-// In order to support a workloadmeta kind, we need to add its protobuf
-// representation and also handle it in the functions that convert workloadmeta
-// types to protobuf and vice versa.
-var supportedKinds = []workloadmeta.Kind{
-	workloadmeta.KindContainer,
-	workloadmeta.KindKubernetesPod,
-	workloadmeta.KindECSTask,
-}
-
-// Params defines the parameters of the remote workloadmeta collector.
-type Params struct {
-	Filter *workloadmeta.Filter
-}
-
-type dependencies struct {
-	fx.In
-
-	Params Params
-}
 
 type client struct {
-	cl     pb.AgentSecureClient
-	filter *workloadmeta.Filter
+	cl       pb.AgentSecureClient
+	filter   *workloadmeta.Filter
+	nodeName string
 }
 
 func (c *client) StreamEntities(ctx context.Context) (remote.Stream, error) {
@@ -66,10 +44,15 @@ func (c *client) StreamEntities(ctx context.Context) (remote.Stream, error) {
 		return nil, err
 	}
 
+	// set pre-registered filter id as filter func can't be sent over gRPC
+	protoFilter.PreRegisteredFilterId = int32(workloadmeta.TerminatedPodFilter)
+	protoFilter.FilterFuncParams = []string{c.nodeName}
+
 	streamcl, err := c.cl.WorkloadmetaStreamEntities(
 		ctx,
 		&pb.WorkloadmetaStreamRequest{
-			Filter: protoFilter,
+			Filter:    protoFilter,
+			RequestId: fmt.Sprintf("%s-%s", workloadmeta.TerminatedPod, c.nodeName),
 		},
 	)
 	if err != nil {
@@ -87,25 +70,35 @@ func (s *stream) Recv() (interface{}, error) {
 }
 
 type streamHandler struct {
-	port   int
-	filter *workloadmeta.Filter
-	config.Config
+	endpoint string
+	port     int
+	filter   *workloadmeta.Filter
+	model.Config
 }
 
 // NewCollector returns a CollectorProvider to build a remote workloadmeta collector, and an error if any.
-func NewCollector(deps dependencies) (workloadmeta.CollectorProvider, error) {
-	if filterHasUnsupportedKind(deps.Params.Filter) {
-		return workloadmeta.CollectorProvider{}, fmt.Errorf("the filter specified contains unsupported kinds")
+func NewCollector() (workloadmeta.CollectorProvider, error) {
+	endpoint, port, err := getClusterAgentEndpoint()
+	if err != nil {
+		log.Error("unable to get cluster agent endpoint: ", err)
 	}
+	log.Infof("remote-terminated-pod collector is targeting %s:%d", endpoint, port)
 
 	return workloadmeta.CollectorProvider{
 		Collector: &remote.GenericCollector{
-			CollectorID: collectorID,
+			CollectorID: workloadmeta.TerminatedPod,
 			StreamHandler: &streamHandler{
-				filter: deps.Params.Filter,
-				Config: config.Datadog(),
+				endpoint: endpoint,
+				port:     port,
+				// filter is set on the server side as filter func can't be sent over gRPC
+				filter: workloadmeta.NewFilterBuilder().
+					AddKind(workloadmeta.KindKubernetesPod).
+					SetSource(workloadmeta.SourceKubeAPISever).
+					SetEventType(workloadmeta.EventTypeUnset).
+					Build(),
+				Config: pkgconfigsetup.Datadog(),
 			},
-			Catalog: workloadmeta.Remote,
+			Catalog: workloadmeta.NodeAgent,
 		},
 	}, nil
 }
@@ -120,32 +113,50 @@ func init() {
 	grpclog.SetLoggerV2(grpcutil.NewLogger())
 }
 
+func (s *streamHandler) Endpoint() string {
+	if s.endpoint == "" {
+		s.setClusterAgentEndpoint()
+	}
+	return s.endpoint
+}
+
 func (s *streamHandler) Port() int {
 	if s.port == 0 {
-		return s.Config.GetInt("cmd_port")
+		s.setClusterAgentEndpoint()
 	}
-	// for tests
 	return s.port
 }
 
-func (s *streamHandler) Endpoint() string {
-	return ""
-}
-
 func (s *streamHandler) TokenFetcher() (string, error) {
-	return security.FetchAuthToken(config.Datadog())
+	return security.GetClusterAgentAuthToken(pkgconfigsetup.Datadog())
 }
 
 func (s *streamHandler) NewClient(cc grpc.ClientConnInterface) remote.GrpcClient {
+	var nodeName string
+	if kubeUtil, err := kubelet.GetKubeUtil(); err == nil && kubeUtil != nil {
+		nodeName, err = kubeUtil.GetNodename(context.Background())
+		if err != nil {
+			log.Error("unable to get node name: ", err)
+		}
+	} else {
+		log.Error("unable to get kubelet util: ", err)
+	}
+
+	log.Infof("remote-terminated-pod collector is targeting node %s", nodeName)
+
 	return &client{
-		cl:     pb.NewAgentSecureClient(cc),
-		filter: s.filter,
+		cl:       pb.NewAgentSecureClient(cc),
+		filter:   s.filter,
+		nodeName: nodeName,
 	}
 }
 
-// IsEnabled always return true for the remote workloadmeta because it uses the remote catalog
+// IsEnabled returns if the feature is enabled
+// This collector is enabled only for node agents
 func (s *streamHandler) IsEnabled() bool {
-	return true
+	return pkgconfigsetup.Datadog().GetBool("orchestrator_explorer.terminated_resources.enabled") &&
+		flavor.GetFlavor() == flavor.DefaultAgent &&
+		!pkgconfigsetup.IsCLCRunner(pkgconfigsetup.Datadog())
 }
 
 func (s *streamHandler) HandleResponse(_ workloadmeta.Component, resp interface{}) ([]workloadmeta.CollectorEvent, error) {
@@ -163,9 +174,10 @@ func (s *streamHandler) HandleResponse(_ workloadmeta.Component, resp interface{
 
 		collectorEvent := workloadmeta.CollectorEvent{
 			Type:   workloadmetaEvent.Type,
-			Source: workloadmeta.SourceRemoteWorkloadmeta,
+			Source: workloadmeta.SourceRemoteTerminatedPodCollector,
 			Entity: workloadmetaEvent.Entity,
 		}
+		log.Info("remote terminated pod collector received event: ", workloadmetaEvent.Entity.(*workloadmeta.KubernetesPod).Name)
 
 		collectorEvents = append(collectorEvents, collectorEvent)
 	}
@@ -185,14 +197,31 @@ func (s *streamHandler) HandleResync(store workloadmeta.Component, events []work
 	// first response is always a bundle of events with all the existing
 	// entities in the store that match the filters specified (see
 	// workloadmeta.Store#Subscribe).
-	store.Reset(entities, workloadmeta.SourceRemoteWorkloadmeta)
+	store.Reset(entities, workloadmeta.SourceRemoteTerminatedPodCollector)
 }
 
-func filterHasUnsupportedKind(filter *workloadmeta.Filter) bool {
-	for _, kind := range filter.Kinds() {
-		if !slices.Contains(supportedKinds, kind) {
-			return true
-		}
+func (s *streamHandler) setClusterAgentEndpoint() {
+	endpoint, port, err := getClusterAgentEndpoint()
+	if err != nil {
+		log.Error("unable to get cluster agent endpoint: ", err)
 	}
-	return false
+	s.endpoint = endpoint
+	s.port = port
+}
+
+func getClusterAgentEndpoint() (string, int, error) {
+	target, err := clusteragent.GetClusterAgentEndpoint()
+	if err != nil {
+		return "", 0, err
+	}
+
+	target = strings.TrimPrefix(target, "https://")
+
+	endpointPort := strings.Split(target, ":")
+	port, err := strconv.Atoi(endpointPort[len(endpointPort)-1])
+	if err != nil {
+		return "", 0, err
+	}
+
+	return endpointPort[0], port, nil
 }

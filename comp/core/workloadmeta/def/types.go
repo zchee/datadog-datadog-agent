@@ -74,13 +74,21 @@ const (
 	// Agent.  `kube_metadata` and `cloudfoundry` use this.
 	SourceClusterOrchestrator Source = "cluster_orchestrator"
 
+	// SourceKubeAPISever represents entities detected from the kubeapiserver
+	SourceKubeAPISever Source = "kubeapiserver"
+
 	// SourceRemoteWorkloadmeta represents entities detected by the remote
 	// workloadmeta.
 	SourceRemoteWorkloadmeta Source = "remote_workloadmeta"
 
-	// SourceRemoteProcessCollector reprents processes entities detected
+	// SourceRemoteProcessCollector represents processes entities detected
 	// by the RemoteProcessCollector.
 	SourceRemoteProcessCollector Source = "remote_process_collector"
+
+	// SourceRemoteTerminatedPodCollector represents terminated pod entities
+	// detected by the RemoteTerminatedPodCollector.
+	// This data source is kubeapisever collector running on the cluster agent.
+	SourceRemoteTerminatedPodCollector Source = "remote_terminated_pod_collector"
 
 	// SourceLanguageDetectionServer represents container languages
 	// detected by node agents
@@ -188,6 +196,22 @@ const (
 	Success SBOMStatus = "Success"
 	// Failed is the status when the scan failed
 	Failed SBOMStatus = "Failed"
+)
+
+// CollectorID is the id of a collector
+type CollectorID string
+
+const (
+	// TerminatedPod is the id of the terminated pod collector
+	TerminatedPod = "remote-terminated-pod-collector"
+)
+
+// PreRegisteredFilterID is the id of a pre-registered filter
+type PreRegisteredFilterID int32
+
+const (
+	// TerminatedPodFilter is the id of the terminated pod filter
+	TerminatedPodFilter PreRegisteredFilterID = 1
 )
 
 // Entity represents a single unit of work being done that is of interest to
@@ -678,6 +702,8 @@ type KubernetesPod struct {
 	NamespaceAnnotations       map[string]string
 	FinishedAt                 time.Time
 	SecurityContext            *PodSecurityContext
+	NodeName                   string
+	Manifest                   []byte
 }
 
 // GetID implements Entity#GetID.

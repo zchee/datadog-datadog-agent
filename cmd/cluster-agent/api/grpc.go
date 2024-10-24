@@ -8,15 +8,16 @@ package api
 import (
 	"context"
 
-	pbgo "github.com/DataDog/datadog-agent/pkg/proto/pbgo/core"
-
 	taggerserver "github.com/DataDog/datadog-agent/comp/core/tagger/taggerimpl/server"
+	workloadmetaServer "github.com/DataDog/datadog-agent/comp/core/workloadmeta/server"
+	pbgo "github.com/DataDog/datadog-agent/pkg/proto/pbgo/core"
 )
 
 type serverSecure struct {
 	pbgo.UnimplementedAgentSecureServer
 
-	taggerServer *taggerserver.Server
+	taggerServer       *taggerserver.Server
+	workloadmetaServer *workloadmetaServer.Server
 }
 
 func (s *serverSecure) TaggerStreamEntities(req *pbgo.StreamTagsRequest, srv pbgo.AgentSecure_TaggerStreamEntitiesServer) error {
@@ -25,4 +26,9 @@ func (s *serverSecure) TaggerStreamEntities(req *pbgo.StreamTagsRequest, srv pbg
 
 func (s *serverSecure) TaggerFetchEntity(ctx context.Context, req *pbgo.FetchEntityRequest) (*pbgo.FetchEntityResponse, error) {
 	return s.taggerServer.TaggerFetchEntity(ctx, req)
+}
+
+// WorkloadmetaStreamEntities streams entities from the workloadmeta store applying the given filter
+func (s *serverSecure) WorkloadmetaStreamEntities(in *pbgo.WorkloadmetaStreamRequest, out pbgo.AgentSecure_WorkloadmetaStreamEntitiesServer) error {
+	return s.workloadmetaServer.StreamEntities(in, out)
 }

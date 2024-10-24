@@ -24,6 +24,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/internal/podman"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/internal/process"
 	remoteprocesscollector "github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/internal/remote/processcollector"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors/internal/remote/terminatedpod"
 )
 
 func getCollectorOptions() []fx.Option {
@@ -41,5 +42,6 @@ func getCollectorOptions() []fx.Option {
 		remoteprocesscollector.GetFxOptions(),
 		host.GetFxOptions(),
 		process.GetFxOptions(),
+		terminatedpod.GetFxOptions(),
 	}
 }
