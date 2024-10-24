@@ -7,6 +7,11 @@ package sample
 
 import "unsafe"
 
+type structWithTwoValues struct {
+	a uint
+	b bool
+}
+
 type structWithPointer struct {
 	a *uint64
 }
@@ -27,6 +32,10 @@ type reallyComplexType struct {
 	aString                              string
 	aStringPtr                           *string
 }
+
+//nolint:all
+//go:noinline
+func test_pointer_to_simple_struct(a *structWithTwoValues) {}
 
 //nolint:all
 //go:noinline
@@ -91,6 +100,9 @@ func ExecutePointerFuncs() {
 	test_struct_with_struct_pointer(ssaw)
 	test_struct_with_string_pointer(z)
 	test_string_pointer(&r)
+
+	x := structWithTwoValues{9, true}
+	test_pointer_to_simple_struct(&x)
 
 	rct := reallyComplexType{
 		pointerToStructWithAPointerToAStruct: &ssaw,

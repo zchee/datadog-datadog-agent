@@ -65,34 +65,25 @@ for(i = 0; i < {{.Arg1}}; i++){
 
 var applyOffsetTemplateText = `
 // Arg1 = uint value (offset) we're adding to the 8-byte address on top of the stack
+bpf_printk("Applying offset");
 
-char valueHolder_{{.InstructionID}}[8];
-
-#pragma unroll
-for(i = 7; i >= 0; i--) {
-	bpf_map_pop_elem(&param_stack, valueHolder_{{.InstructionID}}+i);
-}
-
-// convert the array 'valueHolder_{{.InstructionID}}' to uint
-__u64 uintRepresentationOfAddress{{.InstructionID}} = 0;
+__u64 addressHolder_{{.InstructionID}} = 0;
+char place_holder_value_{{.InstructionID}} = 0;
 
 #pragma unroll
-for (int i = 0; i < 8; i++) {
-	uintRepresentationOfAddress{{.InstructionID}} |= (__u64)valueHolder_{{.InstructionID}}[i] << (8 * (7 - i));
+for(i = 0; i < 8; i++) {
+	bpf_map_pop_elem(&param_stack, &place_holder_value_{{.InstructionID}});
+	addressHolder_{{.InstructionID}} |= (__u64)place_holder_value_{{.InstructionID}} << (8 * (7-i));
 }
 
 // add Arg1 to the converted uint
-uintRepresentationOfAddress{{.InstructionID}} = uintRepresentationOfAddress{{.InstructionID}} + {{.Arg1}};
+addressHolder_{{.InstructionID}} += {{.Arg1}};
 
-// convert the result to an array of chars
-#pragma unroll
-for (int i = 0; i < 8; i++) {
-	valueHolder_{{.InstructionID}}[7 - i] = (char)({{.Arg1}} >> (8 * i));
-}
+char valueHolder_{{.InstructionID}};
 
-// push the array back onto the stack
 #pragma unroll
-for(i = 0; i < 8; i++){
-	bpf_map_push_elem(&param_stack, valueHolder_{{.InstructionID}}+i, 0);
+for(i = 0; i < 8; i++) {
+	valueHolder_{{.InstructionID}} = addressHolder_{{.InstructionID}}>>(8*i);
+	bpf_map_push_elem(&param_stack, &valueHolder_{{.InstructionID}}, 0);
 }
 `

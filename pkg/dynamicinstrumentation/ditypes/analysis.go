@@ -10,6 +10,8 @@ package ditypes
 import (
 	"debug/dwarf"
 	"fmt"
+
+	"golang.org/x/exp/rand"
 )
 
 // TypeMap contains all the information about functions and their parameters including
@@ -90,6 +92,27 @@ const (
 	OpPop
 )
 
+// Arg1 = reigster
+// Arg2 = size of element
+func ReadRegisterLocationExpression(register, size uint) LocationExpression {
+	return LocationExpression{Opcode: OpReadUserRegister, Arg1: register, Arg2: size, InstructionID: randomID()}
+}
+
+// Arg1 = size of value we're reading from the 8 byte address at the top of the stack
+func DereferenceLocationExpression(valueSize uint) LocationExpression {
+	return LocationExpression{Opcode: OpDereference, Arg1: valueSize, InstructionID: randomID()}
+}
+
+// Arg1 = number of bytes to pop
+func PopLocationExpression(bytesToPop uint) LocationExpression {
+	return LocationExpression{Opcode: OpPop, Arg1: bytesToPop, InstructionID: randomID()}
+}
+
+// Arg1 = uint value (offset) we're adding to the 8-byte address on top of the stack
+func ApplyOffsetLocationExpression(offset uint) LocationExpression {
+	return LocationExpression{Opcode: OpApplyOffset, Arg1: offset, InstructionID: randomID()}
+}
+
 type LocationExpression struct {
 	Opcode        LocationExpressionOpcode
 	Arg1          uint
@@ -122,4 +145,13 @@ type BPFProgram struct {
 
 	// Used for bpf code generation
 	Probe *Probe
+}
+
+func randomID() string {
+	length := 6
+	randomString := make([]byte, length)
+	for i := 0; i < length; i++ {
+		randomString[i] = byte(65 + rand.Intn(25))
+	}
+	return string(randomString)
 }
