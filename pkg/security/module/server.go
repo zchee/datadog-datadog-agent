@@ -128,6 +128,11 @@ type APIServer struct {
 	msgSender          MsgSender
 	ecsTags            map[string]string
 
+	// stream all events filters
+	SAEOnlyContainers       bool
+	SAEOnlyProcess          string
+	SAEOnlyProcessCachePids []uint32
+
 	stopChan chan struct{}
 	stopper  startstop.Stopper
 }
@@ -308,6 +313,45 @@ func (a *APIServer) GetConfig(_ context.Context, _ *api.GetConfigParams) (*api.S
 	return &api.SecurityConfigMessage{}, nil
 }
 
+func (a *APIServer) eventMatchProcess(event *model.Event) bool {
+	if event.ProcessContext == nil {
+		return false
+	}
+
+	// first, check cache
+	if slices.Contains(a.SAEOnlyProcessCachePids, event.PIDContext.Pid) {
+		// special case for exit to clear the cache:
+		if event.GetType() == "exit" {
+			slices.DeleteFunc(a.SAEOnlyProcessCachePids, func(pid uint32) bool { return pid == event.PIDContext.Pid })
+		}
+		return true
+	}
+
+	// check current process
+	if event.ProcessContext.FileEvent.PathnameStr == a.SAEOnlyProcess {
+		// add pid to cache
+		a.SAEOnlyProcessCachePids = append(a.SAEOnlyProcessCachePids, event.PIDContext.Pid)
+		return true
+	}
+
+	// then check lineage
+	if event.ProcessContext.Ancestor == nil {
+		return false
+	}
+	parent := &event.ProcessContext.Ancestor.ProcessContext
+	for parent != nil {
+		if parent.FileEvent.PathnameStr == a.SAEOnlyProcess {
+			a.SAEOnlyProcessCachePids = append(a.SAEOnlyProcessCachePids, event.PIDContext.Pid)
+			return true
+		}
+		if parent.Ancestor == nil {
+			return false
+		}
+		parent = &parent.Ancestor.ProcessContext
+	}
+	return false
+}
+
 // SendEvent forwards events sent by the runtime security module to Datadog
 func (a *APIServer) SendEvent(rule *rules.Rule, event events.Event, extTagsCb func() []string, service string) {
 	backendEvent := events.BackendEvent{
@@ -371,6 +415,12 @@ func (a *APIServer) SendEvent(rule *rules.Rule, event events.Event, extTagsCb fu
 		}
 
 		if rules.StreamAllEvents {
+			if a.SAEOnlyProcess != "" && !a.eventMatchProcess(ev) {
+				return
+			}
+			if a.SAEOnlyContainers && (ev.ContainerContext == nil || ev.ContainerContext.ContainerID == "") {
+				return
+			}
 			if ev.ContainerContext != nil && ev.ContainerContext.ContainerID != "" {
 				msg.tags = append(msg.tags, "container_id:"+string(ev.ContainerContext.ContainerID))
 			}
@@ -551,6 +601,13 @@ func (a *APIServer) SetCWSConsumer(consumer *CWSConsumer) {
 	a.cwsConsumer = consumer
 }
 
+func (a *APIServer) applyStreamAllEventsParams() {
+	if os.Getenv(rules.StreamAllEventsOptionContainersOnly) != "" {
+		a.SAEOnlyContainers = true
+	}
+	a.SAEOnlyProcess = os.Getenv(rules.StreamAllEventsOptionProcessOnly)
+}
+
 // NewAPIServer returns a new gRPC event server
 func NewAPIServer(cfg *config.RuntimeSecurityConfig, probe *sprobe.Probe, msgSender MsgSender, client statsd.ClientInterface, selfTester *selftests.SelfTester) (*APIServer, error) {
 	stopper := startstop.NewSerialStopper()
@@ -570,10 +627,12 @@ func NewAPIServer(cfg *config.RuntimeSecurityConfig, probe *sprobe.Probe, msgSen
 		msgSender:     msgSender,
 	}
 
+	as.applyStreamAllEventsParams()
+
 	if as.msgSender == nil {
 		if rules.StreamAllEvents {
-			outputDir := rules.StreamAllEventsOutputDir
-			if env := os.Getenv("STREAM_OUTPUT_DIR"); env != "" {
+			outputDir := rules.DefaultStreamAllEventsOutputDir
+			if env := os.Getenv(rules.StreamAllEventsOptionOutputDir); env != "" {
 				outputDir = env
 			}
 			msgSender, err := NewDiskSender(outputDir)

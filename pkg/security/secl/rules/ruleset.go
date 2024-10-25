@@ -24,8 +24,15 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/security/secl/utils"
 )
 
-var StreamAllEvents bool = true
-var StreamAllEventsOutputDir string = "/tmp/dd_events"
+const (
+	StreamAllEvents                     bool   = true
+	DefaultStreamAllEventsOutputDir     string = "/tmp/dd_events"
+	StreamAllEventsOptionOutputDir      string = "STREAM_OUTPUT_DIR"
+	StreamAllEventsOptionContainersOnly string = "STREAM_ONLY_CONTAINERS"
+	StreamAllEventsOptionProcessOnly    string = "STREAM_ONLY_PROCESS"
+)
+
+// const
 
 // Rule presents a rule in a ruleset
 type Rule struct {
