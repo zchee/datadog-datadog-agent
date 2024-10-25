@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -38,6 +39,36 @@ func NewProcInfo(procRoot string, pid uint32) *ProcInfo {
 // Avoid allocations, reuse the error to mark "iteration start" in the loop
 var errIterStart = errors.New("iteration start")
 
+const pfKthread = 0x00200000
+
+func isKernelThread(p *ProcInfo) bool {
+	pidAsStr := strconv.FormatUint(uint64(p.PID), 10)
+	filePath := filepath.Join(p.procRoot, pidAsStr, "stat")
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return false
+	}
+
+	startIndex := bytes.LastIndexByte(content, byte(')'))
+	if startIndex == -1 || startIndex+1 >= len(content) {
+		return false
+	}
+
+	fields := strings.Fields(string(content[startIndex+1:]))
+	if len(fields) < 50 {
+		return false
+	}
+
+	flagsRaw := fields[8-2]
+	flags, err := strconv.ParseUint(flagsRaw, 10, 64)
+	if err != nil {
+		return false
+	}
+
+	return flags&pfKthread == pfKthread
+}
+
 func waitUntilSucceeds[T any](p *ProcInfo, procFile string, readFunc func(string) (T, error)) (T, error) {
 	// Read the exe link
 	pidAsStr := strconv.FormatUint(uint64(p.PID), 10)
@@ -47,11 +78,22 @@ func waitUntilSucceeds[T any](p *ProcInfo, procFile string, readFunc func(string
 	err := errIterStart
 	end := time.Now().Add(procFSUpdateTimeout)
 
+	checkedKernelThread := false
+
 	for err != nil && end.After(time.Now()) {
 		result, err = readFunc(filePath)
-		if err != nil {
-			time.Sleep(10 * time.Millisecond)
+		if err == nil {
+			break
 		}
+
+		if !checkedKernelThread {
+			checkedKernelThread = true
+			if isKernelThread(p) {
+				break
+			}
+		}
+
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	return result, err
