@@ -11,14 +11,16 @@ import (
 	"github.com/NVIDIA/go-nvml/pkg/nvml"
 
 	"github.com/DataDog/datadog-agent/comp/core/telemetry"
+	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/def"
 	"github.com/DataDog/datadog-agent/pkg/collector/corechecks/gpu/model"
 	"github.com/DataDog/datadog-agent/pkg/ebpf"
 )
 
 // ProbeDependencies holds the dependencies for the probe
 type ProbeDependencies struct {
-	Telemetry telemetry.Component
-	NvmlLib   nvml.Interface
+	Telemetry    telemetry.Component
+	NvmlLib      nvml.Interface
+	Workloadmeta workloadmeta.Component
 }
 
 // Probe is not implemented on non-linux systems
