@@ -75,6 +75,8 @@ type pclntanSymbolParser struct {
 	// symbolFilter is the filter for the symbols.
 	symbolFilter symbolFilter
 
+	// textAddress is the address of the .text section.
+	textAddress uint64
 	// byteOrderParser is the binary.ByteOrder for the pclntab.
 	byteOrderParser binary.ByteOrder
 	// cachedVersion is the version of the pclntab.
@@ -106,7 +108,11 @@ func GetPCLNTABSymbolParser(f *elf.File, symbolFilter symbolFilter) (map[string]
 		return nil, ErrMissingPCLNTABSection
 	}
 
-	parser := &pclntanSymbolParser{section: section, symbolFilter: symbolFilter}
+	textSect := f.Section(".text")
+	if textSect == nil {
+		return nil, fmt.Errorf("failed to locate text section")
+	}
+	parser := &pclntanSymbolParser{section: section, symbolFilter: symbolFilter, textAddress: textSect.Addr}
 
 	if err := parser.parsePclntab(); err != nil {
 		return nil, err
@@ -244,8 +250,18 @@ func (p *pclntanSymbolParser) getSymbols() (map[string]*elf.Symbol, error) {
 		if funcName == "" {
 			continue
 		}
+		entryAddress := p.getFuncOffset(currentIdx)
+		if entryAddress == 0 {
+			continue
+		}
+		nextFuncAddress := p.getFuncOffset(currentIdx + 1)
+		if nextFuncAddress == 0 {
+			continue
+		}
 		symbols[funcName] = &elf.Symbol{
-			Name: funcName,
+			Name:  funcName,
+			Value: entryAddress,
+			Size:  nextFuncAddress - entryAddress,
 		}
 		if len(symbols) == numWanted {
 			break
@@ -312,4 +328,15 @@ func funcNameOffset(ptrSize uint32, version version, binary binary.ByteOrder, da
 		return 0
 	}
 	return binary.Uint32(helper[:4])
+}
+
+func (p *pclntanSymbolParser) getFuncOffset(funcIndex uint32) uint64 {
+	if _, err := p.funcTable.ReadAt(p.funcTableBuffer, int64((2*funcIndex)*uint32(p.funcTableFieldSize))); err != nil {
+		return 0
+	}
+	address := p.uint(p.funcTableBuffer[:p.funcTableFieldSize])
+	if p.cachedVersion >= ver118 {
+		return address + p.textAddress
+	}
+	return address
 }
