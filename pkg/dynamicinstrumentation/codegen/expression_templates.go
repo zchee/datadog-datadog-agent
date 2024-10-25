@@ -49,10 +49,35 @@ outputOffset += {{.Arg1}};
 `
 
 var variablePopTemplateText = `
-// No arguments
+// Arg1 = maximum size (bytes that can be popped, or maximum collection length)
 
+// Read the size from top of stack (8 bytes)
+// Read the actual data (x bytes, x = size)
+// Write data to output buffer (just content, not size)
 
+bpf_printk("Variable length popping!");
 
+char tempHolder{{.InstructionID}} = 0;
+__u64 sizeHolder_{{.InstructionID}} = 0;
+for (i = 0; i < 8; i++) {
+    bpf_map_pop_elem(&param_stack, &tempHolder{{.InstructionID}});
+    bpf_printk("\tpopping byte %d for size %d", i, tempHolder{{.InstructionID}});
+    sizeHolder_{{.InstructionID}} |= (__u64)(tempHolder{{.InstructionID}} << (8 * (7-i)));
+}
+
+bpf_printk("\tSize: %d", sizeHolder_{{.InstructionID}});
+
+if (sizeHolder_{{.InstructionID}} > {{.Arg1}}) {
+    sizeHolder_{{.InstructionID}} = {{.Arg1}};
+}
+
+for (i = 0; i < sizeHolder_{{.InstructionID}}; i++) {
+	bpf_map_pop_elem(&param_stack, &tempHolder{{.InstructionID}});
+    *(temp_storage+i) = tempHolder{{.InstructionID}};
+}
+
+bpf_probe_read(&event->output[outputOffset], sizeHolder_{{.InstructionID}}, temp_storage);
+outputOffset += sizeHolder_{{.InstructionID}};
 `
 
 var dereferenceTemplateText = `
@@ -81,22 +106,14 @@ for(i = 0; i < {{.Arg1}}; i++){
 `
 
 var variableDereferenceTemplateText = `
-// Arg1 = maximum length
+// Arg1 = maximum length (number of elements, not total size)
+// Arg2 = size of each element
 
 bpf_printk("Variable length dereferencing");
 
-// Read the string/slice address
-__u64 addressHolder_{{.InstructionID}} = 0;
-char place_holder_value_{{.InstructionID}} = 0;
-
-// Pop the top 8 elements from the stack, hold in addressHolder_{{.InstructionID}}
-for(i = 0; i < 8; i++) {
-    bpf_map_pop_elem(&param_stack, &place_holder_value_{{.InstructionID}});
-    addressHolder_{{.InstructionID}} |= (__u64)place_holder_value_{{.InstructionID}} << (8 * (7-i));
-}
-
 // Read the string/slice length
 __u64 lengthHolder_{{.InstructionID}} = 0;
+char place_holder_value_{{.InstructionID}} = 0;
 
 // Pop the top 8 elements from the stack, hold in lengthHolder_{{.InstructionID}}
 for(i = 0; i < 8; i++) {
@@ -104,23 +121,44 @@ for(i = 0; i < 8; i++) {
     lengthHolder_{{.InstructionID}} |= (__u64)place_holder_value_{{.InstructionID}} << (8 * (7-i));
 }
 
+bpf_printk("\tLength before multiplying: %d", lengthHolder_{{.InstructionID}});
+
+lengthHolder_{{.InstructionID}} *= {{.Arg2}}; // This means lengthHolder_{{.InstructionID}} holds total size of the collection, not length 
+
+bpf_printk("\tLength after multiplying: %d", lengthHolder_{{.InstructionID}});
+
 // Limit size
-if (lengthHolder_{{.InstructionID}} > {{.Arg1}}) {
-    lengthHolder_{{.InstructionID}} = {{.Arg1}};
+if (lengthHolder_{{.InstructionID}} > {{.Arg1}}*{{.Arg2}}) {
+    lengthHolder_{{.InstructionID}} = {{.Arg1}}*{{.Arg2}};
 }
 
+// Read the string/slice address
+__u64 addressHolder_{{.InstructionID}} = 0;
+
+// Pop the top 8 elements from the stack, hold in addressHolder_{{.InstructionID}}
+for(i = 0; i < 8; i++) {
+    bpf_map_pop_elem(&param_stack, &place_holder_value_{{.InstructionID}});
+    bpf_printk("\tpopping from stack for reading address: %d", place_holder_value_{{.InstructionID}});
+    addressHolder_{{.InstructionID}} |= (__u64)place_holder_value_{{.InstructionID}} << (8 * (7-i));
+}
+
+bpf_printk("\tAddress: 0x%x", addressHolder_{{.InstructionID}});
+
 // Read variable number of bytes from the address that was popped from the stack
-char valueHolder_{{.InstructionID}}[lengthHolder_{{.InstructionID}}];
-bpf_probe_read_user(valueHolder_{{.InstructionID}}, lengthHolder_{{.InstructionID}}, (void*)addressHolder_{{.InstructionID}});
+bpf_probe_read(temp_storage, lengthHolder_{{.InstructionID}}, (void*)addressHolder_{{.InstructionID}});
 
 // Push dereferenced value onto stack
 for(i = 0; i < lengthHolder_{{.InstructionID}}; i++){
-    bpf_map_push_elem(&param_stack, &valueHolder_{{.InstructionID}}[i], 0);
+    bpf_map_push_elem(&spare_stack, temp_storage+(i*{{.Arg2}}), 0);
+}
+for(i = 0; i < lengthHolder_{{.InstructionID}}; i++){
+    bpf_map_pop_elem(&spare_stack, &place_holder_value_{{.InstructionID}});
+    bpf_map_push_elem(&param_stack, &place_holder_value_{{.InstructionID}}, 0);
 }
 
-// Push length onto stack
+// Push size value onto stack
 for(i = 0; i < 8; i++) {
-	place_holder_value_{{.InstructionID}} = lengthHolder_{{.InstructionID}} >> (8 * (7-i))
+    place_holder_value_{{.InstructionID}} = lengthHolder_{{.InstructionID}} >> (8 * (7-i));
     bpf_map_push_elem(&param_stack, &place_holder_value_{{.InstructionID}}, 0);
 }
 `

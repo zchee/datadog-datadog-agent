@@ -111,6 +111,12 @@ func DereferenceLocationExpression(valueSize uint) LocationExpression {
 	return LocationExpression{Opcode: OpDereference, Arg1: valueSize, InstructionID: randomID()}
 }
 
+// Arg1 = maximum length (number of elements, not total size)
+// Arg2 = size of each element
+func DereferenceDynamicLocationExpression(maxCollectionLength, elementSize uint) LocationExpression {
+	return LocationExpression{Opcode: OpDereferenceVariableLength, Arg1: maxCollectionLength, Arg2: elementSize, InstructionID: randomID()}
+}
+
 // Arg1 = uint value (offset) we're adding to the 8-byte address on top of the stack
 func ApplyOffsetLocationExpression(offset uint) LocationExpression {
 	return LocationExpression{Opcode: OpApplyOffset, Arg1: offset, InstructionID: randomID()}
@@ -119,6 +125,11 @@ func ApplyOffsetLocationExpression(offset uint) LocationExpression {
 // Arg1 = number of bytes to pop
 func PopLocationExpression(bytesToPop uint) LocationExpression {
 	return LocationExpression{Opcode: OpPop, Arg1: bytesToPop, InstructionID: randomID()}
+}
+
+// Arg1 = maximum number of bytes to pop
+func PopDynamicLocationExpression(maxBytesToPop uint) LocationExpression {
+	return LocationExpression{Opcode: OpPopVariableLength, Arg1: maxBytesToPop, InstructionID: randomID()}
 }
 
 type LocationExpression struct {

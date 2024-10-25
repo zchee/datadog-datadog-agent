@@ -59,6 +59,13 @@ func GenerateLocationExpression(parameterMetadata bininspect.ParameterMetadata) 
 			ditypes.PopLocationExpression(8),
 			ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[1].Register), 8),
 		)
+	} else if parameterMetadata.Kind == reflect.String {
+		expressions = append(expressions,
+			ditypes.ReadRegisterLocationExpression(0, 8),
+			ditypes.ReadRegisterLocationExpression(1, 8),
+			ditypes.DereferenceDynamicLocationExpression(20, 1),
+			ditypes.PopDynamicLocationExpression(20),
+		)
 	}
 	return expressions
 }

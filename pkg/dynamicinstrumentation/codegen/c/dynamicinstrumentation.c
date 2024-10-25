@@ -28,6 +28,19 @@ struct {
 	__type(value, char);
 } param_stack SEC(".maps");
 
+struct {
+	__uint(type, BPF_MAP_TYPE_STACK);
+	__uint(max_entries, 2048);
+	__type(value, char);
+} spare_stack SEC(".maps");
+
+struct {
+	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+	__uint(max_entries, 1);
+	__type(key, __u32);
+	__type(value, char[MAX_SLICE_SIZE]);
+} temp_storage_array SEC(".maps");
+
 struct event {
     struct base_event base;
     char output[PARAM_BUFFER_SIZE];
@@ -77,7 +90,7 @@ int {{.GetBPFFuncName}}(struct pt_regs *ctx)
     bpf_probe_read(&bp, sizeof(__u64), (void*)bp); // dereference bp to get current stack frame
     __u64 ret_addr = PT_REGS_RET(ctx); // when bpf prog enters, the return address hasn't yet been written to the stack
 
-    int i;
+    __u16 i;
     for (i = 1; i < STACK_DEPTH_LIMIT; i++)
     {
         if (bp == 0) {
@@ -94,6 +107,12 @@ int {{.GetBPFFuncName}}(struct pt_regs *ctx)
     __u16 slice_length;
 
     int outputOffset = 0;
+	
+    char *temp_storage = bpf_map_lookup_elem(&temp_storage_array, &key) ;
+    if (!temp_storage) {
+        bpf_ringbuf_discard(event, 0);
+        return 0;
+    }
 
     {{ .InstrumentationInfo.BPFParametersSourceCode }}
 

@@ -81,9 +81,6 @@ func AnalyzeBinary(procInfo *ditypes.ProcessInfo) error {
 	r.StructOffsets[stringPtrIdentifier] = 0
 	r.StructOffsets[stringLenIdentifier] = 8
 
-	pretty.Log(r.Functions)
-	pretty.Log(procInfo.TypeMap.Functions)
-
 	// Use the result from InspectWithDWARF to populate the locations of parameters
 	for functionName, functionMetadata := range r.Functions {
 		populateLocationExpressions(r.Functions, procInfo.TypeMap.Functions)
@@ -142,6 +139,8 @@ func populateLocationExpressions(
 		if !ok {
 			return fmt.Errorf("no function metadata for function %s", funcName)
 		}
+
+		pretty.Log(">>: ", funcMetadata, parameters)
 
 		for i := range parameters {
 			if i >= len(funcMetadata.Parameters) {
