@@ -25,7 +25,7 @@ struct {
 struct {
 	__uint(type, BPF_MAP_TYPE_STACK);
 	__uint(max_entries, 2048);
-	__type(value, char);
+	__type(value, __u64);
 } param_stack SEC(".maps");
 
 struct {
@@ -91,6 +91,7 @@ int {{.GetBPFFuncName}}(struct pt_regs *ctx)
     __u64 ret_addr = PT_REGS_RET(ctx); // when bpf prog enters, the return address hasn't yet been written to the stack
 
     int i;
+    int j;
     __u16 n;
     for (i = 1; i < STACK_DEPTH_LIMIT; i++)
     {

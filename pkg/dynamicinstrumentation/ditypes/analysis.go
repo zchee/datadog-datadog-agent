@@ -108,7 +108,7 @@ func ReadStackLocationExpression(offset, size uint) LocationExpression {
 
 // Arg1 = size of value we're reading from the 8 byte address at the top of the stack
 func DereferenceLocationExpression(valueSize uint) LocationExpression {
-	return LocationExpression{Opcode: OpDereference, Arg1: valueSize, InstructionID: randomID()}
+	return LocationExpression{Opcode: OpDereference, Arg1: valueSize, Arg2: (valueSize + 7) / 8, InstructionID: randomID()}
 }
 
 // Arg1 = maximum length (number of elements, not total size)
@@ -122,9 +122,10 @@ func ApplyOffsetLocationExpression(offset uint) LocationExpression {
 	return LocationExpression{Opcode: OpApplyOffset, Arg1: offset, InstructionID: randomID()}
 }
 
-// Arg1 = number of bytes to pop
-func PopLocationExpression(bytesToPop uint) LocationExpression {
-	return LocationExpression{Opcode: OpPop, Arg1: bytesToPop, InstructionID: randomID()}
+// Arg1 = number of elements to pop
+// Arg2 = size of each element
+func PopLocationExpression(numElements, elementSize uint) LocationExpression {
+	return LocationExpression{Opcode: OpPop, Arg1: numElements, Arg2: elementSize, InstructionID: randomID()}
 }
 
 // Arg1 = maximum number of bytes to pop

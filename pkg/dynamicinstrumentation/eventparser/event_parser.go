@@ -66,6 +66,7 @@ func ParseParams(record []byte) ([]*ditypes.Param, error) {
 }
 
 func readParams(values []byte) []*ditypes.Param {
+	fmt.Println(values[0:100])
 	outputParams := []*ditypes.Param{}
 	for i := 0; i < MaxBufferSize; {
 		if i+3 >= len(values) {

@@ -12,13 +12,11 @@ var readRegisterTemplateText = `
 // Arg2 = size of element
 bpf_printk("Reading from register");
 
-char valueHolder_{{.InstructionID}}[{{.Arg2}}];
+__u64 valueHolder_{{.InstructionID}} = 0;
 bpf_probe_read(&valueHolder_{{.InstructionID}}, {{.Arg2}}, &ctx->DWARF_REGISTER({{.Arg1}}));
+bpf_map_push_elem(&param_stack, &valueHolder_{{.InstructionID}}, 0);
 
-for(i = 0; i < {{.Arg2}}; i++){
-    bpf_printk("\t%d", valueHolder_{{.InstructionID}}[i]);
-    bpf_map_push_elem(&param_stack, valueHolder_{{.InstructionID}}+i, 0);
-}
+bpf_printk("Pushed %d", valueHolder_{{.InstructionID}});
 `
 
 var readStackTemplateText = `
@@ -26,146 +24,49 @@ var readStackTemplateText = `
 // Arg2 = size of element
 bpf_printk("Reading from stack");
 
-char valueHolder_{{.InstructionID}}[{{.Arg2}}];
+__u64 valueHolder_{{.InstructionID}} = 0;
 bpf_probe_read(&valueHolder_{{.InstructionID}}, {{.Arg2}}, &ctx->DWARF_STACK_REGISTER+{{.Arg1}});
+bpf_printk("Value: %d", valueHolder_{{.InstructionID}});
+bpf_map_push_elem(&param_stack, &valueHolder_{{.InstructionID}}, 0);
 
-for(i = 0; i < {{.Arg2}}; i++){
-    bpf_printk("\t%d", valueHolder_{{.InstructionID}}[i]);
-    bpf_map_push_elem(&param_stack, valueHolder_{{.InstructionID}}+i, 0);
-}
+bpf_printk("Pushed %d", valueHolder_{{.InstructionID}});
 `
 
 var popTemplateText = `
-// Arg1 = number of bytes to pop
-bpf_printk("Popping, printing each character as it's popped");
-char valueHolder_{{.InstructionID}};
+// Arg1 = number of elements (u64) to pop
+// Arg2 = size of each element
+bpf_printk("Popping, printing each element as it's popped");
+__u64 valueHolder_{{.InstructionID}};
 
-for(i = {{.Arg1}}-1; i >= 0; i--) {
+for(i = 0; i < {{.Arg1}}; i++) {
     bpf_map_pop_elem(&param_stack, &valueHolder_{{.InstructionID}});
     bpf_printk("\t%d", valueHolder_{{.InstructionID}});
-    bpf_probe_read(&event->output[outputOffset+i], 1, &valueHolder_{{.InstructionID}});
+    bpf_probe_read(&event->output[outputOffset+i], 8, &valueHolder_{{.InstructionID}});
+    outputOffset += {{.Arg2}};
 }
-outputOffset += {{.Arg1}};
-`
-
-var variablePopTemplateText = `
-// Arg1 = maximum size (bytes that can be popped, or maximum collection length)
-
-// Read the size from top of stack (8 bytes)
-// Read the actual data (x bytes, x = size)
-// Write data to output buffer (just content, not size)
-
-bpf_printk("Variable length popping!");
-
-char tempHolder{{.InstructionID}} = 0;
-__u64 sizeHolder_{{.InstructionID}} = 0;
-
-for (n = 0; n < 8; n++) {
-    bpf_map_pop_elem(&param_stack, &tempHolder{{.InstructionID}});
-    bpf_printk("\tpopping byte %d for size %d", n, tempHolder{{.InstructionID}});
-    sizeHolder_{{.InstructionID}} |= (__u64)(tempHolder{{.InstructionID}} << (8 * n));
-    bpf_printk("\tSize: %d", sizeHolder_{{.InstructionID}});
-}
-
-bpf_printk("\tSize: %d", sizeHolder_{{.InstructionID}});
-
-if (sizeHolder_{{.InstructionID}} > {{.Arg1}}) {
-    sizeHolder_{{.InstructionID}} = {{.Arg1}};
-    bpf_printk("\tApplied limit! Size: %d", sizeHolder_{{.InstructionID}});
-}
-
-for (n = 0; n < sizeHolder_{{.InstructionID}}; n++) {
-	bpf_map_pop_elem(&param_stack, &tempHolder{{.InstructionID}});
-    bpf_printk("\tpopping byte %d for value %d", n, tempHolder{{.InstructionID}});
-    *(temp_storage+n) = tempHolder{{.InstructionID}};
-}
-
-bpf_probe_read(&event->output[outputOffset], sizeHolder_{{.InstructionID}}, temp_storage);
-outputOffset += sizeHolder_{{.InstructionID}};
 `
 
 var dereferenceTemplateText = `
-// Arg1 = size of value we're reading from the 8 byte address at the top of the stack
+// Arg1 = size in bytes of value we're reading from the 8 byte address at the top of the stack
+// Arg2 = number of __u64's to use (Should be ({{.Arg1}}+7)/8)
 bpf_printk("Dereferencing");
 
 __u64 addressHolder_{{.InstructionID}} = 0;
-char place_holder_value_{{.InstructionID}} = 0;
+bpf_map_pop_elem(&param_stack, &addressHolder_{{.InstructionID}});
 
-// Pop the top 8 elements from the stack, hold in addressHolder_{{.InstructionID}}
-for(i = 0; i < 8; i++) {
-    bpf_map_pop_elem(&param_stack, &place_holder_value_{{.InstructionID}});
-    bpf_printk("\tchar: %d", place_holder_value_{{.InstructionID}});
-    addressHolder_{{.InstructionID}} |= (__u64)place_holder_value_{{.InstructionID}} << (8 * (7-i));
-    bpf_printk("\tAddr: 0x%x", addressHolder_{{.InstructionID}});
-}
+// Read {{.Arg1}} bytes from the address that was popped from the stack
+// Round up to nearest amount of __u64's to fit this type
 
-// Read {{.Arg1}} bytes from the address that was popped from the stack into valueHolder_{{.InstructionID}}[{{.Arg1}}]
-char valueHolder_{{.InstructionID}}[{{.Arg1}}];
-bpf_probe_read_user(valueHolder_{{.InstructionID}}, {{.Arg1}}, (void*)addressHolder_{{.InstructionID}});
+__u64 valueHolder_{{.InstructionID}} = 0;
+bpf_probe_read(&valueHolder_{{.InstructionID}}, {{.Arg1}}, (void*)addressHolder_{{.InstructionID}});
+bpf_printk("\tRead %d bytes from %x for value %d", {{.Arg1}}, (void*)addressHolder_{{.InstructionID}}, valueHolder_{{.InstructionID}});
 
-// Push dereferenced value onto stack
-for(i = 0; i < {{.Arg1}}; i++){
-    bpf_map_push_elem(&param_stack, &valueHolder_{{.InstructionID}}[i], 0);
-}
-`
+__u64 mask_{{.InstructionID}} = ({{.Arg1}} == 8) ? ~0ULL : (1ULL << (8 * {{.Arg1}})) - 1;
 
-var variableDereferenceTemplateText = `
-// Arg1 = maximum length (number of elements, not total size)
-// Arg2 = size of each element
+__u64 encodedValueHolder_{{.InstructionID}} = valueHolder_{{.InstructionID}} & mask_{{.InstructionID}};
+bpf_printk("\tEncoded value %d", encodedValueHolder_{{.InstructionID}});
 
-bpf_printk("Variable length dereferencing");
-
-// Read the string/slice length
-__u64 lengthHolder_{{.InstructionID}} = 0;
-char place_holder_value_{{.InstructionID}} = 0;
-
-// Pop the top 8 elements from the stack, hold in lengthHolder_{{.InstructionID}}
-for(i = 0; i < 8; i++) {
-    bpf_map_pop_elem(&param_stack, &place_holder_value_{{.InstructionID}});
-    lengthHolder_{{.InstructionID}} |= (__u64)place_holder_value_{{.InstructionID}} << (8 * (7-i));
-}
-
-bpf_printk("\tLength before multiplying: %d", lengthHolder_{{.InstructionID}});
-
-lengthHolder_{{.InstructionID}} *= {{.Arg2}}; // This means lengthHolder_{{.InstructionID}} holds total size of the collection, not length 
-
-bpf_printk("\tLength after multiplying: %d", lengthHolder_{{.InstructionID}});
-
-// Limit size
-if (lengthHolder_{{.InstructionID}} > {{.Arg1}}*{{.Arg2}}) {
-    lengthHolder_{{.InstructionID}} = {{.Arg1}}*{{.Arg2}};
-    bpf_printk("\tLength after applying limit: %d", lengthHolder_{{.InstructionID}});
-}
-
-// Read the string/slice address
-__u64 addressHolder_{{.InstructionID}} = 0;
-
-// Pop the top 8 elements from the stack, hold in addressHolder_{{.InstructionID}}
-for(n = 0; n < 8; n++) {
-    bpf_map_pop_elem(&param_stack, &place_holder_value_{{.InstructionID}});
-    bpf_printk("\tpopping from stack for reading address: %d", place_holder_value_{{.InstructionID}});
-    addressHolder_{{.InstructionID}} |= (__u64)place_holder_value_{{.InstructionID}} << (8 * (7-n));
-}
-
-bpf_printk("\tAddress: 0x%x", addressHolder_{{.InstructionID}});
-
-// Read variable number of bytes from the address that was popped from the stack
-bpf_probe_read(temp_storage, lengthHolder_{{.InstructionID}}, (void*)addressHolder_{{.InstructionID}});
-
-// Push dereferenced value onto stack
-for(n = 0; n < lengthHolder_{{.InstructionID}}; n++){
-    bpf_map_push_elem(&spare_stack, temp_storage+n, 0);
-}
-for(n = 0; n < lengthHolder_{{.InstructionID}}; n++){
-    bpf_map_pop_elem(&spare_stack, &place_holder_value_{{.InstructionID}});
-    bpf_map_push_elem(&param_stack, &place_holder_value_{{.InstructionID}}, 0);
-}
-
-// Push size value onto stack
-for(n = 0; n < 8; n++) {
-    place_holder_value_{{.InstructionID}} = lengthHolder_{{.InstructionID}} >> (8 * (7-n));
-    bpf_map_push_elem(&param_stack, &place_holder_value_{{.InstructionID}}, 0);
-}
+bpf_map_push_elem(&param_stack, &encodedValueHolder_{{.InstructionID}}, 0);
 `
 
 var applyOffsetTemplateText = `
@@ -173,20 +74,13 @@ var applyOffsetTemplateText = `
 bpf_printk("Applying offset");
 
 __u64 addressHolder_{{.InstructionID}} = 0;
-char place_holder_value_{{.InstructionID}} = 0;
-
-for(i = 0; i < 8; i++) {
-    bpf_map_pop_elem(&param_stack, &place_holder_value_{{.InstructionID}});
-    addressHolder_{{.InstructionID}} |= (__u64)place_holder_value_{{.InstructionID}} << (8 * (7-i));
-}
-
-// add Arg1 to the converted uint
+bpf_map_pop_elem(&param_stack, &addressHolder_{{.InstructionID}});
 addressHolder_{{.InstructionID}} += {{.Arg1}};
+bpf_map_push_elem(&param_stack, &addressHolder_{{.InstructionID}}, 0);
+`
 
-char valueHolder_{{.InstructionID}};
+var variablePopTemplateText = `
+`
 
-for(i = 0; i < 8; i++) {
-    valueHolder_{{.InstructionID}} = addressHolder_{{.InstructionID}}>>(8*i);
-    bpf_map_push_elem(&param_stack, &valueHolder_{{.InstructionID}}, 0);
-}
+var variableDereferenceTemplateText = `
 `

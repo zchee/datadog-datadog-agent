@@ -24,7 +24,7 @@ func GenerateLocationExpression(parameterMetadata bininspect.ParameterMetadata) 
 		if parameterMetadata.Pieces[0].InReg {
 			expressions = append(expressions,
 				ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),
-				ditypes.PopLocationExpression(8),
+				ditypes.PopLocationExpression(1, 8),
 			)
 		}
 	} else if parameterMetadata.Kind == reflect.Pointer {
@@ -33,37 +33,37 @@ func GenerateLocationExpression(parameterMetadata bininspect.ParameterMetadata) 
 				ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),
 				ditypes.ApplyOffsetLocationExpression(0),
 				ditypes.DereferenceLocationExpression(8),
-				ditypes.PopLocationExpression(8),
+				ditypes.PopLocationExpression(1, 8),
 
 				ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),
 				ditypes.ApplyOffsetLocationExpression(8),
 				ditypes.DereferenceLocationExpression(1),
-				ditypes.PopLocationExpression(1),
+				ditypes.PopLocationExpression(1, 1),
 
 				ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),
-				ditypes.PopLocationExpression(8),
+				ditypes.PopLocationExpression(1, 8),
 			)
 		}
 	} else if parameterMetadata.Kind == reflect.Struct {
 		expressions = append(expressions,
 			ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),
-			ditypes.PopLocationExpression(8),
+			ditypes.PopLocationExpression(1, 8),
 			ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[1].Register), 8),
 		)
 	} else if parameterMetadata.Kind == reflect.String {
-		expressions = append(expressions,
-			ditypes.ReadRegisterLocationExpression(0, 8),
-			ditypes.ReadRegisterLocationExpression(1, 8),
-			ditypes.DereferenceDynamicLocationExpression(20, 1),
-			ditypes.PopDynamicLocationExpression(20),
-		)
+		// expressions = append(expressions,
+		// 	ditypes.ReadRegisterLocationExpression(0, 8),
+		// 	ditypes.ReadRegisterLocationExpression(1, 8),
+		// 	ditypes.DereferenceDynamicLocationExpression(20, 1),
+		// 	ditypes.PopDynamicLocationExpression(20),
+		// )
 	} else if parameterMetadata.Kind == reflect.Slice {
-		expressions = append(expressions,
-			ditypes.ReadRegisterLocationExpression(0, 8),
-			ditypes.ReadRegisterLocationExpression(1, 8),
-			ditypes.DereferenceDynamicLocationExpression(3, 8),
-			ditypes.PopDynamicLocationExpression(24),
-		)
+		// expressions = append(expressions,
+		// 	ditypes.ReadRegisterLocationExpression(0, 8),
+		// 	ditypes.ReadRegisterLocationExpression(1, 8),
+		// 	ditypes.DereferenceDynamicLocationExpression(3, 8),
+		// 	ditypes.PopDynamicLocationExpression(24),
+		// )
 	}
 	return expressions
 }
