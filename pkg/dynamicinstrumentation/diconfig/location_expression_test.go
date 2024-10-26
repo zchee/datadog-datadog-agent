@@ -33,15 +33,8 @@ func TestLocationExpressionGeneration(t *testing.T) {
 				},
 			},
 			ExpectedOutput: []ditypes.LocationExpression{
-				{
-					Opcode: ditypes.OpReadUserRegister,
-					Arg1:   0,
-					Arg2:   8,
-				},
-				{
-					Opcode: ditypes.OpPop,
-					Arg1:   8,
-				},
+				ditypes.ReadRegisterLocationExpression(0, 8),
+				ditypes.PopLocationExpression(8),
 			},
 		},
 	}

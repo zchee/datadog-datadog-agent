@@ -19,6 +19,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/ditypes"
 	"github.com/DataDog/datadog-agent/pkg/dynamicinstrumentation/ratelimiter"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+	"github.com/kr/pretty"
 )
 
 // MaxBufferSize is the maximum size of the output buffer from bpf which is read by this package
@@ -51,6 +52,8 @@ func ParseEvent(record []byte, ratelimiters *ratelimiter.MultiProbeRateLimiter) 
 	event.UID = baseEvent.Uid
 	event.StackPCs = baseEvent.Program_counters[:]
 	event.Argdata = readParams(record[ditypes.SizeofBaseEvent:])
+	pretty.Log(event.Argdata)
+
 	return &event
 }
 
@@ -63,7 +66,6 @@ func ParseParams(record []byte) ([]*ditypes.Param, error) {
 }
 
 func readParams(values []byte) []*ditypes.Param {
-	fmt.Println(values[0:50])
 	outputParams := []*ditypes.Param{}
 	for i := 0; i < MaxBufferSize; {
 		if i+3 >= len(values) {

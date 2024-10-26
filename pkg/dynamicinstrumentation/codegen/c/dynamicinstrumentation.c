@@ -90,7 +90,8 @@ int {{.GetBPFFuncName}}(struct pt_regs *ctx)
     bpf_probe_read(&bp, sizeof(__u64), (void*)bp); // dereference bp to get current stack frame
     __u64 ret_addr = PT_REGS_RET(ctx); // when bpf prog enters, the return address hasn't yet been written to the stack
 
-    __u16 i;
+    int i;
+    __u16 n;
     for (i = 1; i < STACK_DEPTH_LIMIT; i++)
     {
         if (bp == 0) {
