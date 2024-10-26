@@ -3,7 +3,9 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2024-present Datadog, Inc.
 
-//go:build linux
+// This doesn't need BPF, but it's built with this tag to only run with
+// system-probe tests, otherwise linters show an error for the core agent tests.
+//go:build test && linux_bpf
 
 package module
 
@@ -65,7 +67,7 @@ func TestShouldIgnoreProc(t *testing.T) {
 			require.NoError(t, err)
 
 			require.EventuallyWithT(t, func(collect *assert.CollectT) {
-				// find service name
+				// find service name, first run saves ignored process.
 				discovery.getService(discoveryCtx, int32(cmd.Process.Pid))
 
 				// check ignored service
