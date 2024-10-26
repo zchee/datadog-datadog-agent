@@ -66,6 +66,9 @@ type discovery struct {
 	// cache maps pids to data that should be cached between calls to the endpoint.
 	cache map[int32]*serviceInfo
 
+	// ignorePids processes to be excluded from discovery processing
+	ignorePids map[int32]bool
+
 	// privilegedDetector is used to detect the language of a process.
 	privilegedDetector privileged.LanguageDetector
 
@@ -80,15 +83,20 @@ type discovery struct {
 	lastCPUTimeUpdate time.Time
 }
 
-// NewDiscoveryModule creates a new discovery system probe module.
-func NewDiscoveryModule(*sysconfigtypes.Config, module.FactoryDependencies) (module.Module, error) {
+func newDiscovery() *discovery {
 	return &discovery{
 		config:             newConfig(),
 		mux:                &sync.RWMutex{},
 		cache:              make(map[int32]*serviceInfo),
+		ignorePids:         make(map[int32]bool, len(ignoreServices)),
 		privilegedDetector: privileged.NewLanguageDetector(),
 		scrubber:           procutil.NewDefaultDataScrubber(),
-	}, nil
+	}
+}
+
+// NewDiscoveryModule creates a new discovery system probe module.
+func NewDiscoveryModule(*sysconfigtypes.Config, module.FactoryDependencies) (module.Module, error) {
+	return newDiscovery(), nil
 }
 
 // GetStats returns the stats of the discovery module.
@@ -108,6 +116,7 @@ func (s *discovery) Close() {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 	clear(s.cache)
+	clear(s.ignorePids)
 }
 
 // handleStatusEndpoint is the handler for the /status endpoint.
@@ -402,6 +411,9 @@ func (s *discovery) getService(context parsingContext, pid int32) *model.Service
 		return nil
 	}
 
+	if s.shouldIgnorePid(proc) {
+		return nil
+	}
 	if shouldIgnoreComm(proc) {
 		return nil
 	}
@@ -487,6 +499,7 @@ func (s *discovery) getService(context parsingContext, pid int32) *model.Service
 	if name == "" {
 		name = info.generatedName
 	}
+	s.saveIgnoredProc(name, proc)
 
 	return &model.Service{
 		PID:                int(pid),
@@ -578,6 +591,7 @@ func (s *discovery) getServices() (*[]model.Service, error) {
 		services = append(services, *service)
 	}
 
+	s.cleanIgnoredProc(alivePids)
 	s.cleanCache(alivePids)
 
 	if err = s.updateServicesCPUStats(services); err != nil {
