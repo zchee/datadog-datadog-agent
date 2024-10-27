@@ -29,16 +29,10 @@ struct {
 } param_stack SEC(".maps");
 
 struct {
-	__uint(type, BPF_MAP_TYPE_STACK);
-	__uint(max_entries, 2048);
-	__type(value, char);
-} spare_stack SEC(".maps");
-
-struct {
 	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
 	__uint(max_entries, 1);
 	__type(key, __u32);
-	__type(value, char[MAX_SLICE_SIZE]);
+	__type(value, __u64[MAX_SLICE_SIZE]);
 } temp_storage_array SEC(".maps");
 
 struct event {
@@ -108,9 +102,10 @@ int {{.GetBPFFuncName}}(struct pt_regs *ctx)
     __u16 param_size;
     __u16 slice_length;
 
+    int chunk_size = 0;
     int outputOffset = 0;
 	
-    char *temp_storage = bpf_map_lookup_elem(&temp_storage_array, &key) ;
+    __u64 *temp_storage = bpf_map_lookup_elem(&temp_storage_array, &key) ;
     if (!temp_storage) {
         bpf_ringbuf_discard(event, 0);
         return 0;

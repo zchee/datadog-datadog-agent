@@ -121,14 +121,14 @@ func resolveLocationExpressionTemplate(locationExpression ditypes.LocationExpres
 	if locationExpression.Opcode == ditypes.OpPop {
 		return template.New("pop_location_expression").Parse(popTemplateText)
 	}
-	if locationExpression.Opcode == ditypes.OpPopVariableLength {
-		return template.New("pop_variable_length_location_expression").Parse(variablePopTemplateText)
-	}
 	if locationExpression.Opcode == ditypes.OpDereference {
 		return template.New("dereference_location_expression").Parse(dereferenceTemplateText)
 	}
-	if locationExpression.Opcode == ditypes.OpDereferenceVariableLength {
-		return template.New("dereference_variable_length_location_expression").Parse(variableDereferenceTemplateText)
+	if locationExpression.Opcode == ditypes.OpDereferenceToOutput {
+		return template.New("dereference_to_output_location_expression").Parse(dereferenceToOutputTemplateText)
+	}
+	if locationExpression.Opcode == ditypes.OpDereferenceLarge {
+		return template.New("dereference_large_location_expression").Parse(dereferenceLargeTemplateText)
 	}
 	if locationExpression.Opcode == ditypes.OpApplyOffset {
 		return template.New("apply_offset_location_expression").Parse(applyOffsetTemplateText)

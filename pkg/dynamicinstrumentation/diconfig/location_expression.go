@@ -28,22 +28,10 @@ func GenerateLocationExpression(parameterMetadata bininspect.ParameterMetadata) 
 			)
 		}
 	} else if parameterMetadata.Kind == reflect.Pointer {
-		if parameterMetadata.Pieces[0].InReg {
-			expressions = append(expressions,
-				ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),
-				ditypes.ApplyOffsetLocationExpression(0),
-				ditypes.DereferenceLocationExpression(8),
-				ditypes.PopLocationExpression(1, 8),
-
-				ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),
-				ditypes.ApplyOffsetLocationExpression(8),
-				ditypes.DereferenceLocationExpression(1),
-				ditypes.PopLocationExpression(1, 1),
-
-				ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),
-				ditypes.PopLocationExpression(1, 8),
-			)
-		}
+		expressions = append(expressions,
+			ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),
+			ditypes.DereferenceToOutputLocationExpression(8),
+		)
 	} else if parameterMetadata.Kind == reflect.Struct {
 		expressions = append(expressions,
 			ditypes.ReadRegisterLocationExpression(uint(parameterMetadata.Pieces[0].Register), 8),

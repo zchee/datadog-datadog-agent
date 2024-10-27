@@ -87,11 +87,14 @@ const (
 	OpInvalid LocationExpressionOpcode = iota
 	OpReadUserRegister
 	OpReadUserStack
+	OpReadUserRegisterToOutput
+	OpReadUserStackToOutput
 	OpDereference
-	OpDereferenceVariableLength
+	OpDereferenceToOutput
+	OpDereferenceLarge
+	OpDereferenceLargeToOutput
 	OpApplyOffset
 	OpPop
-	OpPopVariableLength
 )
 
 // Arg1 = register
@@ -106,15 +109,38 @@ func ReadStackLocationExpression(offset, size uint) LocationExpression {
 	return LocationExpression{Opcode: OpReadUserStack, Arg1: offset, Arg2: size, InstructionID: randomID()}
 }
 
-// Arg1 = size of value we're reading from the 8 byte address at the top of the stack
-func DereferenceLocationExpression(valueSize uint) LocationExpression {
-	return LocationExpression{Opcode: OpDereference, Arg1: valueSize, Arg2: (valueSize + 7) / 8, InstructionID: randomID()}
+// Arg1 = register
+// Arg2 = size of element
+func ReadRegisterToOutputLocationExpression(register, size uint) LocationExpression {
+	return LocationExpression{Opcode: OpReadUserRegisterToOutput, Arg1: register, Arg2: size, InstructionID: randomID()}
 }
 
-// Arg1 = maximum length (number of elements, not total size)
-// Arg2 = size of each element
-func DereferenceDynamicLocationExpression(maxCollectionLength, elementSize uint) LocationExpression {
-	return LocationExpression{Opcode: OpDereferenceVariableLength, Arg1: maxCollectionLength, Arg2: elementSize, InstructionID: randomID()}
+// Arg1 = stack offset
+// Arg2 = size of element
+func ReadStackToOutputLocationExpression(offset, size uint) LocationExpression {
+	return LocationExpression{Opcode: OpReadUserStackToOutput, Arg1: offset, Arg2: size, InstructionID: randomID()}
+}
+
+// Arg1 = size of value we're reading from the 8 byte address at the top of the stack
+func DereferenceLocationExpression(valueSize uint) LocationExpression {
+	return LocationExpression{Opcode: OpDereference, Arg1: valueSize, InstructionID: randomID()}
+}
+
+// Arg1 = size of value we're reading from the 8 byte address at the top of the stack
+func DereferenceToOutputLocationExpression(valueSize uint) LocationExpression {
+	return LocationExpression{Opcode: OpDereferenceToOutput, Arg1: valueSize, InstructionID: randomID()}
+}
+
+// Arg1 = size in bytes of value we're reading from the 8 byte address at the top of the stack
+// Arg2 = number of chunks (should be ({{.Arg1}} + 7) / 8)
+func DereferenceLargeLocationExpression(typeSize uint) LocationExpression {
+	return LocationExpression{Opcode: OpDereferenceLarge, Arg1: typeSize, Arg2: (typeSize + 7) / 8, InstructionID: randomID()}
+}
+
+// Arg1 = size in bytes of value we're reading from the 8 byte address at the top of the stack
+// Arg2 = number of chunks (should be ({{.Arg1}} + 7) / 8)
+func DereferenceLargeToOutputLocationExpression(typeSize uint) LocationExpression {
+	return LocationExpression{Opcode: OpDereferenceLargeToOutput, Arg1: typeSize, Arg2: (typeSize + 7) / 8, InstructionID: randomID()}
 }
 
 // Arg1 = uint value (offset) we're adding to the 8-byte address on top of the stack
@@ -126,11 +152,6 @@ func ApplyOffsetLocationExpression(offset uint) LocationExpression {
 // Arg2 = size of each element
 func PopLocationExpression(numElements, elementSize uint) LocationExpression {
 	return LocationExpression{Opcode: OpPop, Arg1: numElements, Arg2: elementSize, InstructionID: randomID()}
-}
-
-// Arg1 = maximum number of bytes to pop
-func PopDynamicLocationExpression(maxBytesToPop uint) LocationExpression {
-	return LocationExpression{Opcode: OpPopVariableLength, Arg1: maxBytesToPop, InstructionID: randomID()}
 }
 
 type LocationExpression struct {
