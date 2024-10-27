@@ -122,7 +122,7 @@ func (ext *ddExtension) Start(_ context.Context, host component.Host) error {
 
 	go func() {
 		if err := ext.server.Serve(ext.tlsListener); err != nil && err != http.ErrServerClosed {
-			ext.telemetry.ReportStatus(component.NewFatalErrorEvent(err))
+			// ext.telemetry.ReportStatus(component.NewFatalErrorEvent(err))
 			ext.telemetry.Logger.Info("DD Extension HTTP could not start", zap.String("err", err.Error()))
 		}
 	}()

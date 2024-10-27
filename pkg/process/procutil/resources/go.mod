@@ -2,3 +2,7 @@
 // This solves the issue of gopls crashing since https://github.com/DataDog/datadog-agent/pull/15843 was merged.
 
 // Issue suggesting this solution: https://github.com/golang/go/issues/42965
+
+module github.com/DataDog/datadog-agent/pkg/process/procutil/resources
+
+go 1.23.2

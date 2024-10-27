@@ -49,29 +49,29 @@ replace (
 )
 
 require (
-	github.com/DataDog/datadog-agent/comp/core/config v0.57.0
-	github.com/DataDog/datadog-agent/comp/core/log/def v0.57.0
-	github.com/DataDog/datadog-agent/comp/core/log/mock v0.57.0
-	github.com/DataDog/datadog-agent/comp/core/status v0.57.0
-	github.com/DataDog/datadog-agent/pkg/config/model v0.57.0
-	github.com/DataDog/datadog-agent/pkg/config/setup v0.57.0
-	github.com/DataDog/datadog-agent/pkg/config/utils v0.57.0
-	github.com/DataDog/datadog-agent/pkg/orchestrator/model v0.57.0
-	github.com/DataDog/datadog-agent/pkg/status/health v0.57.0
-	github.com/DataDog/datadog-agent/pkg/telemetry v0.57.0
-	github.com/DataDog/datadog-agent/pkg/util/backoff v0.57.0
-	github.com/DataDog/datadog-agent/pkg/util/common v0.57.0
-	github.com/DataDog/datadog-agent/pkg/util/filesystem v0.57.0
-	github.com/DataDog/datadog-agent/pkg/util/fxutil v0.57.0
-	github.com/DataDog/datadog-agent/pkg/util/http v0.57.0
-	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.57.0
-	github.com/DataDog/datadog-agent/pkg/version v0.57.0
-	github.com/golang/protobuf v1.5.3
+	github.com/DataDog/datadog-agent/comp/core/config v0.58.1
+	github.com/DataDog/datadog-agent/comp/core/log/def v0.58.1
+	github.com/DataDog/datadog-agent/comp/core/log/mock v0.58.1
+	github.com/DataDog/datadog-agent/comp/core/status v0.58.1
+	github.com/DataDog/datadog-agent/pkg/config/model v0.58.1
+	github.com/DataDog/datadog-agent/pkg/config/setup v0.58.1
+	github.com/DataDog/datadog-agent/pkg/config/utils v0.58.1
+	github.com/DataDog/datadog-agent/pkg/orchestrator/model v0.58.1
+	github.com/DataDog/datadog-agent/pkg/status/health v0.58.1
+	github.com/DataDog/datadog-agent/pkg/telemetry v0.58.1
+	github.com/DataDog/datadog-agent/pkg/util/backoff v0.58.1
+	github.com/DataDog/datadog-agent/pkg/util/common v0.58.1
+	github.com/DataDog/datadog-agent/pkg/util/filesystem v0.58.1
+	github.com/DataDog/datadog-agent/pkg/util/fxutil v0.58.1
+	github.com/DataDog/datadog-agent/pkg/util/http v0.58.1
+	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.58.1
+	github.com/DataDog/datadog-agent/pkg/version v0.58.1
+	github.com/golang/protobuf v1.5.4
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/atomic v1.11.0
-	go.uber.org/fx v1.22.2
-	golang.org/x/text v0.17.0
+	go.uber.org/fx v1.23.0
+	golang.org/x/text v0.19.0
 )
 
 require (
