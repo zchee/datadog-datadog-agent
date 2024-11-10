@@ -1,6 +1,8 @@
 module github.com/DataDog/datadog-agent/comp/otelcol/logsagentpipeline/logsagentpipelineimpl
 
-go 1.22.0
+go 1.23.2
+
+toolchain go1.23.3
 
 replace (
 	github.com/DataDog/datadog-agent/cmd/agent/common/path => ../../../../cmd/agent/common/path
@@ -64,8 +66,8 @@ require (
 	github.com/DataDog/datadog-agent/comp/core/log/mock v0.57.0
 	github.com/DataDog/datadog-agent/comp/logs/agent/config v0.57.0
 	github.com/DataDog/datadog-agent/comp/otelcol/logsagentpipeline v0.57.0
-	github.com/DataDog/datadog-agent/pkg/config/model v0.57.0
-	github.com/DataDog/datadog-agent/pkg/config/setup v0.57.0
+	github.com/DataDog/datadog-agent/pkg/config/model v0.59.0
+	github.com/DataDog/datadog-agent/pkg/config/setup v0.59.0
 	github.com/DataDog/datadog-agent/pkg/logs/auditor v0.57.0
 	github.com/DataDog/datadog-agent/pkg/logs/client v0.57.0
 	github.com/DataDog/datadog-agent/pkg/logs/diagnostic v0.57.0
@@ -75,8 +77,8 @@ require (
 	github.com/DataDog/datadog-agent/pkg/logs/sources v0.57.0
 	github.com/DataDog/datadog-agent/pkg/logs/status/statusinterface v0.57.0
 	github.com/DataDog/datadog-agent/pkg/status/health v0.57.0
-	github.com/DataDog/datadog-agent/pkg/util/fxutil v0.57.0
-	github.com/DataDog/datadog-agent/pkg/util/optional v0.57.0
+	github.com/DataDog/datadog-agent/pkg/util/fxutil v0.59.0
+	github.com/DataDog/datadog-agent/pkg/util/optional v0.59.0
 	github.com/DataDog/datadog-agent/pkg/util/startstop v0.57.0
 	github.com/DataDog/datadog-agent/pkg/util/testutil v0.57.0
 	github.com/stretchr/testify v1.9.0
@@ -86,14 +88,14 @@ require (
 
 require (
 	github.com/DataDog/agent-payload/v5 v5.0.106 // indirect
-	github.com/DataDog/datadog-agent/comp/core/flare/builder v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/comp/core/flare/types v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/comp/core/secrets v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/comp/core/telemetry v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/comp/def v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/collector/check/defaults v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/config/env v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/config/mock v0.0.0-00010101000000-000000000000 // indirect
+	github.com/DataDog/datadog-agent/comp/core/flare/builder v0.58.1 // indirect
+	github.com/DataDog/datadog-agent/comp/core/flare/types v0.59.0 // indirect
+	github.com/DataDog/datadog-agent/comp/core/secrets v0.59.0 // indirect
+	github.com/DataDog/datadog-agent/comp/core/telemetry v0.59.0 // indirect
+	github.com/DataDog/datadog-agent/comp/def v0.58.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/collector/check/defaults v0.58.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/config/env v0.58.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/config/mock v0.59.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/config/utils v0.57.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/logs/processor v0.57.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/logs/sds v0.57.0 // indirect
@@ -101,18 +103,18 @@ require (
 	github.com/DataDog/datadog-agent/pkg/logs/status/utils v0.57.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/telemetry v0.57.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/backoff v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/executable v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/filesystem v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/hostname/validate v0.57.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/executable v0.58.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/filesystem v0.58.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/hostname/validate v0.58.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/http v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/log v0.57.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/log v0.58.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/log/setup v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/pointer v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.57.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/pointer v0.58.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.58.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/statstracker v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/system v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/system/socket v0.57.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/winutil v0.57.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/system v0.58.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/system/socket v0.58.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/winutil v0.59.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/version v0.57.0 // indirect
 	github.com/DataDog/dd-sensitive-data-scanner/sds-go/go v0.0.0-20240816154533-f7f9beb53a42 // indirect
 	github.com/DataDog/viper v1.13.5 // indirect
@@ -123,11 +125,12 @@ require (
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/go-logr/logr v1.4.1 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -156,12 +159,12 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	go.opentelemetry.io/otel v1.27.0 // indirect
+	go.opentelemetry.io/otel v1.31.0 // indirect
 	go.opentelemetry.io/otel/exporters/prometheus v0.42.0 // indirect
-	go.opentelemetry.io/otel/metric v1.27.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.27.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.27.0 // indirect
-	go.opentelemetry.io/otel/trace v1.27.0 // indirect
+	go.opentelemetry.io/otel/metric v1.31.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.31.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.31.0 // indirect
+	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/dig v1.18.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -169,7 +172,7 @@ require (
 	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.24.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect

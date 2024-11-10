@@ -31,16 +31,16 @@ replace (
 )
 
 require (
-	github.com/DataDog/datadog-agent/cmd/agent/common/path v0.58.1
-	github.com/DataDog/datadog-agent/comp/core/flare/types v0.58.1
-	github.com/DataDog/datadog-agent/comp/core/secrets v0.58.1
-	github.com/DataDog/datadog-agent/comp/core/telemetry v0.58.1
-	github.com/DataDog/datadog-agent/pkg/config/mock v0.58.1
-	github.com/DataDog/datadog-agent/pkg/config/model v0.58.1
-	github.com/DataDog/datadog-agent/pkg/config/setup v0.58.1
-	github.com/DataDog/datadog-agent/pkg/util/fxutil v0.58.1
-	github.com/DataDog/datadog-agent/pkg/util/optional v0.58.1
-	github.com/DataDog/datadog-agent/pkg/util/winutil v0.58.1
+	github.com/DataDog/datadog-agent/cmd/agent/common/path v0.59.0
+	github.com/DataDog/datadog-agent/comp/core/flare/types v0.59.0
+	github.com/DataDog/datadog-agent/comp/core/secrets v0.59.0
+	github.com/DataDog/datadog-agent/comp/core/telemetry v0.59.0
+	github.com/DataDog/datadog-agent/pkg/config/mock v0.59.0
+	github.com/DataDog/datadog-agent/pkg/config/model v0.59.0
+	github.com/DataDog/datadog-agent/pkg/config/setup v0.59.0
+	github.com/DataDog/datadog-agent/pkg/util/fxutil v0.59.0
+	github.com/DataDog/datadog-agent/pkg/util/optional v0.59.0
+	github.com/DataDog/datadog-agent/pkg/util/winutil v0.59.0
 	github.com/DataDog/viper v1.13.5
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/fx v1.22.2
