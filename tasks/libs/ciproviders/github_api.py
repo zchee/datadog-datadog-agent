@@ -332,7 +332,7 @@ class GithubAPI:
 
     def latest_release(self) -> str:
         release = self._repository.get_latest_release()
-        return release.title
+        return release.tag_name
 
     def latest_unreleased_release_branches(self):
         """

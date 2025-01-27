@@ -20,7 +20,7 @@ LICENSE_HEADER = """// Unless explicitly stated otherwise all files in this repo
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 """
-OCB_VERSION = "0.114.0"
+OCB_VERSION = "0.118.0"
 
 MANDATORY_COMPONENTS = {
     "extensions": [
@@ -186,8 +186,9 @@ def generate(ctx):
             ) from e
 
         # Run the binary with specified options
-        run_command = f"{binary_path} --config {MANIFEST_FILE} --skip-compilation"
-        print(f"Running command: {run_command}")
+        os.environ.update({"GOFLAGS": "-v -trimpath -tags=osusergo,netgo,static"})
+        run_command = f"{binary_path} --config {MANIFEST_FILE} --ldflags='-s -w -buildid= \"-extldflags=-static\"' --skip-compilation"
+        print(f"Running command: {run_command}, GOFLAGS: {os.environ.get("GOFLAGS")}")
 
         try:
             result = ctx.run(run_command)
@@ -479,9 +480,6 @@ class CollectorVersionUpdater:
             "./tasks/collector.py",
             "./.gitlab/integration_test/otel.yml",
         ]
-        for root, _, files in os.walk("./tasks/unit_tests/testdata/collector"):
-            for file in files:
-                files.append(os.path.join(root, file))
         collector_version = self.core_collector.get_version()[1:]
         for file in files:
             update_file(file, self.core_collector.get_old_version(), collector_version)

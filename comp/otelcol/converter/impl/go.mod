@@ -42,12 +42,12 @@ require (
 	github.com/DataDog/datadog-agent/comp/core/config v0.61.0
 	github.com/DataDog/datadog-agent/comp/otelcol/converter/def v0.61.0
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/collector/confmap v1.20.0
-	go.opentelemetry.io/collector/confmap/provider/envprovider v1.20.0
-	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.20.0
-	go.opentelemetry.io/collector/confmap/provider/httpprovider v1.20.0
-	go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.20.0
-	go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.20.0
+	go.opentelemetry.io/collector/confmap v1.24.0
+	go.opentelemetry.io/collector/confmap/provider/envprovider v1.24.0
+	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.24.0
+	go.opentelemetry.io/collector/confmap/provider/httpprovider v1.24.0
+	go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.24.0
+	go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.24.0
 	go.uber.org/zap v1.27.0
 
 )
