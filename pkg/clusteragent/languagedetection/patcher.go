@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-//go:build kubeapiserver
+//go:build !kubeapiserver
 
 // Package languagedetection contains the language detection patcher running in the cluster agent
 package languagedetection

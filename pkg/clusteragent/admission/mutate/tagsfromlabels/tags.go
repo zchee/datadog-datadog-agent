@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-//go:build kubeapiserver
+//go:build !kubeapiserver
 
 // Package tagsfromlabels implements the webhook that injects DD_ENV,
 // DD_VERSION, DD_SERVICE env vars into a pod template if needed

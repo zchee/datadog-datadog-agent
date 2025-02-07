@@ -1,4 +1,4 @@
-//go:build kubeapiserver
+//go:build !kubeapiserver
 
 /*
 Copyright 2018 The Kubernetes Authors All rights reserved.

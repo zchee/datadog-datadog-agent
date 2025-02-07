@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 // Skip mac os test as cluster agent doesn't run on mac os
-//go:build kubeapiserver && !darwin
+//go:build !kubeapiserver && !darwin
 
 package webhook
 
