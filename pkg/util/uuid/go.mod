@@ -11,8 +11,8 @@ replace (
 require (
 	github.com/DataDog/datadog-agent/pkg/util/cache v0.62.1
 	github.com/DataDog/datadog-agent/pkg/util/log v0.62.1
-	github.com/shirou/gopsutil/v4 v4.24.11
-	golang.org/x/sys v0.28.0
+	github.com/shirou/gopsutil/v4 v4.24.12
+	golang.org/x/sys v0.29.0
 )
 
 require (
