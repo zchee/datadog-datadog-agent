@@ -42,12 +42,12 @@ require (
 	github.com/DataDog/datadog-agent/comp/core/config v0.62.2-rc.1
 	github.com/DataDog/datadog-agent/comp/otelcol/converter/def v0.62.2-rc.1
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/collector/confmap v1.21.0
-	go.opentelemetry.io/collector/confmap/provider/envprovider v1.21.0
-	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.21.0
-	go.opentelemetry.io/collector/confmap/provider/httpprovider v1.21.0
-	go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.21.0
-	go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.21.0
+	go.opentelemetry.io/collector/confmap v1.25.0
+	go.opentelemetry.io/collector/confmap/provider/envprovider v1.25.0
+	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.25.0
+	go.opentelemetry.io/collector/confmap/provider/httpprovider v1.25.0
+	go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.25.0
+	go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.25.0
 	go.uber.org/zap v1.27.0
 
 )
@@ -101,9 +101,9 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
-	github.com/shirou/gopsutil/v4 v4.24.11 // indirect
+	github.com/shirou/gopsutil/v4 v4.24.12 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
-	github.com/spf13/cast v1.7.0 // indirect
+	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -114,8 +114,8 @@ require (
 	go.uber.org/dig v1.18.0 // indirect
 	go.uber.org/fx v1.23.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/exp v0.0.0-20241210194714-1829a127f884 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

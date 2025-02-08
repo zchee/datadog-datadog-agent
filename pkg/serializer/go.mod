@@ -63,7 +63,7 @@ replace (
 )
 
 require (
-	github.com/DataDog/agent-payload/v5 v5.0.138
+	github.com/DataDog/agent-payload/v5 v5.0.142
 	github.com/DataDog/datadog-agent/comp/core/config v0.62.2-rc.1
 	github.com/DataDog/datadog-agent/comp/forwarder/defaultforwarder v0.62.2-rc.1
 	github.com/DataDog/datadog-agent/comp/forwarder/orchestrator/orchestratorinterface v0.62.2-rc.1
@@ -79,13 +79,13 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/json v0.62.2-rc.1
 	github.com/DataDog/datadog-agent/pkg/util/log v0.62.2-rc.1
 	github.com/DataDog/datadog-agent/pkg/version v0.62.2-rc.1
-	github.com/DataDog/opentelemetry-mapping-go/pkg/quantile v0.22.0
+	github.com/DataDog/opentelemetry-mapping-go/pkg/quantile v0.24.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/json-iterator/go v1.1.12
 	github.com/protocolbuffers/protoscope v0.0.0-20221109213918-8e7a6aafa2c9
 	github.com/richardartoul/molecule v1.0.1-0.20240531184615-7ca0df43c0b3
 	github.com/stretchr/testify v1.10.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.4
 )
 
 require (
@@ -159,11 +159,11 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/prometheus/client_golang v1.20.5 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.60.1 // indirect
+	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/shirou/gopsutil/v4 v4.24.11 // indirect
+	github.com/shirou/gopsutil/v4 v4.24.12 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
-	github.com/spf13/cast v1.7.0 // indirect
+	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -177,9 +177,9 @@ require (
 	go.uber.org/fx v1.23.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/exp v0.0.0-20241210194714-1829a127f884 // indirect
-	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
+	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
