@@ -1,4 +1,4 @@
-//go:build kubeapiserver
+//go:build !kubeapiserver
 // +build kubeapiserver
 
 /*

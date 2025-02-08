@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-//go:build kubeapiserver
+//go:build !kubeapiserver
 
 // Package config implements the webhook that injects DD_AGENT_HOST and
 // DD_ENTITY_ID into a pod template as needed

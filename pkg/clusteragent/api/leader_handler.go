@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-//go:build kubeapiserver
+//go:build !kubeapiserver
 
 // Package api contains the telemetry of the Cluster Agent API and implements
 // the forwarding of queries from Cluster Agent followers to the leader.
